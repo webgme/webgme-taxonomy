@@ -1,0 +1,24 @@
+#! /usr/bin/env node
+
+const fs = require('fs');
+if (process.argv.length !== 3) {
+	const path = require('path');
+	const scriptName = path.basename(process.argv[1]);
+	console.error(`usage: ${scriptName} <csv file...>`);
+	process.exit(1);
+}
+
+const TaxonomyParser = require('../src/common/TaxonomyParser');
+
+const tags = process.argv.slice(2).flatMap(csvFile => {
+	const csvContent = fs.readFileSync(csvFile, 'utf8');
+	return TaxonomyParser.fromCSV(csvContent);
+});
+
+const taxonomy = {
+	pointers: {
+		base: '@meta:Taxonomy'
+	},
+	children: tags
+};
+console.log(JSON.stringify(taxonomy));

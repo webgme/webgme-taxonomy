@@ -1,0 +1,19 @@
+{
+  "components": {
+    "seeds": {
+      "taxonomy": {
+        "src": "src/seeds/taxonomy"
+      }
+    },
+    "plugins": {}
+  },
+  "dependencies": {
+    "seeds": {},
+    "plugins": {
+      "SetStateFromJSON": {
+        "project": "webgme-json-importer",
+        "path": "node_modules/webgme-json-importer/src/plugins/SetStateFromJSON"
+      }
+    }
+  }
+}
