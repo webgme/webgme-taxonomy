@@ -60,10 +60,35 @@ function factory() {
 		}
 	}
 
+	function parseCSVRow(line) {
+		const cols = [];
+		let currentChars = [];
+		let isQuoted = false;
+		let isEscaped = false;
+		const specialChars = [',', '\\', '"'];
+		line.split('').forEach(char => {
+			if (isEscaped || !specialChars.includes(char)) {
+				currentChars.push(char);
+			} else if (char === ',') {
+				if (isQuoted) {
+					currentChars.push(char);
+				} else {
+					cols.push(currentChars.join(''));
+					currentChars = [];
+				}
+			} else if (char === '"') {
+				isQuoted = !isQuoted;
+			}
+			isEscaped = char === '\\' && !isEscaped;
+		});
+		cols.push(currentChars.join(''));
+		return cols;
+	}
+
 	const TaxonomyParser = {};
 	TaxonomyParser.fromCSV = csvContent => {
 		const rows = csvContent.split('\n')
-			.map(line => line.trim().split(','));  // TODO: handle escape quotes
+			.map(line => parseCSVRow(line.trim()));
 		const cells = rows.map(CellWithText.findInRow)
 			.filter(cell => !!cell);
 
