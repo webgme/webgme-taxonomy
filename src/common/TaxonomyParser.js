@@ -12,13 +12,17 @@ function factory() {
 		constructor(text, depth = 0) {
 			this.text = text;
 			this.depth = depth;
+
+			const hasParenType = this.getMetaType() !== DEFAULT_TYPE;
+			this.name = hasParenType ?
+				this.text.replace(/\((.*)\)/, '').trim() : this.text;
 		}
 
 		/// Convert to webgme-json-importer format
 		toWJI(nextCell) {
 			return {
 				attributes: {
-					name: this.text,
+					name: this.name,
 				},
 				pointers: {
 					base: `@meta:${this.getMetaType(nextCell)}`,
@@ -32,7 +36,7 @@ function factory() {
 			if (parenText && parenText.length > 2) {
 				const text = parenText.toLowerCase();
 				if (text === 'field') {
-					const hasChildren = nextCell.depth > this.depth;
+					const hasChildren = nextCell && nextCell.depth > this.depth;
 					if (hasChildren) {
 						return 'EnumField';
 					} else {
