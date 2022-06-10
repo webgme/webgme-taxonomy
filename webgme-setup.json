@@ -5,7 +5,12 @@
         "src": "src/seeds/taxonomy"
       }
     },
-    "plugins": {}
+    "plugins": {
+      "ExportOntology": {
+        "src": "src/plugins/ExportOntology",
+        "test": "test/plugins/ExportOntology"
+      }
+    }
   },
   "dependencies": {
     "seeds": {},

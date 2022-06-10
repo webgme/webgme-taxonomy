@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<rdf:RDF xmlns="urn:webprotege:ontology:530beb6b-c2a0-45d4-a6c4-f594082c5c1c#"
+     xml:base="urn:webprotege:ontology:530beb6b-c2a0-45d4-a6c4-f594082c5c1c"
+     xmlns:owl="http://www.w3.org/2002/07/owl#"
+     xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+     xmlns:xml="http://www.w3.org/XML/1998/namespace"
+     xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
+     xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#">
+    <owl:Ontology rdf:about="urn:webprotege:ontology:530beb6b-c2a0-45d4-a6c4-f594082c5c1c"/>
+
+	<% classes.forEach(clazz => {%>
+	<owl:Class rdf:about="http://webgme.leap.vanderbilt.edu/<%= clazz.id %>">
+	<% if (clazz.parentId) { %>
+        <rdfs:subClassOf rdf:resource="http://webgme.leap.vanderbilt.edu/<%= clazz.parentId %>"/>
+	<% } %>
+		<rdfs:label rdf:datatype="http://www.w3.org/2001/XMLSchema#string"><%= clazz.name %></rdfs:label>
+    </owl:Class>
+    
+	<% }) %>
+</rdf:RDF>
+    
+
