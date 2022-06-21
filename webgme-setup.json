@@ -9,6 +9,10 @@
       "ExportOntology": {
         "src": "src/plugins/ExportOntology",
         "test": "test/plugins/ExportOntology"
+      },
+      "ExportToJSONSchema": {
+        "src": "src/plugins/ExportToJSONSchema",
+        "test": "test/plugins/ExportToJSONSchema"
       }
     }
   },
