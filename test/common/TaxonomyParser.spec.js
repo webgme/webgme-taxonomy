@@ -3,6 +3,25 @@ describe('TaxonomyParser', function () {
     const assert = require('assert');
     const _ = require('underscore');
 
+    it('should record description', function() {
+        const text = `
+        someTag,someDescription,
+        `;
+        const [taxonomy] = parser.fromCSV(text);
+        assert.equal(taxonomy.pointers.base, '@meta:Tag');
+        assert.equal(taxonomy.attributes.name, 'someTag');
+        assert.equal(taxonomy.attributes.description, 'someDescription');
+    });
+
+    it('should set description to "" if unset', function() {
+        const text = `
+        someTag,,
+        `;
+        const [taxonomy] = parser.fromCSV(text);
+        assert.equal(taxonomy.pointers.base, '@meta:Tag');
+        assert.equal(taxonomy.attributes.description, '');
+    });
+
     it('should parse enums in tags', function() {
         const text = `
         someTag (tag),,

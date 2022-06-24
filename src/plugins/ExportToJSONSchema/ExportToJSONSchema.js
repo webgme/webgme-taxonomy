@@ -32,7 +32,7 @@ define([
                     minItems: 1,
                     items: {
                         type: 'object',
-                        anyOf: Object.keys(definitions).map(name => ({$ref: `#/definitions/${name}`})),
+                        anyOf: tagNames.map(name => ({$ref: `#/definitions/${normalize(name)}`})),
                     }
                 }
             };
@@ -62,26 +62,36 @@ define([
             this.result.setSuccess(true);
         }
 
-        async getSchemaDefinitions(node) {
-            const childTags = (await this.core.loadChildren(node))
-                .filter(child => this.core.isTypeOf(child, this.META.Tag));
-            const isLeafNode = childTags.length === 0;
-            if (isLeafNode) {
-                const properties = await this.getTagProperties(node);
-                return [{
-                    title: this.core.getAttribute(node, 'name'),
-                    properties,
-                    required: Object.keys(properties)
-                }];
-            } else {
-                return (await Promise.all(
-                    childTags.map(child => this.getSchemaDefinitions(child))
-                )).flat();
-            }
+        async getTagNames(node) {
+            const tags = (await this.core.loadSubTree(node))
+                .filter(node => this.core.isTypeOf(node, this.META.Tag));
+            return tags.map(tag => this.core.getAttribute(tag, 'name'));
         }
 
-        async getTagProperties(node) {
-            const properties = this.getConstantPropertiesFor(node);
+        async getSchemaDefinitions(node) {
+            const tagsAndCompounds = (await this.core.loadSubTree(node))
+                .filter(child => this.core.isTypeOf(child, this.META.Tag) ||
+                    this.core.isTypeOf(child, this.META.CompoundField)
+                );
+
+            // for each of them, we need to record the 
+            return await Promise.all(
+                tagsAndCompounds.map(node => this.getDefinition(node))
+            );
+        }
+
+        async getDefinition(node) {
+            const properties = await this.getProperties(node);
+            return {
+                title: this.core.getAttribute(node, 'name'),
+                properties,
+                required: Object.keys(properties)
+            };
+        }
+
+        async getProperties(node) {
+            const isTag = this.core.isTypeOf(node, this.META.Tag);
+            const properties = isTag ? this.getConstantPropertiesFor(node) : [];
             const fieldNodes = (await this.core.loadChildren(node))
                 .filter(child => this.core.isTypeOf(child, this.META.Field));
 
@@ -117,7 +127,7 @@ define([
             const name = this.core.getAttribute(node, 'name');
             const baseName = this.core.getAttribute(baseNode, 'name');
 
-            const fieldSchema = {type: 'string'};
+            let fieldSchema = {type: 'string'};
             switch (baseName) {
                 case 'IntegerField':
                     fieldSchema.type = 'integer';
@@ -131,6 +141,9 @@ define([
                 case 'EnumField':
                     fieldSchema.enum = (await this.core.loadChildren(node))
                         .map(node => this.core.getAttribute(node, 'name'));
+                    break;
+                case 'CompoundField':
+                    fieldSchema = {"$ref": `#/definitions/${normalize(name)}`};
                     break;
             }
             return [name, fieldSchema];

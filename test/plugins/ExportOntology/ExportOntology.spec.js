@@ -74,7 +74,7 @@ describe('ExportOntology', function () {
 
             project.getBranchHash('test')
                 .then(function (branchHash) {
-                    expect(branchHash).to.not.equal(commitHash);
+                    expect(branchHash).to.equal(commitHash);
                 })
                 .nodeify(done);
         });
