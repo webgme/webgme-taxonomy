@@ -16,9 +16,10 @@ function factory() {
 	]);
 
 	class CellWithText {
-		constructor(text, depth = 0) {
+		constructor(text, depth = 0, description = '') {
 			this.text = text;
 			this.depth = depth;
+			this.description = description;
 
 			const hasParenType = this.getExplicitType();
 			this.name = hasParenType ?
@@ -30,6 +31,7 @@ function factory() {
 			return {
 				attributes: {
 					name: this.name,
+					description: this.description,
 				},
 				pointers: {
 					base: `@meta:${this.getMetaType(nextCell)}`,
@@ -86,7 +88,8 @@ function factory() {
 				.find(([text, _]) => !!text);
 			if (contentTuple) {
 				const [text, depth] = contentTuple;
-				return new CellWithText(text, depth);
+				const cell = new CellWithText(text, depth, row[depth + 1]);
+				return cell;
 			}
 		}
 	}

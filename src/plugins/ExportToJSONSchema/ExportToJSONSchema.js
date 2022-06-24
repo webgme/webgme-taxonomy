@@ -23,6 +23,7 @@ define([
                 (await this.getSchemaDefinitions(this.activeNode)).map(def => [normalize(def.title), def])
             );
             const taxonomyName = this.core.getAttribute(this.activeNode, 'name');
+            const tagNames = await this.getTagNames(this.activeNode);
             const properties = {
                 taxonomyTags: {
                     title: taxonomyName,
