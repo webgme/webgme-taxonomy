@@ -1,19 +1,26 @@
 function factory() {
 	const DEFAULT_TYPE = 'Tag';
+	const CATEGORY_TYPE = 'Category';
+	const UNKNOWN_FIELD_TYPE = 'TextOrEnumField';
 	const FieldTypes = [
 		'TextField',
 		'IntegerField',
 		'FloatField',
 		'BooleanField',
 		'EnumField',
+		'CompoundField',
 	];
+	const Types = FieldTypes.concat([
+		DEFAULT_TYPE,
+		CATEGORY_TYPE,
+	]);
 
 	class CellWithText {
 		constructor(text, depth = 0) {
 			this.text = text;
 			this.depth = depth;
 
-			const hasParenType = this.getMetaType() !== DEFAULT_TYPE;
+			const hasParenType = this.getExplicitType();
 			this.name = hasParenType ?
 				this.text.replace(/\((.*)\)/, '').trim() : this.text;
 		}
@@ -31,21 +38,41 @@ function factory() {
 			};
 		}
 
-		getMetaType(nextCell) {
+		/// Explicit types are types specified in parentheses in the cell
+		getExplicitType() {
 			const parenText = this.getParentheticalText();
 			if (parenText && parenText.length > 2) {
 				const text = parenText.toLowerCase();
 				if (text === 'field') {
+					return UNKNOWN_FIELD_TYPE;
+				} else {
+					return Types.find(type => type.toLowerCase().startsWith(text)) || DEFAULT_TYPE;
+				}
+			}
+		}
+
+		getMetaType(nextCell) {
+			const explicitType = this.getExplicitType();
+			if (explicitType) {
+				if (explicitType === UNKNOWN_FIELD_TYPE) {
 					const hasChildren = nextCell && nextCell.depth > this.depth;
 					if (hasChildren) {
 						return 'EnumField';
 					} else {
 						return 'TextField';
 					}
-				} else {
-					return FieldTypes.find(type => type.toLowerCase().startsWith(text)) || DEFAULT_TYPE;
+				}
+				return explicitType;
+			}
+
+			const hasChild = nextCell && nextCell.depth > this.depth;
+			if (hasChild) {
+				const childIsField = nextCell.getExplicitType()?.endsWith('Field');
+				if (!childIsField) {
+					return CATEGORY_TYPE;
 				}
 			}
+
 			return DEFAULT_TYPE;
 		}
 
@@ -117,32 +144,80 @@ function factory() {
 			} else {
 				nodes.push(node);
 			}
-			if (cell.getMetaType(cells[i+1]) === 'EnumField') {
-				const childOptDepth = cell.depth + 1;
-				let j;
-				for (j = i+1; j < cells.length; j++) {
-					if (cells[j].depth !== childOptDepth) {
-						j--;
-						break;
-					}
-					const child = cells[j].toWJI(cells[j + 1]);
-					child.pointers.base = '@meta:EnumOption';
-					node.children.push(child);
-				}
-				i = j;
-				cell = cells[i];
-			}
+			i = addChildCells(node, cells, i);
 
-			parentStack.splice(cell.depth, parentStack.length - cell.depth, node);
-			// TODO: skip any fields indented further than 1 additional indent
-			let nextCell = cells[i+1];
-			while (nextCell && nextCell.depth > cell.depth + 1) {
-				i++;
-				nextCell = cells[i+1];
-			}
+			parentStack.splice(cells[i].depth, parentStack.length - cells[i].depth, node);
 		}
 		return nodes;
 	};
+
+	function hasChildren(cells, i) {
+		const cell = cells[i];
+		const nextCell = cells[i+1];
+		return !!nextCell && nextCell.depth === cell.depth + 1;
+	}
+
+	// skip any fields indented further than 1 additional indent
+	function skipOverIndentedRows(cells, i) {
+		const cell = cells[i];
+		let nextCell = cells[i+1];
+		while (nextCell && nextCell.depth > cell.depth + 1) {
+			i++;
+			nextCell = cells[i+1];
+		}
+		return i;
+	}
+
+	function addChildCells(node, cells, i) {
+		const cell = cells[i];
+		i = skipOverIndentedRows(cells, i);
+		if (!hasChildren(cells, i)) {
+			return i;
+		}
+
+		const cellType = cell.getMetaType(cells[i+1]);
+		if (cellType === 'EnumField') {
+			i = addEnumOptions(node, cells, i);
+		} else if (cellType === 'Tag') {
+			i = addCompoundFields(node, cells, i);
+		}
+		return i;
+	}
+
+	function addEnumOptions(node, cells, i) {
+		const childOptDepth = cell.depth + 1;
+		let j;
+		for (j = i+1; j < cells.length; j++) {
+			if (cells[j].depth !== childOptDepth) {
+				j--;
+				break;
+			}
+			const child = cells[j].toWJI(cells[j + 1]);
+			child.pointers.base = '@meta:EnumOption';
+			node.children.push(child);
+		}
+		return j;
+	}
+
+	function addCompoundFields(node, cells, i) {
+		// any children that would be a tag are now a CompoundField
+		const cell = cells[i];
+		const currentDepth = cell.depth;
+		let j;
+		for (j = i+1; j < cells.length; j++) {
+			if (cells[j].depth <= currentDepth) {
+				j--;
+				break;
+			}
+			const child = cells[j].toWJI(cells[j + 1]);
+			if (child.pointers.base === '@meta:Tag') {
+				child.pointers.base = '@meta:CompoundField';
+				j = addChildCells(child, cells, j);
+			}
+			node.children.push(child);
+		}
+		return Math.min(j, cells.length - 1);
+	}
 	
 	return TaxonomyParser;
 }
