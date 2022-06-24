@@ -185,7 +185,7 @@ function factory() {
 	}
 
 	function addEnumOptions(node, cells, i) {
-		const childOptDepth = cell.depth + 1;
+		const childOptDepth = cells[i].depth + 1;
 		let j;
 		for (j = i+1; j < cells.length; j++) {
 			if (cells[j].depth !== childOptDepth) {
@@ -210,9 +210,9 @@ function factory() {
 				break;
 			}
 			const child = cells[j].toWJI(cells[j + 1]);
+			j = addChildCells(child, cells, j);
 			if (child.pointers.base === '@meta:Tag') {
 				child.pointers.base = '@meta:CompoundField';
-				j = addChildCells(child, cells, j);
 			}
 			node.children.push(child);
 		}
