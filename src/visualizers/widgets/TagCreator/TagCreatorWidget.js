@@ -30,16 +30,16 @@ define([
         }
 
         // Adding/Removing/Updating items
-        onFormSubmit(eventData) {
+        onDownloadTags(eventData) {
             // TODO: emit an event with the tag data
             const {formData} = eventData;
             const tags = formData.taxonomyTags;
-            console.log('downloading tag data!', tags);
             this.downloadJSON(tags);
         }
 
-        render (schema, uiSchema) {
-            const onSubmit = this.onFormSubmit.bind(this);
+        render (schema, uiSchema, taxonomyPath) {
+            //const onSubmit = this.onDownloadTags.bind(this);
+            const onSubmit = ({formData}) => this.addTags(taxonomyPath, formData.taxonomyTags);
             this.root.render(React.createElement(Form, {schema, onSubmit, uiSchema}, null));
         }
 

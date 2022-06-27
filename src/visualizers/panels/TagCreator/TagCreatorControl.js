@@ -35,9 +35,52 @@ define([
     }
 
     TagCreatorControl.prototype._initWidgetEventHandlers = function () {
-        this._widget.onNodeClick = function (id) {
-            // Change the current active object
-            WebGMEGlobal.State.registerActiveObject(id);
+        const tagSetName = 'taxonomyTags';
+        this._widget.addTags = async (taxonomyPath, tags) => {
+            const activeNodeId = this._currentNodeId;
+            const {core, rootNode} = await this._getCoreInstance();
+            const activeNode = await core.loadByPath(rootNode, activeNodeId);
+            const taxonomyNode = await core.loadByPath(rootNode, taxonomyPath);
+            const nodesByGuid = Object.fromEntries(
+                (await core.loadSubTree(taxonomyNode))
+                    .map(node => [core.getGuid(node), node])
+            );
+
+            // remove existing members
+            const existingMemberPaths = core.getMemberPaths(activeNode, tagSetName);
+            existingMemberPaths.forEach(
+                memberPath => core.delMember(activeNode, tagSetName, memberPath)
+            );
+
+            // add new members
+            tags.forEach(tagInfo => {
+                const tagNode = nodesByGuid[tagInfo.tagID];
+                core.addMember(activeNode, tagSetName, tagNode);
+
+                const attributeNames = _.without(Object.keys(tagInfo), 'tagID', 'tagName');
+                const tagPath = core.getPath(tagNode);
+                attributeNames.forEach(name => {
+                    const value = tagInfo[name];
+                    core.setMemberAttribute(activeNode, tagSetName, tagPath, name, value);
+                });
+            });
+
+            const {rootHash, objects} = core.persist(rootNode);
+            const branch = this._client.getActiveBranchName();
+            const startCommit = this._client.getActiveCommitHash();
+            const project = this._client.getProjectObject();
+
+            const tagNames = tags.map(tagInfo => tagInfo.tagName).join(', ');
+            const activeNodeName = core.getAttribute(activeNode, 'name');
+            const commitMsg = `Set taxonomy tags on ${activeNodeName} to ${tagNames}`;
+
+            await project.makeCommit(
+                branch,
+                [startCommit],
+                rootHash,
+                objects,
+                commitMsg
+            );
         };
     };
 
@@ -74,10 +117,10 @@ define([
 
             self._territoryId = self._client.addUI(self, async () => {
                 whileChain(
-                    () => nodeId && nodeId === self._currentNodeId,
+                    () => nodeId === self._currentNodeId,
                     [
                         () => this._getJSONSchemas(nodeId),
-                        ({schema, uiSchema}) => this._widget.render(schema, uiSchema),
+                        ({taxonomyPath, schema, uiSchema}) => this._widget.render(schema, uiSchema, taxonomyPath),
                     ]
                 );
             });
@@ -120,8 +163,33 @@ define([
         const {core, rootNode} = await this._getCoreInstance()
         const meta = this._toMetaDict(core, Object.values(core.getAllMetaNodes(rootNode)));
         const exporter = new JSONSchemaExporter(core, meta);
-        const node = await core.loadByPath(rootNode, nodeId);
-        return await exporter.getSchemas(node);
+        //const node = await core.loadByPath(rootNode, nodeId);
+        const node = await this._findTaxonomyNode(core, rootNode);
+        const taxonomyData = await exporter.getSchemas(node);
+        taxonomyData.taxonomyPath = core.getPath(node);
+        return taxonomyData;
+    };
+
+    TagCreatorControl.prototype._findTaxonomyNode = async function (core, node) {
+        // This finds the first taxonomy node and uses it
+        // In the future, it might be nice to find all of them
+        const isTaxonomyNode = n => {
+            const baseNode = core.getMetaType(n);
+            return baseNode && core.getAttribute(baseNode, 'name') === 'Taxonomy';
+        };
+        const searchLocations = [
+            core.getRoot(node),
+            ...core.getLibraryNames(node)
+                .map(name => core.getLibraryRoot(node, name))
+        ];
+
+        return searchLocations.reduce(async (prevSearch, location) => {
+            const taxNode = await prevSearch;
+            if (taxNode) return taxNode;
+
+            const children = await core.loadChildren(location);
+            return children.find(isTaxonomyNode);
+        }, Promise.resolve(null));
     };
 
     TagCreatorControl.prototype._getCoreInstance = async function () {
