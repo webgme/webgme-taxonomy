@@ -1,1 +1,8 @@
-[]
+[
+  {
+    "id": "TagCreator",
+    "title": "TagCreator",
+    "panel": "panels/TagCreator/TagCreatorPanel",
+    "DEBUG_ONLY": false
+  }
+]
