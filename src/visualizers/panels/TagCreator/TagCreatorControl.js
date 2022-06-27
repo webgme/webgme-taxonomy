@@ -73,10 +73,13 @@ define([
             self._currentNodeParentId = desc.parentId;
 
             self._territoryId = self._client.addUI(self, async () => {
-                const {schema, uiSchema} = await this._getJSONSchemas(nodeId);
-                if (nodeId === self._currentNodeId) {
-                    this._widget.render(schema, uiSchema);
-                }
+                whileChain(
+                    () => nodeId && nodeId === self._currentNodeId,
+                    [
+                        () => this._getJSONSchemas(nodeId),
+                        ({schema, uiSchema}) => this._widget.render(schema, uiSchema),
+                    ]
+                );
             });
 
             // Update the territory
@@ -86,6 +89,15 @@ define([
             self._client.updateTerritory(self._territoryId, self._selfPatterns);
         }
     };
+
+    async function whileChain(cond, chain) {
+        let i = 0;
+        let lastResult = null;
+        while (await cond() && i < chain.length) {
+            lastResult = await chain(lastResult);
+        }
+        return lastResult;
+    }
 
     // This next function retrieves the relevant node information for the widget
     TagCreatorControl.prototype._getObjectDescriptor = function (nodeId) {
