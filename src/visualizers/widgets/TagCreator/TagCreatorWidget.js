@@ -29,18 +29,22 @@ define([
             this._logger.debug('Widget is resizing...');
         }
 
-        // Adding/Removing/Updating items
-        onDownloadTags(eventData) {
-            // TODO: emit an event with the tag data
-            const {formData} = eventData;
-            const tags = formData.taxonomyTags;
-            this.downloadJSON(tags);
-        }
-
-        render (schema, uiSchema, taxonomyPath) {
-            //const onSubmit = this.onDownloadTags.bind(this);
-            const onSubmit = ({formData}) => this.addTags(taxonomyPath, formData.taxonomyTags);
-            this.root.render(React.createElement(Form, {schema, onSubmit, uiSchema}, null));
+        render (schema, uiSchema, /*initialData,*/ taxonomyPath) {
+            let formData = {};
+            // TODO: what about the initial case
+            const onChange = (event) => formData = event.formData;
+            const children = React.createElement('div', null, [
+                React.createElement('button', {
+                    className: 'btn btn-info',
+                    onClick: () => this.addTags(taxonomyPath, formData.taxonomyTags),
+                }, 'Apply tags'),
+                React.createElement('button', {
+                    type: 'submit',
+                    className: 'btn btn-secondary',
+                    onClick: () => this.downloadJSON(formData.taxonomyTags),
+                }, 'Download'),
+            ]);
+            this.root.render(React.createElement(Form, {schema, onChange, uiSchema}, children));
         }
 
         downloadJSON(object, name = 'tags') {
