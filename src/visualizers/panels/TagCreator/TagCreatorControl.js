@@ -91,10 +91,9 @@ define([
     };
 
     async function whileChain(cond, chain) {
-        let i = 0;
         let lastResult = null;
-        while (await cond() && i < chain.length) {
-            lastResult = await chain(lastResult);
+        while (await cond() && chain.length) {
+            lastResult = await chain.shift()(lastResult);
         }
         return lastResult;
     }
