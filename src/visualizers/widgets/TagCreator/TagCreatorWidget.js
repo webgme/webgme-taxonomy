@@ -29,8 +29,7 @@ define([
             this._logger.debug('Widget is resizing...');
         }
 
-        render (schema, uiSchema, /*initialData,*/ taxonomyPath) {
-            let formData = {};
+        render (schema, uiSchema, formData, taxonomyPath) {
             // TODO: what about the initial case
             const onChange = (event) => formData = event.formData;
             const children = React.createElement('div', null, [
@@ -44,7 +43,7 @@ define([
                     onClick: () => this.downloadJSON(formData.taxonomyTags),
                 }, 'Download'),
             ]);
-            this.root.render(React.createElement(Form, {schema, onChange, uiSchema}, children));
+            this.root.render(React.createElement(Form, {schema, onChange, uiSchema, formData}, children));
         }
 
         downloadJSON(object, name = 'tags') {

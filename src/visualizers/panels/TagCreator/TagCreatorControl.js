@@ -7,14 +7,17 @@ define([
     'js/Constants',
     'js/Utils/GMEConcepts',
     'webgme-taxonomy/JSONSchemaExporter',
-    'js/NodePropertyNames'
+    'js/NodePropertyNames',
+    'q',
 ], function (
     CONSTANTS,
     GMEConcepts,
     JSONSchemaExporter,
-    nodePropertyNames
+    nodePropertyNames,
+    Q,
 ) {
 
+    const TAG_SET_NAMES = 'taxonomyTags';
     'use strict';
 
     function TagCreatorControl(options) {
@@ -35,7 +38,6 @@ define([
     }
 
     TagCreatorControl.prototype._initWidgetEventHandlers = function () {
-        const tagSetName = 'taxonomyTags';
         this._widget.addTags = async (taxonomyPath, tags) => {
             const activeNodeId = this._currentNodeId;
             const {core, rootNode} = await this._getCoreInstance();
@@ -47,24 +49,25 @@ define([
             );
 
             // remove existing members
-            const existingMemberPaths = core.getMemberPaths(activeNode, tagSetName);
+            const existingMemberPaths = core.getMemberPaths(activeNode, TAG_SET_NAMES);
             existingMemberPaths.forEach(
-                memberPath => core.delMember(activeNode, tagSetName, memberPath)
+                memberPath => core.delMember(activeNode, TAG_SET_NAMES, memberPath)
             );
 
             // add new members
             tags.forEach(tagInfo => {
                 const tagNode = nodesByGuid[tagInfo.tagID];
-                core.addMember(activeNode, tagSetName, tagNode);
+                core.addMember(activeNode, TAG_SET_NAMES, tagNode);
 
                 const attributeNames = _.without(Object.keys(tagInfo), 'tagID', 'tagName');
                 const tagPath = core.getPath(tagNode);
                 attributeNames.forEach(name => {
                     const value = tagInfo[name];
-                    core.setMemberAttribute(activeNode, tagSetName, tagPath, name, value);
+                    core.setMemberAttribute(activeNode, TAG_SET_NAMES, tagPath, name, value);
                 });
             });
 
+            // save
             const {rootHash, objects} = core.persist(rootNode);
             const branch = this._client.getActiveBranchName();
             const startCommit = this._client.getActiveCommitHash();
@@ -119,8 +122,14 @@ define([
                 whileChain(
                     () => nodeId === self._currentNodeId,
                     [
-                        () => this._getJSONSchemas(nodeId),
-                        ({taxonomyPath, schema, uiSchema}) => this._widget.render(schema, uiSchema, taxonomyPath),
+                        () => Promise.all([
+                            this._getJSONSchemas(nodeId),
+                            this._getCurrentFormData(nodeId),
+                        ]),
+                        ([schemas, formData]) => {
+                            const {taxonomyPath, schema, uiSchema} = schemas;
+                            this._widget.render(schema, uiSchema, formData, taxonomyPath);
+                        },
                     ]
                 );
             });
@@ -142,6 +151,52 @@ define([
     }
 
     // This next function retrieves the relevant node information for the widget
+    TagCreatorControl.prototype._getCurrentFormData = async function (nodeId) {
+        const node = this._client.getNode(nodeId);
+        const memberPaths = node.getMemberIds(TAG_SET_NAMES);
+        const memberAttrs = memberPaths.map(
+            memberPath => {
+                const attrDict = Object.fromEntries(
+                    node.getMemberAttributeNames(TAG_SET_NAMES, memberPath).map(
+                        name => [name, node.getMemberAttribute(TAG_SET_NAMES, memberPath, name)]
+                    )
+                );
+                return attrDict;
+            }
+        );
+
+        const memberNodes = await this._loadNodes(memberPaths);
+        const taxonomyTags = await Promise.all(memberNodes.map((node, i) => this._getTagData(node, memberAttrs[i])));
+        return {taxonomyTags};
+    };
+
+    TagCreatorControl.prototype._getTagData = function (memberNode, attrDict) {
+        const tag = {
+            tagID: memberNode.getGuid(),
+            tagName: memberNode.getAttribute('name'),
+        };
+        Object.assign(tag, attrDict);
+        return tag;
+    };
+
+    TagCreatorControl.prototype._loadNodes = async function (nodePaths) {
+        const deferred = Q.defer();
+        console.log('loading nodes', nodePaths);
+        const territoryId = this._client.addUI(this, async () => {
+            console.log('loaded!');
+            this._client.removeUI(territoryId);
+            const nodes = nodePaths.map(nodePath => this._client.getNode(nodePath));
+            return deferred.resolve(nodes);
+        });
+        const territory = Object.fromEntries(
+            nodePaths.map(path => [path, {children: 0}])
+        );
+        console.log({territory});
+        this._client.updateTerritory(territoryId, territory);
+
+        return deferred.promise;
+    };
+
     TagCreatorControl.prototype._getObjectDescriptor = function (nodeId) {
         var node = this._client.getNode(nodeId),
             objDescriptor;
