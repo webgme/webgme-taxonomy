@@ -153,21 +153,25 @@ define([
     // This next function retrieves the relevant node information for the widget
     TagCreatorControl.prototype._getCurrentFormData = async function (nodeId) {
         const node = this._client.getNode(nodeId);
-        const memberPaths = node.getMemberIds(TAG_SET_NAMES);
-        const memberAttrs = memberPaths.map(
-            memberPath => {
-                const attrDict = Object.fromEntries(
-                    node.getMemberAttributeNames(TAG_SET_NAMES, memberPath).map(
-                        name => [name, node.getMemberAttribute(TAG_SET_NAMES, memberPath, name)]
-                    )
-                );
-                return attrDict;
-            }
-        );
+        const supportsTags = node.getSetNames().includes(TAG_SET_NAMES);
 
-        const memberNodes = await this._loadNodes(memberPaths);
-        const taxonomyTags = await Promise.all(memberNodes.map((node, i) => this._getTagData(node, memberAttrs[i])));
-        return {taxonomyTags};
+        if (supportsTags) {
+            const memberPaths = node.getMemberIds(TAG_SET_NAMES);
+            const memberAttrs = memberPaths.map(
+                memberPath => {
+                    const attrDict = Object.fromEntries(
+                        node.getMemberAttributeNames(TAG_SET_NAMES, memberPath).map(
+                            name => [name, node.getMemberAttribute(TAG_SET_NAMES, memberPath, name)]
+                        )
+                    );
+                    return attrDict;
+                }
+            );
+
+            const memberNodes = await this._loadNodes(memberPaths);
+            const taxonomyTags = await Promise.all(memberNodes.map((node, i) => this._getTagData(node, memberAttrs[i])));
+            return {taxonomyTags};
+        }
     };
 
     TagCreatorControl.prototype._getTagData = function (memberNode, attrDict) {
@@ -181,9 +185,7 @@ define([
 
     TagCreatorControl.prototype._loadNodes = async function (nodePaths) {
         const deferred = Q.defer();
-        console.log('loading nodes', nodePaths);
         const territoryId = this._client.addUI(this, async () => {
-            console.log('loaded!');
             this._client.removeUI(territoryId);
             const nodes = nodePaths.map(nodePath => this._client.getNode(nodePath));
             return deferred.resolve(nodes);
@@ -191,7 +193,6 @@ define([
         const territory = Object.fromEntries(
             nodePaths.map(path => [path, {children: 0}])
         );
-        console.log({territory});
         this._client.updateTerritory(territoryId, territory);
 
         return deferred.promise;
@@ -218,11 +219,14 @@ define([
         const {core, rootNode} = await this._getCoreInstance()
         const meta = this._toMetaDict(core, Object.values(core.getAllMetaNodes(rootNode)));
         const exporter = new JSONSchemaExporter(core, meta);
-        //const node = await core.loadByPath(rootNode, nodeId);
         const node = await this._findTaxonomyNode(core, rootNode);
-        const taxonomyData = await exporter.getSchemas(node);
-        taxonomyData.taxonomyPath = core.getPath(node);
-        return taxonomyData;
+        if (node) {
+            const taxonomyData = await exporter.getSchemas(node);
+            taxonomyData.taxonomyPath = core.getPath(node);
+            return taxonomyData;
+        } else {
+            return {};
+        }
     };
 
     TagCreatorControl.prototype._findTaxonomyNode = async function (core, node) {

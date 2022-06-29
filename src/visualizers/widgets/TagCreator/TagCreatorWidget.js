@@ -40,7 +40,7 @@ define([
                 React.createElement('button', {
                     type: 'submit',
                     className: 'btn btn-secondary',
-                    onClick: () => this.downloadJSON(formData.taxonomyTags),
+                    onClick: () => this.downloadJSON(formData),
                 }, 'Download'),
             ]);
             this.root.render(React.createElement(Form, {schema, onChange, uiSchema, formData}, children));
