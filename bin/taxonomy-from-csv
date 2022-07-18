@@ -15,10 +15,19 @@ const tags = process.argv.slice(2).flatMap(csvFile => {
 	return TaxonomyParser.fromCSV(csvContent);
 });
 
-const taxonomy = {
-	pointers: {
-		base: '@meta:Taxonomy'
-	},
-	children: tags
-};
+const isSingleTaxonomy = tags.length === 1;
+if (isSingleTaxonomy) {
+	tags[0].pointers.base = '@meta:Taxonomy';
+}
+
+const taxonomy = isSingleTaxonomy ? tags[0] : createTaxonomy(tags);
 console.log(JSON.stringify(taxonomy));
+
+function createTaxonomy(children) {
+	return {
+		pointers: {
+			base: '@meta:Taxonomy'
+		},
+		children: tags
+	};
+}
