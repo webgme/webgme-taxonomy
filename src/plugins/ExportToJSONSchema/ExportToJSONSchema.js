@@ -27,6 +27,7 @@ define([
                 'schema.json': JSON.stringify(schema, null, 2),
                 'uischema.json': JSON.stringify(uiSchema, null, 2),
             };
+            const taxonomyName = this.core.getAttribute(this.activeNode, 'name');
             await this.addArtifact(taxonomyName, files);
             this.result.setSuccess(true);
         }
