@@ -10,17 +10,16 @@ if (process.argv.length < 3) {
 
 const TaxonomyParser = require('../src/common/TaxonomyParser');
 
-const tags = process.argv.slice(2).flatMap(csvFile => {
-	const csvContent = fs.readFileSync(csvFile, 'utf8');
-	return TaxonomyParser.fromCSV(csvContent);
-});
+const tags = process.argv.slice(2)
+	.flatMap(csvFile => {
+		const csvContent = fs.readFileSync(csvFile, 'utf8');
+		return TaxonomyParser.fromCSV(csvContent);
+	}).map(vocabRoot => {
+		vocabRoot.pointers.base = '@meta:Vocabulary';
+		return vocabRoot;
+	});
 
-const isSingleTaxonomy = tags.length === 1;
-if (isSingleTaxonomy) {
-	tags[0].pointers.base = '@meta:Taxonomy';
-}
-
-const taxonomy = isSingleTaxonomy ? tags[0] : createTaxonomy(tags);
+const taxonomy = createTaxonomy(tags);
 console.log(JSON.stringify(taxonomy));
 
 function createTaxonomy(children) {

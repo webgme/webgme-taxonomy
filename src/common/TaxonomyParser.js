@@ -1,6 +1,6 @@
 function factory() {
-	const DEFAULT_TYPE = 'Tag';
-	const CATEGORY_TYPE = 'Category';
+	const DEFAULT_TYPE = 'Term';
+	const CATEGORY_TYPE = 'Term';
 	const UNKNOWN_FIELD_TYPE = 'TextOrEnumField';
 	const FieldTypes = [
 		'TextField',
@@ -29,6 +29,7 @@ function factory() {
 		/// Convert to webgme-json-importer format
 		toWJI(nextCell) {
 			return {
+				id: `@name:${this.name}`,
 				attributes: {
 					name: this.name,
 					description: this.description,
@@ -181,7 +182,7 @@ function factory() {
 		const cellType = cell.getMetaType(cells[i+1]);
 		if (cellType === 'EnumField') {
 			i = addEnumOptions(node, cells, i);
-		} else if (cellType === 'Tag') {
+		} else if (cellType === 'Term') {
 			i = addCompoundFields(node, cells, i);
 		}
 		return i;
@@ -214,9 +215,9 @@ function factory() {
 			}
 			const child = cells[j].toWJI(cells[j + 1]);
 			j = addChildCells(child, cells, j);
-			if (child.pointers.base === '@meta:Tag') {
-				child.pointers.base = '@meta:CompoundField';
-			}
+			//if (child.pointers.base === '@meta:Term') {
+				//child.pointers.base = '@meta:CompoundField';
+			//}
 			node.children.push(child);
 		}
 		return Math.min(j, cells.length - 1);
