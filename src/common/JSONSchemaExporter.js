@@ -5,18 +5,17 @@ define([
 ], function(
 ) {
 
-	class JSONSchemaExporter {
-		constructor(core, META) {
-			this.core = core;
-			this.META = META;
-		}
+    class JSONSchemaExporter {
+        constructor(core, META) {
+            this.core = core;
+            this.META = META;
+        }
 
-		async getSchemas(node) {
-            const definitions = Object.fromEntries(
-                (await this.getSchemaDefinitions(node)).map(def => [normalize(def.title), def])
-            );
+        async getSchemas(node) {
+            const defEntries = await this.getDefinitionEntries(node);
+            const definitions = Object.fromEntries(defEntries);
             const taxonomyName = this.core.getAttribute(node, 'name');
-            const tagNames = await this.getTagNames(node);
+            const termNodes = await this.getTermNodes(node);
             const properties = {
                 taxonomyTags: {
                     title: taxonomyName,
@@ -25,7 +24,10 @@ define([
                     minItems: 1,
                     items: {
                         type: 'object',
-                        anyOf: tagNames.map(name => ({$ref: `#/definitions/${normalize(name)}`})),
+                        anyOf: termNodes.map(node => {
+                            const guid = this.core.getGuid(node);
+                            return {$ref: `#/definitions/${guid}`};
+                        }),
                     }
                 }
             };
@@ -47,25 +49,28 @@ define([
                     )
                 }
             };
-			return {schema, uiSchema};
-		}
-
-        async getTagNames(node) {
-            const tags = (await this.core.loadSubTree(node))
-                .filter(node => this.core.isTypeOf(node, this.META.Tag));
-            return tags.map(tag => this.core.getAttribute(tag, 'name'));
+            return {schema, uiSchema};
         }
 
-        async getSchemaDefinitions(node) {
-            const tagsAndCompounds = (await this.core.loadSubTree(node))
-                .filter(child => this.core.isTypeOf(child, this.META.Tag) ||
+        async getTermNodes(node) {
+            return (await this.core.loadSubTree(node))
+                .filter(node => this.core.isTypeOf(node, this.META.Term));
+        }
+
+        async getDefinitionEntries(node) {
+            const children = await this.core.loadChildren(node);
+            const tagsAndCompounds = children
+                .filter(child => this.core.isTypeOf(child, this.META.Term) ||
                     this.core.isTypeOf(child, this.META.CompoundField)
                 );
 
-            // for each of them, we need to record the 
-            return await Promise.all(
-                tagsAndCompounds.map(node => this.getDefinition(node))
+            const childDefs = (await Promise.all(children.map(node => this.getDefinitionEntries(node))))
+                .flat();
+            const myDefs = 
+            await Promise.all(
+                tagsAndCompounds.map(async node => [this.core.getGuid(node), await this.getDefinition(node)])
             );
+            return myDefs.concat(childDefs);
         }
 
         async getDefinition(node) {
@@ -78,10 +83,17 @@ define([
         }
 
         async getProperties(node) {
-            const isTag = this.core.isTypeOf(node, this.META.Tag);
-            const properties = isTag ? this.getConstantPropertiesFor(node) : [];
+            const isTerm = this.core.isTypeOf(node, this.META.Term);
+            const properties = isTerm ? this.getConstantPropertiesFor(node) : [];
             const fieldNodes = (await this.core.loadChildren(node))
                 .filter(child => this.core.isTypeOf(child, this.META.Field));
+
+            // TODO: if parent is a term, add it as a property
+            const parent = this.core.getParent(node);
+            if (this.core.isTypeOf(parent, this.META.Term)) {
+                const guid = this.core.getGuid(parent);
+                properties.push([guid, {$ref: `#/definitions/${guid}`}]);
+            }
 
             return Object.fromEntries([
                 ...properties,
@@ -91,8 +103,7 @@ define([
 
         getConstantProperties() {
             return [
-                ['tagID', node => this.core.getGuid(node)],
-                ['tagName', node => this.core.getAttribute(node, 'name')],
+                ['ID', node => this.core.getGuid(node)],
             ];
         }
 
@@ -113,9 +124,13 @@ define([
         async getFieldSchema(node) {
             const baseNode = this.core.getMetaType(node);
             const name = this.core.getAttribute(node, 'name');
+            const guid = this.core.getGuid(node);
             const baseName = this.core.getAttribute(baseNode, 'name');
 
-            let fieldSchema = {type: 'string'};
+            let fieldSchema = {
+                title: name,
+                type: 'string'
+            };
             switch (baseName) {
                 case 'IntegerField':
                     fieldSchema.type = 'integer';
@@ -130,13 +145,13 @@ define([
                     fieldSchema.enum = (await this.core.loadChildren(node))
                         .map(node => this.core.getAttribute(node, 'name'));
                     break;
-                case 'CompoundField':
-                    fieldSchema = {"$ref": `#/definitions/${normalize(name)}`};
+                case 'CompoundField':  // TODO: use guid?
+                    fieldSchema = {"$ref": `#/definitions/${guid}`};
                     break;
             }
-            return [name, fieldSchema];
+            return [guid, fieldSchema];
         }
-	}
+    }
 
     function normalize(text) {
         return text.split(/[^a-zA-Z]/)
@@ -145,5 +160,5 @@ define([
             .join('')
     }
 
-	return JSONSchemaExporter;
+    return JSONSchemaExporter;
 });
