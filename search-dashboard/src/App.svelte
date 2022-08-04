@@ -38,7 +38,7 @@
 				<Item>
 					<Text>
 						<PrimaryText>Title</PrimaryText>
-						<PrimaryText>Subtitle</PrimaryText>
+						<SecondaryText>Subtitle</SecondaryText>
 					</Text>
 				</Item>
 			</List>
