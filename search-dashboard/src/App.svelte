@@ -10,7 +10,7 @@
 	let searchKeyword: string = '';
 
 	import testData from './TestTaxonomyData.js';
-	export let taxonomy: TaxonomyData = testData;
+	export let vocabularies: TaxonomyData = testData.children[0].children;
 </script>
 
 <TopAppBar variant="static">
@@ -20,15 +20,13 @@
 	  </Section>
 	</Row>
 </TopAppBar>
-<!--<Textfield label="Search..." bind:value={searchKeyword}/>-->
 
 <!-- TODO: make sure the drawer is collapsible -->
 	<Drawer>
-		<!-- TODO: make the taxonomy view -->
-		<!-- TODO: make them all checkboxes?? -->
 		<Content>
-			<span>Filters</span>
-			<TaxonomyFilter tree={taxonomy} />
+			<Textfield label="Search..." bind:value={searchKeyword}/>
+			<span class="filter-header">Advanced Filters</span>
+			<TaxonomyFilter trees={vocabularies} />
 		</Content>
 	</Drawer>
 	<AppContent>
@@ -71,5 +69,10 @@
 		main {
 			max-width: none;
 		}
+	}
+
+	.filter-header {
+		display: block;
+		padding-top: 10px;
 	}
 </style>
