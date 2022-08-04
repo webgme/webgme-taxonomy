@@ -27,6 +27,13 @@
         "secondary": false,
         "widget": "src/visualizers/widgets/TagCreator"
       }
+    },
+    "routers": {
+      "Search": {
+        "src": "src/routers/Search",
+        "test": "test/routers/Search",
+        "mount": "routers/Search"
+      }
     }
   },
   "dependencies": {
@@ -37,6 +44,7 @@
         "path": "node_modules/webgme-json-importer/src/plugins/SetStateFromJSON"
       }
     },
-    "visualizers": {}
+    "visualizers": {},
+    "routers": {}
   }
 }

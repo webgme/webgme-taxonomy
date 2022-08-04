@@ -16,7 +16,11 @@ config.seedProjects.basePaths.push(__dirname + '/../src/seeds/taxonomy');
 config.visualization.panelPaths.push(__dirname + '/../src/visualizers/panels');
 
 
-
+config.rest.components['Search'] = {
+  src: __dirname + '/../src/routers/Search/Search.js',
+  mount: 'routers/Search',
+  options: {}
+};
 
 // Visualizer descriptors
 config.visualization.visualizerDescriptors.push(__dirname + '/../src/visualizers/Visualizers.json');
