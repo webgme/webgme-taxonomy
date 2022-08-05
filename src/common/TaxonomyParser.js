@@ -141,6 +141,7 @@ function factory() {
 		let lastDepth = baseDepth;
 		for (let i = 0; i < cells.length; i++) {
 			let cell = cells[i];
+			// TODO: refactor this so it can be called from addEnumOptions
 			const node = cell.toWJI(cells[i + 1]);
 			const parent = parentStack[cell.depth - 1];
 			if (parent) {
@@ -196,6 +197,8 @@ function factory() {
 				j--;
 				break;
 			}
+			// FIXME: don't flatten
+			// TODO: Recursively, call the parsing function
 			const child = cells[j].toWJI(cells[j + 1]);
 			child.pointers.base = '@meta:EnumOption';
 			node.children.push(child);

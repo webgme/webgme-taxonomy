@@ -13,6 +13,10 @@
       "ExportToJSONSchema": {
         "src": "src/plugins/ExportToJSONSchema",
         "test": "test/plugins/ExportToJSONSchema"
+      },
+      "ExportSearchFilterData": {
+        "src": "src/plugins/ExportSearchFilterData",
+        "test": "test/plugins/ExportSearchFilterData"
       }
     },
     "visualizers": {
@@ -22,6 +26,13 @@
         "panel": "src/visualizers/panels/TagCreator",
         "secondary": false,
         "widget": "src/visualizers/widgets/TagCreator"
+      }
+    },
+    "routers": {
+      "Search": {
+        "src": "src/routers/Search",
+        "test": "test/routers/Search",
+        "mount": "routers/Search"
       }
     }
   },
@@ -33,6 +44,7 @@
         "path": "node_modules/webgme-json-importer/src/plugins/SetStateFromJSON"
       }
     },
-    "visualizers": {}
+    "visualizers": {},
+    "routers": {}
   }
 }
