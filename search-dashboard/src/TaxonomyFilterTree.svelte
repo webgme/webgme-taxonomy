@@ -28,22 +28,15 @@
 	import {createEventDispatcher} from 'svelte';
 	const dispatch = createEventDispatcher();
 	$: {
-		console.log('checked is now', checked);
-		if (checked !== tree.selected) {
-			console.log('selection state changed');
+		//if (checked !== tree.selected) {
 
+		console.log('checked:', checked);
 			tree.selected = checked;
 			//tree.children.forEach(child => child.selected = checked);
-			console.log({tree})
 			dispatch('change', {tree});
-		}
-		// TODO: emit an event when selected
+			//}
 		// TODO: for any parents, set to indeterminate if single child is selected
 	};
-
-	export function getState() {
-		return tree;
-	}
 
 	// TODO: when any children are selected
 	let value = null;
@@ -85,7 +78,7 @@
 			<div class="arrow" class:arrowDown on:click={toggleExpansion}>&#x25b6</div>
 			{#if expanded}
 				{#each children as child}
-					<svelte:self tree={child} />
+					<svelte:self on:change tree={child} />
 				{/each}
 			{/if}
 		{/if}

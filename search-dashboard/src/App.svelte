@@ -13,7 +13,6 @@
 	import testData from './TestTaxonomyData.js';
 	let vocabularies: TaxonomyData[] = testData.children[0].children;
 
-	$: console.log('vocab changed:', vocabularies);
 	import testDataItems from './TestResultData.js';
 	let items = testDataItems;
 
@@ -38,9 +37,20 @@
 			return false;
 		};
 
-		console.log('filter updated!');
+		console.log('filter updated!', filterTags);
 		items = testDataItems.filter(item => filter(item));
 	}
+
+        function getTag(id) {
+                const queue = vocabularies;
+                while (queue.length) {
+                        const node = queue.shift();
+                        if (node.id === id) {
+                                return node;
+                        }
+                        queue.push(...node.children);
+                }
+        }
 
 </script>
 
@@ -57,7 +67,7 @@
 
 <!-- TODO: make sure the drawer is collapsible -->
 <div class="drawer-container">
-	<Drawer>
+	<Drawer style="width: 360px">
 		<Content>
 			<Textfield label="Search..." bind:value={searchKeyword}/>
 			<span class="filter-header">Advanced Filters</span>
@@ -71,16 +81,20 @@
 					<Item>
 						<Text>
 							<PrimaryText>{item.Data[0].label}</PrimaryText>
-							<SecondaryText>{Math.floor(Math.random()*10) + 1} revisions. <a>Earlier versions.</a> </SecondaryText>
+							<SecondaryText>{item.Version + 1} revisions. <a>Earlier versions.</a> </SecondaryText>
 						</Text>
 						{#each item.Data[0].taxonomyTags as tag}
-										<Chip chip={tag.id}>
-								{#if tag.value}
+							<!--
+                                                        <Chip chip={tag.id}>
+								{#if tag.type === 'EnumField'}
+						<Text>{tag.name}</Text>
+                                        {:else if tag.value}
 						<Text>{tag.name}: {tag.value}</Text>
 								{:else}
 						<Text>{tag.name}</Text>
 								{/if}
-										</Chip>
+                                                        </Chip>
+							-->
 						{/each}
 					</Item>
 				{/each}
@@ -104,10 +118,9 @@
   rel="stylesheet"
   href="https://fonts.googleapis.com/css?family=Roboto+Mono"
 />
-<!-- TODO: move this from the CDN to our own style sheet -->
 <link
   rel="stylesheet"
-  href="https://cdn.jsdelivr.net/npm/svelte-material-ui@6.0.0/bare.min.css"
+  href="/build/smui.css"
 />
 
 <style>
@@ -127,6 +140,10 @@
 		position: relative;
 		display: flex;
 		height: 100%;
+	}
+
+	.drawer {
+		width: 360px;
 	}
 
 	  * :global(.app-content) {
