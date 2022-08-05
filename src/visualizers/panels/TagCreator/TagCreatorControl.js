@@ -152,9 +152,12 @@ define([
 
     // This next function retrieves the relevant node information for the widget
     TagCreatorControl.prototype._getCurrentFormData = async function (nodeId) {
+        console.log(`Getting form data for "${nodeId}"`);
         const node = this._client.getNode(nodeId);
+        //if (!node) return;
         const supportsTags = node.getSetNames().includes(TAG_SET_NAMES);
 
+        console.log({supportsTags});
         if (supportsTags) {
             const memberPaths = node.getMemberIds(TAG_SET_NAMES);
             const memberAttrs = memberPaths.map(
@@ -168,8 +171,10 @@ define([
                 }
             );
 
+            console.log({memberPaths});
             const memberNodes = await this._loadNodes(memberPaths);
             const taxonomyTags = await Promise.all(memberNodes.map((node, i) => this._getTagData(node, memberAttrs[i])));
+            console.log({taxonomyTags});
             return {taxonomyTags};
         }
     };

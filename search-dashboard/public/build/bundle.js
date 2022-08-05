@@ -228,6 +228,22 @@ var app = (function () {
     function onDestroy(fn) {
         get_current_component().$$.on_destroy.push(fn);
     }
+    function createEventDispatcher() {
+        const component = get_current_component();
+        return (type, detail, { cancelable = false } = {}) => {
+            const callbacks = component.$$.callbacks[type];
+            if (callbacks) {
+                // TODO are there situations where events could be dispatched
+                // in a server (non-DOM) environment?
+                const event = custom_event(type, detail, { cancelable });
+                callbacks.slice().forEach(fn => {
+                    fn.call(component, event);
+                });
+                return !event.defaultPrevented;
+            }
+            return true;
+        };
+    }
     function setContext(key, context) {
         get_current_component().$$.context.set(key, context);
         return context;
@@ -686,6 +702,33 @@ var app = (function () {
         throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
     }
 
+    function __read(o, n) {
+        var m = typeof Symbol === "function" && o[Symbol.iterator];
+        if (!m) return o;
+        var i = m.call(o), r, ar = [], e;
+        try {
+            while ((n === void 0 || n-- > 0) && !(r = i.next()).done) ar.push(r.value);
+        }
+        catch (error) { e = { error: error }; }
+        finally {
+            try {
+                if (r && !r.done && (m = i["return"])) m.call(i);
+            }
+            finally { if (e) throw e.error; }
+        }
+        return ar;
+    }
+
+    function __spreadArray(to, from, pack) {
+        if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
+            if (ar || !(i in from)) {
+                if (!ar) ar = Array.prototype.slice.call(from, 0, i);
+                ar[i] = from[i];
+            }
+        }
+        return to.concat(ar || Array.prototype.slice.call(from));
+    }
+
     /**
      * @license
      * Copyright 2016 Google Inc.
@@ -757,6 +800,101 @@ var app = (function () {
             // Subclasses should override this method to perform de-initialization routines (de-registering events, etc.)
         };
         return MDCFoundation;
+    }());
+
+    /**
+     * @license
+     * Copyright 2016 Google Inc.
+     *
+     * Permission is hereby granted, free of charge, to any person obtaining a copy
+     * of this software and associated documentation files (the "Software"), to deal
+     * in the Software without restriction, including without limitation the rights
+     * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+     * copies of the Software, and to permit persons to whom the Software is
+     * furnished to do so, subject to the following conditions:
+     *
+     * The above copyright notice and this permission notice shall be included in
+     * all copies or substantial portions of the Software.
+     *
+     * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+     * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+     * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+     * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+     * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+     * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+     * THE SOFTWARE.
+     */
+    var MDCComponent = /** @class */ (function () {
+        function MDCComponent(root, foundation) {
+            var args = [];
+            for (var _i = 2; _i < arguments.length; _i++) {
+                args[_i - 2] = arguments[_i];
+            }
+            this.root = root;
+            this.initialize.apply(this, __spreadArray([], __read(args)));
+            // Note that we initialize foundation here and not within the constructor's
+            // default param so that this.root is defined and can be used within the
+            // foundation class.
+            this.foundation =
+                foundation === undefined ? this.getDefaultFoundation() : foundation;
+            this.foundation.init();
+            this.initialSyncWithDOM();
+        }
+        MDCComponent.attachTo = function (root) {
+            // Subclasses which extend MDCBase should provide an attachTo() method that takes a root element and
+            // returns an instantiated component with its root set to that element. Also note that in the cases of
+            // subclasses, an explicit foundation class will not have to be passed in; it will simply be initialized
+            // from getDefaultFoundation().
+            return new MDCComponent(root, new MDCFoundation({}));
+        };
+        /* istanbul ignore next: method param only exists for typing purposes; it does not need to be unit tested */
+        MDCComponent.prototype.initialize = function () {
+            // Subclasses can override this to do any additional setup work that would be considered part of a
+            // "constructor". Essentially, it is a hook into the parent constructor before the foundation is
+            // initialized. Any additional arguments besides root and foundation will be passed in here.
+        };
+        MDCComponent.prototype.getDefaultFoundation = function () {
+            // Subclasses must override this method to return a properly configured foundation class for the
+            // component.
+            throw new Error('Subclasses must override getDefaultFoundation to return a properly configured ' +
+                'foundation class');
+        };
+        MDCComponent.prototype.initialSyncWithDOM = function () {
+            // Subclasses should override this method if they need to perform work to synchronize with a host DOM
+            // object. An example of this would be a form control wrapper that needs to synchronize its internal state
+            // to some property or attribute of the host DOM. Please note: this is *not* the place to perform DOM
+            // reads/writes that would cause layout / paint, as this is called synchronously from within the constructor.
+        };
+        MDCComponent.prototype.destroy = function () {
+            // Subclasses may implement this method to release any resources / deregister any listeners they have
+            // attached. An example of this might be deregistering a resize event from the window object.
+            this.foundation.destroy();
+        };
+        MDCComponent.prototype.listen = function (evtType, handler, options) {
+            this.root.addEventListener(evtType, handler, options);
+        };
+        MDCComponent.prototype.unlisten = function (evtType, handler, options) {
+            this.root.removeEventListener(evtType, handler, options);
+        };
+        /**
+         * Fires a cross-browser-compatible custom event from the component root of the given type, with the given data.
+         */
+        MDCComponent.prototype.emit = function (evtType, evtData, shouldBubble) {
+            if (shouldBubble === void 0) { shouldBubble = false; }
+            var evt;
+            if (typeof CustomEvent === 'function') {
+                evt = new CustomEvent(evtType, {
+                    bubbles: shouldBubble,
+                    detail: evtData,
+                });
+            }
+            else {
+                evt = document.createEvent('CustomEvent');
+                evt.initCustomEvent(evtType, shouldBubble, false, evtData);
+            }
+            this.root.dispatchEvent(evt);
+        };
+        return MDCComponent;
     }());
 
     /**
@@ -920,7 +1058,7 @@ var app = (function () {
      * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
      * THE SOFTWARE.
      */
-    var cssClasses$d = {
+    var cssClasses$f = {
         // Ripple is a special case where the "root" component is really a "mixin" of sorts,
         // given that it's an 'upgrade' to an existing component. That being said it is the root
         // CSS class that all other CSS classes derive from.
@@ -930,7 +1068,7 @@ var app = (function () {
         ROOT: 'mdc-ripple-upgraded',
         UNBOUNDED: 'mdc-ripple-upgraded--unbounded',
     };
-    var strings$b = {
+    var strings$e = {
         VAR_FG_SCALE: '--mdc-ripple-fg-scale',
         VAR_FG_SIZE: '--mdc-ripple-fg-size',
         VAR_FG_TRANSLATE_END: '--mdc-ripple-fg-translate-end',
@@ -1066,14 +1204,14 @@ var app = (function () {
         }
         Object.defineProperty(MDCRippleFoundation, "cssClasses", {
             get: function () {
-                return cssClasses$d;
+                return cssClasses$f;
             },
             enumerable: false,
             configurable: true
         });
         Object.defineProperty(MDCRippleFoundation, "strings", {
             get: function () {
-                return strings$b;
+                return strings$e;
             },
             enumerable: false,
             configurable: true
@@ -1516,6 +1654,123 @@ var app = (function () {
 
     /**
      * @license
+     * Copyright 2016 Google Inc.
+     *
+     * Permission is hereby granted, free of charge, to any person obtaining a copy
+     * of this software and associated documentation files (the "Software"), to deal
+     * in the Software without restriction, including without limitation the rights
+     * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+     * copies of the Software, and to permit persons to whom the Software is
+     * furnished to do so, subject to the following conditions:
+     *
+     * The above copyright notice and this permission notice shall be included in
+     * all copies or substantial portions of the Software.
+     *
+     * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+     * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+     * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+     * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+     * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+     * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+     * THE SOFTWARE.
+     */
+    var MDCRipple = /** @class */ (function (_super) {
+        __extends(MDCRipple, _super);
+        function MDCRipple() {
+            var _this = _super !== null && _super.apply(this, arguments) || this;
+            _this.disabled = false;
+            return _this;
+        }
+        MDCRipple.attachTo = function (root, opts) {
+            if (opts === void 0) { opts = {
+                isUnbounded: undefined
+            }; }
+            var ripple = new MDCRipple(root);
+            // Only override unbounded behavior if option is explicitly specified
+            if (opts.isUnbounded !== undefined) {
+                ripple.unbounded = opts.isUnbounded;
+            }
+            return ripple;
+        };
+        MDCRipple.createAdapter = function (instance) {
+            return {
+                addClass: function (className) { return instance.root.classList.add(className); },
+                browserSupportsCssVars: function () { return supportsCssVariables(window); },
+                computeBoundingRect: function () { return instance.root.getBoundingClientRect(); },
+                containsEventTarget: function (target) { return instance.root.contains(target); },
+                deregisterDocumentInteractionHandler: function (evtType, handler) {
+                    return document.documentElement.removeEventListener(evtType, handler, applyPassive$1());
+                },
+                deregisterInteractionHandler: function (evtType, handler) {
+                    return instance.root
+                        .removeEventListener(evtType, handler, applyPassive$1());
+                },
+                deregisterResizeHandler: function (handler) {
+                    return window.removeEventListener('resize', handler);
+                },
+                getWindowPageOffset: function () {
+                    return ({ x: window.pageXOffset, y: window.pageYOffset });
+                },
+                isSurfaceActive: function () { return matches$1(instance.root, ':active'); },
+                isSurfaceDisabled: function () { return Boolean(instance.disabled); },
+                isUnbounded: function () { return Boolean(instance.unbounded); },
+                registerDocumentInteractionHandler: function (evtType, handler) {
+                    return document.documentElement.addEventListener(evtType, handler, applyPassive$1());
+                },
+                registerInteractionHandler: function (evtType, handler) {
+                    return instance.root
+                        .addEventListener(evtType, handler, applyPassive$1());
+                },
+                registerResizeHandler: function (handler) {
+                    return window.addEventListener('resize', handler);
+                },
+                removeClass: function (className) { return instance.root.classList.remove(className); },
+                updateCssVariable: function (varName, value) {
+                    return instance.root.style.setProperty(varName, value);
+                },
+            };
+        };
+        Object.defineProperty(MDCRipple.prototype, "unbounded", {
+            get: function () {
+                return Boolean(this.isUnbounded);
+            },
+            set: function (unbounded) {
+                this.isUnbounded = Boolean(unbounded);
+                this.setUnbounded();
+            },
+            enumerable: false,
+            configurable: true
+        });
+        MDCRipple.prototype.activate = function () {
+            this.foundation.activate();
+        };
+        MDCRipple.prototype.deactivate = function () {
+            this.foundation.deactivate();
+        };
+        MDCRipple.prototype.layout = function () {
+            this.foundation.layout();
+        };
+        MDCRipple.prototype.getDefaultFoundation = function () {
+            return new MDCRippleFoundation(MDCRipple.createAdapter(this));
+        };
+        MDCRipple.prototype.initialSyncWithDOM = function () {
+            var root = this.root;
+            this.isUnbounded = 'mdcRippleIsUnbounded' in root.dataset;
+        };
+        /**
+         * Closure Compiler throws an access control error when directly accessing a
+         * protected or private property inside a getter/setter, like unbounded above.
+         * By accessing the protected property inside a method, we solve that problem.
+         * That's why this function exists.
+         */
+        MDCRipple.prototype.setUnbounded = function () {
+            this.foundation.setUnbounded(Boolean(this.isUnbounded));
+        };
+        return MDCRipple;
+    }(MDCComponent));
+
+    /**
+     * @license
      * Copyright 2018 Google Inc.
      *
      * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -1536,7 +1791,7 @@ var app = (function () {
      * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
      * THE SOFTWARE.
      */
-    var cssClasses$c = {
+    var cssClasses$e = {
         FIXED_CLASS: 'mdc-top-app-bar--fixed',
         FIXED_SCROLLED_CLASS: 'mdc-top-app-bar--fixed-scrolled',
         SHORT_CLASS: 'mdc-top-app-bar--short',
@@ -1547,7 +1802,7 @@ var app = (function () {
         DEBOUNCE_THROTTLE_RESIZE_TIME_MS: 100,
         MAX_TOP_APP_BAR_HEIGHT: 128,
     };
-    var strings$a = {
+    var strings$d = {
         ACTION_ITEM_SELECTOR: '.mdc-top-app-bar__action-item',
         NAVIGATION_EVENT: 'MDCTopAppBar:nav',
         NAVIGATION_ICON_SELECTOR: '.mdc-top-app-bar__navigation-icon',
@@ -1585,14 +1840,14 @@ var app = (function () {
         }
         Object.defineProperty(MDCTopAppBarBaseFoundation, "strings", {
             get: function () {
-                return strings$a;
+                return strings$d;
             },
             enumerable: false,
             configurable: true
         });
         Object.defineProperty(MDCTopAppBarBaseFoundation, "cssClasses", {
             get: function () {
-                return cssClasses$c;
+                return cssClasses$e;
             },
             enumerable: false,
             configurable: true
@@ -1839,13 +2094,13 @@ var app = (function () {
             var currentScroll = this.adapter.getViewportScrollY();
             if (currentScroll <= 0) {
                 if (this.wasScrolled) {
-                    this.adapter.removeClass(cssClasses$c.FIXED_SCROLLED_CLASS);
+                    this.adapter.removeClass(cssClasses$e.FIXED_SCROLLED_CLASS);
                     this.wasScrolled = false;
                 }
             }
             else {
                 if (!this.wasScrolled) {
-                    this.adapter.addClass(cssClasses$c.FIXED_SCROLLED_CLASS);
+                    this.adapter.addClass(cssClasses$e.FIXED_SCROLLED_CLASS);
                     this.wasScrolled = true;
                 }
             }
@@ -1895,10 +2150,10 @@ var app = (function () {
         MDCShortTopAppBarFoundation.prototype.init = function () {
             _super.prototype.init.call(this);
             if (this.adapter.getTotalActionItems() > 0) {
-                this.adapter.addClass(cssClasses$c.SHORT_HAS_ACTION_ITEM_CLASS);
+                this.adapter.addClass(cssClasses$e.SHORT_HAS_ACTION_ITEM_CLASS);
             }
             // If initialized with SHORT_COLLAPSED_CLASS, the bar should always be collapsed
-            this.setAlwaysCollapsed(this.adapter.hasClass(cssClasses$c.SHORT_COLLAPSED_CLASS));
+            this.setAlwaysCollapsed(this.adapter.hasClass(cssClasses$e.SHORT_COLLAPSED_CLASS));
         };
         /**
          * Set if the short top app bar should always be collapsed.
@@ -1942,11 +2197,11 @@ var app = (function () {
             }
         };
         MDCShortTopAppBarFoundation.prototype.uncollapse = function () {
-            this.adapter.removeClass(cssClasses$c.SHORT_COLLAPSED_CLASS);
+            this.adapter.removeClass(cssClasses$e.SHORT_COLLAPSED_CLASS);
             this.collapsed = false;
         };
         MDCShortTopAppBarFoundation.prototype.collapse = function () {
-            this.adapter.addClass(cssClasses$c.SHORT_COLLAPSED_CLASS);
+            this.adapter.addClass(cssClasses$e.SHORT_COLLAPSED_CLASS);
             this.collapsed = true;
         };
         return MDCShortTopAppBarFoundation;
@@ -2246,9 +2501,9 @@ var app = (function () {
 
     const { window: window_1 } = globals;
 
-    const file$r = "node_modules/@smui/top-app-bar/dist/TopAppBar.svelte";
+    const file$s = "node_modules/@smui/top-app-bar/dist/TopAppBar.svelte";
 
-    function create_fragment$w(ctx) {
+    function create_fragment$x(ctx) {
     	let header;
     	let header_class_value;
     	let header_style_value;
@@ -2275,7 +2530,7 @@ var app = (function () {
     			})
     		},
     		{
-    			style: header_style_value = Object.entries(/*internalStyles*/ ctx[12]).map(func$8).concat([/*style*/ ctx[3]]).join(' ')
+    			style: header_style_value = Object.entries(/*internalStyles*/ ctx[12]).map(func$9).concat([/*style*/ ctx[3]]).join(' ')
     		},
     		/*$$restProps*/ ctx[15]
     	];
@@ -2291,7 +2546,7 @@ var app = (function () {
     			header = element("header");
     			if (default_slot) default_slot.c();
     			set_attributes(header, header_data);
-    			add_location(header, file$r, 9, 0, 208);
+    			add_location(header, file$s, 9, 0, 208);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -2347,7 +2602,7 @@ var app = (function () {
     					'mdc-top-app-bar--dense': /*dense*/ ctx[7],
     					.../*internalClasses*/ ctx[11]
     				}))) && { class: header_class_value },
-    				(!current || dirty[0] & /*internalStyles, style*/ 4104 && header_style_value !== (header_style_value = Object.entries(/*internalStyles*/ ctx[12]).map(func$8).concat([/*style*/ ctx[3]]).join(' '))) && { style: header_style_value },
+    				(!current || dirty[0] & /*internalStyles, style*/ 4104 && header_style_value !== (header_style_value = Object.entries(/*internalStyles*/ ctx[12]).map(func$9).concat([/*style*/ ctx[3]]).join(' '))) && { style: header_style_value },
     				dirty[0] & /*$$restProps*/ 32768 && /*$$restProps*/ ctx[15]
     			]));
 
@@ -2373,7 +2628,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment$w.name,
+    		id: create_fragment$x.name,
     		type: "component",
     		source: "",
     		ctx
@@ -2382,9 +2637,9 @@ var app = (function () {
     	return block;
     }
 
-    const func$8 = ([name, value]) => `${name}: ${value};`;
+    const func$9 = ([name, value]) => `${name}: ${value};`;
 
-    function instance_1$c($$self, $$props, $$invalidate) {
+    function instance_1$d($$self, $$props, $$invalidate) {
     	const omit_props_names = [
     		"use","class","style","variant","color","collapsed","prominent","dense","scrollTarget","getPropStore","getElement"
     	];
@@ -2679,8 +2934,8 @@ var app = (function () {
     		init(
     			this,
     			options,
-    			instance_1$c,
-    			create_fragment$w,
+    			instance_1$d,
+    			create_fragment$x,
     			safe_not_equal,
     			{
     				use: 1,
@@ -2703,7 +2958,7 @@ var app = (function () {
     			component: this,
     			tagName: "TopAppBar",
     			options,
-    			id: create_fragment$w.name
+    			id: create_fragment$x.name
     		});
     	}
 
@@ -2797,9 +3052,9 @@ var app = (function () {
     }
 
     /* node_modules/@smui/common/dist/elements/Div.svelte generated by Svelte v3.49.0 */
-    const file$q = "node_modules/@smui/common/dist/elements/Div.svelte";
+    const file$r = "node_modules/@smui/common/dist/elements/Div.svelte";
 
-    function create_fragment$v(ctx) {
+    function create_fragment$w(ctx) {
     	let div;
     	let useActions_action;
     	let current;
@@ -2819,7 +3074,7 @@ var app = (function () {
     			div = element("div");
     			if (default_slot) default_slot.c();
     			set_attributes(div, div_data);
-    			add_location(div, file$q, 0, 0, 0);
+    			add_location(div, file$r, 0, 0, 0);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -2882,7 +3137,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment$v.name,
+    		id: create_fragment$w.name,
     		type: "component",
     		source: "",
     		ctx
@@ -2952,13 +3207,13 @@ var app = (function () {
     class Div$1 extends SvelteComponentDev {
     	constructor(options) {
     		super(options);
-    		init(this, options, instance$j, create_fragment$v, safe_not_equal, { use: 0, getElement: 4 });
+    		init(this, options, instance$j, create_fragment$w, safe_not_equal, { use: 0, getElement: 4 });
 
     		dispatch_dev("SvelteRegisterComponent", {
     			component: this,
     			tagName: "Div",
     			options,
-    			id: create_fragment$v.name
+    			id: create_fragment$w.name
     		});
     	}
 
@@ -2982,7 +3237,7 @@ var app = (function () {
     /* node_modules/@smui/common/dist/classadder/ClassAdder.svelte generated by Svelte v3.49.0 */
 
     // (1:0) <svelte:component   this={component}   bind:this={element}   use={[forwardEvents, ...use]}   class={classMap({     [className]: true,     [smuiClass]: true,     ...smuiClassMap,   })}   {...props}   {...$$restProps}>
-    function create_default_slot$8(ctx) {
+    function create_default_slot$9(ctx) {
     	let current;
     	const default_slot_template = /*#slots*/ ctx[10].default;
     	const default_slot = create_slot(default_slot_template, ctx, /*$$scope*/ ctx[12], null);
@@ -3030,7 +3285,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_default_slot$8.name,
+    		id: create_default_slot$9.name,
     		type: "slot",
     		source: "(1:0) <svelte:component   this={component}   bind:this={element}   use={[forwardEvents, ...use]}   class={classMap({     [className]: true,     [smuiClass]: true,     ...smuiClassMap,   })}   {...props}   {...$$restProps}>",
     		ctx
@@ -3039,7 +3294,7 @@ var app = (function () {
     	return block;
     }
 
-    function create_fragment$u(ctx) {
+    function create_fragment$v(ctx) {
     	let switch_instance;
     	let switch_instance_anchor;
     	let current;
@@ -3063,7 +3318,7 @@ var app = (function () {
 
     	function switch_props(ctx) {
     		let switch_instance_props = {
-    			$$slots: { default: [create_default_slot$8] },
+    			$$slots: { default: [create_default_slot$9] },
     			$$scope: { ctx }
     		};
 
@@ -3163,7 +3418,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment$u.name,
+    		id: create_fragment$v.name,
     		type: "component",
     		source: "",
     		ctx
@@ -3293,7 +3548,7 @@ var app = (function () {
     	constructor(options) {
     		super(options);
 
-    		init(this, options, instance$i, create_fragment$u, safe_not_equal, {
+    		init(this, options, instance$i, create_fragment$v, safe_not_equal, {
     			use: 0,
     			class: 1,
     			component: 2,
@@ -3304,7 +3559,7 @@ var app = (function () {
     			component: this,
     			tagName: "ClassAdder",
     			options,
-    			id: create_fragment$u.name
+    			id: create_fragment$v.name
     		});
     	}
 
@@ -3358,9 +3613,9 @@ var app = (function () {
     }
 
     /* node_modules/@smui/common/dist/elements/A.svelte generated by Svelte v3.49.0 */
-    const file$p = "node_modules/@smui/common/dist/elements/A.svelte";
+    const file$q = "node_modules/@smui/common/dist/elements/A.svelte";
 
-    function create_fragment$t(ctx) {
+    function create_fragment$u(ctx) {
     	let a;
     	let useActions_action;
     	let current;
@@ -3380,7 +3635,7 @@ var app = (function () {
     			a = element("a");
     			if (default_slot) default_slot.c();
     			set_attributes(a, a_data);
-    			add_location(a, file$p, 0, 0, 0);
+    			add_location(a, file$q, 0, 0, 0);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -3447,7 +3702,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment$t.name,
+    		id: create_fragment$u.name,
     		type: "component",
     		source: "",
     		ctx
@@ -3522,13 +3777,13 @@ var app = (function () {
     class A$1 extends SvelteComponentDev {
     	constructor(options) {
     		super(options);
-    		init(this, options, instance$h, create_fragment$t, safe_not_equal, { use: 0, href: 1, getElement: 5 });
+    		init(this, options, instance$h, create_fragment$u, safe_not_equal, { use: 0, href: 1, getElement: 5 });
 
     		dispatch_dev("SvelteRegisterComponent", {
     			component: this,
     			tagName: "A",
     			options,
-    			id: create_fragment$t.name
+    			id: create_fragment$u.name
     		});
     	}
 
@@ -3558,9 +3813,9 @@ var app = (function () {
     }
 
     /* node_modules/@smui/common/dist/elements/H1.svelte generated by Svelte v3.49.0 */
-    const file$o = "node_modules/@smui/common/dist/elements/H1.svelte";
+    const file$p = "node_modules/@smui/common/dist/elements/H1.svelte";
 
-    function create_fragment$s(ctx) {
+    function create_fragment$t(ctx) {
     	let h1;
     	let useActions_action;
     	let current;
@@ -3580,7 +3835,7 @@ var app = (function () {
     			h1 = element("h1");
     			if (default_slot) default_slot.c();
     			set_attributes(h1, h1_data);
-    			add_location(h1, file$o, 0, 0, 0);
+    			add_location(h1, file$p, 0, 0, 0);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -3643,7 +3898,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment$s.name,
+    		id: create_fragment$t.name,
     		type: "component",
     		source: "",
     		ctx
@@ -3713,13 +3968,13 @@ var app = (function () {
     class H1$1 extends SvelteComponentDev {
     	constructor(options) {
     		super(options);
-    		init(this, options, instance$g, create_fragment$s, safe_not_equal, { use: 0, getElement: 4 });
+    		init(this, options, instance$g, create_fragment$t, safe_not_equal, { use: 0, getElement: 4 });
 
     		dispatch_dev("SvelteRegisterComponent", {
     			component: this,
     			tagName: "H1",
     			options,
-    			id: create_fragment$s.name
+    			id: create_fragment$t.name
     		});
     	}
 
@@ -3741,9 +3996,9 @@ var app = (function () {
     }
 
     /* node_modules/@smui/common/dist/elements/H2.svelte generated by Svelte v3.49.0 */
-    const file$n = "node_modules/@smui/common/dist/elements/H2.svelte";
+    const file$o = "node_modules/@smui/common/dist/elements/H2.svelte";
 
-    function create_fragment$r(ctx) {
+    function create_fragment$s(ctx) {
     	let h2;
     	let useActions_action;
     	let current;
@@ -3763,7 +4018,7 @@ var app = (function () {
     			h2 = element("h2");
     			if (default_slot) default_slot.c();
     			set_attributes(h2, h2_data);
-    			add_location(h2, file$n, 0, 0, 0);
+    			add_location(h2, file$o, 0, 0, 0);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -3826,7 +4081,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment$r.name,
+    		id: create_fragment$s.name,
     		type: "component",
     		source: "",
     		ctx
@@ -3896,13 +4151,13 @@ var app = (function () {
     class H2$1 extends SvelteComponentDev {
     	constructor(options) {
     		super(options);
-    		init(this, options, instance$f, create_fragment$r, safe_not_equal, { use: 0, getElement: 4 });
+    		init(this, options, instance$f, create_fragment$s, safe_not_equal, { use: 0, getElement: 4 });
 
     		dispatch_dev("SvelteRegisterComponent", {
     			component: this,
     			tagName: "H2",
     			options,
-    			id: create_fragment$r.name
+    			id: create_fragment$s.name
     		});
     	}
 
@@ -3924,9 +4179,9 @@ var app = (function () {
     }
 
     /* node_modules/@smui/common/dist/elements/H3.svelte generated by Svelte v3.49.0 */
-    const file$m = "node_modules/@smui/common/dist/elements/H3.svelte";
+    const file$n = "node_modules/@smui/common/dist/elements/H3.svelte";
 
-    function create_fragment$q(ctx) {
+    function create_fragment$r(ctx) {
     	let h3;
     	let useActions_action;
     	let current;
@@ -3946,7 +4201,7 @@ var app = (function () {
     			h3 = element("h3");
     			if (default_slot) default_slot.c();
     			set_attributes(h3, h3_data);
-    			add_location(h3, file$m, 0, 0, 0);
+    			add_location(h3, file$n, 0, 0, 0);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -4009,7 +4264,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment$q.name,
+    		id: create_fragment$r.name,
     		type: "component",
     		source: "",
     		ctx
@@ -4079,13 +4334,13 @@ var app = (function () {
     class H3$1 extends SvelteComponentDev {
     	constructor(options) {
     		super(options);
-    		init(this, options, instance$e, create_fragment$q, safe_not_equal, { use: 0, getElement: 4 });
+    		init(this, options, instance$e, create_fragment$r, safe_not_equal, { use: 0, getElement: 4 });
 
     		dispatch_dev("SvelteRegisterComponent", {
     			component: this,
     			tagName: "H3",
     			options,
-    			id: create_fragment$q.name
+    			id: create_fragment$r.name
     		});
     	}
 
@@ -4107,9 +4362,9 @@ var app = (function () {
     }
 
     /* node_modules/@smui/common/dist/elements/Li.svelte generated by Svelte v3.49.0 */
-    const file$l = "node_modules/@smui/common/dist/elements/Li.svelte";
+    const file$m = "node_modules/@smui/common/dist/elements/Li.svelte";
 
-    function create_fragment$p(ctx) {
+    function create_fragment$q(ctx) {
     	let li;
     	let useActions_action;
     	let current;
@@ -4129,7 +4384,7 @@ var app = (function () {
     			li = element("li");
     			if (default_slot) default_slot.c();
     			set_attributes(li, li_data);
-    			add_location(li, file$l, 0, 0, 0);
+    			add_location(li, file$m, 0, 0, 0);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -4192,7 +4447,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment$p.name,
+    		id: create_fragment$q.name,
     		type: "component",
     		source: "",
     		ctx
@@ -4262,13 +4517,13 @@ var app = (function () {
     class Li$1 extends SvelteComponentDev {
     	constructor(options) {
     		super(options);
-    		init(this, options, instance$d, create_fragment$p, safe_not_equal, { use: 0, getElement: 4 });
+    		init(this, options, instance$d, create_fragment$q, safe_not_equal, { use: 0, getElement: 4 });
 
     		dispatch_dev("SvelteRegisterComponent", {
     			component: this,
     			tagName: "Li",
     			options,
-    			id: create_fragment$p.name
+    			id: create_fragment$q.name
     		});
     	}
 
@@ -4290,9 +4545,9 @@ var app = (function () {
     }
 
     /* node_modules/@smui/common/dist/elements/Nav.svelte generated by Svelte v3.49.0 */
-    const file$k = "node_modules/@smui/common/dist/elements/Nav.svelte";
+    const file$l = "node_modules/@smui/common/dist/elements/Nav.svelte";
 
-    function create_fragment$o(ctx) {
+    function create_fragment$p(ctx) {
     	let nav;
     	let useActions_action;
     	let current;
@@ -4312,7 +4567,7 @@ var app = (function () {
     			nav = element("nav");
     			if (default_slot) default_slot.c();
     			set_attributes(nav, nav_data);
-    			add_location(nav, file$k, 0, 0, 0);
+    			add_location(nav, file$l, 0, 0, 0);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -4375,7 +4630,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment$o.name,
+    		id: create_fragment$p.name,
     		type: "component",
     		source: "",
     		ctx
@@ -4445,13 +4700,13 @@ var app = (function () {
     class Nav$1 extends SvelteComponentDev {
     	constructor(options) {
     		super(options);
-    		init(this, options, instance$c, create_fragment$o, safe_not_equal, { use: 0, getElement: 4 });
+    		init(this, options, instance$c, create_fragment$p, safe_not_equal, { use: 0, getElement: 4 });
 
     		dispatch_dev("SvelteRegisterComponent", {
     			component: this,
     			tagName: "Nav",
     			options,
-    			id: create_fragment$o.name
+    			id: create_fragment$p.name
     		});
     	}
 
@@ -4473,9 +4728,9 @@ var app = (function () {
     }
 
     /* node_modules/@smui/common/dist/elements/Span.svelte generated by Svelte v3.49.0 */
-    const file$j = "node_modules/@smui/common/dist/elements/Span.svelte";
+    const file$k = "node_modules/@smui/common/dist/elements/Span.svelte";
 
-    function create_fragment$n(ctx) {
+    function create_fragment$o(ctx) {
     	let span;
     	let useActions_action;
     	let current;
@@ -4495,7 +4750,7 @@ var app = (function () {
     			span = element("span");
     			if (default_slot) default_slot.c();
     			set_attributes(span, span_data);
-    			add_location(span, file$j, 0, 0, 0);
+    			add_location(span, file$k, 0, 0, 0);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -4558,7 +4813,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment$n.name,
+    		id: create_fragment$o.name,
     		type: "component",
     		source: "",
     		ctx
@@ -4628,13 +4883,13 @@ var app = (function () {
     class Span$1 extends SvelteComponentDev {
     	constructor(options) {
     		super(options);
-    		init(this, options, instance$b, create_fragment$n, safe_not_equal, { use: 0, getElement: 4 });
+    		init(this, options, instance$b, create_fragment$o, safe_not_equal, { use: 0, getElement: 4 });
 
     		dispatch_dev("SvelteRegisterComponent", {
     			component: this,
     			tagName: "Span",
     			options,
-    			id: create_fragment$n.name
+    			id: create_fragment$o.name
     		});
     	}
 
@@ -4656,9 +4911,9 @@ var app = (function () {
     }
 
     /* node_modules/@smui/common/dist/elements/Ul.svelte generated by Svelte v3.49.0 */
-    const file$i = "node_modules/@smui/common/dist/elements/Ul.svelte";
+    const file$j = "node_modules/@smui/common/dist/elements/Ul.svelte";
 
-    function create_fragment$m(ctx) {
+    function create_fragment$n(ctx) {
     	let ul;
     	let useActions_action;
     	let current;
@@ -4678,7 +4933,7 @@ var app = (function () {
     			ul = element("ul");
     			if (default_slot) default_slot.c();
     			set_attributes(ul, ul_data);
-    			add_location(ul, file$i, 0, 0, 0);
+    			add_location(ul, file$j, 0, 0, 0);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -4741,7 +4996,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment$m.name,
+    		id: create_fragment$n.name,
     		type: "component",
     		source: "",
     		ctx
@@ -4811,13 +5066,13 @@ var app = (function () {
     class Ul$1 extends SvelteComponentDev {
     	constructor(options) {
     		super(options);
-    		init(this, options, instance$a, create_fragment$m, safe_not_equal, { use: 0, getElement: 4 });
+    		init(this, options, instance$a, create_fragment$n, safe_not_equal, { use: 0, getElement: 4 });
 
     		dispatch_dev("SvelteRegisterComponent", {
     			component: this,
     			tagName: "Ul",
     			options,
-    			id: create_fragment$m.name
+    			id: create_fragment$n.name
     		});
     	}
 
@@ -4854,9 +5109,9 @@ var app = (function () {
     });
 
     /* node_modules/@smui/top-app-bar/dist/Section.svelte generated by Svelte v3.49.0 */
-    const file$h = "node_modules/@smui/top-app-bar/dist/Section.svelte";
+    const file$i = "node_modules/@smui/top-app-bar/dist/Section.svelte";
 
-    function create_fragment$l(ctx) {
+    function create_fragment$m(ctx) {
     	let section;
     	let section_class_value;
     	let useActions_action;
@@ -4890,7 +5145,7 @@ var app = (function () {
     			section = element("section");
     			if (default_slot) default_slot.c();
     			set_attributes(section, section_data);
-    			add_location(section, file$h, 0, 0, 0);
+    			add_location(section, file$i, 0, 0, 0);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -4963,7 +5218,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment$l.name,
+    		id: create_fragment$m.name,
     		type: "component",
     		source: "",
     		ctx
@@ -5059,7 +5314,7 @@ var app = (function () {
     	constructor(options) {
     		super(options);
 
-    		init(this, options, instance$9, create_fragment$l, safe_not_equal, {
+    		init(this, options, instance$9, create_fragment$m, safe_not_equal, {
     			use: 0,
     			class: 1,
     			align: 2,
@@ -5071,7 +5326,7 @@ var app = (function () {
     			component: this,
     			tagName: "Section",
     			options,
-    			id: create_fragment$l.name
+    			id: create_fragment$m.name
     		});
     	}
 
@@ -5145,7 +5400,7 @@ var app = (function () {
      * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
      * THE SOFTWARE.
      */
-    var cssClasses$b = {
+    var cssClasses$d = {
         LABEL_FLOAT_ABOVE: 'mdc-floating-label--float-above',
         LABEL_REQUIRED: 'mdc-floating-label--required',
         LABEL_SHAKE: 'mdc-floating-label--shake',
@@ -5185,7 +5440,7 @@ var app = (function () {
         }
         Object.defineProperty(MDCFloatingLabelFoundation, "cssClasses", {
             get: function () {
-                return cssClasses$b;
+                return cssClasses$d;
             },
             enumerable: false,
             configurable: true
@@ -5289,7 +5544,7 @@ var app = (function () {
      * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
      * THE SOFTWARE.
      */
-    var cssClasses$a = {
+    var cssClasses$c = {
         LINE_RIPPLE_ACTIVE: 'mdc-line-ripple--active',
         LINE_RIPPLE_DEACTIVATING: 'mdc-line-ripple--deactivating',
     };
@@ -5327,7 +5582,7 @@ var app = (function () {
         }
         Object.defineProperty(MDCLineRippleFoundation, "cssClasses", {
             get: function () {
-                return cssClasses$a;
+                return cssClasses$c;
             },
             enumerable: false,
             configurable: true
@@ -5358,23 +5613,23 @@ var app = (function () {
             this.adapter.deregisterEventHandler('transitionend', this.transitionEndHandler);
         };
         MDCLineRippleFoundation.prototype.activate = function () {
-            this.adapter.removeClass(cssClasses$a.LINE_RIPPLE_DEACTIVATING);
-            this.adapter.addClass(cssClasses$a.LINE_RIPPLE_ACTIVE);
+            this.adapter.removeClass(cssClasses$c.LINE_RIPPLE_DEACTIVATING);
+            this.adapter.addClass(cssClasses$c.LINE_RIPPLE_ACTIVE);
         };
         MDCLineRippleFoundation.prototype.setRippleCenter = function (xCoordinate) {
             this.adapter.setStyle('transform-origin', xCoordinate + "px center");
         };
         MDCLineRippleFoundation.prototype.deactivate = function () {
-            this.adapter.addClass(cssClasses$a.LINE_RIPPLE_DEACTIVATING);
+            this.adapter.addClass(cssClasses$c.LINE_RIPPLE_DEACTIVATING);
         };
         MDCLineRippleFoundation.prototype.handleTransitionEnd = function (evt) {
             // Wait for the line ripple to be either transparent or opaque
             // before emitting the animation end event
-            var isDeactivating = this.adapter.hasClass(cssClasses$a.LINE_RIPPLE_DEACTIVATING);
+            var isDeactivating = this.adapter.hasClass(cssClasses$c.LINE_RIPPLE_DEACTIVATING);
             if (evt.propertyName === 'opacity') {
                 if (isDeactivating) {
-                    this.adapter.removeClass(cssClasses$a.LINE_RIPPLE_ACTIVE);
-                    this.adapter.removeClass(cssClasses$a.LINE_RIPPLE_DEACTIVATING);
+                    this.adapter.removeClass(cssClasses$c.LINE_RIPPLE_ACTIVE);
+                    this.adapter.removeClass(cssClasses$c.LINE_RIPPLE_DEACTIVATING);
                 }
             }
         };
@@ -5403,14 +5658,14 @@ var app = (function () {
      * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
      * THE SOFTWARE.
      */
-    var strings$9 = {
+    var strings$c = {
         NOTCH_ELEMENT_SELECTOR: '.mdc-notched-outline__notch',
     };
     var numbers$6 = {
         // This should stay in sync with $mdc-notched-outline-padding * 2.
         NOTCH_ELEMENT_PADDING: 8,
     };
-    var cssClasses$9 = {
+    var cssClasses$b = {
         NO_LABEL: 'mdc-notched-outline--no-label',
         OUTLINE_NOTCHED: 'mdc-notched-outline--notched',
         OUTLINE_UPGRADED: 'mdc-notched-outline--upgraded',
@@ -5445,14 +5700,14 @@ var app = (function () {
         }
         Object.defineProperty(MDCNotchedOutlineFoundation, "strings", {
             get: function () {
-                return strings$9;
+                return strings$c;
             },
             enumerable: false,
             configurable: true
         });
         Object.defineProperty(MDCNotchedOutlineFoundation, "cssClasses", {
             get: function () {
-                return cssClasses$9;
+                return cssClasses$b;
             },
             enumerable: false,
             configurable: true
@@ -5525,7 +5780,7 @@ var app = (function () {
      * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
      * THE SOFTWARE.
      */
-    var strings$8 = {
+    var strings$b = {
         ARIA_CONTROLS: 'aria-controls',
         ARIA_DESCRIBEDBY: 'aria-describedby',
         INPUT_SELECTOR: '.mdc-text-field__input',
@@ -5537,7 +5792,7 @@ var app = (function () {
         SUFFIX_SELECTOR: '.mdc-text-field__affix--suffix',
         TRAILING_ICON_SELECTOR: '.mdc-text-field__icon--trailing'
     };
-    var cssClasses$8 = {
+    var cssClasses$a = {
         DISABLED: 'mdc-text-field--disabled',
         FOCUSED: 'mdc-text-field--focused',
         HELPER_LINE: 'mdc-text-field-helper-line',
@@ -5646,14 +5901,14 @@ var app = (function () {
         }
         Object.defineProperty(MDCTextFieldFoundation, "cssClasses", {
             get: function () {
-                return cssClasses$8;
+                return cssClasses$a;
             },
             enumerable: false,
             configurable: true
         });
         Object.defineProperty(MDCTextFieldFoundation, "strings", {
             get: function () {
-                return strings$8;
+                return strings$b;
             },
             enumerable: false,
             configurable: true
@@ -6084,10 +6339,10 @@ var app = (function () {
                 var helperTextVisible = this.helperText.isVisible();
                 var helperTextId = this.helperText.getId();
                 if (helperTextVisible && helperTextId) {
-                    this.adapter.setInputAttr(strings$8.ARIA_DESCRIBEDBY, helperTextId);
+                    this.adapter.setInputAttr(strings$b.ARIA_DESCRIBEDBY, helperTextId);
                 }
                 else {
-                    this.adapter.removeInputAttr(strings$8.ARIA_DESCRIBEDBY);
+                    this.adapter.removeInputAttr(strings$b.ARIA_DESCRIBEDBY);
                 }
             }
         };
@@ -6392,17 +6647,17 @@ var app = (function () {
     mappedKeyCodes.set(KEY_CODE.DELETE, KEY.DELETE);
     mappedKeyCodes.set(KEY_CODE.ESCAPE, KEY.ESCAPE);
     mappedKeyCodes.set(KEY_CODE.TAB, KEY.TAB);
-    var navigationKeys = new Set();
+    var navigationKeys$1 = new Set();
     // IE11 has no support for new Set with iterable so we need to initialize this
     // by hand.
-    navigationKeys.add(KEY.PAGE_UP);
-    navigationKeys.add(KEY.PAGE_DOWN);
-    navigationKeys.add(KEY.END);
-    navigationKeys.add(KEY.HOME);
-    navigationKeys.add(KEY.ARROW_LEFT);
-    navigationKeys.add(KEY.ARROW_UP);
-    navigationKeys.add(KEY.ARROW_RIGHT);
-    navigationKeys.add(KEY.ARROW_DOWN);
+    navigationKeys$1.add(KEY.PAGE_UP);
+    navigationKeys$1.add(KEY.PAGE_DOWN);
+    navigationKeys$1.add(KEY.END);
+    navigationKeys$1.add(KEY.HOME);
+    navigationKeys$1.add(KEY.ARROW_LEFT);
+    navigationKeys$1.add(KEY.ARROW_UP);
+    navigationKeys$1.add(KEY.ARROW_RIGHT);
+    navigationKeys$1.add(KEY.ARROW_DOWN);
     /**
      * normalizeKey returns the normalized string for a navigational action.
      */
@@ -6419,10 +6674,16 @@ var app = (function () {
         }
         return KEY.UNKNOWN;
     }
+    /**
+     * isNavigationEvent returns whether the event is a navigation event
+     */
+    function isNavigationEvent(evt) {
+        return navigationKeys$1.has(normalizeKey(evt));
+    }
 
     /* node_modules/@smui/common/dist/ContextFragment.svelte generated by Svelte v3.49.0 */
 
-    function create_fragment$k(ctx) {
+    function create_fragment$l(ctx) {
     	let current;
     	const default_slot_template = /*#slots*/ ctx[4].default;
     	const default_slot = create_slot(default_slot_template, ctx, /*$$scope*/ ctx[3], null);
@@ -6473,7 +6734,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment$k.name,
+    		id: create_fragment$l.name,
     		type: "component",
     		source: "",
     		ctx
@@ -6540,13 +6801,13 @@ var app = (function () {
     class ContextFragment extends SvelteComponentDev {
     	constructor(options) {
     		super(options);
-    		init(this, options, instance$8, create_fragment$k, safe_not_equal, { key: 1, value: 2 });
+    		init(this, options, instance$8, create_fragment$l, safe_not_equal, { key: 1, value: 2 });
 
     		dispatch_dev("SvelteRegisterComponent", {
     			component: this,
     			tagName: "ContextFragment",
     			options,
-    			id: create_fragment$k.name
+    			id: create_fragment$l.name
     		});
 
     		const { ctx } = this.$$;
@@ -6718,10 +6979,10 @@ var app = (function () {
 
     /* node_modules/@smui/floating-label/dist/FloatingLabel.svelte generated by Svelte v3.49.0 */
 
-    const file$g = "node_modules/@smui/floating-label/dist/FloatingLabel.svelte";
+    const file$h = "node_modules/@smui/floating-label/dist/FloatingLabel.svelte";
 
     // (19:0) {:else}
-    function create_else_block$3(ctx) {
+    function create_else_block$4(ctx) {
     	let label;
     	let label_class_value;
     	let label_style_value;
@@ -6765,7 +7026,7 @@ var app = (function () {
     			label = element("label");
     			if (default_slot) default_slot.c();
     			set_attributes(label, label_data);
-    			add_location(label, file$g, 19, 2, 494);
+    			add_location(label, file$h, 19, 2, 494);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, label, anchor);
@@ -6839,7 +7100,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_else_block$3.name,
+    		id: create_else_block$4.name,
     		type: "else",
     		source: "(19:0) {:else}",
     		ctx
@@ -6849,7 +7110,7 @@ var app = (function () {
     }
 
     // (1:0) {#if wrapped}
-    function create_if_block$6(ctx) {
+    function create_if_block$8(ctx) {
     	let span;
     	let span_class_value;
     	let span_style_value;
@@ -6871,7 +7132,7 @@ var app = (function () {
     			})
     		},
     		{
-    			style: span_style_value = Object.entries(/*internalStyles*/ ctx[9]).map(func$7).concat([/*style*/ ctx[4]]).join(' ')
+    			style: span_style_value = Object.entries(/*internalStyles*/ ctx[9]).map(func$8).concat([/*style*/ ctx[4]]).join(' ')
     		},
     		/*$$restProps*/ ctx[12]
     	];
@@ -6887,7 +7148,7 @@ var app = (function () {
     			span = element("span");
     			if (default_slot) default_slot.c();
     			set_attributes(span, span_data);
-    			add_location(span, file$g, 1, 2, 16);
+    			add_location(span, file$h, 1, 2, 16);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, span, anchor);
@@ -6932,7 +7193,7 @@ var app = (function () {
     					'mdc-floating-label--required': /*required*/ ctx[1],
     					.../*internalClasses*/ ctx[8]
     				}))) && { class: span_class_value },
-    				(!current || dirty & /*internalStyles, style*/ 528 && span_style_value !== (span_style_value = Object.entries(/*internalStyles*/ ctx[9]).map(func$7).concat([/*style*/ ctx[4]]).join(' '))) && { style: span_style_value },
+    				(!current || dirty & /*internalStyles, style*/ 528 && span_style_value !== (span_style_value = Object.entries(/*internalStyles*/ ctx[9]).map(func$8).concat([/*style*/ ctx[4]]).join(' '))) && { style: span_style_value },
     				dirty & /*$$restProps*/ 4096 && /*$$restProps*/ ctx[12]
     			]));
 
@@ -6958,7 +7219,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_if_block$6.name,
+    		id: create_if_block$8.name,
     		type: "if",
     		source: "(1:0) {#if wrapped}",
     		ctx
@@ -6967,12 +7228,12 @@ var app = (function () {
     	return block;
     }
 
-    function create_fragment$j(ctx) {
+    function create_fragment$k(ctx) {
     	let current_block_type_index;
     	let if_block;
     	let if_block_anchor;
     	let current;
-    	const if_block_creators = [create_if_block$6, create_else_block$3];
+    	const if_block_creators = [create_if_block$8, create_else_block$4];
     	const if_blocks = [];
 
     	function select_block_type(ctx, dirty) {
@@ -7040,7 +7301,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment$j.name,
+    		id: create_fragment$k.name,
     		type: "component",
     		source: "",
     		ctx
@@ -7049,10 +7310,10 @@ var app = (function () {
     	return block;
     }
 
-    const func$7 = ([name, value]) => `${name}: ${value};`;
+    const func$8 = ([name, value]) => `${name}: ${value};`;
     const func_1$1 = ([name, value]) => `${name}: ${value};`;
 
-    function instance_1$b($$self, $$props, $$invalidate) {
+    function instance_1$c($$self, $$props, $$invalidate) {
     	const omit_props_names = [
     		"use","class","style","for","floatAbove","required","wrapped","shake","float","setRequired","getWidth","getElement"
     	];
@@ -7310,7 +7571,7 @@ var app = (function () {
     	constructor(options) {
     		super(options);
 
-    		init(this, options, instance_1$b, create_fragment$j, safe_not_equal, {
+    		init(this, options, instance_1$c, create_fragment$k, safe_not_equal, {
     			use: 2,
     			class: 3,
     			style: 4,
@@ -7329,7 +7590,7 @@ var app = (function () {
     			component: this,
     			tagName: "FloatingLabel",
     			options,
-    			id: create_fragment$j.name
+    			id: create_fragment$k.name
     		});
     	}
 
@@ -7431,9 +7692,9 @@ var app = (function () {
     }
 
     /* node_modules/@smui/line-ripple/dist/LineRipple.svelte generated by Svelte v3.49.0 */
-    const file$f = "node_modules/@smui/line-ripple/dist/LineRipple.svelte";
+    const file$g = "node_modules/@smui/line-ripple/dist/LineRipple.svelte";
 
-    function create_fragment$i(ctx) {
+    function create_fragment$j(ctx) {
     	let div;
     	let div_class_value;
     	let div_style_value;
@@ -7451,7 +7712,7 @@ var app = (function () {
     			})
     		},
     		{
-    			style: div_style_value = Object.entries(/*internalStyles*/ ctx[6]).map(func$6).concat([/*style*/ ctx[2]]).join(' ')
+    			style: div_style_value = Object.entries(/*internalStyles*/ ctx[6]).map(func$7).concat([/*style*/ ctx[2]]).join(' ')
     		},
     		/*$$restProps*/ ctx[8]
     	];
@@ -7466,7 +7727,7 @@ var app = (function () {
     		c: function create() {
     			div = element("div");
     			set_attributes(div, div_data);
-    			add_location(div, file$f, 0, 0, 0);
+    			add_location(div, file$g, 0, 0, 0);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -7492,7 +7753,7 @@ var app = (function () {
     					'mdc-line-ripple--active': /*active*/ ctx[3],
     					.../*internalClasses*/ ctx[5]
     				})) && { class: div_class_value },
-    				dirty & /*internalStyles, style*/ 68 && div_style_value !== (div_style_value = Object.entries(/*internalStyles*/ ctx[6]).map(func$6).concat([/*style*/ ctx[2]]).join(' ')) && { style: div_style_value },
+    				dirty & /*internalStyles, style*/ 68 && div_style_value !== (div_style_value = Object.entries(/*internalStyles*/ ctx[6]).map(func$7).concat([/*style*/ ctx[2]]).join(' ')) && { style: div_style_value },
     				dirty & /*$$restProps*/ 256 && /*$$restProps*/ ctx[8]
     			]));
 
@@ -7510,7 +7771,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment$i.name,
+    		id: create_fragment$j.name,
     		type: "component",
     		source: "",
     		ctx
@@ -7519,9 +7780,9 @@ var app = (function () {
     	return block;
     }
 
-    const func$6 = ([name, value]) => `${name}: ${value};`;
+    const func$7 = ([name, value]) => `${name}: ${value};`;
 
-    function instance_1$a($$self, $$props, $$invalidate) {
+    function instance_1$b($$self, $$props, $$invalidate) {
     	const omit_props_names = [
     		"use","class","style","active","activate","deactivate","setRippleCenter","getElement"
     	];
@@ -7680,7 +7941,7 @@ var app = (function () {
     	constructor(options) {
     		super(options);
 
-    		init(this, options, instance_1$a, create_fragment$i, safe_not_equal, {
+    		init(this, options, instance_1$b, create_fragment$j, safe_not_equal, {
     			use: 0,
     			class: 1,
     			style: 2,
@@ -7695,7 +7956,7 @@ var app = (function () {
     			component: this,
     			tagName: "LineRipple",
     			options,
-    			id: create_fragment$i.name
+    			id: create_fragment$j.name
     		});
     	}
 
@@ -7765,10 +8026,10 @@ var app = (function () {
     }
 
     /* node_modules/@smui/notched-outline/dist/NotchedOutline.svelte generated by Svelte v3.49.0 */
-    const file$e = "node_modules/@smui/notched-outline/dist/NotchedOutline.svelte";
+    const file$f = "node_modules/@smui/notched-outline/dist/NotchedOutline.svelte";
 
     // (17:2) {#if !noLabel}
-    function create_if_block$5(ctx) {
+    function create_if_block$7(ctx) {
     	let div;
     	let div_style_value;
     	let current;
@@ -7780,8 +8041,8 @@ var app = (function () {
     			div = element("div");
     			if (default_slot) default_slot.c();
     			attr_dev(div, "class", "mdc-notched-outline__notch");
-    			attr_dev(div, "style", div_style_value = Object.entries(/*notchStyles*/ ctx[7]).map(func$5).join(' '));
-    			add_location(div, file$e, 17, 4, 496);
+    			attr_dev(div, "style", div_style_value = Object.entries(/*notchStyles*/ ctx[7]).map(func$6).join(' '));
+    			add_location(div, file$f, 17, 4, 496);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, div, anchor);
@@ -7808,7 +8069,7 @@ var app = (function () {
     				}
     			}
 
-    			if (!current || dirty & /*notchStyles*/ 128 && div_style_value !== (div_style_value = Object.entries(/*notchStyles*/ ctx[7]).map(func$5).join(' '))) {
+    			if (!current || dirty & /*notchStyles*/ 128 && div_style_value !== (div_style_value = Object.entries(/*notchStyles*/ ctx[7]).map(func$6).join(' '))) {
     				attr_dev(div, "style", div_style_value);
     			}
     		},
@@ -7829,7 +8090,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_if_block$5.name,
+    		id: create_if_block$7.name,
     		type: "if",
     		source: "(17:2) {#if !noLabel}",
     		ctx
@@ -7838,7 +8099,7 @@ var app = (function () {
     	return block;
     }
 
-    function create_fragment$h(ctx) {
+    function create_fragment$i(ctx) {
     	let div2;
     	let div0;
     	let t0;
@@ -7849,7 +8110,7 @@ var app = (function () {
     	let current;
     	let mounted;
     	let dispose;
-    	let if_block = !/*noLabel*/ ctx[3] && create_if_block$5(ctx);
+    	let if_block = !/*noLabel*/ ctx[3] && create_if_block$7(ctx);
 
     	let div2_levels = [
     		{
@@ -7879,11 +8140,11 @@ var app = (function () {
     			t1 = space();
     			div1 = element("div");
     			attr_dev(div0, "class", "mdc-notched-outline__leading");
-    			add_location(div0, file$e, 15, 2, 430);
+    			add_location(div0, file$f, 15, 2, 430);
     			attr_dev(div1, "class", "mdc-notched-outline__trailing");
-    			add_location(div1, file$e, 26, 2, 699);
+    			add_location(div1, file$f, 26, 2, 699);
     			set_attributes(div2, div2_data);
-    			add_location(div2, file$e, 0, 0, 0);
+    			add_location(div2, file$f, 0, 0, 0);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -7918,7 +8179,7 @@ var app = (function () {
     						transition_in(if_block, 1);
     					}
     				} else {
-    					if_block = create_if_block$5(ctx);
+    					if_block = create_if_block$7(ctx);
     					if_block.c();
     					transition_in(if_block, 1);
     					if_block.m(div2, t1);
@@ -7966,7 +8227,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment$h.name,
+    		id: create_fragment$i.name,
     		type: "component",
     		source: "",
     		ctx
@@ -7975,9 +8236,9 @@ var app = (function () {
     	return block;
     }
 
-    const func$5 = ([name, value]) => `${name}: ${value};`;
+    const func$6 = ([name, value]) => `${name}: ${value};`;
 
-    function instance_1$9($$self, $$props, $$invalidate) {
+    function instance_1$a($$self, $$props, $$invalidate) {
     	const omit_props_names = ["use","class","notched","noLabel","notch","closeNotch","getElement"];
     	let $$restProps = compute_rest_props($$props, omit_props_names);
     	let { $$slots: slots = {}, $$scope } = $$props;
@@ -8155,7 +8416,7 @@ var app = (function () {
     	constructor(options) {
     		super(options);
 
-    		init(this, options, instance_1$9, create_fragment$h, safe_not_equal, {
+    		init(this, options, instance_1$a, create_fragment$i, safe_not_equal, {
     			use: 0,
     			class: 1,
     			notched: 2,
@@ -8169,7 +8430,7 @@ var app = (function () {
     			component: this,
     			tagName: "NotchedOutline",
     			options,
-    			id: create_fragment$h.name
+    			id: create_fragment$i.name
     		});
     	}
 
@@ -8246,9 +8507,9 @@ var app = (function () {
     });
 
     /* node_modules/@smui/textfield/dist/Input.svelte generated by Svelte v3.49.0 */
-    const file$d = "node_modules/@smui/textfield/dist/Input.svelte";
+    const file$e = "node_modules/@smui/textfield/dist/Input.svelte";
 
-    function create_fragment$g(ctx) {
+    function create_fragment$h(ctx) {
     	let input;
     	let input_class_value;
     	let useActions_action;
@@ -8279,7 +8540,7 @@ var app = (function () {
     		c: function create() {
     			input = element("input");
     			set_attributes(input, input_data);
-    			add_location(input, file$d, 0, 0, 0);
+    			add_location(input, file$e, 0, 0, 0);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -8329,7 +8590,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment$g.name,
+    		id: create_fragment$h.name,
     		type: "component",
     		source: "",
     		ctx
@@ -8613,7 +8874,7 @@ var app = (function () {
     	constructor(options) {
     		super(options);
 
-    		init(this, options, instance$7, create_fragment$g, safe_not_equal, {
+    		init(this, options, instance$7, create_fragment$h, safe_not_equal, {
     			use: 0,
     			class: 1,
     			type: 2,
@@ -8637,7 +8898,7 @@ var app = (function () {
     			component: this,
     			tagName: "Input",
     			options,
-    			id: create_fragment$g.name
+    			id: create_fragment$h.name
     		});
     	}
 
@@ -8779,9 +9040,9 @@ var app = (function () {
     }
 
     /* node_modules/@smui/textfield/dist/Textarea.svelte generated by Svelte v3.49.0 */
-    const file$c = "node_modules/@smui/textfield/dist/Textarea.svelte";
+    const file$d = "node_modules/@smui/textfield/dist/Textarea.svelte";
 
-    function create_fragment$f(ctx) {
+    function create_fragment$g(ctx) {
     	let textarea;
     	let textarea_class_value;
     	let textarea_style_value;
@@ -8813,7 +9074,7 @@ var app = (function () {
     		c: function create() {
     			textarea = element("textarea");
     			set_attributes(textarea, textarea_data);
-    			add_location(textarea, file$c, 0, 0, 0);
+    			add_location(textarea, file$d, 0, 0, 0);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -8866,7 +9127,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment$f.name,
+    		id: create_fragment$g.name,
     		type: "component",
     		source: "",
     		ctx
@@ -9050,7 +9311,7 @@ var app = (function () {
     	constructor(options) {
     		super(options);
 
-    		init(this, options, instance$6, create_fragment$f, safe_not_equal, {
+    		init(this, options, instance$6, create_fragment$g, safe_not_equal, {
     			use: 1,
     			class: 2,
     			style: 3,
@@ -9071,7 +9332,7 @@ var app = (function () {
     			component: this,
     			tagName: "Textarea",
     			options,
-    			id: create_fragment$f.name
+    			id: create_fragment$g.name
     		});
     	}
 
@@ -9190,8 +9451,8 @@ var app = (function () {
 
     /* node_modules/@smui/textfield/dist/Textfield.svelte generated by Svelte v3.49.0 */
 
-    const { Error: Error_1 } = globals;
-    const file$b = "node_modules/@smui/textfield/dist/Textfield.svelte";
+    const { Error: Error_1$1 } = globals;
+    const file$c = "node_modules/@smui/textfield/dist/Textfield.svelte";
     const get_helper_slot_changes = dirty => ({});
     const get_helper_slot_context = ctx => ({});
     const get_ripple_slot_changes = dirty => ({});
@@ -9304,7 +9565,7 @@ var app = (function () {
     			t3 = space();
     			if (ripple_slot) ripple_slot.c();
     			set_attributes(div, div_data);
-    			add_location(div, file$b, 163, 2, 5417);
+    			add_location(div, file$c, 163, 2, 5417);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, div, anchor);
@@ -9485,7 +9746,7 @@ var app = (function () {
     }
 
     // (1:0) {#if valued}
-    function create_if_block_1$2(ctx) {
+    function create_if_block_1$3(ctx) {
     	let label_1;
     	let t0;
     	let t1;
@@ -9519,7 +9780,7 @@ var app = (function () {
 
     	const default_slot_template = /*#slots*/ ctx[51].default;
     	const default_slot = create_slot(default_slot_template, ctx, /*$$scope*/ ctx[90], null);
-    	const if_block_creators = [create_if_block_3$2, create_else_block$2];
+    	const if_block_creators = [create_if_block_3$2, create_else_block$3];
     	const if_blocks = [];
 
     	function select_block_type_1(ctx, dirty) {
@@ -9566,7 +9827,7 @@ var app = (function () {
     			})
     		},
     		{
-    			style: label_1_style_value = Object.entries(/*internalStyles*/ ctx[26]).map(func$4).concat([/*style*/ ctx[10]]).join(' ')
+    			style: label_1_style_value = Object.entries(/*internalStyles*/ ctx[26]).map(func$5).concat([/*style*/ ctx[10]]).join(' ')
     		},
     		{
     			for: /* suppress a11y warning, since this is wrapped */ undefined
@@ -9597,7 +9858,7 @@ var app = (function () {
     			t5 = space();
     			if (if_block3) if_block3.c();
     			set_attributes(label_1, label_1_data);
-    			add_location(label_1, file$b, 1, 2, 15);
+    			add_location(label_1, file$c, 1, 2, 15);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, label_1, anchor);
@@ -9794,7 +10055,7 @@ var app = (function () {
     					'mdc-text-field--invalid': /*invalid*/ ctx[1],
     					.../*internalClasses*/ ctx[25]
     				}))) && { class: label_1_class_value },
-    				(!current || dirty[0] & /*internalStyles, style*/ 67109888 && label_1_style_value !== (label_1_style_value = Object.entries(/*internalStyles*/ ctx[26]).map(func$4).concat([/*style*/ ctx[10]]).join(' '))) && { style: label_1_style_value },
+    				(!current || dirty[0] & /*internalStyles, style*/ 67109888 && label_1_style_value !== (label_1_style_value = Object.entries(/*internalStyles*/ ctx[26]).map(func$5).concat([/*style*/ ctx[10]]).join(' '))) && { style: label_1_style_value },
     				{
     					for: /* suppress a11y warning, since this is wrapped */ undefined
     				},
@@ -9852,7 +10113,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_if_block_1$2.name,
+    		id: create_if_block_1$3.name,
     		type: "if",
     		source: "(1:0) {#if valued}",
     		ctx
@@ -10070,7 +10331,7 @@ var app = (function () {
     		c: function create() {
     			span = element("span");
     			attr_dev(span, "class", "mdc-text-field__ripple");
-    			add_location(span, file$b, 63, 8, 2241);
+    			add_location(span, file$c, 63, 8, 2241);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, span, anchor);
@@ -10590,7 +10851,7 @@ var app = (function () {
     }
 
     // (124:4) {:else}
-    function create_else_block$2(ctx) {
+    function create_else_block$3(ctx) {
     	let t0;
     	let t1;
     	let input_1;
@@ -10852,7 +11113,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_else_block$2.name,
+    		id: create_else_block$3.name,
     		type: "else",
     		source: "(124:4) {:else}",
     		ctx
@@ -10934,7 +11195,7 @@ var app = (function () {
     				'mdc-text-field__resizer': !('input$resizable' in /*$$restProps*/ ctx[41]) || /*$$restProps*/ ctx[41].input$resizable
     			}));
 
-    			add_location(span, file$b, 99, 6, 3514);
+    			add_location(span, file$c, 99, 6, 3514);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, span, anchor);
@@ -11314,13 +11575,13 @@ var app = (function () {
     }
 
     // (217:0) {#if $$slots.helper}
-    function create_if_block$4(ctx) {
+    function create_if_block$6(ctx) {
     	let helperline;
     	let current;
     	const helperline_spread_levels = [prefixFilter(/*$$restProps*/ ctx[41], 'helperLine$')];
 
     	let helperline_props = {
-    		$$slots: { default: [create_default_slot$7] },
+    		$$slots: { default: [create_default_slot$8] },
     		$$scope: { ctx }
     	};
 
@@ -11370,7 +11631,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_if_block$4.name,
+    		id: create_if_block$6.name,
     		type: "if",
     		source: "(217:0) {#if $$slots.helper}",
     		ctx
@@ -11380,7 +11641,7 @@ var app = (function () {
     }
 
     // (218:2) <HelperLine     on:SMUITextfieldHelperText:id={(event) => (helperId = event.detail)}     on:SMUITextfieldHelperText:mount={(event) => (helperText = event.detail)}     on:SMUITextfieldHelperText:unmount={() => {       helperId = undefined;       helperText = undefined;     }}     on:SMUITextfieldCharacterCounter:mount={(event) =>       (characterCounter = event.detail)}     on:SMUITextfieldCharacterCounter:unmount={() =>       (characterCounter = undefined)}     {...prefixFilter($$restProps, 'helperLine$')}     >
-    function create_default_slot$7(ctx) {
+    function create_default_slot$8(ctx) {
     	let current;
     	const helper_slot_template = /*#slots*/ ctx[51].helper;
     	const helper_slot = create_slot(helper_slot_template, ctx, /*$$scope*/ ctx[90], get_helper_slot_context);
@@ -11428,7 +11689,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_default_slot$7.name,
+    		id: create_default_slot$8.name,
     		type: "slot",
     		source: "(218:2) <HelperLine     on:SMUITextfieldHelperText:id={(event) => (helperId = event.detail)}     on:SMUITextfieldHelperText:mount={(event) => (helperText = event.detail)}     on:SMUITextfieldHelperText:unmount={() => {       helperId = undefined;       helperText = undefined;     }}     on:SMUITextfieldCharacterCounter:mount={(event) =>       (characterCounter = event.detail)}     on:SMUITextfieldCharacterCounter:unmount={() =>       (characterCounter = undefined)}     {...prefixFilter($$restProps, 'helperLine$')}     >",
     		ctx
@@ -11437,13 +11698,13 @@ var app = (function () {
     	return block;
     }
 
-    function create_fragment$e(ctx) {
+    function create_fragment$f(ctx) {
     	let current_block_type_index;
     	let if_block0;
     	let t;
     	let if_block1_anchor;
     	let current;
-    	const if_block_creators = [create_if_block_1$2, create_else_block_1];
+    	const if_block_creators = [create_if_block_1$3, create_else_block_1];
     	const if_blocks = [];
 
     	function select_block_type(ctx, dirty) {
@@ -11453,7 +11714,7 @@ var app = (function () {
 
     	current_block_type_index = select_block_type(ctx);
     	if_block0 = if_blocks[current_block_type_index] = if_block_creators[current_block_type_index](ctx);
-    	let if_block1 = /*$$slots*/ ctx[42].helper && create_if_block$4(ctx);
+    	let if_block1 = /*$$slots*/ ctx[42].helper && create_if_block$6(ctx);
 
     	const block = {
     		c: function create() {
@@ -11463,7 +11724,7 @@ var app = (function () {
     			if_block1_anchor = empty();
     		},
     		l: function claim(nodes) {
-    			throw new Error_1("options.hydrate only works if the component was compiled with the `hydratable: true` option");
+    			throw new Error_1$1("options.hydrate only works if the component was compiled with the `hydratable: true` option");
     		},
     		m: function mount(target, anchor) {
     			if_blocks[current_block_type_index].m(target, anchor);
@@ -11483,7 +11744,7 @@ var app = (function () {
     						transition_in(if_block1, 1);
     					}
     				} else {
-    					if_block1 = create_if_block$4(ctx);
+    					if_block1 = create_if_block$6(ctx);
     					if_block1.c();
     					transition_in(if_block1, 1);
     					if_block1.m(if_block1_anchor.parentNode, if_block1_anchor);
@@ -11519,7 +11780,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment$e.name,
+    		id: create_fragment$f.name,
     		type: "component",
     		source: "",
     		ctx
@@ -11528,10 +11789,10 @@ var app = (function () {
     	return block;
     }
 
-    const func$4 = ([name, value]) => `${name}: ${value};`;
+    const func$5 = ([name, value]) => `${name}: ${value};`;
     const func_1 = ([name, value]) => `${name}: ${value};`;
 
-    function instance_1$8($$self, $$props, $$invalidate) {
+    function instance_1$9($$self, $$props, $$invalidate) {
     	let inputElement;
 
     	const omit_props_names = [
@@ -12244,8 +12505,8 @@ var app = (function () {
     		init(
     			this,
     			options,
-    			instance_1$8,
-    			create_fragment$e,
+    			instance_1$9,
+    			create_fragment$f,
     			safe_not_equal,
     			{
     				use: 8,
@@ -12287,216 +12548,216 @@ var app = (function () {
     			component: this,
     			tagName: "Textfield",
     			options,
-    			id: create_fragment$e.name
+    			id: create_fragment$f.name
     		});
     	}
 
     	get use() {
-    		throw new Error_1("<Textfield>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    		throw new Error_1$1("<Textfield>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
 
     	set use(value) {
-    		throw new Error_1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    		throw new Error_1$1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
 
     	get class() {
-    		throw new Error_1("<Textfield>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    		throw new Error_1$1("<Textfield>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
 
     	set class(value) {
-    		throw new Error_1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    		throw new Error_1$1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
 
     	get style() {
-    		throw new Error_1("<Textfield>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    		throw new Error_1$1("<Textfield>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
 
     	set style(value) {
-    		throw new Error_1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    		throw new Error_1$1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
 
     	get ripple() {
-    		throw new Error_1("<Textfield>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    		throw new Error_1$1("<Textfield>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
 
     	set ripple(value) {
-    		throw new Error_1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    		throw new Error_1$1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
 
     	get disabled() {
-    		throw new Error_1("<Textfield>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    		throw new Error_1$1("<Textfield>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
 
     	set disabled(value) {
-    		throw new Error_1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    		throw new Error_1$1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
 
     	get required() {
-    		throw new Error_1("<Textfield>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    		throw new Error_1$1("<Textfield>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
 
     	set required(value) {
-    		throw new Error_1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    		throw new Error_1$1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
 
     	get textarea() {
-    		throw new Error_1("<Textfield>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    		throw new Error_1$1("<Textfield>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
 
     	set textarea(value) {
-    		throw new Error_1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    		throw new Error_1$1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
 
     	get variant() {
-    		throw new Error_1("<Textfield>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    		throw new Error_1$1("<Textfield>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
 
     	set variant(value) {
-    		throw new Error_1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    		throw new Error_1$1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
 
     	get noLabel() {
-    		throw new Error_1("<Textfield>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    		throw new Error_1$1("<Textfield>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
 
     	set noLabel(value) {
-    		throw new Error_1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    		throw new Error_1$1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
 
     	get label() {
-    		throw new Error_1("<Textfield>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    		throw new Error_1$1("<Textfield>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
 
     	set label(value) {
-    		throw new Error_1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    		throw new Error_1$1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
 
     	get type() {
-    		throw new Error_1("<Textfield>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    		throw new Error_1$1("<Textfield>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
 
     	set type(value) {
-    		throw new Error_1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    		throw new Error_1$1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
 
     	get value() {
-    		throw new Error_1("<Textfield>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    		throw new Error_1$1("<Textfield>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
 
     	set value(value) {
-    		throw new Error_1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    		throw new Error_1$1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
 
     	get files() {
-    		throw new Error_1("<Textfield>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    		throw new Error_1$1("<Textfield>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
 
     	set files(value) {
-    		throw new Error_1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    		throw new Error_1$1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
 
     	get invalid() {
-    		throw new Error_1("<Textfield>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    		throw new Error_1$1("<Textfield>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
 
     	set invalid(value) {
-    		throw new Error_1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    		throw new Error_1$1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
 
     	get updateInvalid() {
-    		throw new Error_1("<Textfield>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    		throw new Error_1$1("<Textfield>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
 
     	set updateInvalid(value) {
-    		throw new Error_1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    		throw new Error_1$1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
 
     	get dirty() {
-    		throw new Error_1("<Textfield>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    		throw new Error_1$1("<Textfield>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
 
     	set dirty(value) {
-    		throw new Error_1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    		throw new Error_1$1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
 
     	get prefix() {
-    		throw new Error_1("<Textfield>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    		throw new Error_1$1("<Textfield>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
 
     	set prefix(value) {
-    		throw new Error_1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    		throw new Error_1$1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
 
     	get suffix() {
-    		throw new Error_1("<Textfield>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    		throw new Error_1$1("<Textfield>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
 
     	set suffix(value) {
-    		throw new Error_1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    		throw new Error_1$1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
 
     	get validateOnValueChange() {
-    		throw new Error_1("<Textfield>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    		throw new Error_1$1("<Textfield>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
 
     	set validateOnValueChange(value) {
-    		throw new Error_1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    		throw new Error_1$1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
 
     	get useNativeValidation() {
-    		throw new Error_1("<Textfield>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    		throw new Error_1$1("<Textfield>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
 
     	set useNativeValidation(value) {
-    		throw new Error_1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    		throw new Error_1$1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
 
     	get withLeadingIcon() {
-    		throw new Error_1("<Textfield>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    		throw new Error_1$1("<Textfield>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
 
     	set withLeadingIcon(value) {
-    		throw new Error_1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    		throw new Error_1$1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
 
     	get withTrailingIcon() {
-    		throw new Error_1("<Textfield>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    		throw new Error_1$1("<Textfield>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
 
     	set withTrailingIcon(value) {
-    		throw new Error_1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    		throw new Error_1$1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
 
     	get input() {
-    		throw new Error_1("<Textfield>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    		throw new Error_1$1("<Textfield>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
 
     	set input(value) {
-    		throw new Error_1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    		throw new Error_1$1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
 
     	get floatingLabel() {
-    		throw new Error_1("<Textfield>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    		throw new Error_1$1("<Textfield>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
 
     	set floatingLabel(value) {
-    		throw new Error_1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    		throw new Error_1$1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
 
     	get lineRipple() {
-    		throw new Error_1("<Textfield>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    		throw new Error_1$1("<Textfield>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
 
     	set lineRipple(value) {
-    		throw new Error_1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    		throw new Error_1$1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
 
     	get notchedOutline() {
-    		throw new Error_1("<Textfield>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    		throw new Error_1$1("<Textfield>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
 
     	set notchedOutline(value) {
-    		throw new Error_1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    		throw new Error_1$1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
 
     	get focus() {
@@ -12504,7 +12765,7 @@ var app = (function () {
     	}
 
     	set focus(value) {
-    		throw new Error_1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    		throw new Error_1$1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
 
     	get blur() {
@@ -12512,7 +12773,7 @@ var app = (function () {
     	}
 
     	set blur(value) {
-    		throw new Error_1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    		throw new Error_1$1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
 
     	get layout() {
@@ -12520,7 +12781,7 @@ var app = (function () {
     	}
 
     	set layout(value) {
-    		throw new Error_1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    		throw new Error_1$1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
 
     	get getElement() {
@@ -12528,7 +12789,2494 @@ var app = (function () {
     	}
 
     	set getElement(value) {
-    		throw new Error_1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    		throw new Error_1$1("<Textfield>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+    }
+
+    /**
+     * @license
+     * Copyright 2020 Google Inc.
+     *
+     * Permission is hereby granted, free of charge, to any person obtaining a copy
+     * of this software and associated documentation files (the "Software"), to deal
+     * in the Software without restriction, including without limitation the rights
+     * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+     * copies of the Software, and to permit persons to whom the Software is
+     * furnished to do so, subject to the following conditions:
+     *
+     * The above copyright notice and this permission notice shall be included in
+     * all copies or substantial portions of the Software.
+     *
+     * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+     * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+     * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+     * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+     * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+     * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+     * THE SOFTWARE.
+     */
+    /**
+     * Priorities for the announce function.
+     */
+    var AnnouncerPriority;
+    (function (AnnouncerPriority) {
+        AnnouncerPriority["POLITE"] = "polite";
+        AnnouncerPriority["ASSERTIVE"] = "assertive";
+    })(AnnouncerPriority || (AnnouncerPriority = {}));
+    /**
+     * Data attribute added to live region element.
+     */
+    var DATA_MDC_DOM_ANNOUNCE = 'data-mdc-dom-announce';
+    /**
+     * Announces the given message with optional priority, defaulting to "polite"
+     */
+    function announce(message, options) {
+        Announcer.getInstance().say(message, options);
+    }
+    var Announcer = /** @class */ (function () {
+        // Constructor made private to ensure only the singleton is used
+        function Announcer() {
+            this.liveRegions = new Map();
+        }
+        Announcer.getInstance = function () {
+            if (!Announcer.instance) {
+                Announcer.instance = new Announcer();
+            }
+            return Announcer.instance;
+        };
+        Announcer.prototype.say = function (message, options) {
+            var _a, _b;
+            var priority = (_a = options === null || options === void 0 ? void 0 : options.priority) !== null && _a !== void 0 ? _a : AnnouncerPriority.POLITE;
+            var ownerDocument = (_b = options === null || options === void 0 ? void 0 : options.ownerDocument) !== null && _b !== void 0 ? _b : document;
+            var liveRegion = this.getLiveRegion(priority, ownerDocument);
+            // Reset the region to pick up the message, even if the message is the
+            // exact same as before.
+            liveRegion.textContent = '';
+            // Timeout is necessary for screen readers like NVDA and VoiceOver.
+            setTimeout(function () {
+                liveRegion.textContent = message;
+                ownerDocument.addEventListener('click', clearLiveRegion);
+            }, 1);
+            function clearLiveRegion() {
+                liveRegion.textContent = '';
+                ownerDocument.removeEventListener('click', clearLiveRegion);
+            }
+        };
+        Announcer.prototype.getLiveRegion = function (priority, ownerDocument) {
+            var documentLiveRegions = this.liveRegions.get(ownerDocument);
+            if (!documentLiveRegions) {
+                documentLiveRegions = new Map();
+                this.liveRegions.set(ownerDocument, documentLiveRegions);
+            }
+            var existingLiveRegion = documentLiveRegions.get(priority);
+            if (existingLiveRegion &&
+                ownerDocument.body.contains(existingLiveRegion)) {
+                return existingLiveRegion;
+            }
+            var liveRegion = this.createLiveRegion(priority, ownerDocument);
+            documentLiveRegions.set(priority, liveRegion);
+            return liveRegion;
+        };
+        Announcer.prototype.createLiveRegion = function (priority, ownerDocument) {
+            var el = ownerDocument.createElement('div');
+            el.style.position = 'absolute';
+            el.style.top = '-9999px';
+            el.style.left = '-9999px';
+            el.style.height = '1px';
+            el.style.overflow = 'hidden';
+            el.setAttribute('aria-atomic', 'true');
+            el.setAttribute('aria-live', priority);
+            el.setAttribute(DATA_MDC_DOM_ANNOUNCE, 'true');
+            ownerDocument.body.appendChild(el);
+            return el;
+        };
+        return Announcer;
+    }());
+
+    /**
+     * @license
+     * Copyright 2020 Google Inc.
+     *
+     * Permission is hereby granted, free of charge, to any person obtaining a copy
+     * of this software and associated documentation files (the "Software"), to deal
+     * in the Software without restriction, including without limitation the rights
+     * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+     * copies of the Software, and to permit persons to whom the Software is
+     * furnished to do so, subject to the following conditions:
+     *
+     * The above copyright notice and this permission notice shall be included in
+     * all copies or substantial portions of the Software.
+     *
+     * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+     * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+     * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+     * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+     * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+     * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+     * THE SOFTWARE.
+     */
+    var InteractionTrigger;
+    (function (InteractionTrigger) {
+        InteractionTrigger[InteractionTrigger["UNSPECIFIED"] = 0] = "UNSPECIFIED";
+        InteractionTrigger[InteractionTrigger["CLICK"] = 1] = "CLICK";
+        InteractionTrigger[InteractionTrigger["BACKSPACE_KEY"] = 2] = "BACKSPACE_KEY";
+        InteractionTrigger[InteractionTrigger["DELETE_KEY"] = 3] = "DELETE_KEY";
+        InteractionTrigger[InteractionTrigger["SPACEBAR_KEY"] = 4] = "SPACEBAR_KEY";
+        InteractionTrigger[InteractionTrigger["ENTER_KEY"] = 5] = "ENTER_KEY";
+    })(InteractionTrigger || (InteractionTrigger = {}));
+    var strings$a = {
+        ARIA_HIDDEN: 'aria-hidden',
+        INTERACTION_EVENT: 'MDCChipTrailingAction:interaction',
+        NAVIGATION_EVENT: 'MDCChipTrailingAction:navigation',
+        TAB_INDEX: 'tabindex',
+    };
+
+    /**
+     * @license
+     * Copyright 2020 Google Inc.
+     *
+     * Permission is hereby granted, free of charge, to any person obtaining a copy
+     * of this software and associated documentation files (the "Software"), to deal
+     * in the Software without restriction, including without limitation the rights
+     * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+     * copies of the Software, and to permit persons to whom the Software is
+     * furnished to do so, subject to the following conditions:
+     *
+     * The above copyright notice and this permission notice shall be included in
+     * all copies or substantial portions of the Software.
+     *
+     * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+     * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+     * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+     * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+     * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+     * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+     * THE SOFTWARE.
+     */
+    var MDCChipTrailingActionFoundation = /** @class */ (function (_super) {
+        __extends(MDCChipTrailingActionFoundation, _super);
+        function MDCChipTrailingActionFoundation(adapter) {
+            return _super.call(this, __assign(__assign({}, MDCChipTrailingActionFoundation.defaultAdapter), adapter)) || this;
+        }
+        Object.defineProperty(MDCChipTrailingActionFoundation, "strings", {
+            get: function () {
+                return strings$a;
+            },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(MDCChipTrailingActionFoundation, "defaultAdapter", {
+            get: function () {
+                return {
+                    focus: function () { return undefined; },
+                    getAttribute: function () { return null; },
+                    setAttribute: function () { return undefined; },
+                    notifyInteraction: function () { return undefined; },
+                    notifyNavigation: function () { return undefined; },
+                };
+            },
+            enumerable: false,
+            configurable: true
+        });
+        MDCChipTrailingActionFoundation.prototype.handleClick = function (evt) {
+            evt.stopPropagation();
+            this.adapter.notifyInteraction(InteractionTrigger.CLICK);
+        };
+        MDCChipTrailingActionFoundation.prototype.handleKeydown = function (evt) {
+            evt.stopPropagation();
+            var key = normalizeKey(evt);
+            if (this.shouldNotifyInteractionFromKey(key)) {
+                var trigger = this.getTriggerFromKey(key);
+                this.adapter.notifyInteraction(trigger);
+                return;
+            }
+            if (isNavigationEvent(evt)) {
+                this.adapter.notifyNavigation(key);
+                return;
+            }
+        };
+        MDCChipTrailingActionFoundation.prototype.removeFocus = function () {
+            this.adapter.setAttribute(strings$a.TAB_INDEX, '-1');
+        };
+        MDCChipTrailingActionFoundation.prototype.focus = function () {
+            this.adapter.setAttribute(strings$a.TAB_INDEX, '0');
+            this.adapter.focus();
+        };
+        MDCChipTrailingActionFoundation.prototype.isNavigable = function () {
+            return this.adapter.getAttribute(strings$a.ARIA_HIDDEN) !== 'true';
+        };
+        MDCChipTrailingActionFoundation.prototype.shouldNotifyInteractionFromKey = function (key) {
+            var isFromActionKey = key === KEY.ENTER || key === KEY.SPACEBAR;
+            var isFromDeleteKey = key === KEY.BACKSPACE || key === KEY.DELETE;
+            return isFromActionKey || isFromDeleteKey;
+        };
+        MDCChipTrailingActionFoundation.prototype.getTriggerFromKey = function (key) {
+            if (key === KEY.SPACEBAR) {
+                return InteractionTrigger.SPACEBAR_KEY;
+            }
+            if (key === KEY.ENTER) {
+                return InteractionTrigger.ENTER_KEY;
+            }
+            if (key === KEY.DELETE) {
+                return InteractionTrigger.DELETE_KEY;
+            }
+            if (key === KEY.BACKSPACE) {
+                return InteractionTrigger.BACKSPACE_KEY;
+            }
+            // Default case, should never be returned
+            return InteractionTrigger.UNSPECIFIED;
+        };
+        return MDCChipTrailingActionFoundation;
+    }(MDCFoundation));
+
+    /**
+     * @license
+     * Copyright 2020 Google Inc.
+     *
+     * Permission is hereby granted, free of charge, to any person obtaining a copy
+     * of this software and associated documentation files (the "Software"), to deal
+     * in the Software without restriction, including without limitation the rights
+     * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+     * copies of the Software, and to permit persons to whom the Software is
+     * furnished to do so, subject to the following conditions:
+     *
+     * The above copyright notice and this permission notice shall be included in
+     * all copies or substantial portions of the Software.
+     *
+     * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+     * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+     * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+     * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+     * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+     * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+     * THE SOFTWARE.
+     */
+    var MDCChipTrailingAction = /** @class */ (function (_super) {
+        __extends(MDCChipTrailingAction, _super);
+        function MDCChipTrailingAction() {
+            return _super !== null && _super.apply(this, arguments) || this;
+        }
+        Object.defineProperty(MDCChipTrailingAction.prototype, "ripple", {
+            get: function () {
+                return this.rippleSurface;
+            },
+            enumerable: false,
+            configurable: true
+        });
+        MDCChipTrailingAction.attachTo = function (root) {
+            return new MDCChipTrailingAction(root);
+        };
+        MDCChipTrailingAction.prototype.initialize = function (rippleFactory) {
+            if (rippleFactory === void 0) { rippleFactory = function (el, foundation) {
+                return new MDCRipple(el, foundation);
+            }; }
+            // DO NOT INLINE this variable. For backward compatibility, foundations take
+            // a Partial<MDCFooAdapter>. To ensure we don't accidentally omit any
+            // methods, we need a separate, strongly typed adapter variable.
+            var rippleAdapter = MDCRipple.createAdapter(this);
+            this.rippleSurface =
+                rippleFactory(this.root, new MDCRippleFoundation(rippleAdapter));
+        };
+        MDCChipTrailingAction.prototype.initialSyncWithDOM = function () {
+            var _this = this;
+            this.handleClick = function (evt) {
+                _this.foundation.handleClick(evt);
+            };
+            this.handleKeydown = function (evt) {
+                _this.foundation.handleKeydown(evt);
+            };
+            this.listen('click', this.handleClick);
+            this.listen('keydown', this.handleKeydown);
+        };
+        MDCChipTrailingAction.prototype.destroy = function () {
+            this.rippleSurface.destroy();
+            this.unlisten('click', this.handleClick);
+            this.unlisten('keydown', this.handleKeydown);
+            _super.prototype.destroy.call(this);
+        };
+        MDCChipTrailingAction.prototype.getDefaultFoundation = function () {
+            var _this = this;
+            // DO NOT INLINE this variable. For backward compatibility, foundations take
+            // a Partial<MDCFooAdapter>. To ensure we don't accidentally omit any
+            // methods, we need a separate, strongly typed adapter variable.
+            var adapter = {
+                focus: function () {
+                    // TODO(b/157231863): Migate MDCComponent#root to HTMLElement
+                    _this.root.focus();
+                },
+                getAttribute: function (attr) { return _this.root.getAttribute(attr); },
+                notifyInteraction: function (trigger) {
+                    return _this.emit(strings$a.INTERACTION_EVENT, { trigger: trigger }, true /* shouldBubble */);
+                },
+                notifyNavigation: function (key) {
+                    _this.emit(strings$a.NAVIGATION_EVENT, { key: key }, true /* shouldBubble */);
+                },
+                setAttribute: function (attr, value) {
+                    _this.root.setAttribute(attr, value);
+                },
+            };
+            return new MDCChipTrailingActionFoundation(adapter);
+        };
+        MDCChipTrailingAction.prototype.isNavigable = function () {
+            return this.foundation.isNavigable();
+        };
+        MDCChipTrailingAction.prototype.focus = function () {
+            this.foundation.focus();
+        };
+        MDCChipTrailingAction.prototype.removeFocus = function () {
+            this.foundation.removeFocus();
+        };
+        return MDCChipTrailingAction;
+    }(MDCComponent));
+
+    /**
+     * @license
+     * Copyright 2016 Google Inc.
+     *
+     * Permission is hereby granted, free of charge, to any person obtaining a copy
+     * of this software and associated documentation files (the "Software"), to deal
+     * in the Software without restriction, including without limitation the rights
+     * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+     * copies of the Software, and to permit persons to whom the Software is
+     * furnished to do so, subject to the following conditions:
+     *
+     * The above copyright notice and this permission notice shall be included in
+     * all copies or substantial portions of the Software.
+     *
+     * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+     * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+     * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+     * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+     * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+     * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+     * THE SOFTWARE.
+     */
+    var Direction;
+    (function (Direction) {
+        Direction["LEFT"] = "left";
+        Direction["RIGHT"] = "right";
+    })(Direction || (Direction = {}));
+    var EventSource;
+    (function (EventSource) {
+        EventSource["PRIMARY"] = "primary";
+        EventSource["TRAILING"] = "trailing";
+        EventSource["NONE"] = "none";
+    })(EventSource || (EventSource = {}));
+    var strings$9 = {
+        ADDED_ANNOUNCEMENT_ATTRIBUTE: 'data-mdc-chip-added-announcement',
+        ARIA_CHECKED: 'aria-checked',
+        ARROW_DOWN_KEY: 'ArrowDown',
+        ARROW_LEFT_KEY: 'ArrowLeft',
+        ARROW_RIGHT_KEY: 'ArrowRight',
+        ARROW_UP_KEY: 'ArrowUp',
+        BACKSPACE_KEY: 'Backspace',
+        CHECKMARK_SELECTOR: '.mdc-chip__checkmark',
+        DELETE_KEY: 'Delete',
+        END_KEY: 'End',
+        ENTER_KEY: 'Enter',
+        ENTRY_ANIMATION_NAME: 'mdc-chip-entry',
+        HOME_KEY: 'Home',
+        IE_ARROW_DOWN_KEY: 'Down',
+        IE_ARROW_LEFT_KEY: 'Left',
+        IE_ARROW_RIGHT_KEY: 'Right',
+        IE_ARROW_UP_KEY: 'Up',
+        IE_DELETE_KEY: 'Del',
+        INTERACTION_EVENT: 'MDCChip:interaction',
+        LEADING_ICON_SELECTOR: '.mdc-chip__icon--leading',
+        NAVIGATION_EVENT: 'MDCChip:navigation',
+        PRIMARY_ACTION_SELECTOR: '.mdc-chip__primary-action',
+        REMOVED_ANNOUNCEMENT_ATTRIBUTE: 'data-mdc-chip-removed-announcement',
+        REMOVAL_EVENT: 'MDCChip:removal',
+        SELECTION_EVENT: 'MDCChip:selection',
+        SPACEBAR_KEY: ' ',
+        TAB_INDEX: 'tabindex',
+        TRAILING_ACTION_SELECTOR: '.mdc-chip-trailing-action',
+        TRAILING_ICON_INTERACTION_EVENT: 'MDCChip:trailingIconInteraction',
+        TRAILING_ICON_SELECTOR: '.mdc-chip__icon--trailing',
+    };
+    var cssClasses$9 = {
+        CHECKMARK: 'mdc-chip__checkmark',
+        CHIP_EXIT: 'mdc-chip--exit',
+        DELETABLE: 'mdc-chip--deletable',
+        EDITABLE: 'mdc-chip--editable',
+        EDITING: 'mdc-chip--editing',
+        HIDDEN_LEADING_ICON: 'mdc-chip__icon--leading-hidden',
+        LEADING_ICON: 'mdc-chip__icon--leading',
+        PRIMARY_ACTION: 'mdc-chip__primary-action',
+        PRIMARY_ACTION_FOCUSED: 'mdc-chip--primary-action-focused',
+        SELECTED: 'mdc-chip--selected',
+        TEXT: 'mdc-chip__text',
+        TRAILING_ACTION: 'mdc-chip__trailing-action',
+        TRAILING_ICON: 'mdc-chip__icon--trailing',
+    };
+    var navigationKeys = new Set();
+    // IE11 has no support for new Set with iterable so we need to initialize this by hand
+    navigationKeys.add(strings$9.ARROW_LEFT_KEY);
+    navigationKeys.add(strings$9.ARROW_RIGHT_KEY);
+    navigationKeys.add(strings$9.ARROW_DOWN_KEY);
+    navigationKeys.add(strings$9.ARROW_UP_KEY);
+    navigationKeys.add(strings$9.END_KEY);
+    navigationKeys.add(strings$9.HOME_KEY);
+    navigationKeys.add(strings$9.IE_ARROW_LEFT_KEY);
+    navigationKeys.add(strings$9.IE_ARROW_RIGHT_KEY);
+    navigationKeys.add(strings$9.IE_ARROW_DOWN_KEY);
+    navigationKeys.add(strings$9.IE_ARROW_UP_KEY);
+    var jumpChipKeys = new Set();
+    // IE11 has no support for new Set with iterable so we need to initialize this by hand
+    jumpChipKeys.add(strings$9.ARROW_UP_KEY);
+    jumpChipKeys.add(strings$9.ARROW_DOWN_KEY);
+    jumpChipKeys.add(strings$9.HOME_KEY);
+    jumpChipKeys.add(strings$9.END_KEY);
+    jumpChipKeys.add(strings$9.IE_ARROW_UP_KEY);
+    jumpChipKeys.add(strings$9.IE_ARROW_DOWN_KEY);
+
+    /**
+     * @license
+     * Copyright 2016 Google Inc.
+     *
+     * Permission is hereby granted, free of charge, to any person obtaining a copy
+     * of this software and associated documentation files (the "Software"), to deal
+     * in the Software without restriction, including without limitation the rights
+     * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+     * copies of the Software, and to permit persons to whom the Software is
+     * furnished to do so, subject to the following conditions:
+     *
+     * The above copyright notice and this permission notice shall be included in
+     * all copies or substantial portions of the Software.
+     *
+     * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+     * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+     * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+     * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+     * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+     * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+     * THE SOFTWARE.
+     */
+    var emptyClientRect = {
+        bottom: 0,
+        height: 0,
+        left: 0,
+        right: 0,
+        top: 0,
+        width: 0,
+    };
+    var FocusBehavior;
+    (function (FocusBehavior) {
+        FocusBehavior[FocusBehavior["SHOULD_FOCUS"] = 0] = "SHOULD_FOCUS";
+        FocusBehavior[FocusBehavior["SHOULD_NOT_FOCUS"] = 1] = "SHOULD_NOT_FOCUS";
+    })(FocusBehavior || (FocusBehavior = {}));
+    var MDCChipFoundation = /** @class */ (function (_super) {
+        __extends(MDCChipFoundation, _super);
+        function MDCChipFoundation(adapter) {
+            var _this = _super.call(this, __assign(__assign({}, MDCChipFoundation.defaultAdapter), adapter)) || this;
+            /** Whether a trailing icon click should immediately trigger exit/removal of the chip. */
+            _this.shouldRemoveOnTrailingIconClick = true;
+            /**
+             * Whether the primary action should receive focus on click. Should only be
+             * set to true for clients who programmatically give focus to a different
+             * element on the page when a chip is clicked (like a menu).
+             */
+            _this.shouldFocusPrimaryActionOnClick = true;
+            return _this;
+        }
+        Object.defineProperty(MDCChipFoundation, "strings", {
+            get: function () {
+                return strings$9;
+            },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(MDCChipFoundation, "cssClasses", {
+            get: function () {
+                return cssClasses$9;
+            },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(MDCChipFoundation, "defaultAdapter", {
+            get: function () {
+                return {
+                    addClass: function () { return undefined; },
+                    addClassToLeadingIcon: function () { return undefined; },
+                    eventTargetHasClass: function () { return false; },
+                    focusPrimaryAction: function () { return undefined; },
+                    focusTrailingAction: function () { return undefined; },
+                    getAttribute: function () { return null; },
+                    getCheckmarkBoundingClientRect: function () { return emptyClientRect; },
+                    getComputedStyleValue: function () { return ''; },
+                    getRootBoundingClientRect: function () { return emptyClientRect; },
+                    hasClass: function () { return false; },
+                    hasLeadingIcon: function () { return false; },
+                    isRTL: function () { return false; },
+                    isTrailingActionNavigable: function () { return false; },
+                    notifyEditFinish: function () { return undefined; },
+                    notifyEditStart: function () { return undefined; },
+                    notifyInteraction: function () { return undefined; },
+                    notifyNavigation: function () { return undefined; },
+                    notifyRemoval: function () { return undefined; },
+                    notifySelection: function () { return undefined; },
+                    notifyTrailingIconInteraction: function () { return undefined; },
+                    removeClass: function () { return undefined; },
+                    removeClassFromLeadingIcon: function () { return undefined; },
+                    removeTrailingActionFocus: function () { return undefined; },
+                    setPrimaryActionAttr: function () { return undefined; },
+                    setStyleProperty: function () { return undefined; },
+                };
+            },
+            enumerable: false,
+            configurable: true
+        });
+        MDCChipFoundation.prototype.isSelected = function () {
+            return this.adapter.hasClass(cssClasses$9.SELECTED);
+        };
+        MDCChipFoundation.prototype.isEditable = function () {
+            return this.adapter.hasClass(cssClasses$9.EDITABLE);
+        };
+        MDCChipFoundation.prototype.isEditing = function () {
+            return this.adapter.hasClass(cssClasses$9.EDITING);
+        };
+        MDCChipFoundation.prototype.setSelected = function (selected) {
+            this.setSelectedImpl(selected);
+            this.notifySelection(selected);
+        };
+        MDCChipFoundation.prototype.setSelectedFromChipSet = function (selected, shouldNotifyClients) {
+            this.setSelectedImpl(selected);
+            if (shouldNotifyClients) {
+                this.notifyIgnoredSelection(selected);
+            }
+        };
+        MDCChipFoundation.prototype.getShouldRemoveOnTrailingIconClick = function () {
+            return this.shouldRemoveOnTrailingIconClick;
+        };
+        MDCChipFoundation.prototype.setShouldRemoveOnTrailingIconClick = function (shouldRemove) {
+            this.shouldRemoveOnTrailingIconClick = shouldRemove;
+        };
+        MDCChipFoundation.prototype.setShouldFocusPrimaryActionOnClick = function (shouldFocus) {
+            this.shouldFocusPrimaryActionOnClick = shouldFocus;
+        };
+        MDCChipFoundation.prototype.getDimensions = function () {
+            var _this = this;
+            var getRootRect = function () { return _this.adapter.getRootBoundingClientRect(); };
+            var getCheckmarkRect = function () {
+                return _this.adapter.getCheckmarkBoundingClientRect();
+            };
+            // When a chip has a checkmark and not a leading icon, the bounding rect changes in size depending on the current
+            // size of the checkmark.
+            if (!this.adapter.hasLeadingIcon()) {
+                var checkmarkRect = getCheckmarkRect();
+                if (checkmarkRect) {
+                    var rootRect = getRootRect();
+                    // Checkmark is a square, meaning the client rect's width and height are identical once the animation completes.
+                    // However, the checkbox is initially hidden by setting the width to 0.
+                    // To account for an initial width of 0, we use the checkbox's height instead (which equals the end-state width)
+                    // when adding it to the root client rect's width.
+                    return {
+                        bottom: rootRect.bottom,
+                        height: rootRect.height,
+                        left: rootRect.left,
+                        right: rootRect.right,
+                        top: rootRect.top,
+                        width: rootRect.width + checkmarkRect.height,
+                    };
+                }
+            }
+            return getRootRect();
+        };
+        /**
+         * Begins the exit animation which leads to removal of the chip.
+         */
+        MDCChipFoundation.prototype.beginExit = function () {
+            this.adapter.addClass(cssClasses$9.CHIP_EXIT);
+        };
+        MDCChipFoundation.prototype.handleClick = function () {
+            this.adapter.notifyInteraction();
+            this.setPrimaryActionFocusable(this.getFocusBehavior());
+        };
+        MDCChipFoundation.prototype.handleDoubleClick = function () {
+            if (this.isEditable()) {
+                this.startEditing();
+            }
+        };
+        /**
+         * Handles a transition end event on the root element.
+         */
+        MDCChipFoundation.prototype.handleTransitionEnd = function (evt) {
+            var _this = this;
+            // Handle transition end event on the chip when it is about to be removed.
+            var shouldHandle = this.adapter.eventTargetHasClass(evt.target, cssClasses$9.CHIP_EXIT);
+            var widthIsAnimating = evt.propertyName === 'width';
+            var opacityIsAnimating = evt.propertyName === 'opacity';
+            if (shouldHandle && opacityIsAnimating) {
+                // See: https://css-tricks.com/using-css-transitions-auto-dimensions/#article-header-id-5
+                var chipWidth_1 = this.adapter.getComputedStyleValue('width');
+                // On the next frame (once we get the computed width), explicitly set the chip's width
+                // to its current pixel width, so we aren't transitioning out of 'auto'.
+                requestAnimationFrame(function () {
+                    _this.adapter.setStyleProperty('width', chipWidth_1);
+                    // To mitigate jitter, start transitioning padding and margin before width.
+                    _this.adapter.setStyleProperty('padding', '0');
+                    _this.adapter.setStyleProperty('margin', '0');
+                    // On the next frame (once width is explicitly set), transition width to 0.
+                    requestAnimationFrame(function () {
+                        _this.adapter.setStyleProperty('width', '0');
+                    });
+                });
+                return;
+            }
+            if (shouldHandle && widthIsAnimating) {
+                this.removeFocus();
+                var removedAnnouncement = this.adapter.getAttribute(strings$9.REMOVED_ANNOUNCEMENT_ATTRIBUTE);
+                this.adapter.notifyRemoval(removedAnnouncement);
+            }
+            // Handle a transition end event on the leading icon or checkmark, since the transition end event bubbles.
+            if (!opacityIsAnimating) {
+                return;
+            }
+            var shouldHideLeadingIcon = this.adapter.eventTargetHasClass(evt.target, cssClasses$9.LEADING_ICON) &&
+                this.adapter.hasClass(cssClasses$9.SELECTED);
+            var shouldShowLeadingIcon = this.adapter.eventTargetHasClass(evt.target, cssClasses$9.CHECKMARK) &&
+                !this.adapter.hasClass(cssClasses$9.SELECTED);
+            if (shouldHideLeadingIcon) {
+                this.adapter.addClassToLeadingIcon(cssClasses$9.HIDDEN_LEADING_ICON);
+                return;
+            }
+            if (shouldShowLeadingIcon) {
+                this.adapter.removeClassFromLeadingIcon(cssClasses$9.HIDDEN_LEADING_ICON);
+                return;
+            }
+        };
+        MDCChipFoundation.prototype.handleFocusIn = function (evt) {
+            // Early exit if the event doesn't come from the primary action
+            if (!this.eventFromPrimaryAction(evt)) {
+                return;
+            }
+            this.adapter.addClass(cssClasses$9.PRIMARY_ACTION_FOCUSED);
+        };
+        MDCChipFoundation.prototype.handleFocusOut = function (evt) {
+            // Early exit if the event doesn't come from the primary action
+            if (!this.eventFromPrimaryAction(evt)) {
+                return;
+            }
+            if (this.isEditing()) {
+                this.finishEditing();
+            }
+            this.adapter.removeClass(cssClasses$9.PRIMARY_ACTION_FOCUSED);
+        };
+        /**
+         * Handles an interaction event on the trailing icon element. This is used to
+         * prevent the ripple from activating on interaction with the trailing icon.
+         */
+        MDCChipFoundation.prototype.handleTrailingActionInteraction = function () {
+            this.adapter.notifyTrailingIconInteraction();
+            this.removeChip();
+        };
+        /**
+         * Handles a keydown event from the root element.
+         */
+        MDCChipFoundation.prototype.handleKeydown = function (evt) {
+            if (this.isEditing()) {
+                if (this.shouldFinishEditing(evt)) {
+                    evt.preventDefault();
+                    this.finishEditing();
+                }
+                // When editing, the foundation should only handle key events that finish
+                // the editing process.
+                return;
+            }
+            if (this.isEditable()) {
+                if (this.shouldStartEditing(evt)) {
+                    evt.preventDefault();
+                    this.startEditing();
+                }
+            }
+            if (this.shouldNotifyInteraction(evt)) {
+                this.adapter.notifyInteraction();
+                this.setPrimaryActionFocusable(this.getFocusBehavior());
+                return;
+            }
+            if (this.isDeleteAction(evt)) {
+                evt.preventDefault();
+                this.removeChip();
+                return;
+            }
+            // Early exit if the key is not usable
+            if (!navigationKeys.has(evt.key)) {
+                return;
+            }
+            // Prevent default behavior for movement keys which could include scrolling
+            evt.preventDefault();
+            this.focusNextAction(evt.key, EventSource.PRIMARY);
+        };
+        MDCChipFoundation.prototype.handleTrailingActionNavigation = function (evt) {
+            this.focusNextAction(evt.detail.key, EventSource.TRAILING);
+        };
+        /**
+         * Called by the chip set to remove focus from the chip actions.
+         */
+        MDCChipFoundation.prototype.removeFocus = function () {
+            this.adapter.setPrimaryActionAttr(strings$9.TAB_INDEX, '-1');
+            this.adapter.removeTrailingActionFocus();
+        };
+        /**
+         * Called by the chip set to focus the primary action.
+         *
+         */
+        MDCChipFoundation.prototype.focusPrimaryAction = function () {
+            this.setPrimaryActionFocusable(FocusBehavior.SHOULD_FOCUS);
+        };
+        /**
+         * Called by the chip set to focus the trailing action (if present), otherwise
+         * gives focus to the trailing action.
+         */
+        MDCChipFoundation.prototype.focusTrailingAction = function () {
+            var trailingActionIsNavigable = this.adapter.isTrailingActionNavigable();
+            if (trailingActionIsNavigable) {
+                this.adapter.setPrimaryActionAttr(strings$9.TAB_INDEX, '-1');
+                this.adapter.focusTrailingAction();
+                return;
+            }
+            this.focusPrimaryAction();
+        };
+        MDCChipFoundation.prototype.setPrimaryActionFocusable = function (focusBehavior) {
+            this.adapter.setPrimaryActionAttr(strings$9.TAB_INDEX, '0');
+            if (focusBehavior === FocusBehavior.SHOULD_FOCUS) {
+                this.adapter.focusPrimaryAction();
+            }
+            this.adapter.removeTrailingActionFocus();
+        };
+        MDCChipFoundation.prototype.getFocusBehavior = function () {
+            if (this.shouldFocusPrimaryActionOnClick) {
+                return FocusBehavior.SHOULD_FOCUS;
+            }
+            return FocusBehavior.SHOULD_NOT_FOCUS;
+        };
+        MDCChipFoundation.prototype.focusNextAction = function (key, source) {
+            var isTrailingActionNavigable = this.adapter.isTrailingActionNavigable();
+            var dir = this.getDirection(key);
+            // Early exit if the key should jump chips
+            if (jumpChipKeys.has(key) || !isTrailingActionNavigable) {
+                this.adapter.notifyNavigation(key, source);
+                return;
+            }
+            if (source === EventSource.PRIMARY && dir === Direction.RIGHT) {
+                this.focusTrailingAction();
+                return;
+            }
+            if (source === EventSource.TRAILING && dir === Direction.LEFT) {
+                this.focusPrimaryAction();
+                return;
+            }
+            this.adapter.notifyNavigation(key, EventSource.NONE);
+        };
+        MDCChipFoundation.prototype.getDirection = function (key) {
+            var isRTL = this.adapter.isRTL();
+            var isLeftKey = key === strings$9.ARROW_LEFT_KEY || key === strings$9.IE_ARROW_LEFT_KEY;
+            var isRightKey = key === strings$9.ARROW_RIGHT_KEY || key === strings$9.IE_ARROW_RIGHT_KEY;
+            if (!isRTL && isLeftKey || isRTL && isRightKey) {
+                return Direction.LEFT;
+            }
+            return Direction.RIGHT;
+        };
+        MDCChipFoundation.prototype.removeChip = function () {
+            if (this.shouldRemoveOnTrailingIconClick) {
+                this.beginExit();
+            }
+        };
+        MDCChipFoundation.prototype.shouldStartEditing = function (evt) {
+            return this.eventFromPrimaryAction(evt) && evt.key === strings$9.ENTER_KEY;
+        };
+        MDCChipFoundation.prototype.shouldFinishEditing = function (evt) {
+            return evt.key === strings$9.ENTER_KEY;
+        };
+        MDCChipFoundation.prototype.shouldNotifyInteraction = function (evt) {
+            return evt.key === strings$9.ENTER_KEY || evt.key === strings$9.SPACEBAR_KEY;
+        };
+        MDCChipFoundation.prototype.isDeleteAction = function (evt) {
+            var isDeletable = this.adapter.hasClass(cssClasses$9.DELETABLE);
+            return isDeletable &&
+                (evt.key === strings$9.BACKSPACE_KEY || evt.key === strings$9.DELETE_KEY ||
+                    evt.key === strings$9.IE_DELETE_KEY);
+        };
+        MDCChipFoundation.prototype.setSelectedImpl = function (selected) {
+            if (selected) {
+                this.adapter.addClass(cssClasses$9.SELECTED);
+                this.adapter.setPrimaryActionAttr(strings$9.ARIA_CHECKED, 'true');
+            }
+            else {
+                this.adapter.removeClass(cssClasses$9.SELECTED);
+                this.adapter.setPrimaryActionAttr(strings$9.ARIA_CHECKED, 'false');
+            }
+        };
+        MDCChipFoundation.prototype.notifySelection = function (selected) {
+            this.adapter.notifySelection(selected, false);
+        };
+        MDCChipFoundation.prototype.notifyIgnoredSelection = function (selected) {
+            this.adapter.notifySelection(selected, true);
+        };
+        MDCChipFoundation.prototype.eventFromPrimaryAction = function (evt) {
+            return this.adapter.eventTargetHasClass(evt.target, cssClasses$9.PRIMARY_ACTION);
+        };
+        MDCChipFoundation.prototype.startEditing = function () {
+            this.adapter.addClass(cssClasses$9.EDITING);
+            this.adapter.notifyEditStart();
+        };
+        MDCChipFoundation.prototype.finishEditing = function () {
+            this.adapter.removeClass(cssClasses$9.EDITING);
+            this.adapter.notifyEditFinish();
+        };
+        return MDCChipFoundation;
+    }(MDCFoundation));
+
+    /**
+     * @license
+     * Copyright 2016 Google Inc.
+     *
+     * Permission is hereby granted, free of charge, to any person obtaining a copy
+     * of this software and associated documentation files (the "Software"), to deal
+     * in the Software without restriction, including without limitation the rights
+     * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+     * copies of the Software, and to permit persons to whom the Software is
+     * furnished to do so, subject to the following conditions:
+     *
+     * The above copyright notice and this permission notice shall be included in
+     * all copies or substantial portions of the Software.
+     *
+     * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+     * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+     * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+     * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+     * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+     * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+     * THE SOFTWARE.
+     */
+    var MDCChip = /** @class */ (function (_super) {
+        __extends(MDCChip, _super);
+        function MDCChip() {
+            return _super !== null && _super.apply(this, arguments) || this;
+        }
+        Object.defineProperty(MDCChip.prototype, "selected", {
+            /**
+             * @return Whether the chip is selected.
+             */
+            get: function () {
+                return this.foundation.isSelected();
+            },
+            /**
+             * Sets selected state on the chip.
+             */
+            set: function (selected) {
+                this.foundation.setSelected(selected);
+            },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(MDCChip.prototype, "shouldRemoveOnTrailingIconClick", {
+            /**
+             * @return Whether a trailing icon click should trigger exit/removal of the chip.
+             */
+            get: function () {
+                return this.foundation.getShouldRemoveOnTrailingIconClick();
+            },
+            /**
+             * Sets whether a trailing icon click should trigger exit/removal of the chip.
+             */
+            set: function (shouldRemove) {
+                this.foundation.setShouldRemoveOnTrailingIconClick(shouldRemove);
+            },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(MDCChip.prototype, "setShouldFocusPrimaryActionOnClick", {
+            /**
+             * Sets whether a clicking on the chip should focus the primary action.
+             */
+            set: function (shouldFocus) {
+                this.foundation.setShouldFocusPrimaryActionOnClick(shouldFocus);
+            },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(MDCChip.prototype, "ripple", {
+            get: function () {
+                return this.rippleSurface;
+            },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(MDCChip.prototype, "id", {
+            get: function () {
+                return this.root.id;
+            },
+            enumerable: false,
+            configurable: true
+        });
+        MDCChip.attachTo = function (root) {
+            return new MDCChip(root);
+        };
+        MDCChip.prototype.initialize = function (rippleFactory, trailingActionFactory) {
+            var _this = this;
+            if (rippleFactory === void 0) { rippleFactory = function (el, foundation) { return new MDCRipple(el, foundation); }; }
+            if (trailingActionFactory === void 0) { trailingActionFactory = function (el) { return new MDCChipTrailingAction(el); }; }
+            this.leadingIcon = this.root.querySelector(strings$9.LEADING_ICON_SELECTOR);
+            this.checkmark = this.root.querySelector(strings$9.CHECKMARK_SELECTOR);
+            this.primaryAction =
+                this.root.querySelector(strings$9.PRIMARY_ACTION_SELECTOR);
+            var trailingActionEl = this.root.querySelector(strings$9.TRAILING_ACTION_SELECTOR);
+            if (trailingActionEl) {
+                this.trailingAction = trailingActionFactory(trailingActionEl);
+            }
+            // DO NOT INLINE this variable. For backward compatibility, foundations take a Partial<MDCFooAdapter>.
+            // To ensure we don't accidentally omit any methods, we need a separate, strongly typed adapter variable.
+            var rippleAdapter = __assign(__assign({}, MDCRipple.createAdapter(this)), { computeBoundingRect: function () { return _this.foundation.getDimensions(); } });
+            this.rippleSurface =
+                rippleFactory(this.root, new MDCRippleFoundation(rippleAdapter));
+        };
+        MDCChip.prototype.initialSyncWithDOM = function () {
+            var _this = this;
+            // Custom events
+            this.handleTrailingActionInteraction = function () {
+                _this.foundation.handleTrailingActionInteraction();
+            };
+            this.handleTrailingActionNavigation =
+                function (evt) {
+                    _this.foundation.handleTrailingActionNavigation(evt);
+                };
+            // Native events
+            this.handleClick = function () {
+                _this.foundation.handleClick();
+            };
+            this.handleKeydown = function (evt) {
+                _this.foundation.handleKeydown(evt);
+            };
+            this.handleTransitionEnd = function (evt) {
+                _this.foundation.handleTransitionEnd(evt);
+            };
+            this.handleFocusIn = function (evt) {
+                _this.foundation.handleFocusIn(evt);
+            };
+            this.handleFocusOut = function (evt) {
+                _this.foundation.handleFocusOut(evt);
+            };
+            this.listen('transitionend', this.handleTransitionEnd);
+            this.listen('click', this.handleClick);
+            this.listen('keydown', this.handleKeydown);
+            this.listen('focusin', this.handleFocusIn);
+            this.listen('focusout', this.handleFocusOut);
+            if (this.trailingAction) {
+                this.listen(strings$a.INTERACTION_EVENT, this.handleTrailingActionInteraction);
+                this.listen(strings$a.NAVIGATION_EVENT, this.handleTrailingActionNavigation);
+            }
+        };
+        MDCChip.prototype.destroy = function () {
+            this.rippleSurface.destroy();
+            this.unlisten('transitionend', this.handleTransitionEnd);
+            this.unlisten('keydown', this.handleKeydown);
+            this.unlisten('click', this.handleClick);
+            this.unlisten('focusin', this.handleFocusIn);
+            this.unlisten('focusout', this.handleFocusOut);
+            if (this.trailingAction) {
+                this.unlisten(strings$a.INTERACTION_EVENT, this.handleTrailingActionInteraction);
+                this.unlisten(strings$a.NAVIGATION_EVENT, this.handleTrailingActionNavigation);
+            }
+            _super.prototype.destroy.call(this);
+        };
+        /**
+         * Begins the exit animation which leads to removal of the chip.
+         */
+        MDCChip.prototype.beginExit = function () {
+            this.foundation.beginExit();
+        };
+        MDCChip.prototype.getDefaultFoundation = function () {
+            var _this = this;
+            // DO NOT INLINE this variable. For backward compatibility, foundations take a Partial<MDCFooAdapter>.
+            // To ensure we don't accidentally omit any methods, we need a separate, strongly typed adapter variable.
+            var adapter = {
+                addClass: function (className) { return _this.root.classList.add(className); },
+                addClassToLeadingIcon: function (className) {
+                    if (_this.leadingIcon) {
+                        _this.leadingIcon.classList.add(className);
+                    }
+                },
+                eventTargetHasClass: function (target, className) {
+                    return target ? target.classList.contains(className) : false;
+                },
+                focusPrimaryAction: function () {
+                    if (_this.primaryAction) {
+                        _this.primaryAction.focus();
+                    }
+                },
+                focusTrailingAction: function () {
+                    if (_this.trailingAction) {
+                        _this.trailingAction.focus();
+                    }
+                },
+                getAttribute: function (attr) { return _this.root.getAttribute(attr); },
+                getCheckmarkBoundingClientRect: function () {
+                    return _this.checkmark ? _this.checkmark.getBoundingClientRect() : null;
+                },
+                getComputedStyleValue: function (propertyName) {
+                    return window.getComputedStyle(_this.root).getPropertyValue(propertyName);
+                },
+                getRootBoundingClientRect: function () { return _this.root.getBoundingClientRect(); },
+                hasClass: function (className) { return _this.root.classList.contains(className); },
+                hasLeadingIcon: function () { return !!_this.leadingIcon; },
+                isRTL: function () { return window.getComputedStyle(_this.root).getPropertyValue('direction') === 'rtl'; },
+                isTrailingActionNavigable: function () {
+                    if (_this.trailingAction) {
+                        return _this.trailingAction.isNavigable();
+                    }
+                    return false;
+                },
+                notifyInteraction: function () { return _this.emit(strings$9.INTERACTION_EVENT, { chipId: _this.id }, true /* shouldBubble */); },
+                notifyNavigation: function (key, source) {
+                    return _this.emit(strings$9.NAVIGATION_EVENT, { chipId: _this.id, key: key, source: source }, true /* shouldBubble */);
+                },
+                notifyRemoval: function (removedAnnouncement) {
+                    _this.emit(strings$9.REMOVAL_EVENT, { chipId: _this.id, removedAnnouncement: removedAnnouncement }, true /* shouldBubble */);
+                },
+                notifySelection: function (selected, shouldIgnore) {
+                    return _this.emit(strings$9.SELECTION_EVENT, { chipId: _this.id, selected: selected, shouldIgnore: shouldIgnore }, true /* shouldBubble */);
+                },
+                notifyTrailingIconInteraction: function () {
+                    return _this.emit(strings$9.TRAILING_ICON_INTERACTION_EVENT, { chipId: _this.id }, true /* shouldBubble */);
+                },
+                notifyEditStart: function () { },
+                notifyEditFinish: function () { },
+                removeClass: function (className) { return _this.root.classList.remove(className); },
+                removeClassFromLeadingIcon: function (className) {
+                    if (_this.leadingIcon) {
+                        _this.leadingIcon.classList.remove(className);
+                    }
+                },
+                removeTrailingActionFocus: function () {
+                    if (_this.trailingAction) {
+                        _this.trailingAction.removeFocus();
+                    }
+                },
+                setPrimaryActionAttr: function (attr, value) {
+                    if (_this.primaryAction) {
+                        _this.primaryAction.setAttribute(attr, value);
+                    }
+                },
+                setStyleProperty: function (propertyName, value) {
+                    return _this.root.style.setProperty(propertyName, value);
+                },
+            };
+            return new MDCChipFoundation(adapter);
+        };
+        MDCChip.prototype.setSelectedFromChipSet = function (selected, shouldNotifyClients) {
+            this.foundation.setSelectedFromChipSet(selected, shouldNotifyClients);
+        };
+        MDCChip.prototype.focusPrimaryAction = function () {
+            this.foundation.focusPrimaryAction();
+        };
+        MDCChip.prototype.focusTrailingAction = function () {
+            this.foundation.focusTrailingAction();
+        };
+        MDCChip.prototype.removeFocus = function () {
+            this.foundation.removeFocus();
+        };
+        MDCChip.prototype.remove = function () {
+            var parent = this.root.parentNode;
+            if (parent !== null) {
+                parent.removeChild(this.root);
+            }
+        };
+        return MDCChip;
+    }(MDCComponent));
+
+    /**
+     * @license
+     * Copyright 2016 Google Inc.
+     *
+     * Permission is hereby granted, free of charge, to any person obtaining a copy
+     * of this software and associated documentation files (the "Software"), to deal
+     * in the Software without restriction, including without limitation the rights
+     * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+     * copies of the Software, and to permit persons to whom the Software is
+     * furnished to do so, subject to the following conditions:
+     *
+     * The above copyright notice and this permission notice shall be included in
+     * all copies or substantial portions of the Software.
+     *
+     * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+     * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+     * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+     * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+     * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+     * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+     * THE SOFTWARE.
+     */
+    var strings$8 = {
+        CHIP_SELECTOR: '.mdc-chip',
+    };
+    var cssClasses$8 = {
+        CHOICE: 'mdc-chip-set--choice',
+        FILTER: 'mdc-chip-set--filter',
+    };
+
+    /**
+     * @license
+     * Copyright 2017 Google Inc.
+     *
+     * Permission is hereby granted, free of charge, to any person obtaining a copy
+     * of this software and associated documentation files (the "Software"), to deal
+     * in the Software without restriction, including without limitation the rights
+     * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+     * copies of the Software, and to permit persons to whom the Software is
+     * furnished to do so, subject to the following conditions:
+     *
+     * The above copyright notice and this permission notice shall be included in
+     * all copies or substantial portions of the Software.
+     *
+     * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+     * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+     * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+     * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+     * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+     * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+     * THE SOFTWARE.
+     */
+    var MDCChipSetFoundation = /** @class */ (function (_super) {
+        __extends(MDCChipSetFoundation, _super);
+        function MDCChipSetFoundation(adapter) {
+            var _this = _super.call(this, __assign(__assign({}, MDCChipSetFoundation.defaultAdapter), adapter)) || this;
+            /**
+             * The ids of the selected chips in the set. Only used for choice chip set or filter chip set.
+             */
+            _this.selectedChipIds = [];
+            return _this;
+        }
+        Object.defineProperty(MDCChipSetFoundation, "strings", {
+            get: function () {
+                return strings$8;
+            },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(MDCChipSetFoundation, "cssClasses", {
+            get: function () {
+                return cssClasses$8;
+            },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(MDCChipSetFoundation, "defaultAdapter", {
+            get: function () {
+                return {
+                    announceMessage: function () { return undefined; },
+                    focusChipPrimaryActionAtIndex: function () { return undefined; },
+                    focusChipTrailingActionAtIndex: function () { return undefined; },
+                    getChipListCount: function () { return -1; },
+                    getIndexOfChipById: function () { return -1; },
+                    hasClass: function () { return false; },
+                    isRTL: function () { return false; },
+                    removeChipAtIndex: function () { return undefined; },
+                    removeFocusFromChipAtIndex: function () { return undefined; },
+                    selectChipAtIndex: function () { return undefined; },
+                };
+            },
+            enumerable: false,
+            configurable: true
+        });
+        /**
+         * Returns an array of the IDs of all selected chips.
+         */
+        MDCChipSetFoundation.prototype.getSelectedChipIds = function () {
+            return this.selectedChipIds.slice();
+        };
+        /**
+         * Selects the chip with the given id. Deselects all other chips if the chip set is of the choice variant.
+         * Does not notify clients of the updated selection state.
+         */
+        MDCChipSetFoundation.prototype.select = function (chipId) {
+            this.selectImpl(chipId, false);
+        };
+        /**
+         * Handles a chip interaction event
+         */
+        MDCChipSetFoundation.prototype.handleChipInteraction = function (_a) {
+            var chipId = _a.chipId;
+            var index = this.adapter.getIndexOfChipById(chipId);
+            this.removeFocusFromChipsExcept(index);
+            if (this.adapter.hasClass(cssClasses$8.CHOICE) ||
+                this.adapter.hasClass(cssClasses$8.FILTER)) {
+                this.toggleSelect(chipId);
+            }
+        };
+        /**
+         * Handles a chip selection event, used to handle discrepancy when selection state is set directly on the Chip.
+         */
+        MDCChipSetFoundation.prototype.handleChipSelection = function (_a) {
+            var chipId = _a.chipId, selected = _a.selected, shouldIgnore = _a.shouldIgnore;
+            // Early exit if we should ignore the event
+            if (shouldIgnore) {
+                return;
+            }
+            var chipIsSelected = this.selectedChipIds.indexOf(chipId) >= 0;
+            if (selected && !chipIsSelected) {
+                this.select(chipId);
+            }
+            else if (!selected && chipIsSelected) {
+                this.deselectImpl(chipId);
+            }
+        };
+        /**
+         * Handles the event when a chip is removed.
+         */
+        MDCChipSetFoundation.prototype.handleChipRemoval = function (_a) {
+            var chipId = _a.chipId, removedAnnouncement = _a.removedAnnouncement;
+            if (removedAnnouncement) {
+                this.adapter.announceMessage(removedAnnouncement);
+            }
+            var index = this.adapter.getIndexOfChipById(chipId);
+            this.deselectAndNotifyClients(chipId);
+            this.adapter.removeChipAtIndex(index);
+            var maxIndex = this.adapter.getChipListCount() - 1;
+            if (maxIndex < 0) {
+                return;
+            }
+            var nextIndex = Math.min(index, maxIndex);
+            this.removeFocusFromChipsExcept(nextIndex);
+            // After removing a chip, we should focus the trailing action for the next chip.
+            this.adapter.focusChipTrailingActionAtIndex(nextIndex);
+        };
+        /**
+         * Handles a chip navigation event.
+         */
+        MDCChipSetFoundation.prototype.handleChipNavigation = function (_a) {
+            var chipId = _a.chipId, key = _a.key, source = _a.source;
+            var maxIndex = this.adapter.getChipListCount() - 1;
+            var index = this.adapter.getIndexOfChipById(chipId);
+            // Early exit if the index is out of range or the key is unusable
+            if (index === -1 || !navigationKeys.has(key)) {
+                return;
+            }
+            var isRTL = this.adapter.isRTL();
+            var isLeftKey = key === strings$9.ARROW_LEFT_KEY ||
+                key === strings$9.IE_ARROW_LEFT_KEY;
+            var isRightKey = key === strings$9.ARROW_RIGHT_KEY ||
+                key === strings$9.IE_ARROW_RIGHT_KEY;
+            var isDownKey = key === strings$9.ARROW_DOWN_KEY ||
+                key === strings$9.IE_ARROW_DOWN_KEY;
+            var shouldIncrement = !isRTL && isRightKey || isRTL && isLeftKey || isDownKey;
+            var isHome = key === strings$9.HOME_KEY;
+            var isEnd = key === strings$9.END_KEY;
+            if (shouldIncrement) {
+                index++;
+            }
+            else if (isHome) {
+                index = 0;
+            }
+            else if (isEnd) {
+                index = maxIndex;
+            }
+            else {
+                index--;
+            }
+            // Early exit if the index is out of bounds
+            if (index < 0 || index > maxIndex) {
+                return;
+            }
+            this.removeFocusFromChipsExcept(index);
+            this.focusChipAction(index, key, source);
+        };
+        MDCChipSetFoundation.prototype.focusChipAction = function (index, key, source) {
+            var shouldJumpChips = jumpChipKeys.has(key);
+            if (shouldJumpChips && source === EventSource.PRIMARY) {
+                return this.adapter.focusChipPrimaryActionAtIndex(index);
+            }
+            if (shouldJumpChips && source === EventSource.TRAILING) {
+                return this.adapter.focusChipTrailingActionAtIndex(index);
+            }
+            var dir = this.getDirection(key);
+            if (dir === Direction.LEFT) {
+                return this.adapter.focusChipTrailingActionAtIndex(index);
+            }
+            if (dir === Direction.RIGHT) {
+                return this.adapter.focusChipPrimaryActionAtIndex(index);
+            }
+        };
+        MDCChipSetFoundation.prototype.getDirection = function (key) {
+            var isRTL = this.adapter.isRTL();
+            var isLeftKey = key === strings$9.ARROW_LEFT_KEY ||
+                key === strings$9.IE_ARROW_LEFT_KEY;
+            var isRightKey = key === strings$9.ARROW_RIGHT_KEY ||
+                key === strings$9.IE_ARROW_RIGHT_KEY;
+            if (!isRTL && isLeftKey || isRTL && isRightKey) {
+                return Direction.LEFT;
+            }
+            return Direction.RIGHT;
+        };
+        /**
+         * Deselects the chip with the given id and optionally notifies clients.
+         */
+        MDCChipSetFoundation.prototype.deselectImpl = function (chipId, shouldNotifyClients) {
+            if (shouldNotifyClients === void 0) { shouldNotifyClients = false; }
+            var index = this.selectedChipIds.indexOf(chipId);
+            if (index >= 0) {
+                this.selectedChipIds.splice(index, 1);
+                var chipIndex = this.adapter.getIndexOfChipById(chipId);
+                this.adapter.selectChipAtIndex(chipIndex, /** isSelected */ false, shouldNotifyClients);
+            }
+        };
+        /**
+         * Deselects the chip with the given id and notifies clients.
+         */
+        MDCChipSetFoundation.prototype.deselectAndNotifyClients = function (chipId) {
+            this.deselectImpl(chipId, true);
+        };
+        /**
+         * Toggles selection of the chip with the given id.
+         */
+        MDCChipSetFoundation.prototype.toggleSelect = function (chipId) {
+            if (this.selectedChipIds.indexOf(chipId) >= 0) {
+                this.deselectAndNotifyClients(chipId);
+            }
+            else {
+                this.selectAndNotifyClients(chipId);
+            }
+        };
+        MDCChipSetFoundation.prototype.removeFocusFromChipsExcept = function (index) {
+            var chipCount = this.adapter.getChipListCount();
+            for (var i = 0; i < chipCount; i++) {
+                if (i !== index) {
+                    this.adapter.removeFocusFromChipAtIndex(i);
+                }
+            }
+        };
+        MDCChipSetFoundation.prototype.selectAndNotifyClients = function (chipId) {
+            this.selectImpl(chipId, true);
+        };
+        MDCChipSetFoundation.prototype.selectImpl = function (chipId, shouldNotifyClients) {
+            if (this.selectedChipIds.indexOf(chipId) >= 0) {
+                return;
+            }
+            if (this.adapter.hasClass(cssClasses$8.CHOICE) &&
+                this.selectedChipIds.length > 0) {
+                var previouslySelectedChip = this.selectedChipIds[0];
+                var previouslySelectedIndex = this.adapter.getIndexOfChipById(previouslySelectedChip);
+                this.selectedChipIds = [];
+                this.adapter.selectChipAtIndex(previouslySelectedIndex, /** isSelected */ false, shouldNotifyClients);
+            }
+            this.selectedChipIds.push(chipId);
+            var index = this.adapter.getIndexOfChipById(chipId);
+            this.adapter.selectChipAtIndex(index, /** isSelected */ true, shouldNotifyClients);
+        };
+        return MDCChipSetFoundation;
+    }(MDCFoundation));
+
+    /**
+     * @license
+     * Copyright 2016 Google Inc.
+     *
+     * Permission is hereby granted, free of charge, to any person obtaining a copy
+     * of this software and associated documentation files (the "Software"), to deal
+     * in the Software without restriction, including without limitation the rights
+     * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+     * copies of the Software, and to permit persons to whom the Software is
+     * furnished to do so, subject to the following conditions:
+     *
+     * The above copyright notice and this permission notice shall be included in
+     * all copies or substantial portions of the Software.
+     *
+     * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+     * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+     * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+     * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+     * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+     * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+     * THE SOFTWARE.
+     */
+    var _a$1 = MDCChipFoundation.strings, INTERACTION_EVENT = _a$1.INTERACTION_EVENT, SELECTION_EVENT = _a$1.SELECTION_EVENT, REMOVAL_EVENT = _a$1.REMOVAL_EVENT, NAVIGATION_EVENT = _a$1.NAVIGATION_EVENT;
+    var CHIP_SELECTOR = MDCChipSetFoundation.strings.CHIP_SELECTOR;
+    var idCounter = 0;
+    var MDCChipSet = /** @class */ (function (_super) {
+        __extends(MDCChipSet, _super);
+        function MDCChipSet() {
+            return _super !== null && _super.apply(this, arguments) || this;
+        }
+        MDCChipSet.attachTo = function (root) {
+            return new MDCChipSet(root);
+        };
+        Object.defineProperty(MDCChipSet.prototype, "chips", {
+            get: function () {
+                return this.chipsList.slice();
+            },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(MDCChipSet.prototype, "selectedChipIds", {
+            /**
+             * @return An array of the IDs of all selected chips.
+             */
+            get: function () {
+                return this.foundation.getSelectedChipIds();
+            },
+            enumerable: false,
+            configurable: true
+        });
+        /**
+         * @param chipFactory A function which creates a new MDCChip.
+         */
+        MDCChipSet.prototype.initialize = function (chipFactory) {
+            if (chipFactory === void 0) { chipFactory = function (el) { return new MDCChip(el); }; }
+            this.chipFactory = chipFactory;
+            this.chipsList = this.instantiateChips(this.chipFactory);
+        };
+        MDCChipSet.prototype.initialSyncWithDOM = function () {
+            var e_1, _a;
+            var _this = this;
+            try {
+                for (var _b = __values(this.chipsList), _c = _b.next(); !_c.done; _c = _b.next()) {
+                    var chip = _c.value;
+                    if (chip.id && chip.selected) {
+                        this.foundation.select(chip.id);
+                    }
+                }
+            }
+            catch (e_1_1) { e_1 = { error: e_1_1 }; }
+            finally {
+                try {
+                    if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+                }
+                finally { if (e_1) throw e_1.error; }
+            }
+            this.handleChipInteraction = function (evt) {
+                return _this.foundation.handleChipInteraction(evt.detail);
+            };
+            this.handleChipSelection = function (evt) {
+                return _this.foundation.handleChipSelection(evt.detail);
+            };
+            this.handleChipRemoval = function (evt) {
+                return _this.foundation.handleChipRemoval(evt.detail);
+            };
+            this.handleChipNavigation = function (evt) {
+                return _this.foundation.handleChipNavigation(evt.detail);
+            };
+            this.listen(INTERACTION_EVENT, this.handleChipInteraction);
+            this.listen(SELECTION_EVENT, this.handleChipSelection);
+            this.listen(REMOVAL_EVENT, this.handleChipRemoval);
+            this.listen(NAVIGATION_EVENT, this.handleChipNavigation);
+        };
+        MDCChipSet.prototype.destroy = function () {
+            var e_2, _a;
+            try {
+                for (var _b = __values(this.chipsList), _c = _b.next(); !_c.done; _c = _b.next()) {
+                    var chip = _c.value;
+                    chip.destroy();
+                }
+            }
+            catch (e_2_1) { e_2 = { error: e_2_1 }; }
+            finally {
+                try {
+                    if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+                }
+                finally { if (e_2) throw e_2.error; }
+            }
+            this.unlisten(INTERACTION_EVENT, this.handleChipInteraction);
+            this.unlisten(SELECTION_EVENT, this.handleChipSelection);
+            this.unlisten(REMOVAL_EVENT, this.handleChipRemoval);
+            this.unlisten(NAVIGATION_EVENT, this.handleChipNavigation);
+            _super.prototype.destroy.call(this);
+        };
+        /**
+         * Adds a new chip object to the chip set from the given chip element.
+         */
+        MDCChipSet.prototype.addChip = function (chipEl) {
+            chipEl.id = chipEl.id || "mdc-chip-" + ++idCounter;
+            this.chipsList.push(this.chipFactory(chipEl));
+        };
+        MDCChipSet.prototype.getDefaultFoundation = function () {
+            var _this = this;
+            // DO NOT INLINE this variable. For backward compatibility, foundations take a Partial<MDCFooAdapter>.
+            // To ensure we don't accidentally omit any methods, we need a separate, strongly typed adapter variable.
+            var adapter = {
+                announceMessage: function (message) {
+                    announce(message);
+                },
+                focusChipPrimaryActionAtIndex: function (index) {
+                    _this.chipsList[index].focusPrimaryAction();
+                },
+                focusChipTrailingActionAtIndex: function (index) {
+                    _this.chipsList[index].focusTrailingAction();
+                },
+                getChipListCount: function () { return _this.chips.length; },
+                getIndexOfChipById: function (chipId) {
+                    return _this.findChipIndex(chipId);
+                },
+                hasClass: function (className) { return _this.root.classList.contains(className); },
+                isRTL: function () { return window.getComputedStyle(_this.root).getPropertyValue('direction') === 'rtl'; },
+                removeChipAtIndex: function (index) {
+                    if (index >= 0 && index < _this.chips.length) {
+                        _this.chipsList[index].destroy();
+                        _this.chipsList[index].remove();
+                        _this.chipsList.splice(index, 1);
+                    }
+                },
+                removeFocusFromChipAtIndex: function (index) {
+                    _this.chipsList[index].removeFocus();
+                },
+                selectChipAtIndex: function (index, selected, shouldNotifyClients) {
+                    if (index >= 0 && index < _this.chips.length) {
+                        _this.chipsList[index].setSelectedFromChipSet(selected, shouldNotifyClients);
+                    }
+                },
+            };
+            return new MDCChipSetFoundation(adapter);
+        };
+        /**
+         * Instantiates chip components on all of the chip set's child chip elements.
+         */
+        MDCChipSet.prototype.instantiateChips = function (chipFactory) {
+            var chipElements = [].slice.call(this.root.querySelectorAll(CHIP_SELECTOR));
+            return chipElements.map(function (el) {
+                el.id = el.id || "mdc-chip-" + ++idCounter;
+                return chipFactory(el);
+            });
+        };
+        /**
+         * Returns the index of the chip with the given id, or -1 if the chip does not exist.
+         */
+        MDCChipSet.prototype.findChipIndex = function (chipId) {
+            for (var i = 0; i < this.chips.length; i++) {
+                if (this.chipsList[i].id === chipId) {
+                    return i;
+                }
+            }
+            return -1;
+        };
+        return MDCChipSet;
+    }(MDCComponent));
+
+    /**
+     * @license
+     * Copyright 2019 Google Inc.
+     *
+     * Permission is hereby granted, free of charge, to any person obtaining a copy
+     * of this software and associated documentation files (the "Software"), to deal
+     * in the Software without restriction, including without limitation the rights
+     * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+     * copies of the Software, and to permit persons to whom the Software is
+     * furnished to do so, subject to the following conditions:
+     *
+     * The above copyright notice and this permission notice shall be included in
+     * all copies or substantial portions of the Software.
+     *
+     * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+     * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+     * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+     * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+     * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+     * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+     * THE SOFTWARE.
+     */
+
+    var deprecated = /*#__PURE__*/Object.freeze({
+        __proto__: null,
+        trailingActionStrings: strings$a,
+        MDCChipTrailingAction: MDCChipTrailingAction,
+        MDCChipTrailingActionFoundation: MDCChipTrailingActionFoundation,
+        chipCssClasses: cssClasses$9,
+        chipStrings: strings$9,
+        MDCChip: MDCChip,
+        MDCChipFoundation: MDCChipFoundation,
+        chipSetCssClasses: cssClasses$8,
+        chipSetStrings: strings$8,
+        MDCChipSet: MDCChipSet,
+        MDCChipSetFoundation: MDCChipSetFoundation
+    });
+
+    /* node_modules/@smui/chips/dist/Chip.svelte generated by Svelte v3.49.0 */
+
+    const { Error: Error_1 } = globals;
+    const file$b = "node_modules/@smui/chips/dist/Chip.svelte";
+
+    // (49:2) {#if ripple && !$nonInteractive}
+    function create_if_block_1$2(ctx) {
+    	let div;
+
+    	const block = {
+    		c: function create() {
+    			div = element("div");
+    			attr_dev(div, "class", "mdc-chip__ripple");
+    			add_location(div, file$b, 49, 4, 1566);
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, div, anchor);
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(div);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_if_block_1$2.name,
+    		type: "if",
+    		source: "(49:2) {#if ripple && !$nonInteractive}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (53:2) {#if touch}
+    function create_if_block$5(ctx) {
+    	let div;
+
+    	const block = {
+    		c: function create() {
+    			div = element("div");
+    			attr_dev(div, "class", "mdc-chip__touch");
+    			add_location(div, file$b, 53, 4, 1636);
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, div, anchor);
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(div);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_if_block$5.name,
+    		type: "if",
+    		source: "(53:2) {#if touch}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (1:0) <svelte:component   this={component}   bind:this={element}   use={[     [       Ripple,       {         ripple: ripple && !$nonInteractive,         unbounded: false,         addClass,         removeClass,         addStyle,       },     ],     forwardEvents,     ...use,   ]}   class={classMap({     [className]: true,     'mdc-chip': true,     'mdc-chip--selected': selected,     'mdc-chip--touch': touch,     ...internalClasses,   })}   style={Object.entries(internalStyles)     .map(([name, value]) => `${name}: ${value};`)     .concat([style])     .join(' ')}   role="row"   on:transitionend={(event) => instance && instance.handleTransitionEnd(event)}   on:click={() => instance && instance.handleClick()}   on:keydown={(event) => instance && instance.handleKeydown(event)}   on:focusin={(event) => instance && instance.handleFocusIn(event)}   on:focusout={(event) => instance && instance.handleFocusOut(event)}   on:SMUIChipTrailingAction:interaction={() =>     instance && instance.handleTrailingActionInteraction()}   on:SMUIChipTrailingAction:navigation={(event) =>     instance && instance.handleTrailingActionNavigation(event)}   on:SMUIChipsChipPrimaryAction:mount={(event) =>     (primaryActionAccessor = event.detail)}   on:SMUIChipsChipPrimaryAction:unmount={() =>     (primaryActionAccessor = undefined)}   on:SMUIChipsChipTrailingAction:mount={(event) =>     (trailingActionAccessor = event.detail)}   on:SMUIChipsChipTrailingAction:unmount={() =>     (trailingActionAccessor = undefined)}   {...$$restProps} >
+    function create_default_slot$7(ctx) {
+    	let t0;
+    	let t1;
+    	let if_block1_anchor;
+    	let current;
+    	let if_block0 = /*ripple*/ ctx[3] && !/*$nonInteractive*/ ctx[13] && create_if_block_1$2(ctx);
+    	const default_slot_template = /*#slots*/ ctx[31].default;
+    	const default_slot = create_slot(default_slot_template, ctx, /*$$scope*/ ctx[44], null);
+    	let if_block1 = /*touch*/ ctx[4] && create_if_block$5(ctx);
+
+    	const block = {
+    		c: function create() {
+    			if (if_block0) if_block0.c();
+    			t0 = space();
+    			if (default_slot) default_slot.c();
+    			t1 = space();
+    			if (if_block1) if_block1.c();
+    			if_block1_anchor = empty();
+    		},
+    		m: function mount(target, anchor) {
+    			if (if_block0) if_block0.m(target, anchor);
+    			insert_dev(target, t0, anchor);
+
+    			if (default_slot) {
+    				default_slot.m(target, anchor);
+    			}
+
+    			insert_dev(target, t1, anchor);
+    			if (if_block1) if_block1.m(target, anchor);
+    			insert_dev(target, if_block1_anchor, anchor);
+    			current = true;
+    		},
+    		p: function update(ctx, dirty) {
+    			if (/*ripple*/ ctx[3] && !/*$nonInteractive*/ ctx[13]) {
+    				if (if_block0) ; else {
+    					if_block0 = create_if_block_1$2(ctx);
+    					if_block0.c();
+    					if_block0.m(t0.parentNode, t0);
+    				}
+    			} else if (if_block0) {
+    				if_block0.d(1);
+    				if_block0 = null;
+    			}
+
+    			if (default_slot) {
+    				if (default_slot.p && (!current || dirty[1] & /*$$scope*/ 8192)) {
+    					update_slot_base(
+    						default_slot,
+    						default_slot_template,
+    						ctx,
+    						/*$$scope*/ ctx[44],
+    						!current
+    						? get_all_dirty_from_scope(/*$$scope*/ ctx[44])
+    						: get_slot_changes(default_slot_template, /*$$scope*/ ctx[44], dirty, null),
+    						null
+    					);
+    				}
+    			}
+
+    			if (/*touch*/ ctx[4]) {
+    				if (if_block1) ; else {
+    					if_block1 = create_if_block$5(ctx);
+    					if_block1.c();
+    					if_block1.m(if_block1_anchor.parentNode, if_block1_anchor);
+    				}
+    			} else if (if_block1) {
+    				if_block1.d(1);
+    				if_block1 = null;
+    			}
+    		},
+    		i: function intro(local) {
+    			if (current) return;
+    			transition_in(default_slot, local);
+    			current = true;
+    		},
+    		o: function outro(local) {
+    			transition_out(default_slot, local);
+    			current = false;
+    		},
+    		d: function destroy(detaching) {
+    			if (if_block0) if_block0.d(detaching);
+    			if (detaching) detach_dev(t0);
+    			if (default_slot) default_slot.d(detaching);
+    			if (detaching) detach_dev(t1);
+    			if (if_block1) if_block1.d(detaching);
+    			if (detaching) detach_dev(if_block1_anchor);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_default_slot$7.name,
+    		type: "slot",
+    		source: "(1:0) <svelte:component   this={component}   bind:this={element}   use={[     [       Ripple,       {         ripple: ripple && !$nonInteractive,         unbounded: false,         addClass,         removeClass,         addStyle,       },     ],     forwardEvents,     ...use,   ]}   class={classMap({     [className]: true,     'mdc-chip': true,     'mdc-chip--selected': selected,     'mdc-chip--touch': touch,     ...internalClasses,   })}   style={Object.entries(internalStyles)     .map(([name, value]) => `${name}: ${value};`)     .concat([style])     .join(' ')}   role=\\\"row\\\"   on:transitionend={(event) => instance && instance.handleTransitionEnd(event)}   on:click={() => instance && instance.handleClick()}   on:keydown={(event) => instance && instance.handleKeydown(event)}   on:focusin={(event) => instance && instance.handleFocusIn(event)}   on:focusout={(event) => instance && instance.handleFocusOut(event)}   on:SMUIChipTrailingAction:interaction={() =>     instance && instance.handleTrailingActionInteraction()}   on:SMUIChipTrailingAction:navigation={(event) =>     instance && instance.handleTrailingActionNavigation(event)}   on:SMUIChipsChipPrimaryAction:mount={(event) =>     (primaryActionAccessor = event.detail)}   on:SMUIChipsChipPrimaryAction:unmount={() =>     (primaryActionAccessor = undefined)}   on:SMUIChipsChipTrailingAction:mount={(event) =>     (trailingActionAccessor = event.detail)}   on:SMUIChipsChipTrailingAction:unmount={() =>     (trailingActionAccessor = undefined)}   {...$$restProps} >",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    function create_fragment$e(ctx) {
+    	let switch_instance;
+    	let switch_instance_anchor;
+    	let current;
+
+    	const switch_instance_spread_levels = [
+    		{
+    			use: [
+    				[
+    					Ripple,
+    					{
+    						ripple: /*ripple*/ ctx[3] && !/*$nonInteractive*/ ctx[13],
+    						unbounded: false,
+    						addClass: /*addClass*/ ctx[22],
+    						removeClass: /*removeClass*/ ctx[23],
+    						addStyle: /*addStyle*/ ctx[24]
+    					}
+    				],
+    				/*forwardEvents*/ ctx[14],
+    				.../*use*/ ctx[0]
+    			]
+    		},
+    		{
+    			class: classMap({
+    				[/*className*/ ctx[1]]: true,
+    				'mdc-chip': true,
+    				'mdc-chip--selected': /*selected*/ ctx[7],
+    				'mdc-chip--touch': /*touch*/ ctx[4],
+    				.../*internalClasses*/ ctx[9]
+    			})
+    		},
+    		{
+    			style: Object.entries(/*internalStyles*/ ctx[10]).map(func$4).concat([/*style*/ ctx[2]]).join(' ')
+    		},
+    		{ role: "row" },
+    		/*$$restProps*/ ctx[25]
+    	];
+
+    	var switch_value = /*component*/ ctx[5];
+
+    	function switch_props(ctx) {
+    		let switch_instance_props = {
+    			$$slots: { default: [create_default_slot$7] },
+    			$$scope: { ctx }
+    		};
+
+    		for (let i = 0; i < switch_instance_spread_levels.length; i += 1) {
+    			switch_instance_props = assign(switch_instance_props, switch_instance_spread_levels[i]);
+    		}
+
+    		return {
+    			props: switch_instance_props,
+    			$$inline: true
+    		};
+    	}
+
+    	if (switch_value) {
+    		switch_instance = new switch_value(switch_props(ctx));
+    		/*switch_instance_binding*/ ctx[32](switch_instance);
+    		switch_instance.$on("transitionend", /*transitionend_handler*/ ctx[33]);
+    		switch_instance.$on("click", /*click_handler*/ ctx[34]);
+    		switch_instance.$on("keydown", /*keydown_handler*/ ctx[35]);
+    		switch_instance.$on("focusin", /*focusin_handler*/ ctx[36]);
+    		switch_instance.$on("focusout", /*focusout_handler*/ ctx[37]);
+    		switch_instance.$on("SMUIChipTrailingAction:interaction", /*SMUIChipTrailingAction_interaction_handler*/ ctx[38]);
+    		switch_instance.$on("SMUIChipTrailingAction:navigation", /*SMUIChipTrailingAction_navigation_handler*/ ctx[39]);
+    		switch_instance.$on("SMUIChipsChipPrimaryAction:mount", /*SMUIChipsChipPrimaryAction_mount_handler*/ ctx[40]);
+    		switch_instance.$on("SMUIChipsChipPrimaryAction:unmount", /*SMUIChipsChipPrimaryAction_unmount_handler*/ ctx[41]);
+    		switch_instance.$on("SMUIChipsChipTrailingAction:mount", /*SMUIChipsChipTrailingAction_mount_handler*/ ctx[42]);
+    		switch_instance.$on("SMUIChipsChipTrailingAction:unmount", /*SMUIChipsChipTrailingAction_unmount_handler*/ ctx[43]);
+    	}
+
+    	const block = {
+    		c: function create() {
+    			if (switch_instance) create_component(switch_instance.$$.fragment);
+    			switch_instance_anchor = empty();
+    		},
+    		l: function claim(nodes) {
+    			throw new Error_1("options.hydrate only works if the component was compiled with the `hydratable: true` option");
+    		},
+    		m: function mount(target, anchor) {
+    			if (switch_instance) {
+    				mount_component(switch_instance, target, anchor);
+    			}
+
+    			insert_dev(target, switch_instance_anchor, anchor);
+    			current = true;
+    		},
+    		p: function update(ctx, dirty) {
+    			const switch_instance_changes = (dirty[0] & /*ripple, $nonInteractive, addClass, removeClass, addStyle, forwardEvents, use, className, selected, touch, internalClasses, internalStyles, style, $$restProps*/ 62940831)
+    			? get_spread_update(switch_instance_spread_levels, [
+    					dirty[0] & /*ripple, $nonInteractive, addClass, removeClass, addStyle, forwardEvents, use*/ 29384713 && {
+    						use: [
+    							[
+    								Ripple,
+    								{
+    									ripple: /*ripple*/ ctx[3] && !/*$nonInteractive*/ ctx[13],
+    									unbounded: false,
+    									addClass: /*addClass*/ ctx[22],
+    									removeClass: /*removeClass*/ ctx[23],
+    									addStyle: /*addStyle*/ ctx[24]
+    								}
+    							],
+    							/*forwardEvents*/ ctx[14],
+    							.../*use*/ ctx[0]
+    						]
+    					},
+    					dirty[0] & /*className, selected, touch, internalClasses*/ 658 && {
+    						class: classMap({
+    							[/*className*/ ctx[1]]: true,
+    							'mdc-chip': true,
+    							'mdc-chip--selected': /*selected*/ ctx[7],
+    							'mdc-chip--touch': /*touch*/ ctx[4],
+    							.../*internalClasses*/ ctx[9]
+    						})
+    					},
+    					dirty[0] & /*internalStyles, style*/ 1028 && {
+    						style: Object.entries(/*internalStyles*/ ctx[10]).map(func$4).concat([/*style*/ ctx[2]]).join(' ')
+    					},
+    					switch_instance_spread_levels[3],
+    					dirty[0] & /*$$restProps*/ 33554432 && get_spread_object(/*$$restProps*/ ctx[25])
+    				])
+    			: {};
+
+    			if (dirty[0] & /*touch, ripple, $nonInteractive*/ 8216 | dirty[1] & /*$$scope*/ 8192) {
+    				switch_instance_changes.$$scope = { dirty, ctx };
+    			}
+
+    			if (switch_value !== (switch_value = /*component*/ ctx[5])) {
+    				if (switch_instance) {
+    					group_outros();
+    					const old_component = switch_instance;
+
+    					transition_out(old_component.$$.fragment, 1, 0, () => {
+    						destroy_component(old_component, 1);
+    					});
+
+    					check_outros();
+    				}
+
+    				if (switch_value) {
+    					switch_instance = new switch_value(switch_props(ctx));
+    					/*switch_instance_binding*/ ctx[32](switch_instance);
+    					switch_instance.$on("transitionend", /*transitionend_handler*/ ctx[33]);
+    					switch_instance.$on("click", /*click_handler*/ ctx[34]);
+    					switch_instance.$on("keydown", /*keydown_handler*/ ctx[35]);
+    					switch_instance.$on("focusin", /*focusin_handler*/ ctx[36]);
+    					switch_instance.$on("focusout", /*focusout_handler*/ ctx[37]);
+    					switch_instance.$on("SMUIChipTrailingAction:interaction", /*SMUIChipTrailingAction_interaction_handler*/ ctx[38]);
+    					switch_instance.$on("SMUIChipTrailingAction:navigation", /*SMUIChipTrailingAction_navigation_handler*/ ctx[39]);
+    					switch_instance.$on("SMUIChipsChipPrimaryAction:mount", /*SMUIChipsChipPrimaryAction_mount_handler*/ ctx[40]);
+    					switch_instance.$on("SMUIChipsChipPrimaryAction:unmount", /*SMUIChipsChipPrimaryAction_unmount_handler*/ ctx[41]);
+    					switch_instance.$on("SMUIChipsChipTrailingAction:mount", /*SMUIChipsChipTrailingAction_mount_handler*/ ctx[42]);
+    					switch_instance.$on("SMUIChipsChipTrailingAction:unmount", /*SMUIChipsChipTrailingAction_unmount_handler*/ ctx[43]);
+    					create_component(switch_instance.$$.fragment);
+    					transition_in(switch_instance.$$.fragment, 1);
+    					mount_component(switch_instance, switch_instance_anchor.parentNode, switch_instance_anchor);
+    				} else {
+    					switch_instance = null;
+    				}
+    			} else if (switch_value) {
+    				switch_instance.$set(switch_instance_changes);
+    			}
+    		},
+    		i: function intro(local) {
+    			if (current) return;
+    			if (switch_instance) transition_in(switch_instance.$$.fragment, local);
+    			current = true;
+    		},
+    		o: function outro(local) {
+    			if (switch_instance) transition_out(switch_instance.$$.fragment, local);
+    			current = false;
+    		},
+    		d: function destroy(detaching) {
+    			/*switch_instance_binding*/ ctx[32](null);
+    			if (detaching) detach_dev(switch_instance_anchor);
+    			if (switch_instance) destroy_component(switch_instance, detaching);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_fragment$e.name,
+    		type: "component",
+    		source: "",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    const func$4 = ([name, value]) => `${name}: ${value};`;
+
+    function instance_1$8($$self, $$props, $$invalidate) {
+    	const omit_props_names = [
+    		"use","class","style","chip","ripple","touch","shouldRemoveOnTrailingIconClick","shouldFocusPrimaryActionOnClick","component","getElement"
+    	];
+
+    	let $$restProps = compute_rest_props($$props, omit_props_names);
+    	let $index;
+    	let $choice;
+    	let $leadingIconClassesStore;
+    	let $isSelectedStore;
+    	let $shouldRemoveOnTrailingIconClickStore;
+    	let $initialSelectedStore;
+    	let $nonInteractive;
+    	let { $$slots: slots = {}, $$scope } = $$props;
+    	validate_slots('Chip', slots, ['default']);
+    	const { MDCChipFoundation } = deprecated;
+    	const forwardEvents = forwardEventsBuilder(get_current_component());
+    	let { use = [] } = $$props;
+    	let { class: className = '' } = $$props;
+    	let { style = '' } = $$props;
+    	let { chip: chipId } = $$props;
+    	let { ripple = true } = $$props;
+    	let { touch = false } = $$props;
+    	let { shouldRemoveOnTrailingIconClick = true } = $$props;
+    	let { shouldFocusPrimaryActionOnClick = true } = $$props;
+    	let element;
+    	let instance;
+    	let internalClasses = {};
+    	let leadingIconClasses = {};
+    	let internalStyles = {};
+    	const initialSelectedStore = getContext('SMUI:chips:chip:initialSelected');
+    	validate_store(initialSelectedStore, 'initialSelectedStore');
+    	component_subscribe($$self, initialSelectedStore, value => $$invalidate(50, $initialSelectedStore = value));
+    	let selected = $initialSelectedStore;
+    	let primaryActionAccessor = undefined;
+    	let trailingActionAccessor = undefined;
+    	const nonInteractive = getContext('SMUI:chips:nonInteractive');
+    	validate_store(nonInteractive, 'nonInteractive');
+    	component_subscribe($$self, nonInteractive, value => $$invalidate(13, $nonInteractive = value));
+    	const choice = getContext('SMUI:chips:choice');
+    	validate_store(choice, 'choice');
+    	component_subscribe($$self, choice, value => $$invalidate(46, $choice = value));
+    	const index = getContext('SMUI:chips:chip:index');
+    	validate_store(index, 'index');
+    	component_subscribe($$self, index, value => $$invalidate(45, $index = value));
+    	let { component = Div } = $$props;
+    	const shouldRemoveOnTrailingIconClickStore = writable(shouldRemoveOnTrailingIconClick);
+    	validate_store(shouldRemoveOnTrailingIconClickStore, 'shouldRemoveOnTrailingIconClickStore');
+    	component_subscribe($$self, shouldRemoveOnTrailingIconClickStore, value => $$invalidate(49, $shouldRemoveOnTrailingIconClickStore = value));
+    	setContext('SMUI:chips:chip:shouldRemoveOnTrailingIconClick', shouldRemoveOnTrailingIconClickStore);
+    	const isSelectedStore = writable(selected);
+    	validate_store(isSelectedStore, 'isSelectedStore');
+    	component_subscribe($$self, isSelectedStore, value => $$invalidate(48, $isSelectedStore = value));
+    	setContext('SMUI:chips:chip:isSelected', isSelectedStore);
+    	const leadingIconClassesStore = writable(leadingIconClasses);
+    	validate_store(leadingIconClassesStore, 'leadingIconClassesStore');
+    	component_subscribe($$self, leadingIconClassesStore, value => $$invalidate(47, $leadingIconClassesStore = value));
+    	setContext('SMUI:chips:chip:leadingIconClasses', leadingIconClassesStore);
+    	setContext('SMUI:chips:chip:focusable', $choice && selected || $index === 0);
+
+    	if (!chipId) {
+    		throw new Error('The chip property is required! It should be passed down from the Set to the Chip.');
+    	}
+
+    	onMount(() => {
+    		$$invalidate(6, instance = new MDCChipFoundation({
+    				addClass,
+    				addClassToLeadingIcon: addLeadingIconClass,
+    				eventTargetHasClass: (target, className) => target && 'classList' in target
+    				? target.classList.contains(className)
+    				: false,
+    				focusPrimaryAction: () => {
+    					if (primaryActionAccessor) {
+    						primaryActionAccessor.focus();
+    					}
+    				},
+    				focusTrailingAction: () => {
+    					if (trailingActionAccessor) {
+    						trailingActionAccessor.focus();
+    					}
+    				},
+    				getAttribute: attr => getElement().getAttribute(attr),
+    				getCheckmarkBoundingClientRect: () => {
+    					const target = getElement().querySelector('.mdc-chip__checkmark');
+
+    					if (target) {
+    						return target.getBoundingClientRect();
+    					}
+
+    					return null;
+    				},
+    				getComputedStyleValue: getStyle,
+    				getRootBoundingClientRect: () => getElement().getBoundingClientRect(),
+    				hasClass,
+    				hasLeadingIcon: () => {
+    					const target = getElement().querySelector('.mdc-chip__icon--leading');
+    					return !!target;
+    				},
+    				isRTL: () => getComputedStyle(getElement()).getPropertyValue('direction') === 'rtl',
+    				isTrailingActionNavigable: () => {
+    					if (trailingActionAccessor) {
+    						return trailingActionAccessor.isNavigable();
+    					}
+
+    					return false;
+    				},
+    				notifyInteraction: () => dispatch(getElement(), 'SMUIChip:interaction', { chipId }, undefined, true),
+    				notifyNavigation: (key, source) => dispatch(getElement(), 'SMUIChip:navigation', { chipId, key, source }, undefined, true),
+    				notifyRemoval: removedAnnouncement => {
+    					dispatch(getElement(), 'SMUIChip:removal', { chipId, removedAnnouncement }, undefined, true);
+    				},
+    				notifySelection: (selected, shouldIgnore) => dispatch(getElement(), 'SMUIChip:selection', { chipId, selected, shouldIgnore }, undefined, true),
+    				notifyTrailingIconInteraction: () => dispatch(getElement(), 'SMUIChip:trailingIconInteraction', { chipId }, undefined, true),
+    				notifyEditStart: () => {
+    					
+    				}, /* Not Implemented. */
+    				notifyEditFinish: () => {
+    					
+    				}, /* Not Implemented. */
+    				removeClass,
+    				removeClassFromLeadingIcon: removeLeadingIconClass,
+    				removeTrailingActionFocus: () => {
+    					if (trailingActionAccessor) {
+    						trailingActionAccessor.removeFocus();
+    					}
+    				},
+    				setPrimaryActionAttr: (attr, value) => {
+    					if (primaryActionAccessor) {
+    						primaryActionAccessor.addAttr(attr, value);
+    					}
+    				},
+    				setStyleProperty: addStyle
+    			}));
+
+    		const accessor = {
+    			chipId,
+    			get selected() {
+    				return selected;
+    			},
+    			focusPrimaryAction,
+    			focusTrailingAction,
+    			removeFocus,
+    			setSelectedFromChipSet
+    		};
+
+    		dispatch(getElement(), 'SMUIChipsChip:mount', accessor);
+    		instance.init();
+
+    		return () => {
+    			dispatch(getElement(), 'SMUIChipsChip:unmount', accessor);
+    			instance.destroy();
+    		};
+    	});
+
+    	function hasClass(className) {
+    		return className in internalClasses
+    		? internalClasses[className]
+    		: getElement().classList.contains(className);
+    	}
+
+    	function addClass(className) {
+    		if (!internalClasses[className]) {
+    			$$invalidate(9, internalClasses[className] = true, internalClasses);
+    		}
+    	}
+
+    	function removeClass(className) {
+    		if (!(className in internalClasses) || internalClasses[className]) {
+    			$$invalidate(9, internalClasses[className] = false, internalClasses);
+    		}
+    	}
+
+    	function addLeadingIconClass(className) {
+    		if (!leadingIconClasses[className]) {
+    			$$invalidate(30, leadingIconClasses[className] = true, leadingIconClasses);
+    		}
+    	}
+
+    	function removeLeadingIconClass(className) {
+    		if (!(className in leadingIconClasses) || leadingIconClasses[className]) {
+    			$$invalidate(30, leadingIconClasses[className] = false, leadingIconClasses);
+    		}
+    	}
+
+    	function addStyle(name, value) {
+    		if (internalStyles[name] != value) {
+    			if (value === '' || value == null) {
+    				delete internalStyles[name];
+    				$$invalidate(10, internalStyles);
+    			} else {
+    				$$invalidate(10, internalStyles[name] = value, internalStyles);
+    			}
+    		}
+    	}
+
+    	function getStyle(name) {
+    		return name in internalStyles
+    		? internalStyles[name]
+    		: getComputedStyle(getElement()).getPropertyValue(name);
+    	}
+
+    	function setSelectedFromChipSet(value, shouldNotifyClients) {
+    		$$invalidate(7, selected = value);
+    		instance.setSelectedFromChipSet(selected, shouldNotifyClients);
+    	}
+
+    	function focusPrimaryAction() {
+    		instance.focusPrimaryAction();
+    	}
+
+    	function focusTrailingAction() {
+    		instance.focusTrailingAction();
+    	}
+
+    	function removeFocus() {
+    		instance.removeFocus();
+    	}
+
+    	function getElement() {
+    		return element.getElement();
+    	}
+
+    	function switch_instance_binding($$value) {
+    		binding_callbacks[$$value ? 'unshift' : 'push'](() => {
+    			element = $$value;
+    			$$invalidate(8, element);
+    		});
+    	}
+
+    	const transitionend_handler = event => instance && instance.handleTransitionEnd(event);
+    	const click_handler = () => instance && instance.handleClick();
+    	const keydown_handler = event => instance && instance.handleKeydown(event);
+    	const focusin_handler = event => instance && instance.handleFocusIn(event);
+    	const focusout_handler = event => instance && instance.handleFocusOut(event);
+    	const SMUIChipTrailingAction_interaction_handler = () => instance && instance.handleTrailingActionInteraction();
+    	const SMUIChipTrailingAction_navigation_handler = event => instance && instance.handleTrailingActionNavigation(event);
+    	const SMUIChipsChipPrimaryAction_mount_handler = event => $$invalidate(11, primaryActionAccessor = event.detail);
+    	const SMUIChipsChipPrimaryAction_unmount_handler = () => $$invalidate(11, primaryActionAccessor = undefined);
+    	const SMUIChipsChipTrailingAction_mount_handler = event => $$invalidate(12, trailingActionAccessor = event.detail);
+    	const SMUIChipsChipTrailingAction_unmount_handler = () => $$invalidate(12, trailingActionAccessor = undefined);
+
+    	$$self.$$set = $$new_props => {
+    		$$props = assign(assign({}, $$props), exclude_internal_props($$new_props));
+    		$$invalidate(25, $$restProps = compute_rest_props($$props, omit_props_names));
+    		if ('use' in $$new_props) $$invalidate(0, use = $$new_props.use);
+    		if ('class' in $$new_props) $$invalidate(1, className = $$new_props.class);
+    		if ('style' in $$new_props) $$invalidate(2, style = $$new_props.style);
+    		if ('chip' in $$new_props) $$invalidate(26, chipId = $$new_props.chip);
+    		if ('ripple' in $$new_props) $$invalidate(3, ripple = $$new_props.ripple);
+    		if ('touch' in $$new_props) $$invalidate(4, touch = $$new_props.touch);
+    		if ('shouldRemoveOnTrailingIconClick' in $$new_props) $$invalidate(27, shouldRemoveOnTrailingIconClick = $$new_props.shouldRemoveOnTrailingIconClick);
+    		if ('shouldFocusPrimaryActionOnClick' in $$new_props) $$invalidate(28, shouldFocusPrimaryActionOnClick = $$new_props.shouldFocusPrimaryActionOnClick);
+    		if ('component' in $$new_props) $$invalidate(5, component = $$new_props.component);
+    		if ('$$scope' in $$new_props) $$invalidate(44, $$scope = $$new_props.$$scope);
+    	};
+
+    	$$self.$capture_state = () => ({
+    		deprecated,
+    		onMount,
+    		setContext,
+    		getContext,
+    		writable,
+    		get_current_component,
+    		forwardEventsBuilder,
+    		classMap,
+    		dispatch,
+    		Ripple,
+    		Div,
+    		MDCChipFoundation,
+    		forwardEvents,
+    		use,
+    		className,
+    		style,
+    		chipId,
+    		ripple,
+    		touch,
+    		shouldRemoveOnTrailingIconClick,
+    		shouldFocusPrimaryActionOnClick,
+    		element,
+    		instance,
+    		internalClasses,
+    		leadingIconClasses,
+    		internalStyles,
+    		initialSelectedStore,
+    		selected,
+    		primaryActionAccessor,
+    		trailingActionAccessor,
+    		nonInteractive,
+    		choice,
+    		index,
+    		component,
+    		shouldRemoveOnTrailingIconClickStore,
+    		isSelectedStore,
+    		leadingIconClassesStore,
+    		hasClass,
+    		addClass,
+    		removeClass,
+    		addLeadingIconClass,
+    		removeLeadingIconClass,
+    		addStyle,
+    		getStyle,
+    		setSelectedFromChipSet,
+    		focusPrimaryAction,
+    		focusTrailingAction,
+    		removeFocus,
+    		getElement,
+    		$index,
+    		$choice,
+    		$leadingIconClassesStore,
+    		$isSelectedStore,
+    		$shouldRemoveOnTrailingIconClickStore,
+    		$initialSelectedStore,
+    		$nonInteractive
+    	});
+
+    	$$self.$inject_state = $$new_props => {
+    		if ('use' in $$props) $$invalidate(0, use = $$new_props.use);
+    		if ('className' in $$props) $$invalidate(1, className = $$new_props.className);
+    		if ('style' in $$props) $$invalidate(2, style = $$new_props.style);
+    		if ('chipId' in $$props) $$invalidate(26, chipId = $$new_props.chipId);
+    		if ('ripple' in $$props) $$invalidate(3, ripple = $$new_props.ripple);
+    		if ('touch' in $$props) $$invalidate(4, touch = $$new_props.touch);
+    		if ('shouldRemoveOnTrailingIconClick' in $$props) $$invalidate(27, shouldRemoveOnTrailingIconClick = $$new_props.shouldRemoveOnTrailingIconClick);
+    		if ('shouldFocusPrimaryActionOnClick' in $$props) $$invalidate(28, shouldFocusPrimaryActionOnClick = $$new_props.shouldFocusPrimaryActionOnClick);
+    		if ('element' in $$props) $$invalidate(8, element = $$new_props.element);
+    		if ('instance' in $$props) $$invalidate(6, instance = $$new_props.instance);
+    		if ('internalClasses' in $$props) $$invalidate(9, internalClasses = $$new_props.internalClasses);
+    		if ('leadingIconClasses' in $$props) $$invalidate(30, leadingIconClasses = $$new_props.leadingIconClasses);
+    		if ('internalStyles' in $$props) $$invalidate(10, internalStyles = $$new_props.internalStyles);
+    		if ('selected' in $$props) $$invalidate(7, selected = $$new_props.selected);
+    		if ('primaryActionAccessor' in $$props) $$invalidate(11, primaryActionAccessor = $$new_props.primaryActionAccessor);
+    		if ('trailingActionAccessor' in $$props) $$invalidate(12, trailingActionAccessor = $$new_props.trailingActionAccessor);
+    		if ('component' in $$props) $$invalidate(5, component = $$new_props.component);
+    	};
+
+    	if ($$props && "$$inject" in $$props) {
+    		$$self.$inject_state($$props.$$inject);
+    	}
+
+    	$$self.$$.update = () => {
+    		if ($$self.$$.dirty[0] & /*shouldRemoveOnTrailingIconClick*/ 134217728) {
+    			set_store_value(shouldRemoveOnTrailingIconClickStore, $shouldRemoveOnTrailingIconClickStore = shouldRemoveOnTrailingIconClick, $shouldRemoveOnTrailingIconClickStore);
+    		}
+
+    		if ($$self.$$.dirty[0] & /*selected*/ 128) {
+    			set_store_value(isSelectedStore, $isSelectedStore = selected, $isSelectedStore);
+    		}
+
+    		if ($$self.$$.dirty[0] & /*leadingIconClasses*/ 1073741824) {
+    			set_store_value(leadingIconClassesStore, $leadingIconClassesStore = leadingIconClasses, $leadingIconClassesStore);
+    		}
+
+    		if ($$self.$$.dirty[0] & /*instance, shouldRemoveOnTrailingIconClick*/ 134217792) {
+    			if (instance && instance.getShouldRemoveOnTrailingIconClick() !== shouldRemoveOnTrailingIconClick) {
+    				instance.setShouldRemoveOnTrailingIconClick(shouldRemoveOnTrailingIconClick);
+    			}
+    		}
+
+    		if ($$self.$$.dirty[0] & /*instance, shouldFocusPrimaryActionOnClick*/ 268435520) {
+    			if (instance) {
+    				instance.setShouldFocusPrimaryActionOnClick(shouldFocusPrimaryActionOnClick);
+    			}
+    		}
+    	};
+
+    	return [
+    		use,
+    		className,
+    		style,
+    		ripple,
+    		touch,
+    		component,
+    		instance,
+    		selected,
+    		element,
+    		internalClasses,
+    		internalStyles,
+    		primaryActionAccessor,
+    		trailingActionAccessor,
+    		$nonInteractive,
+    		forwardEvents,
+    		initialSelectedStore,
+    		nonInteractive,
+    		choice,
+    		index,
+    		shouldRemoveOnTrailingIconClickStore,
+    		isSelectedStore,
+    		leadingIconClassesStore,
+    		addClass,
+    		removeClass,
+    		addStyle,
+    		$$restProps,
+    		chipId,
+    		shouldRemoveOnTrailingIconClick,
+    		shouldFocusPrimaryActionOnClick,
+    		getElement,
+    		leadingIconClasses,
+    		slots,
+    		switch_instance_binding,
+    		transitionend_handler,
+    		click_handler,
+    		keydown_handler,
+    		focusin_handler,
+    		focusout_handler,
+    		SMUIChipTrailingAction_interaction_handler,
+    		SMUIChipTrailingAction_navigation_handler,
+    		SMUIChipsChipPrimaryAction_mount_handler,
+    		SMUIChipsChipPrimaryAction_unmount_handler,
+    		SMUIChipsChipTrailingAction_mount_handler,
+    		SMUIChipsChipTrailingAction_unmount_handler,
+    		$$scope
+    	];
+    }
+
+    class Chip extends SvelteComponentDev {
+    	constructor(options) {
+    		super(options);
+
+    		init(
+    			this,
+    			options,
+    			instance_1$8,
+    			create_fragment$e,
+    			safe_not_equal,
+    			{
+    				use: 0,
+    				class: 1,
+    				style: 2,
+    				chip: 26,
+    				ripple: 3,
+    				touch: 4,
+    				shouldRemoveOnTrailingIconClick: 27,
+    				shouldFocusPrimaryActionOnClick: 28,
+    				component: 5,
+    				getElement: 29
+    			},
+    			null,
+    			[-1, -1]
+    		);
+
+    		dispatch_dev("SvelteRegisterComponent", {
+    			component: this,
+    			tagName: "Chip",
+    			options,
+    			id: create_fragment$e.name
+    		});
+
+    		const { ctx } = this.$$;
+    		const props = options.props || {};
+
+    		if (/*chipId*/ ctx[26] === undefined && !('chip' in props)) {
+    			console.warn("<Chip> was created without expected prop 'chip'");
+    		}
+    	}
+
+    	get use() {
+    		throw new Error_1("<Chip>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set use(value) {
+    		throw new Error_1("<Chip>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get class() {
+    		throw new Error_1("<Chip>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set class(value) {
+    		throw new Error_1("<Chip>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get style() {
+    		throw new Error_1("<Chip>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set style(value) {
+    		throw new Error_1("<Chip>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get chip() {
+    		throw new Error_1("<Chip>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set chip(value) {
+    		throw new Error_1("<Chip>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get ripple() {
+    		throw new Error_1("<Chip>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set ripple(value) {
+    		throw new Error_1("<Chip>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get touch() {
+    		throw new Error_1("<Chip>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set touch(value) {
+    		throw new Error_1("<Chip>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get shouldRemoveOnTrailingIconClick() {
+    		throw new Error_1("<Chip>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set shouldRemoveOnTrailingIconClick(value) {
+    		throw new Error_1("<Chip>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get shouldFocusPrimaryActionOnClick() {
+    		throw new Error_1("<Chip>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set shouldFocusPrimaryActionOnClick(value) {
+    		throw new Error_1("<Chip>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get component() {
+    		throw new Error_1("<Chip>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set component(value) {
+    		throw new Error_1("<Chip>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get getElement() {
+    		return this.$$.ctx[29];
+    	}
+
+    	set getElement(value) {
+    		throw new Error_1("<Chip>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
     }
 
@@ -14632,7 +17380,7 @@ var app = (function () {
     const file$a = "node_modules/@smui/list/dist/Item.svelte";
 
     // (57:3) {#if ripple}
-    function create_if_block$3(ctx) {
+    function create_if_block$4(ctx) {
     	let span;
 
     	const block = {
@@ -14651,7 +17399,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_if_block$3.name,
+    		id: create_if_block$4.name,
     		type: "if",
     		source: "(57:3) {#if ripple}",
     		ctx
@@ -14664,7 +17412,7 @@ var app = (function () {
     function create_default_slot$5(ctx) {
     	let if_block_anchor;
     	let current;
-    	let if_block = /*ripple*/ ctx[7] && create_if_block$3(ctx);
+    	let if_block = /*ripple*/ ctx[7] && create_if_block$4(ctx);
     	const default_slot_template = /*#slots*/ ctx[32].default;
     	const default_slot = create_slot(default_slot_template, ctx, /*$$scope*/ ctx[35], null);
 
@@ -14687,7 +17435,7 @@ var app = (function () {
     		p: function update(ctx, dirty) {
     			if (/*ripple*/ ctx[7]) {
     				if (if_block) ; else {
-    					if_block = create_if_block$3(ctx);
+    					if_block = create_if_block$4(ctx);
     					if_block.c();
     					if_block.m(if_block_anchor.parentNode, if_block_anchor);
     				}
@@ -21059,7 +23807,7 @@ var app = (function () {
     const file$4 = "node_modules/@smui/select/dist/helper-text/HelperText.svelte";
 
     // (17:31) {:else}
-    function create_else_block$1(ctx) {
+    function create_else_block$2(ctx) {
     	let t;
 
     	const block = {
@@ -21081,7 +23829,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_else_block$1.name,
+    		id: create_else_block$2.name,
     		type: "else",
     		source: "(17:31) {:else}",
     		ctx
@@ -21091,7 +23839,7 @@ var app = (function () {
     }
 
     // (17:2) {#if content == null}
-    function create_if_block$2(ctx) {
+    function create_if_block$3(ctx) {
     	let current;
     	const default_slot_template = /*#slots*/ ctx[13].default;
     	const default_slot = create_slot(default_slot_template, ctx, /*$$scope*/ ctx[12], null);
@@ -21139,7 +23887,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_if_block$2.name,
+    		id: create_if_block$3.name,
     		type: "if",
     		source: "(17:2) {#if content == null}",
     		ctx
@@ -21158,7 +23906,7 @@ var app = (function () {
     	let current;
     	let mounted;
     	let dispose;
-    	const if_block_creators = [create_if_block$2, create_else_block$1];
+    	const if_block_creators = [create_if_block$3, create_else_block$2];
     	const if_blocks = [];
 
     	function select_block_type(ctx, dirty) {
@@ -22265,7 +25013,7 @@ var app = (function () {
     }
 
     // (203:0) {#if $$slots.helperText}
-    function create_if_block$1(ctx) {
+    function create_if_block$2(ctx) {
     	let helpertext;
     	let current;
     	const helpertext_spread_levels = [prefixFilter(/*$$restProps*/ ctx[53], 'helperText$')];
@@ -22319,7 +25067,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_if_block$1.name,
+    		id: create_if_block$2.name,
     		type: "if",
     		source: "(203:0) {#if $$slots.helperText}",
     		ctx
@@ -22600,7 +25348,7 @@ var app = (function () {
     		div1_data = assign(div1_data, div1_levels[i]);
     	}
 
-    	let if_block5 = /*$$slots*/ ctx[52].helperText && create_if_block$1(ctx);
+    	let if_block5 = /*$$slots*/ ctx[52].helperText && create_if_block$2(ctx);
 
     	const block = {
     		c: function create() {
@@ -22975,7 +25723,7 @@ var app = (function () {
     						transition_in(if_block5, 1);
     					}
     				} else {
-    					if_block5 = create_if_block$1(ctx);
+    					if_block5 = create_if_block$2(ctx);
     					if_block5.c();
     					transition_in(if_block5, 1);
     					if_block5.m(if_block5_anchor.parentNode, if_block5_anchor);
@@ -24384,23 +27132,24 @@ var app = (function () {
 
     /* src/TaxonomyFilterTree.svelte generated by Svelte v3.49.0 */
 
-    const { console: console_1 } = globals;
+    const { console: console_1$1 } = globals;
+
     const file$2 = "src/TaxonomyFilterTree.svelte";
 
-    function get_each_context$1(ctx, list, i) {
+    function get_each_context$2(ctx, list, i) {
     	const child_ctx = ctx.slice();
-    	child_ctx[15] = list[i];
+    	child_ctx[17] = list[i];
     	return child_ctx;
     }
 
-    function get_each_context_1(ctx, list, i) {
+    function get_each_context_1$1(ctx, list, i) {
     	const child_ctx = ctx.slice();
-    	child_ctx[15] = list[i];
+    	child_ctx[17] = list[i];
     	return child_ctx;
     }
 
-    // (64:2) {:else}
-    function create_else_block(ctx) {
+    // (67:2) {:else}
+    function create_else_block$1(ctx) {
     	let formfield;
     	let current;
 
@@ -24426,7 +27175,7 @@ var app = (function () {
     		p: function update(ctx, dirty) {
     			const formfield_changes = {};
 
-    			if (dirty & /*$$scope, checked*/ 1048580) {
+    			if (dirty & /*$$scope, checked*/ 4194308) {
     				formfield_changes.$$scope = { dirty, ctx };
     			}
 
@@ -24448,16 +27197,16 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_else_block.name,
+    		id: create_else_block$1.name,
     		type: "else",
-    		source: "(64:2) {:else}",
+    		source: "(67:2) {:else}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (55:38) 
+    // (58:38) 
     function create_if_block_4(ctx) {
     	let formfield;
     	let current;
@@ -24481,7 +27230,7 @@ var app = (function () {
     		p: function update(ctx, dirty) {
     			const formfield_changes = {};
 
-    			if (dirty & /*$$scope, value, checked*/ 1048588) {
+    			if (dirty & /*$$scope, value, checked*/ 4194316) {
     				formfield_changes.$$scope = { dirty, ctx };
     			}
 
@@ -24505,14 +27254,14 @@ var app = (function () {
     		block,
     		id: create_if_block_4.name,
     		type: "if",
-    		source: "(55:38) ",
+    		source: "(58:38) ",
     		ctx
     	});
 
     	return block;
     }
 
-    // (50:41) 
+    // (53:41) 
     function create_if_block_3(ctx) {
     	let formfield;
     	let current;
@@ -24536,7 +27285,7 @@ var app = (function () {
     		p: function update(ctx, dirty) {
     			const formfield_changes = {};
 
-    			if (dirty & /*$$scope, value, checked*/ 1048588) {
+    			if (dirty & /*$$scope, value, checked*/ 4194316) {
     				formfield_changes.$$scope = { dirty, ctx };
     			}
 
@@ -24560,14 +27309,14 @@ var app = (function () {
     		block,
     		id: create_if_block_3.name,
     		type: "if",
-    		source: "(50:41) ",
+    		source: "(53:41) ",
     		ctx
     	});
 
     	return block;
     }
 
-    // (45:2) {#if tree.type === 'TextField'}
+    // (48:2) {#if tree.type === 'TextField'}
     function create_if_block_2(ctx) {
     	let formfield;
     	let current;
@@ -24591,7 +27340,7 @@ var app = (function () {
     		p: function update(ctx, dirty) {
     			const formfield_changes = {};
 
-    			if (dirty & /*$$scope, value, checked*/ 1048588) {
+    			if (dirty & /*$$scope, value, checked*/ 4194316) {
     				formfield_changes.$$scope = { dirty, ctx };
     			}
 
@@ -24615,21 +27364,21 @@ var app = (function () {
     		block,
     		id: create_if_block_2.name,
     		type: "if",
-    		source: "(45:2) {#if tree.type === 'TextField'}",
+    		source: "(48:2) {#if tree.type === 'TextField'}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (65:3) <FormField>
+    // (68:2) <FormField>
     function create_default_slot_5$1(ctx) {
     	let checkbox;
     	let updating_checked;
     	let current;
 
     	function checkbox_checked_binding_3(value) {
-    		/*checkbox_checked_binding_3*/ ctx[14](value);
+    		/*checkbox_checked_binding_3*/ ctx[15](value);
     	}
 
     	let checkbox_props = {
@@ -24681,14 +27430,14 @@ var app = (function () {
     		block,
     		id: create_default_slot_5$1.name,
     		type: "slot",
-    		source: "(65:3) <FormField>",
+    		source: "(68:2) <FormField>",
     		ctx
     	});
 
     	return block;
     }
 
-    // (67:4) 
+    // (70:3) 
     function create_label_slot(ctx) {
     	let span;
 
@@ -24697,7 +27446,7 @@ var app = (function () {
     			span = element("span");
     			span.textContent = `${/*name*/ ctx[5]}`;
     			attr_dev(span, "slot", "label");
-    			add_location(span, file$2, 66, 4, 2069);
+    			add_location(span, file$2, 69, 3, 2250);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, span, anchor);
@@ -24712,16 +27461,16 @@ var app = (function () {
     		block,
     		id: create_label_slot.name,
     		type: "slot",
-    		source: "(67:4) ",
+    		source: "(70:3) ",
     		ctx
     	});
 
     	return block;
     }
 
-    // (60:5) <Option value={child.id}>
+    // (63:4) <Option value={child.id}>
     function create_default_slot_4$1(ctx) {
-    	let t_value = /*child*/ ctx[15].name + "";
+    	let t_value = /*child*/ ctx[17].name + "";
     	let t;
 
     	const block = {
@@ -24741,21 +27490,21 @@ var app = (function () {
     		block,
     		id: create_default_slot_4$1.name,
     		type: "slot",
-    		source: "(60:5) <Option value={child.id}>",
+    		source: "(63:4) <Option value={child.id}>",
     		ctx
     	});
 
     	return block;
     }
 
-    // (59:4) {#each children as child}
-    function create_each_block_1(ctx) {
+    // (62:3) {#each children as child}
+    function create_each_block_1$1(ctx) {
     	let option;
     	let current;
 
     	option = new Option({
     			props: {
-    				value: /*child*/ ctx[15].id,
+    				value: /*child*/ ctx[17].id,
     				$$slots: { default: [create_default_slot_4$1] },
     				$$scope: { ctx }
     			},
@@ -24773,7 +27522,7 @@ var app = (function () {
     		p: function update(ctx, dirty) {
     			const option_changes = {};
 
-    			if (dirty & /*$$scope*/ 1048576) {
+    			if (dirty & /*$$scope*/ 4194304) {
     				option_changes.$$scope = { dirty, ctx };
     			}
 
@@ -24795,16 +27544,16 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_each_block_1.name,
+    		id: create_each_block_1$1.name,
     		type: "each",
-    		source: "(59:4) {#each children as child}",
+    		source: "(62:3) {#each children as child}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (58:4) <Select bind:value label={name}>
+    // (61:3) <Select bind:value label={name}>
     function create_default_slot_3$1(ctx) {
     	let each_1_anchor;
     	let current;
@@ -24813,7 +27562,7 @@ var app = (function () {
     	let each_blocks = [];
 
     	for (let i = 0; i < each_value_1.length; i += 1) {
-    		each_blocks[i] = create_each_block_1(get_each_context_1(ctx, each_value_1, i));
+    		each_blocks[i] = create_each_block_1$1(get_each_context_1$1(ctx, each_value_1, i));
     	}
 
     	const out = i => transition_out(each_blocks[i], 1, 1, () => {
@@ -24843,13 +27592,13 @@ var app = (function () {
     				let i;
 
     				for (i = 0; i < each_value_1.length; i += 1) {
-    					const child_ctx = get_each_context_1(ctx, each_value_1, i);
+    					const child_ctx = get_each_context_1$1(ctx, each_value_1, i);
 
     					if (each_blocks[i]) {
     						each_blocks[i].p(child_ctx, dirty);
     						transition_in(each_blocks[i], 1);
     					} else {
-    						each_blocks[i] = create_each_block_1(child_ctx);
+    						each_blocks[i] = create_each_block_1$1(child_ctx);
     						each_blocks[i].c();
     						transition_in(each_blocks[i], 1);
     						each_blocks[i].m(each_1_anchor.parentNode, each_1_anchor);
@@ -24893,14 +27642,14 @@ var app = (function () {
     		block,
     		id: create_default_slot_3$1.name,
     		type: "slot",
-    		source: "(58:4) <Select bind:value label={name}>",
+    		source: "(61:3) <Select bind:value label={name}>",
     		ctx
     	});
 
     	return block;
     }
 
-    // (56:3) <FormField>
+    // (59:2) <FormField>
     function create_default_slot_2$1(ctx) {
     	let checkbox;
     	let updating_checked;
@@ -24910,7 +27659,7 @@ var app = (function () {
     	let current;
 
     	function checkbox_checked_binding_2(value) {
-    		/*checkbox_checked_binding_2*/ ctx[12](value);
+    		/*checkbox_checked_binding_2*/ ctx[13](value);
     	}
 
     	let checkbox_props = {
@@ -24925,7 +27674,7 @@ var app = (function () {
     	binding_callbacks.push(() => bind(checkbox, 'checked', checkbox_checked_binding_2));
 
     	function select_value_binding(value) {
-    		/*select_value_binding*/ ctx[13](value);
+    		/*select_value_binding*/ ctx[14](value);
     	}
 
     	let select_props = {
@@ -24966,7 +27715,7 @@ var app = (function () {
     			checkbox.$set(checkbox_changes);
     			const select_changes = {};
 
-    			if (dirty & /*$$scope*/ 1048576) {
+    			if (dirty & /*$$scope*/ 4194304) {
     				select_changes.$$scope = { dirty, ctx };
     			}
 
@@ -25000,14 +27749,14 @@ var app = (function () {
     		block,
     		id: create_default_slot_2$1.name,
     		type: "slot",
-    		source: "(56:3) <FormField>",
+    		source: "(59:2) <FormField>",
     		ctx
     	});
 
     	return block;
     }
 
-    // (51:3) <FormField>
+    // (54:2) <FormField>
     function create_default_slot_1$1(ctx) {
     	let checkbox;
     	let updating_checked;
@@ -25017,7 +27766,7 @@ var app = (function () {
     	let current;
 
     	function checkbox_checked_binding_1(value) {
-    		/*checkbox_checked_binding_1*/ ctx[10](value);
+    		/*checkbox_checked_binding_1*/ ctx[11](value);
     	}
 
     	let checkbox_props = {
@@ -25032,7 +27781,7 @@ var app = (function () {
     	binding_callbacks.push(() => bind(checkbox, 'checked', checkbox_checked_binding_1));
 
     	function textfield_value_binding_1(value) {
-    		/*textfield_value_binding_1*/ ctx[11](value);
+    		/*textfield_value_binding_1*/ ctx[12](value);
     	}
 
     	let textfield_props = { label: /*name*/ ctx[5], type: "number" };
@@ -25099,14 +27848,14 @@ var app = (function () {
     		block,
     		id: create_default_slot_1$1.name,
     		type: "slot",
-    		source: "(51:3) <FormField>",
+    		source: "(54:2) <FormField>",
     		ctx
     	});
 
     	return block;
     }
 
-    // (46:3) <FormField>
+    // (49:2) <FormField>
     function create_default_slot$1(ctx) {
     	let checkbox;
     	let updating_checked;
@@ -25116,7 +27865,7 @@ var app = (function () {
     	let current;
 
     	function checkbox_checked_binding(value) {
-    		/*checkbox_checked_binding*/ ctx[8](value);
+    		/*checkbox_checked_binding*/ ctx[9](value);
     	}
 
     	let checkbox_props = {
@@ -25131,7 +27880,7 @@ var app = (function () {
     	binding_callbacks.push(() => bind(checkbox, 'checked', checkbox_checked_binding));
 
     	function textfield_value_binding(value) {
-    		/*textfield_value_binding*/ ctx[9](value);
+    		/*textfield_value_binding*/ ctx[10](value);
     	}
 
     	let textfield_props = { label: /*name*/ ctx[5] };
@@ -25198,15 +27947,15 @@ var app = (function () {
     		block,
     		id: create_default_slot$1.name,
     		type: "slot",
-    		source: "(46:3) <FormField>",
+    		source: "(49:2) <FormField>",
     		ctx
     	});
 
     	return block;
     }
 
-    // (74:2) {#if children.length > 0 && tree.type !== 'EnumField'}
-    function create_if_block(ctx) {
+    // (77:2) {#if children.length > 0 && tree.type !== 'EnumField'}
+    function create_if_block$1(ctx) {
     	let div;
     	let t1;
     	let if_block_anchor;
@@ -25224,7 +27973,7 @@ var app = (function () {
     			if_block_anchor = empty();
     			attr_dev(div, "class", "arrow svelte-vxk9wc");
     			toggle_class(div, "arrowDown", /*arrowDown*/ ctx[4]);
-    			add_location(div, file$2, 74, 3, 2199);
+    			add_location(div, file$2, 77, 3, 2377);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, div, anchor);
@@ -25287,16 +28036,16 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_if_block.name,
+    		id: create_if_block$1.name,
     		type: "if",
-    		source: "(74:2) {#if children.length > 0 && tree.type !== 'EnumField'}",
+    		source: "(77:2) {#if children.length > 0 && tree.type !== 'EnumField'}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (76:3) {#if expanded}
+    // (79:3) {#if expanded}
     function create_if_block_1(ctx) {
     	let each_1_anchor;
     	let current;
@@ -25305,7 +28054,7 @@ var app = (function () {
     	let each_blocks = [];
 
     	for (let i = 0; i < each_value.length; i += 1) {
-    		each_blocks[i] = create_each_block$1(get_each_context$1(ctx, each_value, i));
+    		each_blocks[i] = create_each_block$2(get_each_context$2(ctx, each_value, i));
     	}
 
     	const out = i => transition_out(each_blocks[i], 1, 1, () => {
@@ -25335,13 +28084,13 @@ var app = (function () {
     				let i;
 
     				for (i = 0; i < each_value.length; i += 1) {
-    					const child_ctx = get_each_context$1(ctx, each_value, i);
+    					const child_ctx = get_each_context$2(ctx, each_value, i);
 
     					if (each_blocks[i]) {
     						each_blocks[i].p(child_ctx, dirty);
     						transition_in(each_blocks[i], 1);
     					} else {
-    						each_blocks[i] = create_each_block$1(child_ctx);
+    						each_blocks[i] = create_each_block$2(child_ctx);
     						each_blocks[i].c();
     						transition_in(each_blocks[i], 1);
     						each_blocks[i].m(each_1_anchor.parentNode, each_1_anchor);
@@ -25385,20 +28134,20 @@ var app = (function () {
     		block,
     		id: create_if_block_1.name,
     		type: "if",
-    		source: "(76:3) {#if expanded}",
+    		source: "(79:3) {#if expanded}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (77:4) {#each children as child}
-    function create_each_block$1(ctx) {
+    // (80:4) {#each children as child}
+    function create_each_block$2(ctx) {
     	let taxonomyfiltertree;
     	let current;
 
     	taxonomyfiltertree = new TaxonomyFilterTree({
-    			props: { tree: /*child*/ ctx[15] },
+    			props: { tree: /*child*/ ctx[17] },
     			$$inline: true
     		});
 
@@ -25427,9 +28176,9 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_each_block$1.name,
+    		id: create_each_block$2.name,
     		type: "each",
-    		source: "(77:4) {#each children as child}",
+    		source: "(80:4) {#each children as child}",
     		ctx
     	});
 
@@ -25443,7 +28192,7 @@ var app = (function () {
     	let if_block0;
     	let t;
     	let current;
-    	const if_block_creators = [create_if_block_2, create_if_block_3, create_if_block_4, create_else_block];
+    	const if_block_creators = [create_if_block_2, create_if_block_3, create_if_block_4, create_else_block$1];
     	const if_blocks = [];
 
     	function select_block_type(ctx, dirty) {
@@ -25455,7 +28204,7 @@ var app = (function () {
 
     	current_block_type_index = select_block_type(ctx);
     	if_block0 = if_blocks[current_block_type_index] = if_block_creators[current_block_type_index](ctx);
-    	let if_block1 = /*children*/ ctx[6].length > 0 && /*tree*/ ctx[0].type !== 'EnumField' && create_if_block(ctx);
+    	let if_block1 = /*children*/ ctx[6].length > 0 && /*tree*/ ctx[0].type !== 'EnumField' && create_if_block$1(ctx);
 
     	const block = {
     		c: function create() {
@@ -25464,9 +28213,9 @@ var app = (function () {
     			if_block0.c();
     			t = space();
     			if (if_block1) if_block1.c();
-    			add_location(li, file$2, 43, 1, 1318);
+    			add_location(li, file$2, 46, 1, 1518);
     			attr_dev(ul, "class", "svelte-vxk9wc");
-    			add_location(ul, file$2, 42, 0, 1312);
+    			add_location(ul, file$2, 45, 0, 1512);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -25514,7 +28263,7 @@ var app = (function () {
     						transition_in(if_block1, 1);
     					}
     				} else {
-    					if_block1 = create_if_block(ctx);
+    					if_block1 = create_if_block$1(ctx);
     					if_block1.c();
     					transition_in(if_block1, 1);
     					if_block1.m(li, null);
@@ -25572,7 +28321,12 @@ var app = (function () {
     		$$invalidate(1, expanded = _expansionState[name] = !expanded);
     	};
 
-    	let checked = tree.selected;
+    	let checked = tree.selected === undefined ? false : tree.selected;
+    	const dispatch = createEventDispatcher();
+
+    	function getState() {
+    		return tree;
+    	}
 
     	// TODO: when any children are selected
     	let value = null;
@@ -25580,7 +28334,7 @@ var app = (function () {
     	const writable_props = ['tree'];
 
     	Object.keys($$props).forEach(key => {
-    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console_1.warn(`<TaxonomyFilterTree> was created with unknown prop '${key}'`);
+    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console_1$1.warn(`<TaxonomyFilterTree> was created with unknown prop '${key}'`);
     	});
 
     	function checkbox_checked_binding(value) {
@@ -25635,6 +28389,9 @@ var app = (function () {
     		expanded,
     		toggleExpansion,
     		checked,
+    		createEventDispatcher,
+    		dispatch,
+    		getState,
     		value,
     		arrowDown
     	});
@@ -25657,17 +28414,17 @@ var app = (function () {
     		}
 
     		if ($$self.$$.dirty & /*checked, tree*/ 5) {
-    			// TODO: select checkbox -> select all children; partial select all parents (if false)
-    			// TODO: unselect checkbox -> unselect all children
-    			// TODO: get the state of the tag and all the children
-    			// mutate the existing data
     			{
+    				console.log('checked is now', checked);
+
     				if (checked !== tree.selected) {
     					console.log('selection state changed');
     					$$invalidate(0, tree.selected = checked, tree);
 
     					//tree.children.forEach(child => child.selected = checked);
     					console.log({ tree });
+
+    					dispatch('change', { tree });
     				}
     			} // TODO: emit an event when selected
     			// TODO: for any parents, set to indeterminate if single child is selected
@@ -25687,6 +28444,7 @@ var app = (function () {
     		name,
     		children,
     		toggleExpansion,
+    		getState,
     		checkbox_checked_binding,
     		textfield_value_binding,
     		checkbox_checked_binding_1,
@@ -25700,7 +28458,7 @@ var app = (function () {
     class TaxonomyFilterTree extends SvelteComponentDev {
     	constructor(options) {
     		super(options);
-    		init(this, options, instance$2, create_fragment$2, safe_not_equal, { tree: 0 });
+    		init(this, options, instance$2, create_fragment$2, safe_not_equal, { tree: 0, getState: 8 });
 
     		dispatch_dev("SvelteRegisterComponent", {
     			component: this,
@@ -25713,7 +28471,7 @@ var app = (function () {
     		const props = options.props || {};
 
     		if (/*tree*/ ctx[0] === undefined && !('tree' in props)) {
-    			console_1.warn("<TaxonomyFilterTree> was created without expected prop 'tree'");
+    			console_1$1.warn("<TaxonomyFilterTree> was created without expected prop 'tree'");
     		}
     	}
 
@@ -25724,26 +28482,36 @@ var app = (function () {
     	set tree(value) {
     		throw new Error("<TaxonomyFilterTree>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
+
+    	get getState() {
+    		return this.$$.ctx[8];
+    	}
+
+    	set getState(value) {
+    		throw new Error("<TaxonomyFilterTree>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
     }
 
     /* src/TaxonomyFilter.svelte generated by Svelte v3.49.0 */
     const file$1 = "src/TaxonomyFilter.svelte";
 
-    function get_each_context(ctx, list, i) {
+    function get_each_context$1(ctx, list, i) {
     	const child_ctx = ctx.slice();
-    	child_ctx[1] = list[i];
+    	child_ctx[3] = list[i];
     	return child_ctx;
     }
 
-    // (7:1) {#each trees as tree}
-    function create_each_block(ctx) {
+    // (19:1) {#each trees as tree}
+    function create_each_block$1(ctx) {
     	let taxonomyfiltertree;
     	let current;
 
     	taxonomyfiltertree = new TaxonomyFilterTree({
-    			props: { tree: /*tree*/ ctx[1] },
+    			props: { tree: /*tree*/ ctx[3] },
     			$$inline: true
     		});
+
+    	taxonomyfiltertree.$on("change", /*onChange*/ ctx[1]);
 
     	const block = {
     		c: function create() {
@@ -25755,7 +28523,7 @@ var app = (function () {
     		},
     		p: function update(ctx, dirty) {
     			const taxonomyfiltertree_changes = {};
-    			if (dirty & /*trees*/ 1) taxonomyfiltertree_changes.tree = /*tree*/ ctx[1];
+    			if (dirty & /*trees*/ 1) taxonomyfiltertree_changes.tree = /*tree*/ ctx[3];
     			taxonomyfiltertree.$set(taxonomyfiltertree_changes);
     		},
     		i: function intro(local) {
@@ -25774,9 +28542,9 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_each_block.name,
+    		id: create_each_block$1.name,
     		type: "each",
-    		source: "(7:1) {#each trees as tree}",
+    		source: "(19:1) {#each trees as tree}",
     		ctx
     	});
 
@@ -25791,7 +28559,7 @@ var app = (function () {
     	let each_blocks = [];
 
     	for (let i = 0; i < each_value.length; i += 1) {
-    		each_blocks[i] = create_each_block(get_each_context(ctx, each_value, i));
+    		each_blocks[i] = create_each_block$1(get_each_context$1(ctx, each_value, i));
     	}
 
     	const out = i => transition_out(each_blocks[i], 1, 1, () => {
@@ -25806,7 +28574,7 @@ var app = (function () {
     				each_blocks[i].c();
     			}
 
-    			add_location(main, file$1, 5, 0, 176);
+    			add_location(main, file$1, 17, 0, 483);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -25821,19 +28589,19 @@ var app = (function () {
     			current = true;
     		},
     		p: function update(ctx, [dirty]) {
-    			if (dirty & /*trees*/ 1) {
+    			if (dirty & /*trees, onChange*/ 3) {
     				each_value = /*trees*/ ctx[0];
     				validate_each_argument(each_value);
     				let i;
 
     				for (i = 0; i < each_value.length; i += 1) {
-    					const child_ctx = get_each_context(ctx, each_value, i);
+    					const child_ctx = get_each_context$1(ctx, each_value, i);
 
     					if (each_blocks[i]) {
     						each_blocks[i].p(child_ctx, dirty);
     						transition_in(each_blocks[i], 1);
     					} else {
-    						each_blocks[i] = create_each_block(child_ctx);
+    						each_blocks[i] = create_each_block$1(child_ctx);
     						each_blocks[i].c();
     						transition_in(each_blocks[i], 1);
     						each_blocks[i].m(main, null);
@@ -25884,10 +28652,27 @@ var app = (function () {
     	return block;
     }
 
+    function getSelectedTags(node) {
+    	const tags = node.children.flatMap(getSelectedTags);
+
+    	if (node.selected) {
+    		tags.push(node);
+    	}
+
+    	return tags;
+    }
+
     function instance$1($$self, $$props, $$invalidate) {
     	let { $$slots: slots = {}, $$scope } = $$props;
     	validate_slots('TaxonomyFilter', slots, []);
     	let { trees } = $$props;
+    	const dispatch = createEventDispatcher();
+
+    	function onChange() {
+    		const filterTags = trees.flatMap(getSelectedTags);
+    		dispatch('change', { filterTags });
+    	}
+
     	const writable_props = ['trees'];
 
     	Object.keys($$props).forEach(key => {
@@ -25898,7 +28683,14 @@ var app = (function () {
     		if ('trees' in $$props) $$invalidate(0, trees = $$props.trees);
     	};
 
-    	$$self.$capture_state = () => ({ TaxonomyFilterTree, trees });
+    	$$self.$capture_state = () => ({
+    		TaxonomyFilterTree,
+    		trees,
+    		createEventDispatcher,
+    		dispatch,
+    		getSelectedTags,
+    		onChange
+    	});
 
     	$$self.$inject_state = $$props => {
     		if ('trees' in $$props) $$invalidate(0, trees = $$props.trees);
@@ -25908,7 +28700,7 @@ var app = (function () {
     		$$self.$inject_state($$props.$$inject);
     	}
 
-    	return [trees];
+    	return [trees, onChange];
     }
 
     class TaxonomyFilter extends SvelteComponentDev {
@@ -25950,11 +28742,197 @@ var app = (function () {
 
     const data = {"id":"b0126ab6-7c6d-9770-3a84-b312fe381fdb","name":"Taxonomy","type":"Taxonomy","children":[{"id":"273c57b2-f06a-3ea9-6d40-cfc3d4d76bf9","name":"Digital Phenotyping","type":"Vocabulary","children":[{"id":"26f6428a-b724-e601-0f4e-d636111948e2","name":"Data Type","type":"Term","children":[{"id":"d79c3938-643c-715a-fe0a-1912e42a653e","name":"Face/Video Recording","type":"Term","children":[{"id":"36424611-3d48-264e-0f14-b6703a34dae6","name":"Video","type":"EnumField","children":[{"id":"36083d40-2abd-2f38-fa09-0d3f04477c60","name":"No","type":"EnumOption","children":[]},{"id":"bb7cefad-75ea-e9cd-e3e5-5490d33bc313","name":"Yes","type":"EnumOption","children":[]}]},{"id":"604e21a0-68af-8a1f-c0a0-ae4aa0f0db50","name":"Recording Software","type":"EnumField","children":[{"id":"046a3e1c-1ebe-5ac3-423a-4d21347d9067","name":"Zoom","type":"EnumOption","children":[]}]},{"id":"3f793af0-c11e-28c9-478c-72505c7d4bae","name":"Transcript","type":"EnumField","children":[{"id":"ee13be57-8c38-73f4-c120-5cf08709cd28","name":"Transcript Me","type":"EnumOption","children":[]},{"id":"1d9c3b4a-e77d-6844-b9c4-ad308ce88fdf","name":"None","type":"EnumOption","children":[]}]},{"id":"e4e4377f-ef31-6982-1273-4deea1149eb2","name":"Setting","type":"Term","children":[]},{"id":"b4bd7c41-0d2e-9b16-1302-e49662659cc3","name":"Assessment Instrument","type":"Term","children":[]}]},{"id":"ebe2da19-10c0-0892-11b4-750686996c03","name":"Ecological Momentary Assessment","type":"Term","children":[{"id":"57fe689d-ef38-6118-ce91-2843ad83aa8c","name":"Platform","type":"EnumField","children":[{"id":"a22eb76b-410c-20f4-22e6-0071b78ab31f","name":"Twilio","type":"EnumOption","children":[]},{"id":"6d84ae0f-55a5-d019-3282-d115e946eab8","name":"Iphone","type":"EnumOption","children":[]},{"id":"c9834bdc-10bc-e168-5d1c-323b8a06ed25","name":"REDCap","type":"EnumOption","children":[]}]},{"id":"ffcf9cc0-5317-5545-73a3-f5b3208f41a6","name":"Assessment Instrument","type":"TextField","children":[]}]},{"id":"73c620ac-fdd0-e67b-6b9d-688f11c4bf07","name":"Actigraphy","type":"Term","children":[{"id":"06b13b3b-34fc-7d0b-92d6-144d5f3e0741","name":"Processing Pipeline","type":"EnumField","children":[{"id":"7744617d-5dc6-27cd-09ae-2a9a9d9e0c70","name":"none","type":"EnumOption","children":[]},{"id":"9eb22164-2928-ce77-3369-739326d5e419","name":"dpsleep","type":"EnumOption","children":[]}]},{"id":"03dbb70a-25bb-30a7-5a44-730c1895ef1a","name":"Device","type":"EnumField","children":[{"id":"2e45794f-bcb4-ed66-094a-f8b7ff2a9829","name":"Apple Watch","type":"EnumOption","children":[]},{"id":"3aa26e56-e5b7-d7f4-e214-1bfee7258f55","name":"GENEActiv","type":"EnumOption","children":[]}]}]}]},{"id":"91817e29-792d-a023-e541-bd931fcfcb0b","name":"Study","type":"Term","children":[{"id":"1dbcf8ca-0bf8-a6f4-6573-d695d30d1e0d","name":"Code","type":"TextField","children":[]},{"id":"d9a3e3b3-3a27-ea69-60bc-98a9c892cc35","name":"Center","type":"TextField","children":[]},{"id":"b767ea1f-5df1-295a-a07d-39a0d8800a2c","name":"Extract","type":"Term","children":[{"id":"d4b8c7ab-2526-0bb3-a341-7c1b0bcb4511","name":"Notes","type":"TextField","children":[]},{"id":"38c40073-1509-a062-c511-e0e9527673bb","name":"Time","type":"TextField","children":[]},{"id":"d1ef49c4-78e7-744e-ef25-2642f116f3ac","name":"Operator ID","type":"TextField","children":[]}]},{"id":"644c7b95-8427-c01e-076d-391cfae54c65","name":"Config","type":"Term","children":[{"id":"f1f12c92-740a-16dc-b9b6-e243f0cbcc90","name":"Operator ID","type":"TextField","children":[]},{"id":"271e5715-9c86-fa6b-d476-643e5e95aebd","name":"Notes","type":"TextField","children":[]},{"id":"f47a00fb-4fd6-b09d-3ccb-69863565103e","name":"Time","type":"TextField","children":[]}]},{"id":"13991312-052a-9b0b-f6e7-dd2ded09a111","name":"Investigator ID","type":"TextField","children":[]}]},{"id":"8a2a08b6-385d-d838-f6ba-5b616cdb8fff","name":"Subject","type":"Term","children":[{"id":"24f97d53-eec9-8430-c904-011a8514b95f","name":"Height","type":"IntegerField","children":[]},{"id":"7213bd9d-e20d-fdbb-9374-a97568fc89bd","name":"Sex","type":"EnumField","children":[{"id":"fc6680ba-be3c-e979-bf94-9b33c79b11e1","name":"Female","type":"EnumOption","children":[]},{"id":"35068c09-55c9-d634-d88d-634bc0079312","name":"Other","type":"EnumOption","children":[]},{"id":"dab52028-eec9-d7fe-12e2-c46effa507dc","name":"Male","type":"EnumOption","children":[]}]},{"id":"877c8cca-26bb-8522-1aad-ce6346ef29ac","name":"Date of Birth","type":"TextField","children":[]},{"id":"1c260390-c770-32d8-1693-8a5cbfb42cfb","name":"Handedness","type":"EnumField","children":[{"id":"cfa609f8-ce03-a223-ceab-d530b08aab26","name":"Right","type":"EnumOption","children":[]},{"id":"80ad8943-9709-f701-5157-766ffd320443","name":"Ambidextrious","type":"EnumOption","children":[]},{"id":"49330075-7d2d-7a74-b778-34288b31adc6","name":"Left","type":"EnumOption","children":[]}]},{"id":"6ab19632-217f-9d92-c7f0-c1487fcad205","name":"Weight","type":"IntegerField","children":[]},{"id":"27c62295-00b8-c098-e500-3c5bde60f8fe","name":"Location","type":"TextField","children":[]}]},{"id":"589ba005-8522-7e4a-3e66-215e9b9b74b5","name":"Collection Time","type":"Term","children":[{"id":"47c67f13-47b2-6c35-097f-9458d53614a5","name":"End DateTime","type":"TextField","children":[]},{"id":"8d56c5a3-3d81-fbdc-2890-55330744d344","name":"Start DateTime","type":"TextField","children":[]},{"id":"6df83c75-e4b1-3174-3153-af11d7f8c6a0","name":"Frequency","type":"TextField","children":[]}]},{"id":"a0b2b4cc-ad70-2c77-db2b-ef0e34e4d29e","name":"Collection Site","type":"Term","children":[{"id":"9f67a75d-69b2-4bc9-fc81-e9121ee107a7","name":"State","type":"TextField","children":[]},{"id":"bd443f29-cf04-c0e9-7395-c1646a7594c3","name":"City","type":"TextField","children":[]},{"id":"b817d0f8-b987-d02e-40ae-331e9f90a034","name":"Country","type":"TextField","children":[]}]}]}]};
 
+    const items = [
+    {
+    "$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta",
+    "IsFunction":false,
+    "ProcessType":"labassets",
+    "ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a",
+    "IsMeasure":false,
+    "Index":0,
+    "Version":0,
+    "ObserverId":"95862b95-a22b-4d0b-bd5c-2fb5fca18841",
+    "StartTime":"2021-11-05T05:52:56.63+00:00",
+    "EndTime":null,
+    "ApplicationDependencies":[],
+    "ProcessDependencies":[],
+    "Data":[
+    	{"Guid":"9a370ecc-1a20-4087-9712-4c811b26d5b2","Collection":{"DateCollected":"2021-11-04T00:00:00-07:00"},"Type":0,"Label":"John Doe Dataset","Status":0,"Quantity":1,"SpeciesList":[{"Name":"aegypti","Rank":"species","Parent":{"Name":"stegomyia","Rank":"subgenus","Parent":{"Name":"aedes","Rank":"genus","Parent":{"Name":"culicidae","Rank":"family","Parent":{"Name":"diptera","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":265461}},"SourceIDs":{"NCBI":342889}},"SourceIDs":{"NCBI":1806188}},"SourceIDs":{"NCBI":53541}},"SourceIDs":{"NCBI":7159}}],"SpeciesConfirmed":true,"Sex":3,"Notes":"Eggs collected in Harris County, TX"}
+    ],
+    "DataFiles":[]
+    },
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":1,"Version":0,"ObserverId":"95862b95-a22b-4d0b-bd5c-2fb5fca18841","StartTime":"2021-11-05T06:55:13.278+00:00","EndTime":null,"ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"bb89882b-3aec-4e1c-9758-5b9d49753996","Status":0,"Collection":{"Location":"Premonition lab 123","City":"Redmond, WA","Collector":"Mike Reddy"},"Type":1,"Sources":["9a370ecc-1a20-4087-9712-4c811b26d5b2"],"Label":"Larval001","Quantity":1,"SpeciesList":[{"Name":"aegypti","Rank":"species","Parent":{"Name":"stegomyia","Rank":"subgenus","Parent":{"Name":"aedes","Rank":"genus","Parent":{"Name":"culicidae","Rank":"family","Parent":{"Name":"diptera","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":265461}},"SourceIDs":{"NCBI":342889}},"SourceIDs":{"NCBI":1806188}},"SourceIDs":{"NCBI":53541}},"SourceIDs":{"NCBI":7159}}],"SpeciesConfirmed":false,"History":[{"Action":"Created","Time":"2021-11-05T06:55:13.278+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":2,"Version":0,"ObserverId":"95862b95-a22b-4d0b-bd5c-2fb5fca18841","StartTime":"2021-11-05T07:08:05.761+00:00","EndTime":null,"ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"1be528a6-b5c0-457d-aa98-ea92bfa93267","Status":0,"Collection":{},"Sources":["bb89882b-3aec-4e1c-9758-5b9d49753996"],"Type":2,"Label":"CageA","Notes":"test test test","History":[{"Action":"Created","Time":"2021-11-05T07:08:05.761+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":3,"Version":0,"ObserverId":"95862b95-a22b-4d0b-bd5c-2fb5fca18841","StartTime":"2021-11-11T21:24:17.115+00:00","EndTime":null,"ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"cc51003c-1d20-4a50-8fc2-0ea32a107ed7","Status":0,"Collection":{"City":"Houston, TX"},"Type":0,"Label":"TireEgg","History":[{"Action":"Created","Time":"2021-11-11T21:24:17.115+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":4,"Version":0,"ObserverId":"95862b95-a22b-4d0b-bd5c-2fb5fca18841","StartTime":"2021-11-11T22:51:39.456+00:00","EndTime":null,"ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"effe6c45-a15e-490b-91d0-837f8206e615","Status":0,"Collection":{},"Type":1,"Label":"TireLarval","Sources":["cc51003c-1d20-4a50-8fc2-0ea32a107ed7"],"Quantity":1,"History":[{"Action":"Created","Time":"2021-11-11T22:51:39.456+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":5,"Version":0,"ObserverId":"95862b95-a22b-4d0b-bd5c-2fb5fca18841","StartTime":"2022-01-25T01:47:57.003+00:00","EndTime":null,"ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"5cc61bea-82d9-4f09-94f8-b6a79b49ffd3","Status":0,"SpeciesList":[{"Name":"aedes","Rank":"genus","Parent":{"Name":"culicidae","Rank":"family","Parent":{"Name":"diptera","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":265461}},"SourceIDs":{"NCBI":342889}},"SourceIDs":{"NCBI":1806188}}],"Sex":1,"Quantity":3,"Type":3,"Sources":["bb89882b-3aec-4e1c-9758-5b9d49753996"],"Label":"Larval001-Aedes-female","Collection":{},"History":[{"Action":"Created","Time":"2022-01-25T01:47:57.003+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":6,"Version":0,"ObserverId":"95862b95-a22b-4d0b-bd5c-2fb5fca18841","StartTime":"2022-01-25T01:47:57.262+00:00","EndTime":null,"ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"7ba6de47-c953-42bf-ae89-390decc57482","Status":0,"SpeciesList":[{"Name":"culex","Rank":"genus","Parent":{"Name":"culicidae","Rank":"family","Parent":{"Name":"diptera","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":265461}},"SourceIDs":{"NCBI":342889}},"SourceIDs":{"NCBI":2007271}}],"Sex":2,"Quantity":1,"Type":3,"Sources":["bb89882b-3aec-4e1c-9758-5b9d49753996"],"Label":"Larval001-Culex-male","Collection":{},"History":[{"Action":"Created","Time":"2022-01-25T01:47:57.262+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":7,"Version":0,"ObserverId":"95862b95-a22b-4d0b-bd5c-2fb5fca18841","StartTime":"2022-01-25T01:47:57.542+00:00","EndTime":null,"ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"04287e73-0fea-40cc-bdd0-db42f1193bcf","Status":0,"SpeciesList":[{"Name":"aegypti","Rank":"species","Parent":{"Name":"stegomyia","Rank":"subgenus","Parent":{"Name":"aedes","Rank":"genus","Parent":{"Name":"culicidae","Rank":"family","Parent":{"Name":"diptera","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":265461}},"SourceIDs":{"NCBI":342889}},"SourceIDs":{"NCBI":1806188}},"SourceIDs":{"NCBI":53541}},"SourceIDs":{"NCBI":7159}}],"Sex":2,"Quantity":1,"Type":3,"Sources":["bb89882b-3aec-4e1c-9758-5b9d49753996"],"Label":"Larval001-Aedes_aegypti-male","Collection":{},"History":[{"Action":"Created","Time":"2022-01-25T01:47:57.542+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":8,"Version":0,"ObserverId":"b92dfdef-f13e-48f3-a56f-07f161f3aac2","StartTime":"2022-01-31T21:31:31.287+00:00","EndTime":null,"ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"58de6567-5749-46d0-82a1-06284cfb0437","Status":1,"Collection":{},"Attachments":["1536884011.svg"],"Type":2,"Quantity":1,"Sex":0,"Notes":"Test","Label":"vutest1","History":[{"Action":"Created","Time":"2022-01-31T21:31:31.287+00:00"}]}],"DataFiles":["58de6567-5749-46d0-82a1-06284cfb0437/1536884011.svg"]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":9,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-02-03T01:27:10.944+00:00","EndTime":null,"ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"51b5ae96-bcf4-4b92-a499-53d9b3780ff2","Status":0,"Collection":{},"Type":5,"Label":"Bag01","Quantity":0,"Notes":"Designation for bag to distinguished from others. ","History":[{"Action":"Created","Time":"2022-02-03T01:27:10.944+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":10,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-02-03T01:28:06.721+00:00","EndTime":null,"ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"acdeaae0-fe37-4565-83a5-984e79436b32","Status":0,"Collection":{},"Type":6,"Label":"2022-02-02_CapturedBugs","Sources":["51b5ae96-bcf4-4b92-a499-53d9b3780ff2"],"Quantity":200,"History":[{"Action":"Created","Time":"2022-02-03T01:28:06.721+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":11,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-02-03T01:32:31.163+00:00","EndTime":null,"ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"13b943d3-ac39-4a41-bfca-7864702c1abb","Status":0,"SpeciesList":[{"Name":"aegypti","Rank":"species","Parent":{"Name":"stegomyia","Rank":"subgenus","Parent":{"Name":"aedes","Rank":"genus","Parent":{"Name":"culicidae","Rank":"family","Parent":{"Name":"diptera","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":265461}},"SourceIDs":{"NCBI":342889}},"SourceIDs":{"NCBI":1806188}},"SourceIDs":{"NCBI":53541}},"SourceIDs":{"NCBI":7159}}],"Sex":1,"Quantity":15,"Type":6,"Sources":["51b5ae96-bcf4-4b92-a499-53d9b3780ff2"],"Label":"Bag01-Aedes_aegypti-female","Collection":{},"History":[{"Action":"Created","Time":"2022-02-03T01:32:31.163+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":12,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-02-03T01:32:31.307+00:00","EndTime":null,"ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"4a6f21c8-98ae-483a-9286-91f2a657d0c8","Status":0,"SpeciesList":[{"Name":"quinquefasciatus","Rank":"species","Parent":{"Name":"culex","Rank":"subgenus","Parent":{"Name":"culex","Rank":"genus","Parent":{"Name":"culicidae","Rank":"family","Parent":{"Name":"diptera","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":265461}},"SourceIDs":{"NCBI":342889}},"SourceIDs":{"NCBI":2007271}},"SourceIDs":{"NCBI":518105}},"SourceIDs":{"NCBI":7176}}],"Sex":1,"Quantity":25,"Type":6,"Sources":["51b5ae96-bcf4-4b92-a499-53d9b3780ff2"],"Label":"Bag01-Culex_quinquefasciatus-female","Collection":{},"History":[{"Action":"Created","Time":"2022-02-03T01:32:31.307+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":13,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-02-03T01:32:31.443+00:00","EndTime":null,"ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"ef61e12e-0a84-4d2d-ab24-60f330aec818","Status":0,"SpeciesList":[{"Name":"aegypti","Rank":"species","Parent":{"Name":"stegomyia","Rank":"subgenus","Parent":{"Name":"aedes","Rank":"genus","Parent":{"Name":"culicidae","Rank":"family","Parent":{"Name":"diptera","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":265461}},"SourceIDs":{"NCBI":342889}},"SourceIDs":{"NCBI":1806188}},"SourceIDs":{"NCBI":53541}},"SourceIDs":{"NCBI":7159}}],"Sex":2,"Quantity":3,"Type":6,"Sources":["51b5ae96-bcf4-4b92-a499-53d9b3780ff2"],"Label":"Bag01-Aedes_aegypti-male","Collection":{},"History":[{"Action":"Created","Time":"2022-02-03T01:32:31.443+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":14,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-02-03T01:32:31.557+00:00","EndTime":null,"ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"b88750c3-0df3-48c2-a274-d2d9f807f272","Status":0,"SpeciesList":[{"Name":"quinquefasciatus","Rank":"species","Parent":{"Name":"culex","Rank":"subgenus","Parent":{"Name":"culex","Rank":"genus","Parent":{"Name":"culicidae","Rank":"family","Parent":{"Name":"diptera","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":265461}},"SourceIDs":{"NCBI":342889}},"SourceIDs":{"NCBI":2007271}},"SourceIDs":{"NCBI":518105}},"SourceIDs":{"NCBI":7176}}],"Sex":2,"Quantity":6,"Type":6,"Sources":["51b5ae96-bcf4-4b92-a499-53d9b3780ff2"],"Label":"Bag01-Culex_quinquefasciatus-male","Collection":{},"History":[{"Action":"Created","Time":"2022-02-03T01:32:31.557+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":15,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-02-03T01:32:31.68+00:00","EndTime":null,"ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"dee8bb79-8081-4424-98be-ee9e6b790e43","Status":0,"SpeciesList":[{"Name":"blattodea","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":85823}}],"Sex":1,"Quantity":1,"Type":6,"Sources":["51b5ae96-bcf4-4b92-a499-53d9b3780ff2"],"Label":"Bag01-Blattodea-female","Collection":{},"History":[{"Action":"Created","Time":"2022-02-03T01:32:31.68+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":16,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-02-03T01:36:19.079+00:00","EndTime":null,"ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"4d11531d-244b-4c0d-baed-5d7056f9071c","Status":0,"SpeciesList":[{"Name":"albopictus","Rank":"species","Parent":{"Name":"stegomyia","Rank":"subgenus","Parent":{"Name":"aedes","Rank":"genus","Parent":{"Name":"culicidae","Rank":"family","Parent":{"Name":"diptera","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":265461}},"SourceIDs":{"NCBI":342889}},"SourceIDs":{"NCBI":1806188}},"SourceIDs":{"NCBI":53541}},"SourceIDs":{"NCBI":7160}}],"Sex":1,"Quantity":4,"Type":6,"Sources":["51b5ae96-bcf4-4b92-a499-53d9b3780ff2"],"Label":"Bag01-Aedes_albopictus-female","Collection":{},"History":[{"Action":"Created","Time":"2022-02-03T01:36:19.079+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":17,"Version":0,"ObserverId":"b92dfdef-f13e-48f3-a56f-07f161f3aac2","StartTime":"2022-02-03T22:04:30.015+00:00","EndTime":null,"ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"0d06882f-4b03-44f7-a020-ac4f53d27d0d","Status":0,"Collection":{},"Type":2,"Label":"vutest1","Attachments":["Climat-Houston.svg.png"],"History":[{"Action":"Created","Time":"2022-02-03T22:04:30.015+00:00"}]}],"DataFiles":["0d06882f-4b03-44f7-a020-ac4f53d27d0d/Climat-Houston.svg.png"]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":18,"Version":0,"ObserverId":"b92dfdef-f13e-48f3-a56f-07f161f3aac2","StartTime":"2022-02-03T22:09:43.579+00:00","EndTime":null,"ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"a8726953-0cff-489a-a2d8-b22dcb8aba1d","Status":0,"Collection":{},"Type":2,"Label":"vutest1","Attachments":["Climat-Houston.svg.png"],"History":[{"Action":"Created","Time":"2022-02-03T22:09:43.579+00:00"}]}],"DataFiles":["a8726953-0cff-489a-a2d8-b22dcb8aba1d/Climat-Houston.svg.png"]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":19,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-02-14T21:10:48.023+00:00","EndTime":null,"ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"b3873c46-3bbd-441e-944b-7c09cd924b70","Status":0,"SpeciesList":[{"Name":"quinquefasciatus","Rank":"species","Parent":{"Name":"culex","Rank":"subgenus","Parent":{"Name":"culex","Rank":"genus","Parent":{"Name":"culicidae","Rank":"family","Parent":{"Name":"diptera","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":265461}},"SourceIDs":{"NCBI":342889}},"SourceIDs":{"NCBI":2007271}},"SourceIDs":{"NCBI":518105}},"SourceIDs":{"NCBI":7176}}],"Sex":1,"Quantity":82,"Type":6,"Sources":["51b5ae96-bcf4-4b92-a499-53d9b3780ff2"],"Label":"Bag01-Culex_quinquefasciatus-female","Collection":{},"History":[{"Action":"Created","Time":"2022-02-14T21:10:48.023+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":20,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-02-14T21:10:48.486+00:00","EndTime":null,"ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"366598cb-b811-46f3-bacb-ad458ccb80a8","Status":0,"SpeciesList":[{"Name":"albopictus","Rank":"species","Parent":{"Name":"stegomyia","Rank":"subgenus","Parent":{"Name":"aedes","Rank":"genus","Parent":{"Name":"culicidae","Rank":"family","Parent":{"Name":"diptera","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":265461}},"SourceIDs":{"NCBI":342889}},"SourceIDs":{"NCBI":1806188}},"SourceIDs":{"NCBI":53541}},"SourceIDs":{"NCBI":7160}}],"Sex":1,"Quantity":23,"Type":6,"Sources":["51b5ae96-bcf4-4b92-a499-53d9b3780ff2"],"Label":"Bag01-Aedes_albopictus-female","Collection":{},"History":[{"Action":"Created","Time":"2022-02-14T21:10:48.486+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":21,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-02-14T21:22:17.214+00:00","EndTime":null,"ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"d2de37dd-03a9-4f63-90cf-4c1dbfcc5c36","Status":0,"Collection":{},"Type":5,"Label":"Bag04","Quantity":0,"History":[{"Action":"Created","Time":"2022-02-14T21:22:17.214+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":22,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-02-14T21:24:33.275+00:00","EndTime":null,"ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"98b19ad3-f9cd-4e0b-a689-10beae54446c","Status":0,"Collection":{},"Type":6,"Label":"2022-06-22_PREMO-TRAPP0300-00001","Sources":["d2de37dd-03a9-4f63-90cf-4c1dbfcc5c36"],"Quantity":0,"History":[{"Action":"Created","Time":"2022-02-14T21:24:33.275+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":23,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-02-14T21:26:28.305+00:00","EndTime":null,"ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"54efd8ee-268c-4038-a3e0-87c8d5b4f8da","Status":0,"SpeciesList":[{"Name":"nigripalpus","Rank":"species","Parent":{"Name":"culex","Rank":"subgenus","Parent":{"Name":"culex","Rank":"genus","Parent":{"Name":"culicidae","Rank":"family","Parent":{"Name":"diptera","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":265461}},"SourceIDs":{"NCBI":342889}},"SourceIDs":{"NCBI":2007271}},"SourceIDs":{"NCBI":518105}},"SourceIDs":{"NCBI":42429}}],"Sex":1,"Quantity":19,"Type":6,"Sources":["98b19ad3-f9cd-4e0b-a689-10beae54446c"],"Label":"2022-06-22_PREMO-TRAPP0300-00001-Culex_nigripalpus-female","Collection":{},"History":[{"Action":"Created","Time":"2022-02-14T21:26:28.305+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":24,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-02-14T21:31:41.888+00:00","EndTime":null,"ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"a07979f6-17fc-4cbf-8c35-fab63d893f2d","Status":0,"Collection":{},"Type":5,"Label":"2022-07-04_PREMO-TRAPP0200-00001","History":[{"Action":"Created","Time":"2022-02-14T21:31:41.888+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":25,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-02-14T21:33:37.764+00:00","EndTime":null,"ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"139bdee8-6107-45c4-9420-46c7e9eb59f3","Status":0,"SpeciesList":[{"Name":"aegypti","Rank":"species","Parent":{"Name":"stegomyia","Rank":"subgenus","Parent":{"Name":"aedes","Rank":"genus","Parent":{"Name":"culicidae","Rank":"family","Parent":{"Name":"diptera","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":265461}},"SourceIDs":{"NCBI":342889}},"SourceIDs":{"NCBI":1806188}},"SourceIDs":{"NCBI":53541}},"SourceIDs":{"NCBI":7159}}],"Sex":1,"Quantity":19,"Type":6,"Sources":["a07979f6-17fc-4cbf-8c35-fab63d893f2d"],"Label":"2022-07-04_PREMO-TRAPP0200-00001-Aedes_aegypti-female","Collection":{},"History":[{"Action":"Created","Time":"2022-02-14T21:33:37.764+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":26,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-02-14T21:33:38.076+00:00","EndTime":null,"ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"c126ed77-cb48-4e4d-a98b-aff442f73ecd","Status":0,"SpeciesList":[{"Name":"titillans","Rank":"species","Parent":{"Name":"mansonia","Rank":"subgenus","Parent":{"Name":"mansonia","Rank":"genus","Parent":{"Name":"culicidae","Rank":"family","Parent":{"Name":"diptera","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":265461}},"SourceIDs":{"NCBI":342889}},"SourceIDs":{"NCBI":1147728}},"SourceIDs":{"NCBI":308734}},"SourceIDs":{"NCBI":869066}}],"Sex":1,"Quantity":3,"Type":6,"Sources":["a07979f6-17fc-4cbf-8c35-fab63d893f2d"],"Label":"2022-07-04_PREMO-TRAPP0200-00001-Mansonia_titillans-female","Collection":{},"History":[{"Action":"Created","Time":"2022-02-14T21:33:38.076+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":27,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-02-14T21:36:41.465+00:00","EndTime":null,"ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"f42fb030-9432-4b59-aa0f-5d16e61811a4","Status":0,"SpeciesList":[{"Name":"triseriatus","Rank":"species","Parent":{"Name":"protomacleaya","Rank":"subgenus","Parent":{"Name":"ochlerotatus","Rank":"genus","Parent":{"Name":"culicidae","Rank":"family","Parent":{"Name":"culicoidea","Rank":"superfamily","Parent":{"Name":"diptera","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":265461}},"SourceIDs":{"NCBI":41827}},"SourceIDs":{}},"SourceIDs":{"NCBI":1125803}},"SourceIDs":{"NCBI":119225}},"SourceIDs":{"NCBI":7162}}],"Sex":1,"Quantity":2,"Type":6,"Sources":["a07979f6-17fc-4cbf-8c35-fab63d893f2d"],"Label":"2022-07-04_PREMO-TRAPP0200-00001-Ochlerotatus_triseriatus-female","Collection":{},"History":[{"Action":"Created","Time":"2022-02-14T21:36:41.465+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":28,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-02-14T23:33:03.877+00:00","EndTime":null,"ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"7de83a94-693a-4f07-b91f-ff30164d8c36","Status":0,"Collection":{},"Type":6,"Sources":["d2de37dd-03a9-4f63-90cf-4c1dbfcc5c36"],"Label":"2022-07-04_PREMO_TRAPP03-00005","History":[{"Action":"Created","Time":"2022-02-14T23:33:03.877+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":29,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-02-14T23:36:17.776+00:00","EndTime":null,"ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"3b04a18b-a43d-4e20-8c96-cdd94e333be9","Status":0,"SpeciesList":[{"Name":"aegypti","Rank":"species","Parent":{"Name":"stegomyia","Rank":"subgenus","Parent":{"Name":"aedes","Rank":"genus","Parent":{"Name":"culicidae","Rank":"family","Parent":{"Name":"diptera","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":265461}},"SourceIDs":{"NCBI":342889}},"SourceIDs":{"NCBI":1806188}},"SourceIDs":{"NCBI":53541}},"SourceIDs":{"NCBI":7159}}],"Sex":1,"Quantity":14,"Type":3,"Sources":["7de83a94-693a-4f07-b91f-ff30164d8c36"],"Label":"2022-07-04_PREMO_TRAPP03-00005-Aedes_aegypti-female","Collection":{},"History":[{"Action":"Created","Time":"2022-02-14T23:36:17.776+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":30,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-02-14T23:36:17.92+00:00","EndTime":null,"ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"c0f670a3-e70c-4028-a193-a0251f6613b5","Status":0,"SpeciesList":[{"Name":"mitchellii","Rank":"species","Parent":{"Name":"wyeomyia","Rank":"genus","Parent":{"Name":"culicidae","Rank":"family","Parent":{"Name":"diptera","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":265461}},"SourceIDs":{"NCBI":342889}},"SourceIDs":{"NCBI":2631130}},"SourceIDs":{"NCBI":857316}}],"Sex":1,"Quantity":24,"Type":3,"Sources":["7de83a94-693a-4f07-b91f-ff30164d8c36"],"Label":"2022-07-04_PREMO_TRAPP03-00005-Wyeomyia_mitchellii-female","Collection":{},"History":[{"Action":"Created","Time":"2022-02-14T23:36:17.92+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":31,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-02-15T20:32:36.017+00:00","EndTime":null,"ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"09d28de6-f1dc-43a7-ae1e-869c9f42a3b2","Status":0,"Collection":{},"Type":5,"Label":"Bag05","Notes":"New bag added 2022-02-15.","History":[{"Action":"Created","Time":"2022-02-15T20:32:36.017+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":32,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-02-15T20:34:32.853+00:00","EndTime":null,"ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"fb170c76-2f6b-49a4-a5de-8c925b365f7d","Status":0,"Collection":{},"Type":6,"Label":"2022-02-16_PREMO-TRAPP03-00007","History":[{"Action":"Created","Time":"2022-02-15T20:34:32.853+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":33,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-02-15T20:36:32.307+00:00","EndTime":null,"ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"a9728a4c-fe01-40be-871d-e02941d20528","Status":0,"SpeciesList":[{"Name":"tritaeniorhynchus","Rank":"species","Parent":{"Name":"culex","Rank":"subgenus","Parent":{"Name":"culex","Rank":"genus","Parent":{"Name":"culicidae","Rank":"family","Parent":{"Name":"diptera","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":265461}},"SourceIDs":{"NCBI":342889}},"SourceIDs":{"NCBI":2007271}},"SourceIDs":{"NCBI":518105}},"SourceIDs":{"NCBI":7178}}],"Sex":1,"Quantity":45,"Type":3,"Sources":["fb170c76-2f6b-49a4-a5de-8c925b365f7d"],"Label":"2022-02-16_PREMO-TRAPP03-00007-Culex_tritaeniorhynchus-female","Collection":{},"History":[{"Action":"Created","Time":"2022-02-15T20:36:32.307+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":34,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-02-15T20:36:32.46+00:00","EndTime":null,"ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"b3448d5e-aece-4429-b26b-07d526fce1a1","Status":0,"SpeciesList":[{"Name":"aegypti","Rank":"species","Parent":{"Name":"stegomyia","Rank":"subgenus","Parent":{"Name":"aedes","Rank":"genus","Parent":{"Name":"culicidae","Rank":"family","Parent":{"Name":"diptera","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":265461}},"SourceIDs":{"NCBI":342889}},"SourceIDs":{"NCBI":1806188}},"SourceIDs":{"NCBI":53541}},"SourceIDs":{"NCBI":7159}}],"Sex":1,"Quantity":12,"Type":3,"Sources":["fb170c76-2f6b-49a4-a5de-8c925b365f7d"],"Label":"2022-02-16_PREMO-TRAPP03-00007-Aedes_aegypti-female","Collection":{},"History":[{"Action":"Created","Time":"2022-02-15T20:36:32.46+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":35,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-02-26T00:39:11.169+00:00","EndTime":null,"ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"414f6c0d-3982-4c00-81e1-d186fd3a4616","Status":1,"Collection":{},"Type":3,"Label":"2022-02-25_Cx.tritaen","Sources":["fb170c76-2f6b-49a4-a5de-8c925b365f7d"],"Quantity":5,"SpeciesList":[{"Name":"tritaeniorhynchus","Rank":"species","Parent":{"Name":"culex","Rank":"subgenus","Parent":{"Name":"culex","Rank":"genus","Parent":{"Name":"culicidae","Rank":"family","Parent":{"Name":"diptera","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":265461}},"SourceIDs":{"NCBI":342889}},"SourceIDs":{"NCBI":2007271}},"SourceIDs":{"NCBI":518105}},"SourceIDs":{"NCBI":7178}}],"SpeciesConfirmed":true,"Strain":"wild","Stage":"adult","Sex":1,"History":[{"Action":"Created","Time":"2022-02-26T00:39:11.169+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":36,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-02-26T00:40:11.434+00:00","EndTime":null,"ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"c9f5d85b-dfad-4f20-b933-e71b70db36a1","Status":1,"Collection":{},"Type":3,"Label":"2022-02-25_Ma.tittilans","Sources":["fb170c76-2f6b-49a4-a5de-8c925b365f7d"],"Quantity":14,"SpeciesList":[{"Name":"titillans","Rank":"species","Parent":{"Name":"mansonia","Rank":"subgenus","Parent":{"Name":"mansonia","Rank":"genus","Parent":{"Name":"culicidae","Rank":"family","Parent":{"Name":"diptera","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":265461}},"SourceIDs":{"NCBI":342889}},"SourceIDs":{"NCBI":1147728}},"SourceIDs":{"NCBI":308734}},"SourceIDs":{"NCBI":869066}}],"SpeciesConfirmed":true,"Strain":"wild","Stage":"adult","Sex":1,"History":[{"Action":"Created","Time":"2022-02-26T00:40:11.434+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":37,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-02-26T00:40:58.644+00:00","EndTime":null,"ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"b100407b-f50c-4b57-a96c-521e611666d8","Status":1,"Collection":{},"Type":3,"Label":"2022-02-25_Cx.que","Sources":["fb170c76-2f6b-49a4-a5de-8c925b365f7d"],"Quantity":76,"SpeciesList":[{"Name":"quinquefasciatus","Rank":"species","Parent":{"Name":"culex","Rank":"subgenus","Parent":{"Name":"culex","Rank":"genus","Parent":{"Name":"culicidae","Rank":"family","Parent":{"Name":"diptera","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":265461}},"SourceIDs":{"NCBI":342889}},"SourceIDs":{"NCBI":2007271}},"SourceIDs":{"NCBI":518105}},"SourceIDs":{"NCBI":7176}}],"SpeciesConfirmed":true,"Strain":"wild","Stage":"adult","Sex":1,"History":[{"Action":"Created","Time":"2022-02-26T00:40:58.644+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":38,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-03-14T23:11:47.213+00:00","EndTime":null,"ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"c09205e5-418b-4d82-b0ee-328ce092de92","Status":0,"SpeciesList":[{"Name":"mantodea","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":253120}}],"Sex":0,"Quantity":2,"Type":3,"Sources":["fb170c76-2f6b-49a4-a5de-8c925b365f7d"],"Label":"2022-02-16_PREMO-TRAPP03-00007-Mantodea-unknown","Collection":{},"History":[{"Action":"Created","Time":"2022-03-14T23:11:47.213+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":39,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-03-14T23:11:47.539+00:00","EndTime":null,"ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"1a34bda7-b2fb-454f-9d97-784a28158157","Status":0,"SpeciesList":[{"Name":"blattodea","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":85823}}],"Sex":1,"Quantity":1,"Type":3,"Sources":["fb170c76-2f6b-49a4-a5de-8c925b365f7d"],"Label":"2022-02-16_PREMO-TRAPP03-00007-Blattodea-female","Collection":{},"History":[{"Action":"Created","Time":"2022-03-14T23:11:47.539+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":40,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-03-14T23:11:47.674+00:00","EndTime":null,"ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"34f1c91b-6a64-45c7-9e42-0c0aa72cb099","Status":0,"SpeciesList":[{"Name":"aegypti","Rank":"species","Parent":{"Name":"stegomyia","Rank":"subgenus","Parent":{"Name":"aedes","Rank":"genus","Parent":{"Name":"culicidae","Rank":"family","Parent":{"Name":"diptera","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":265461}},"SourceIDs":{"NCBI":342889}},"SourceIDs":{"NCBI":1806188}},"SourceIDs":{"NCBI":53541}},"SourceIDs":{"NCBI":7159}}],"Sex":1,"Quantity":4,"Type":3,"Sources":["fb170c76-2f6b-49a4-a5de-8c925b365f7d"],"Label":"2022-02-16_PREMO-TRAPP03-00007-Aedes_aegypti-female","Collection":{},"History":[{"Action":"Created","Time":"2022-03-14T23:11:47.674+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":41,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-03-14T23:11:47.79+00:00","EndTime":null,"ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"a6fb32d1-ecf6-43e9-b9d0-45f7f459ebdc","Status":0,"SpeciesList":[{"Name":"sapphirina","Rank":"species","Parent":{"Name":"uranotaenia","Rank":"subgenus","Parent":{"Name":"uranotaenia","Rank":"genus","Parent":{"Name":"culicidae","Rank":"family","Parent":{"Name":"diptera","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":265461}},"SourceIDs":{"NCBI":342889}},"SourceIDs":{"NCBI":2448165}},"SourceIDs":{"NCBI":325429}},"SourceIDs":{"NCBI":139056}}],"Sex":0,"Quantity":6,"Type":3,"Sources":["fb170c76-2f6b-49a4-a5de-8c925b365f7d"],"Label":"2022-02-16_PREMO-TRAPP03-00007-Uranotaenia_sapphirina-unknown","Collection":{},"History":[{"Action":"Created","Time":"2022-03-14T23:11:47.79+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":42,"Version":0,"ObserverId":"25d86336-068d-4a04-9937-d8d91c79a79b","StartTime":"2022-05-13T18:27:42.594+00:00","EndTime":null,"ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"3be8b485-e2f6-4d3d-9a7b-0fa5552b1677","Status":0,"Type":3,"Sources":["fb170c76-2f6b-49a4-a5de-8c925b365f7d"],"SpeciesList":[{"Name":"gambiae","Rank":"species","Parent":{"Name":"cellia","Rank":"subgenus","Parent":{"Name":"anopheles","Rank":"genus","Parent":{"Name":"culicidae","Rank":"family","Parent":{"Name":"diptera","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":265461}},"SourceIDs":{"NCBI":342889}},"SourceIDs":{"NCBI":63365}},"SourceIDs":{"NCBI":2730094}},"SourceIDs":{"NCBI":7165}}],"Sex":1,"Quantity":25,"Label":"2022-02-16_PREMO-TRAPP03-00007-Anopheles_gambiae-female","Collection":{},"History":[{"Action":"Created","Time":"2022-05-13T18:27:42.594+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":43,"Version":0,"ObserverId":"25d86336-068d-4a04-9937-d8d91c79a79b","StartTime":"2022-05-13T18:27:43.205+00:00","EndTime":null,"ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"b419fb56-378a-49b9-98b8-e9aac9cb1570","Status":0,"Type":3,"Sources":["fb170c76-2f6b-49a4-a5de-8c925b365f7d"],"SpeciesList":[{"Name":"funestus","Rank":"species","Parent":{"Name":"cellia","Rank":"subgenus","Parent":{"Name":"anopheles","Rank":"genus","Parent":{"Name":"culicidae","Rank":"family","Parent":{"Name":"diptera","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":265461}},"SourceIDs":{"NCBI":342889}},"SourceIDs":{"NCBI":63365}},"SourceIDs":{"NCBI":2730094}},"SourceIDs":{"NCBI":62324}}],"Sex":1,"Quantity":20,"Label":"2022-02-16_PREMO-TRAPP03-00007-Anopheles_funestus-female","Collection":{},"History":[{"Action":"Created","Time":"2022-05-13T18:27:43.205+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":44,"Version":0,"ObserverId":"25d86336-068d-4a04-9937-d8d91c79a79b","StartTime":"2022-05-13T18:27:43.504+00:00","EndTime":null,"ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"f24eef8b-f453-414c-be14-eada52aa9c11","Status":0,"Type":3,"Sources":["fb170c76-2f6b-49a4-a5de-8c925b365f7d"],"SpeciesList":[{"Name":"stephensi","Rank":"species","Parent":{"Name":"cellia","Rank":"subgenus","Parent":{"Name":"anopheles","Rank":"genus","Parent":{"Name":"culicidae","Rank":"family","Parent":{"Name":"diptera","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":265461}},"SourceIDs":{"NCBI":342889}},"SourceIDs":{"NCBI":63365}},"SourceIDs":{"NCBI":2730094}},"SourceIDs":{"NCBI":30069}}],"Sex":1,"Quantity":23,"Label":"2022-02-16_PREMO-TRAPP03-00007-Anopheles_stephensi-female","Collection":{},"History":[{"Action":"Created","Time":"2022-05-13T18:27:43.504+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":45,"Version":0,"ObserverId":"95862b95-a22b-4d0b-bd5c-2fb5fca18841","StartTime":"2022-05-17T22:19:44.07+00:00","EndTime":"2022-05-17T22:19:44.07+00:00","ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"80228671-c33c-45f3-a4bf-f05148e09902","Type":6,"Label":"Bag04-2022-05-17","Status":0,"Sources":["d2de37dd-03a9-4f63-90cf-4c1dbfcc5c36"],"Notes":"Generated by trap-service app","Collection":{"Longitude":-122.36384561471792,"Latitude":47.66078934006621,"Collector":"Xiaoji Chen"},"History":[{"Action":"Created","Time":"2022-05-17T22:19:44.07+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":46,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-05-18T22:13:20.201+00:00","EndTime":null,"ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"32c516c8-0b57-4c5f-9035-b583cc626186","Status":0,"Collection":{},"Type":5,"Label":"Casper","History":[{"Action":"Created","Time":"2022-05-18T22:13:20.201+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":47,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-05-18T22:19:36.414+00:00","EndTime":null,"ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"a3348c74-96bc-4f2f-9afa-bc55d7fda401","Status":0,"Collection":{},"Type":5,"Label":"Graverler","History":[{"Action":"Created","Time":"2022-05-18T22:19:36.414+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":48,"Version":0,"ObserverId":"fe061a57-daf4-4804-9403-095e46b7768b","StartTime":null,"EndTime":"2022-05-18T22:23:01.319+00:00","ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"0b029f87-01c2-4090-ab61-6c84814d0c59","Type":6,"Label":"Graverler-2022-05-18","Status":0,"Sources":["a3348c74-96bc-4f2f-9afa-bc55d7fda401"],"Notes":"Generated by trap-service app. Installed duration: unknown","Collection":{"Collector":"NepalDroid01@premonitionweb.onmicrosoft.com"},"History":[{"Action":"Created","Time":"2022-05-18T22:23:01.319+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":49,"Version":0,"ObserverId":"25d86336-068d-4a04-9937-d8d91c79a79b","StartTime":"2022-05-19T00:31:21.044+00:00","EndTime":null,"ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"bee14028-dd5a-4048-8115-0eff9bba3456","Status":0,"Type":3,"Sources":["0b029f87-01c2-4090-ab61-6c84814d0c59"],"SpeciesList":[{"Name":"albopictus","Rank":"species","Parent":{"Name":"stegomyia","Rank":"subgenus","Parent":{"Name":"aedes","Rank":"genus","Parent":{"Name":"culicidae","Rank":"family","Parent":{"Name":"diptera","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":265461}},"SourceIDs":{"NCBI":342889}},"SourceIDs":{"NCBI":1806188}},"SourceIDs":{"NCBI":53541}},"SourceIDs":{"NCBI":7160}}],"Sex":1,"Quantity":31,"Label":"Graverler-2022-05-18-Aedes_albopictus-female","Collection":{},"History":[{"Action":"Created","Time":"2022-05-19T00:31:21.044+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":50,"Version":0,"ObserverId":"fe061a57-daf4-4804-9403-095e46b7768b","StartTime":null,"EndTime":"2022-05-25T23:08:50.74+00:00","ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"e5db12c6-cccc-4cd2-8601-c3fa9fa6a822","Type":6,"Label":"Graverler-2022-05-25","Status":0,"Sources":["a3348c74-96bc-4f2f-9afa-bc55d7fda401"],"Notes":"Generated by trap-service app. Installed duration: unknown","Collection":{"Collector":"NepalDroid01@premonitionweb.onmicrosoft.com"},"History":[{"Action":"Created","Time":"2022-05-25T23:08:50.74+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":51,"Version":0,"ObserverId":"25d86336-068d-4a04-9937-d8d91c79a79b","StartTime":"2022-05-25T23:16:55.407+00:00","EndTime":null,"ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"ac88c516-3f3e-418b-aba6-3b69f9cbeca8","Status":0,"Type":3,"Sources":["e5db12c6-cccc-4cd2-8601-c3fa9fa6a822"],"SpeciesList":[{"Name":"quinquefasciatus","Rank":"species","Parent":{"Name":"culex","Rank":"subgenus","Parent":{"Name":"culex","Rank":"genus","Parent":{"Name":"culicidae","Rank":"family","Parent":{"Name":"diptera","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":265461}},"SourceIDs":{"NCBI":342889}},"SourceIDs":{"NCBI":2007271}},"SourceIDs":{"NCBI":518105}},"SourceIDs":{"NCBI":7176}}],"Sex":1,"Quantity":20,"Label":"Graverler-2022-05-25-Culex_quinquefasciatus-female","Collection":{},"History":[{"Action":"Created","Time":"2022-05-25T23:16:55.407+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":52,"Version":0,"ObserverId":"25d86336-068d-4a04-9937-d8d91c79a79b","StartTime":"2022-05-25T23:16:55.872+00:00","EndTime":null,"ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"7efe7731-4c4d-488e-85ce-491b653a1ba7","Status":0,"Type":3,"Sources":["e5db12c6-cccc-4cd2-8601-c3fa9fa6a822"],"SpeciesList":[{"Name":"albopictus","Rank":"species","Parent":{"Name":"stegomyia","Rank":"subgenus","Parent":{"Name":"aedes","Rank":"genus","Parent":{"Name":"culicidae","Rank":"family","Parent":{"Name":"diptera","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":265461}},"SourceIDs":{"NCBI":342889}},"SourceIDs":{"NCBI":1806188}},"SourceIDs":{"NCBI":53541}},"SourceIDs":{"NCBI":7160}}],"Sex":1,"Quantity":10,"Label":"Graverler-2022-05-25-Aedes_albopictus-female","Collection":{},"History":[{"Action":"Created","Time":"2022-05-25T23:16:55.872+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":53,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-05-26T00:25:40.339+00:00","EndTime":null,"ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"5b650c74-86bd-4b13-830e-9eeeb7880007","Status":0,"Collection":{},"Type":3,"SpeciesList":[{"Name":"ceratopogonidae","Rank":"family","Parent":{"Name":"diptera","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":265461}},"SourceIDs":{"NCBI":333807}}],"Label":"212","History":[{"Action":"Created","Time":"2022-05-26T00:25:40.339+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":54,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-05-27T19:57:56.947+00:00","EndTime":null,"ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"e1598edb-05f9-4dde-9d2b-1c034739c9f4","Status":0,"Collection":{},"Type":3,"Label":"Box08","Sources":["bee14028-dd5a-4048-8115-0eff9bba3456","1a34bda7-b2fb-454f-9d97-784a28158157","a6fb32d1-ecf6-43e9-b9d0-45f7f459ebdc","7efe7731-4c4d-488e-85ce-491b653a1ba7","f24eef8b-f453-414c-be14-eada52aa9c11","a9728a4c-fe01-40be-871d-e02941d20528"],"Quantity":6,"Notes":"Box of bugs to send for molecular sequencing, COI and other barcoding. ","History":[{"Action":"Created","Time":"2022-05-27T19:57:56.947+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":55,"Version":0,"ObserverId":"95862b95-a22b-4d0b-bd5c-2fb5fca18841","StartTime":null,"EndTime":"2022-05-31T22:19:57.823+00:00","ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"f12329a0-d312-4c28-9789-4cf812b3a9a6","Type":3,"Label":"181_AN.QUA","Status":1,"Sources":["3ea9b14f-d933-4ce5-9918-d233f0afa20e"],"Quantity":1,"Species":null,"SpeciesList":[{"Name":"quadrimaculatus","Rank":"species","Parent":{"Name":"anopheles","Rank":"genus","Parent":{"Name":"culicidae","Rank":"family","Parent":{"Name":"diptera","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":{"Name":"arthropoda","Rank":"phylum","Parent":{"Name":"animalia","Rank":"kingdom","Parent":null,"SourceIDs":{"COL":54767744}},"SourceIDs":{"NCBI":1597404,"COL":54767749}},"SourceIDs":{"NCBI":260538,"COL":54767750}},"SourceIDs":{"NCBI":265461,"COL":54767890}},"SourceIDs":{"NCBI":342889,"COL":54767914}},"SourceIDs":{"NCBI":63365,"COL":54799091}},"SourceIDs":{"COL":8668065}}],"SpeciesConfirmed":false,"Strain":null,"Stage":"adult","Sex":1,"Notes":"ECS on 75%RH at 28C. Good flier, though would hang inside bowtie on occasion, requiring a poke with a wooden dowel. \r\nWB_2021-05-21T15.44.46-07_WB_2021-05-21T16.12.58-07","Collection":{"City":null,"Location":"box03 vial 181","Habitat":null,"Collector":null,"Longitude":null,"Latitude":null,"DateCollected":null,"DateShipped":null},"History":[{"Action":"Disposed","Time":"2021-05-21T18:31:09.8239824-07:00"},{"Action":"Created","Time":"2021-05-21T16:14:44.2320774-07:00"}],"Attachments":["f12329a0-d312-4c28-9789-4cf812b3a9a6_image01.jpg","f12329a0-d312-4c28-9789-4cf812b3a9a6_image02.jpg","f12329a0-d312-4c28-9789-4cf812b3a9a6_image03.jpg","f12329a0-d312-4c28-9789-4cf812b3a9a6_image04.jpg"],"Deleted":null}],"DataFiles":["f12329a0-d312-4c28-9789-4cf812b3a9a6/f12329a0-d312-4c28-9789-4cf812b3a9a6_image01.jpg","f12329a0-d312-4c28-9789-4cf812b3a9a6/f12329a0-d312-4c28-9789-4cf812b3a9a6_image02.jpg","f12329a0-d312-4c28-9789-4cf812b3a9a6/f12329a0-d312-4c28-9789-4cf812b3a9a6_image03.jpg","f12329a0-d312-4c28-9789-4cf812b3a9a6/f12329a0-d312-4c28-9789-4cf812b3a9a6_image04.jpg"]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":56,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-06-02T21:47:38.797+00:00","EndTime":"2022-06-02T21:47:38.797+00:00","ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"a0b508c2-dd5b-4f42-8379-89cbade06d1e","Status":0,"Type":3,"Sources":["e5db12c6-cccc-4cd2-8601-c3fa9fa6a822"],"SpeciesList":[{"Name":"albopictus","Rank":"species","Parent":{"Name":"stegomyia","Rank":"subgenus","Parent":{"Name":"aedes","Rank":"genus","Parent":{"Name":"culicidae","Rank":"family","Parent":{"Name":"diptera","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":265461}},"SourceIDs":{"NCBI":342889}},"SourceIDs":{"NCBI":1806188}},"SourceIDs":{"NCBI":53541}},"SourceIDs":{"NCBI":7160}}],"Sex":1,"Quantity":23,"Label":"Graverler-2022-05-25-Aedes_albopictus-female","Collection":{},"History":[{"Action":"Created","Time":"2022-06-02T21:47:38.797+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":57,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-06-02T21:47:39.212+00:00","EndTime":"2022-06-02T21:47:39.212+00:00","ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"9ff12aa6-9b82-41c5-92f1-02855afd16dd","Status":0,"Type":3,"Sources":["e5db12c6-cccc-4cd2-8601-c3fa9fa6a822"],"SpeciesList":[{"Name":"kalotermitidae","Rank":"family","Parent":{"Name":"blattoidea","Rank":"superfamily","Parent":{"Name":"blattodea","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":85823}},"SourceIDs":{"NCBI":1049657}},"SourceIDs":{"NCBI":359185}}],"Sex":0,"Quantity":100,"Label":"Graverler-2022-05-25-Kalotermitidae-unknown","Collection":{},"History":[{"Action":"Created","Time":"2022-06-02T21:47:39.212+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":58,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-06-09T20:16:44.835+00:00","EndTime":"2022-06-09T20:16:44.835+00:00","ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"586faa2d-3aa0-40d6-a94e-11a84688679d","Status":0,"Type":3,"Sources":["e5db12c6-cccc-4cd2-8601-c3fa9fa6a822"],"SpeciesList":[{"Name":"aegypti","Rank":"species","Parent":{"Name":"stegomyia","Rank":"subgenus","Parent":{"Name":"aedes","Rank":"genus","Parent":{"Name":"culicidae","Rank":"family","Parent":{"Name":"diptera","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":265461}},"SourceIDs":{"NCBI":342889}},"SourceIDs":{"NCBI":1806188}},"SourceIDs":{"NCBI":53541}},"SourceIDs":{"NCBI":7159}}],"Sex":1,"Quantity":15,"Label":"Graverler-2022-05-25-Aedes_aegypti-female","Collection":{},"History":[{"Action":"Created","Time":"2022-06-09T20:16:44.835+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":59,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-06-09T20:16:45.174+00:00","EndTime":"2022-06-09T20:16:45.174+00:00","ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"ce0709c1-4eec-4c70-a414-57bc5792e3de","Status":0,"Type":3,"Sources":["e5db12c6-cccc-4cd2-8601-c3fa9fa6a822"],"SpeciesList":[{"Name":"quinquefasciatus","Rank":"species","Parent":{"Name":"culex","Rank":"subgenus","Parent":{"Name":"culex","Rank":"genus","Parent":{"Name":"culicidae","Rank":"family","Parent":{"Name":"diptera","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":265461}},"SourceIDs":{"NCBI":342889}},"SourceIDs":{"NCBI":2007271}},"SourceIDs":{"NCBI":518105}},"SourceIDs":{"NCBI":7176}}],"Sex":1,"Quantity":120,"Label":"Graverler-2022-05-25-Culex_quinquefasciatus-female","Collection":{},"History":[{"Action":"Created","Time":"2022-06-09T20:16:45.174+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":60,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-06-09T20:42:54.324+00:00","EndTime":"2022-06-09T20:42:54.324+00:00","ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"86ac7fbf-4ba6-4813-ac9d-7f3d8bb78be5","Status":0,"Collection":{},"Type":3,"Label":"50","Sources":["586faa2d-3aa0-40d6-a94e-11a84688679d"],"Quantity":50,"SpeciesList":[{"Name":"aegypti","Rank":"species","Parent":{"Name":"stegomyia","Rank":"subgenus","Parent":{"Name":"aedes","Rank":"genus","Parent":{"Name":"culicidae","Rank":"family","Parent":{"Name":"diptera","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":265461}},"SourceIDs":{"NCBI":342889}},"SourceIDs":{"NCBI":1806188}},"SourceIDs":{"NCBI":53541}},"SourceIDs":{"NCBI":7159}}],"SpeciesConfirmed":true,"Strain":"wild","Stage":"adults","Sex":1,"Notes":"pooled 50 for sequencing.","History":[{"Action":"Created","Time":"2022-06-09T20:42:54.324+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":61,"Version":0,"ObserverId":"0bae3000-96c0-4f2a-a7e9-73f363263c5e","StartTime":"2022-05-25T16:08:54.5504507-07:00","EndTime":"2022-06-10T18:34:36.47+00:00","ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"2de2b042-71a9-4eb4-bac9-1a48013d08af","Type":6,"Label":"Casper-2022-06-10","Status":0,"Sources":["32c516c8-0b57-4c5f-9035-b583cc626186"],"Notes":"Generated by trap-service app. Installed duration: 379h 26m","Collection":{"Collector":"labdevice02@premonitionweb.onmicrosoft.com"},"History":[{"Action":"Created","Time":"2022-06-10T18:34:36.47+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":62,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-06-13T21:00:05.04+00:00","EndTime":"2022-06-13T21:00:05.04+00:00","ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"4692d4a8-b030-48d7-9bda-a3eba026e492","Status":0,"Collection":{},"Type":5,"Label":"Fido","History":[{"Action":"Created","Time":"2022-06-13T21:00:05.04+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":63,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-06-13T21:12:35.02+00:00","EndTime":"2022-06-13T21:12:35.02+00:00","ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"099de340-d426-400b-8cc7-ab5d20ff15a6","Status":0,"Type":3,"Sources":["7de83a94-693a-4f07-b91f-ff30164d8c36"],"SpeciesList":[{"Name":"stephensi","Rank":"species","Parent":{"Name":"cellia","Rank":"subgenus","Parent":{"Name":"anopheles","Rank":"genus","Parent":{"Name":"culicidae","Rank":"family","Parent":{"Name":"diptera","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":265461}},"SourceIDs":{"NCBI":342889}},"SourceIDs":{"NCBI":63365}},"SourceIDs":{"NCBI":2730094}},"SourceIDs":{"NCBI":30069}}],"Sex":1,"Quantity":56,"Label":"2022-07-04_PREMO_TRAPP03-00005-Anopheles_stephensi-female","Collection":{},"History":[{"Action":"Created","Time":"2022-06-13T21:12:35.02+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":64,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-06-13T21:12:35.221+00:00","EndTime":"2022-06-13T21:12:35.221+00:00","ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"c7ad8d25-5013-44a4-91f6-b9fb174039db","Status":0,"Type":3,"Sources":["7de83a94-693a-4f07-b91f-ff30164d8c36"],"SpeciesList":[{"Name":"nigripalpus","Rank":"species","Parent":{"Name":"culex","Rank":"subgenus","Parent":{"Name":"culex","Rank":"genus","Parent":{"Name":"culicidae","Rank":"family","Parent":{"Name":"diptera","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":265461}},"SourceIDs":{"NCBI":342889}},"SourceIDs":{"NCBI":2007271}},"SourceIDs":{"NCBI":518105}},"SourceIDs":{"NCBI":42429}}],"Quantity":4,"Sex":1,"Label":"2022-07-04_PREMO_TRAPP03-00005-Culex_nigripalpus-female","Collection":{},"History":[{"Action":"Created","Time":"2022-06-13T21:12:35.221+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":65,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-06-13T21:12:35.354+00:00","EndTime":"2022-06-13T21:12:35.354+00:00","ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"999f3655-05b2-4c1b-9bb5-ed01dd89da1e","Status":0,"Type":3,"Sources":["7de83a94-693a-4f07-b91f-ff30164d8c36"],"SpeciesList":[{"Name":"mantodea","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":253120}}],"Sex":1,"Quantity":3,"Label":"2022-07-04_PREMO_TRAPP03-00005-Mantodea-female","Collection":{},"History":[{"Action":"Created","Time":"2022-06-13T21:12:35.354+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":66,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-06-13T21:12:35.463+00:00","EndTime":"2022-06-13T21:12:35.463+00:00","ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"ab7003f6-e9c5-4bc6-b605-8c21c9b48f46","Status":0,"Type":3,"Sources":["7de83a94-693a-4f07-b91f-ff30164d8c36"],"SpeciesList":[{"Name":"mitchellii","Rank":"species","Parent":{"Name":"wyeomyia","Rank":"genus","Parent":{"Name":"culicidae","Rank":"family","Parent":{"Name":"diptera","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":265461}},"SourceIDs":{"NCBI":342889}},"SourceIDs":{"NCBI":2631130}},"SourceIDs":{"NCBI":857316}}],"Sex":1,"Quantity":2,"Label":"2022-07-04_PREMO_TRAPP03-00005-Wyeomyia_mitchellii-female","Collection":{},"History":[{"Action":"Created","Time":"2022-06-13T21:12:35.463+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":67,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-06-13T21:12:35.581+00:00","EndTime":"2022-06-13T21:12:35.581+00:00","ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"559c1646-8c05-4872-a7bd-f65437e68397","Status":0,"Type":3,"Sources":["7de83a94-693a-4f07-b91f-ff30164d8c36"],"SpeciesList":[{"Name":"deinocerites","Rank":"genus","Parent":{"Name":"culicidae","Rank":"family","Parent":{"Name":"diptera","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":265461}},"SourceIDs":{"NCBI":342889}},"SourceIDs":{"NCBI":53524}}],"Sex":3,"Quantity":5,"Label":"2022-07-04_PREMO_TRAPP03-00005-Deinocerites-both","Collection":{},"History":[{"Action":"Created","Time":"2022-06-13T21:12:35.581+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":68,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-06-13T21:35:11.646+00:00","EndTime":"2022-06-13T21:35:11.646+00:00","ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"ca617d61-8752-4362-aa7a-963224c34608","Status":0,"Collection":{},"Type":6,"Label":"Test_2022-06-13","History":[{"Action":"Created","Time":"2022-06-13T21:35:11.646+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":69,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-06-13T21:39:00.501+00:00","EndTime":"2022-06-13T21:39:00.501+00:00","ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"7aade5f5-6782-494a-91b9-d55887828457","Status":0,"Type":3,"Sources":["ca617d61-8752-4362-aa7a-963224c34608"],"SpeciesList":[{"Name":"aegypti","Rank":"species","Parent":{"Name":"stegomyia","Rank":"subgenus","Parent":{"Name":"aedes","Rank":"genus","Parent":{"Name":"culicidae","Rank":"family","Parent":{"Name":"diptera","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":265461}},"SourceIDs":{"NCBI":342889}},"SourceIDs":{"NCBI":1806188}},"SourceIDs":{"NCBI":53541}},"SourceIDs":{"NCBI":7159}}],"Sex":1,"Quantity":3,"Label":"Test_2022-06-13-Aedes_aegypti-female","Collection":{},"History":[{"Action":"Created","Time":"2022-06-13T21:39:00.501+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":70,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-06-13T21:39:00.649+00:00","EndTime":"2022-06-13T21:39:00.649+00:00","ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"d757b0ac-799b-47b3-9708-d3c114173798","Status":0,"Type":3,"Sources":["ca617d61-8752-4362-aa7a-963224c34608"],"SpeciesList":[{"Name":"albopictus","Rank":"species","Parent":{"Name":"stegomyia","Rank":"subgenus","Parent":{"Name":"aedes","Rank":"genus","Parent":{"Name":"culicidae","Rank":"family","Parent":{"Name":"diptera","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":265461}},"SourceIDs":{"NCBI":342889}},"SourceIDs":{"NCBI":1806188}},"SourceIDs":{"NCBI":53541}},"SourceIDs":{"NCBI":7160}}],"Sex":1,"Quantity":4,"Label":"Test_2022-06-13-Aedes_albopictus-female","Collection":{},"History":[{"Action":"Created","Time":"2022-06-13T21:39:00.649+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":71,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-06-13T21:39:00.754+00:00","EndTime":"2022-06-13T21:39:00.754+00:00","ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"51e019ee-13e9-42b3-b57d-042415375a53","Status":0,"Type":3,"Sources":["ca617d61-8752-4362-aa7a-963224c34608"],"SpeciesList":[{"Name":"aegypti","Rank":"species","Parent":{"Name":"stegomyia","Rank":"subgenus","Parent":{"Name":"aedes","Rank":"genus","Parent":{"Name":"culicidae","Rank":"family","Parent":{"Name":"diptera","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":265461}},"SourceIDs":{"NCBI":342889}},"SourceIDs":{"NCBI":1806188}},"SourceIDs":{"NCBI":53541}},"SourceIDs":{"NCBI":7159}}],"Sex":2,"Quantity":2,"Label":"Test_2022-06-13-Aedes_aegypti-male","Collection":{},"History":[{"Action":"Created","Time":"2022-06-13T21:39:00.754+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":72,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-06-13T21:39:00.878+00:00","EndTime":"2022-06-13T21:39:00.878+00:00","ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"3d30243b-fb6b-464d-9d0f-df8ade37b77e","Status":0,"Type":3,"Sources":["ca617d61-8752-4362-aa7a-963224c34608"],"SpeciesList":[{"Name":"quadrimaculatus","Rank":"species","Parent":{"Name":"anopheles","Rank":"subgenus","Parent":{"Name":"anopheles","Rank":"genus","Parent":{"Name":"culicidae","Rank":"family","Parent":{"Name":"diptera","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":265461}},"SourceIDs":{"NCBI":342889}},"SourceIDs":{"NCBI":63365}},"SourceIDs":{"NCBI":190374}},"SourceIDs":{"NCBI":7166}}],"Sex":1,"Quantity":1,"Label":"Test_2022-06-13-Anopheles_quadrimaculatus-female","Collection":{},"History":[{"Action":"Created","Time":"2022-06-13T21:39:00.878+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":73,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-06-13T21:39:01.04+00:00","EndTime":"2022-06-13T21:39:01.04+00:00","ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"dd922eef-6326-4778-83b0-755e532d2923","Status":0,"Type":3,"Sources":["ca617d61-8752-4362-aa7a-963224c34608"],"SpeciesList":[{"Name":"crucians","Rank":"species","Parent":{"Name":"anopheles","Rank":"subgenus","Parent":{"Name":"anopheles","Rank":"genus","Parent":{"Name":"culicidae","Rank":"family","Parent":{"Name":"diptera","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":265461}},"SourceIDs":{"NCBI":342889}},"SourceIDs":{"NCBI":63365}},"SourceIDs":{"NCBI":190374}},"SourceIDs":{"NCBI":869064}}],"Sex":1,"Quantity":3,"Label":"Test_2022-06-13-Anopheles_crucians-female","Collection":{},"History":[{"Action":"Created","Time":"2022-06-13T21:39:01.04+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":74,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-06-13T21:39:01.151+00:00","EndTime":"2022-06-13T21:39:01.151+00:00","ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"c73f0c4f-4861-4a27-99e5-6ccf1957ba0b","Status":0,"Type":3,"Sources":["ca617d61-8752-4362-aa7a-963224c34608"],"SpeciesList":[{"Name":"coronator","Rank":"species","Parent":{"Name":"culex","Rank":"subgenus","Parent":{"Name":"culex","Rank":"genus","Parent":{"Name":"culicidae","Rank":"family","Parent":{"Name":"diptera","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":265461}},"SourceIDs":{"NCBI":342889}},"SourceIDs":{"NCBI":2007271}},"SourceIDs":{"NCBI":518105}},"SourceIDs":{"NCBI":526217}}],"Sex":1,"Quantity":3,"Label":"Test_2022-06-13-Culex_coronator-female","Collection":{},"History":[{"Action":"Created","Time":"2022-06-13T21:39:01.151+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":75,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-06-13T21:39:01.265+00:00","EndTime":"2022-06-13T21:39:01.265+00:00","ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"031e6f3b-378c-4e32-b0aa-d8578a868f2a","Status":0,"Type":3,"Sources":["ca617d61-8752-4362-aa7a-963224c34608"],"SpeciesList":[{"Name":"erraticus","Rank":"species","Parent":{"Name":"melanoconion","Rank":"subgenus","Parent":{"Name":"culex","Rank":"genus","Parent":{"Name":"culicidae","Rank":"family","Parent":{"Name":"diptera","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":265461}},"SourceIDs":{"NCBI":342889}},"SourceIDs":{"NCBI":2007271}},"SourceIDs":{"NCBI":53535}},"SourceIDs":{"NCBI":42427}}],"Sex":1,"Quantity":2,"Label":"Test_2022-06-13-Culex_erraticus-female","Collection":{},"History":[{"Action":"Created","Time":"2022-06-13T21:39:01.265+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":76,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-06-13T21:39:01.394+00:00","EndTime":"2022-06-13T21:39:01.394+00:00","ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"8314e6c9-d764-40a6-a620-67fb4930f33a","Status":0,"Type":3,"Sources":["ca617d61-8752-4362-aa7a-963224c34608"],"SpeciesList":[{"Name":"tarsalis","Rank":"species","Parent":{"Name":"culex","Rank":"subgenus","Parent":{"Name":"culex","Rank":"genus","Parent":{"Name":"culicidae","Rank":"family","Parent":{"Name":"diptera","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":265461}},"SourceIDs":{"NCBI":342889}},"SourceIDs":{"NCBI":2007271}},"SourceIDs":{"NCBI":518105}},"SourceIDs":{"NCBI":7177}}],"Sex":1,"Quantity":1,"Label":"Test_2022-06-13-Culex_tarsalis-female","Collection":{},"History":[{"Action":"Created","Time":"2022-06-13T21:39:01.394+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":77,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-06-13T21:39:01.513+00:00","EndTime":"2022-06-13T21:39:01.513+00:00","ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"f9212010-b27d-4821-8971-8a5cbc6f4229","Status":0,"Type":3,"Sources":["ca617d61-8752-4362-aa7a-963224c34608"],"SpeciesList":[{"Name":"ferox","Rank":"species","Parent":{"Name":"psorophora","Rank":"genus","Parent":{"Name":"culicidae","Rank":"family","Parent":{"Name":"diptera","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":265461}},"SourceIDs":{"NCBI":342889}},"SourceIDs":{"NCBI":7182}},"SourceIDs":{"NCBI":7183}}],"Sex":1,"Quantity":2,"Label":"Test_2022-06-13-Psorophora_ferox-female","Collection":{},"History":[{"Action":"Created","Time":"2022-06-13T21:39:01.513+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":78,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-06-13T21:42:37.08+00:00","EndTime":"2022-06-13T21:42:37.08+00:00","ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"50d001fa-4413-4a7a-b773-7c9e460a7b70","Status":0,"Collection":{},"Type":6,"Label":"Test_2022-06-13-14-42","History":[{"Action":"Created","Time":"2022-06-13T21:42:37.08+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":79,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-06-13T21:46:49.53+00:00","EndTime":"2022-06-13T21:46:49.53+00:00","ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"e2f8c399-977e-4c0b-8bde-57068bee95fe","Status":0,"Type":3,"Sources":["50d001fa-4413-4a7a-b773-7c9e460a7b70"],"SpeciesList":[{"Name":"aegypti","Rank":"species","Parent":{"Name":"stegomyia","Rank":"subgenus","Parent":{"Name":"aedes","Rank":"genus","Parent":{"Name":"culicidae","Rank":"family","Parent":{"Name":"diptera","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":265461}},"SourceIDs":{"NCBI":342889}},"SourceIDs":{"NCBI":1806188}},"SourceIDs":{"NCBI":53541}},"SourceIDs":{"NCBI":7159}}],"Sex":1,"Quantity":2,"Label":"Test_2022-06-13-14-42-Aedes_aegypti-female","Collection":{},"History":[{"Action":"Created","Time":"2022-06-13T21:46:49.53+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":80,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-06-13T21:46:49.785+00:00","EndTime":"2022-06-13T21:46:49.785+00:00","ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"6642e19f-34c6-4f21-93c8-31f3c44f9728","Status":0,"Type":3,"Sources":["50d001fa-4413-4a7a-b773-7c9e460a7b70"],"SpeciesList":[{"Name":"taeniorhynchus","Rank":"species","Parent":{"Name":"ochlerotatus","Rank":"subgenus","Parent":{"Name":"ochlerotatus","Rank":"genus","Parent":{"Name":"culicidae","Rank":"family","Parent":{"Name":"culicoidea","Rank":"superfamily","Parent":{"Name":"diptera","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":265461}},"SourceIDs":{"NCBI":41827}},"SourceIDs":{}},"SourceIDs":{"NCBI":1125803}},"SourceIDs":{"NCBI":53545}},"SourceIDs":{"NCBI":329105}}],"Sex":2,"Quantity":2,"Label":"Test_2022-06-13-14-42-Ochlerotatus_taeniorhynchus-male","Collection":{},"History":[{"Action":"Created","Time":"2022-06-13T21:46:49.785+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":81,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-06-13T21:54:54.758+00:00","EndTime":"2022-06-13T21:54:54.758+00:00","ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"dbbc37bc-f562-4278-9326-4b8e81ea49b2","Status":0,"Collection":{},"Type":3,"Sources":["50d001fa-4413-4a7a-b773-7c9e460a7b70"],"SpeciesList":[{"Name":"apidae","Rank":"family","Parent":{"Name":"apoidea","Rank":"superfamily","Parent":{"Name":"hymenoptera","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":7399}},"SourceIDs":{"NCBI":889157}},"SourceIDs":{"NCBI":7458}}],"Quantity":1,"History":[{"Action":"Created","Time":"2022-06-13T21:54:54.758+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":82,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-06-13T22:07:42.227+00:00","EndTime":"2022-06-13T22:07:42.227+00:00","ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"35126360-8d5b-48b4-9e78-a2e149a9446a","Status":0,"Collection":{},"Type":6,"Label":"Test_2022-06-13-15-07","History":[{"Action":"Created","Time":"2022-06-13T22:07:42.227+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":83,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-06-14T00:28:44.058+00:00","EndTime":"2022-06-14T00:28:44.058+00:00","ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"8092dde8-3a88-4344-b830-adf914913433","Status":0,"Collection":{},"Type":6,"Label":"Test_2022-06-13-17-30","History":[{"Action":"Created","Time":"2022-06-14T00:28:44.058+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":84,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-06-14T00:31:25.406+00:00","EndTime":"2022-06-14T00:31:25.406+00:00","ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"89da7291-98b0-4a46-a65d-bc22cc6d21cd","Status":0,"Type":3,"Sources":["8092dde8-3a88-4344-b830-adf914913433"],"SpeciesList":[{"Name":"aegypti","Rank":"species","Parent":{"Name":"stegomyia","Rank":"subgenus","Parent":{"Name":"aedes","Rank":"genus","Parent":{"Name":"culicidae","Rank":"family","Parent":{"Name":"diptera","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":265461}},"SourceIDs":{"NCBI":342889}},"SourceIDs":{"NCBI":1806188}},"SourceIDs":{"NCBI":53541}},"SourceIDs":{"NCBI":7159}}],"Sex":0,"Quantity":3,"Label":"Test_2022-06-13-17-30-Aedes_aegypti-unknown","Collection":{},"History":[{"Action":"Created","Time":"2022-06-14T00:31:25.406+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":85,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-06-14T00:31:25.63+00:00","EndTime":"2022-06-14T00:31:25.63+00:00","ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"34e34173-cfa7-43bc-b03b-e451da2b17ed","Status":0,"Type":3,"Sources":["8092dde8-3a88-4344-b830-adf914913433"],"SpeciesList":[{"Name":"albopictus","Rank":"species","Parent":{"Name":"stegomyia","Rank":"subgenus","Parent":{"Name":"aedes","Rank":"genus","Parent":{"Name":"culicidae","Rank":"family","Parent":{"Name":"diptera","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":265461}},"SourceIDs":{"NCBI":342889}},"SourceIDs":{"NCBI":1806188}},"SourceIDs":{"NCBI":53541}},"SourceIDs":{"NCBI":7160}}],"Sex":3,"Quantity":34,"Label":"Test_2022-06-13-17-30-Aedes_albopictus-both","Collection":{},"History":[{"Action":"Created","Time":"2022-06-14T00:31:25.63+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":86,"Version":0,"ObserverId":"0bae3000-96c0-4f2a-a7e9-73f363263c5e","StartTime":"2022-06-10T11:34:33.4191574-07:00","EndTime":"2022-06-14T18:17:23.816+00:00","ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"8384df37-c2d9-4a4f-a537-ebd4b76d685d","Type":6,"Label":"Graverler-2022-06-14","Status":0,"Sources":["a3348c74-96bc-4f2f-9afa-bc55d7fda401"],"Notes":"Generated by trap-service app. Installed duration: 95h 43m","Collection":{"Collector":"labdevice02@premonitionweb.onmicrosoft.com"},"History":[{"Action":"Created","Time":"2022-06-14T18:17:23.816+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":87,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-06-14T18:59:51.898+00:00","EndTime":"2022-06-14T18:59:51.898+00:00","ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"ba7810c1-ead0-44d4-b2ff-e2150fac319f","Status":0,"Sex":1,"Type":3,"Sources":["8384df37-c2d9-4a4f-a537-ebd4b76d685d"],"SpeciesList":[{"Name":"quinquefasciatus","Rank":"species","Parent":{"Name":"culex","Rank":"subgenus","Parent":{"Name":"culex","Rank":"genus","Parent":{"Name":"culicidae","Rank":"family","Parent":{"Name":"diptera","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":265461}},"SourceIDs":{"NCBI":342889}},"SourceIDs":{"NCBI":2007271}},"SourceIDs":{"NCBI":518105}},"SourceIDs":{"NCBI":7176}}],"Quantity":7,"Stage":"adult","Notes":"Seabring strain","Label":"Graverler-2022-06-14-Culex_quinquefasciatus-female","Collection":{},"History":[{"Action":"Created","Time":"2022-06-14T18:59:51.898+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":88,"Version":0,"ObserverId":"0bae3000-96c0-4f2a-a7e9-73f363263c5e","StartTime":"2022-06-14T11:17:20.2830729-07:00","EndTime":"2022-06-15T18:37:14.338+00:00","ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"971fe35d-5142-4ce7-8344-2950693337ef","Type":6,"Label":"Casper-2022-06-15","Status":0,"Sources":["32c516c8-0b57-4c5f-9035-b583cc626186"],"Notes":"Generated by trap-service app. Installed duration: 24h 20m","Collection":{"Collector":"labdevice02@premonitionweb.onmicrosoft.com"},"History":[{"Action":"Created","Time":"2022-06-15T18:37:14.338+00:00"}]}],"DataFiles":[]},
+    {"$type":"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta","IsFunction":false,"ProcessType":"labassets","ProcessId":"abc03682-d5bd-490c-b088-c2a0ab5cf07a","IsMeasure":false,"Index":89,"Version":0,"ObserverId":"245e222e-64e7-4837-ba36-7ae20548c7b7","StartTime":"2022-06-16T01:10:44.69+00:00","EndTime":"2022-06-16T01:10:44.69+00:00","ApplicationDependencies":[],"ProcessDependencies":[],"Data":[{"Guid":"f998715a-f1b8-4984-8f32-51d9134789d1","Status":0,"Sex":1,"Type":3,"Sources":["971fe35d-5142-4ce7-8344-2950693337ef"],"SpeciesList":[{"Name":"quinquefasciatus","Rank":"species","Parent":{"Name":"culex","Rank":"subgenus","Parent":{"Name":"culex","Rank":"genus","Parent":{"Name":"culicidae","Rank":"family","Parent":{"Name":"diptera","Rank":"order","Parent":{"Name":"insecta","Rank":"class","Parent":null,"SourceIDs":{"NCBI":260538}},"SourceIDs":{"NCBI":265461}},"SourceIDs":{"NCBI":342889}},"SourceIDs":{"NCBI":2007271}},"SourceIDs":{"NCBI":518105}},"SourceIDs":{"NCBI":7176}}],"Quantity":3,"Label":"Casper-2022-06-15-Culex_quinquefasciatus-female","Collection":{},"History":[{"Action":"Created","Time":"2022-06-16T01:10:44.69+00:00"}]}],"DataFiles":[]},
+    ];
+    function randomInt(max, min=1) {
+    	return Math.floor(Math.random() * max) + min;
+    }
+
+    function sample(list) {
+    	const index = randomInt(list.length - 1, 0);
+    	return list[index];
+    }
+
+    function omit(obj, ...skipKeys) {
+    	const keys = Object.keys(obj)
+    		.filter(k => !skipKeys.includes(k));
+    	return keys.reduce((data, k) => {
+    		data[k] = obj[k];
+    		return data;
+    	}, {});
+    }
+
+    function populateFields(originalTag) {
+    	const tag = omit(originalTag, 'children');
+    	if (tag.type === 'TextField') {
+    		tag.value = 'SomeValue ' + randomInt(10);
+    	} else if (tag.type === 'IntegerField') {
+    		tag.value = randomInt(100);
+    	} else if (tag.type === 'EnumField') {
+    		tag.value = sample(originalTag.children).name;
+    	}
+    	return tag;
+    }
+
+    function getRandomTags(tag) {
+    	const useTag = Math.random() < 0.1;
+    	if (useTag) {
+    		return [populateFields(tag)];
+    	} else if (tag.type !== 'EnumField') {
+    		return tag.children.flatMap(getRandomTags);
+    	}
+    	return [];
+    }
+
+    let i = 1;
+    function getRandomData() {
+    	const name = `Subject #${i++} data`;
+    	return {
+    		Label: name,
+    		taxonomyTags: data.children[0].children.flatMap(getRandomTags)
+    	};
+    }
+
+    items.forEach(item => {
+    	item.Data = [getRandomData()];
+    	console.log(item.Data[0].taxonomyTags);
+    	const sample = Math.random();
+    	if (sample < .3) {
+    		item.Version += 1;
+    	}
+
+    	if (sample < .1) {
+    		item.Version += 1;
+    	}
+    	// TODO
+    });
+
     /* src/App.svelte generated by Svelte v3.49.0 */
+
+    const { console: console_1 } = globals;
     const file = "src/App.svelte";
 
-    // (16:2) <Title>
-    function create_default_slot_11(ctx) {
+    function get_each_context(ctx, list, i) {
+    	const child_ctx = ctx.slice();
+    	child_ctx[6] = list[i];
+    	return child_ctx;
+    }
+
+    function get_each_context_1(ctx, list, i) {
+    	const child_ctx = ctx.slice();
+    	child_ctx[9] = list[i];
+    	return child_ctx;
+    }
+
+    // (36:2) <Title>
+    function create_default_slot_14(ctx) {
     	let t;
 
     	const block = {
@@ -25974,23 +28952,23 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_default_slot_11.name,
+    		id: create_default_slot_14.name,
     		type: "slot",
-    		source: "(16:2) <Title>",
+    		source: "(36:2) <Title>",
     		ctx
     	});
 
     	return block;
     }
 
-    // (15:3) <Section>
-    function create_default_slot_10(ctx) {
+    // (35:3) <Section>
+    function create_default_slot_13(ctx) {
     	let title_1;
     	let current;
 
     	title_1 = new Title({
     			props: {
-    				$$slots: { default: [create_default_slot_11] },
+    				$$slots: { default: [create_default_slot_14] },
     				$$scope: { ctx }
     			},
     			$$inline: true
@@ -26007,7 +28985,7 @@ var app = (function () {
     		p: function update(ctx, dirty) {
     			const title_1_changes = {};
 
-    			if (dirty & /*$$scope, title*/ 17) {
+    			if (dirty & /*$$scope, title*/ 4097) {
     				title_1_changes.$$scope = { dirty, ctx };
     			}
 
@@ -26029,23 +29007,23 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_default_slot_10.name,
+    		id: create_default_slot_13.name,
     		type: "slot",
-    		source: "(15:3) <Section>",
+    		source: "(35:3) <Section>",
     		ctx
     	});
 
     	return block;
     }
 
-    // (14:1) <Row>
-    function create_default_slot_9(ctx) {
+    // (34:1) <Row>
+    function create_default_slot_12(ctx) {
     	let section;
     	let current;
 
     	section = new Section({
     			props: {
-    				$$slots: { default: [create_default_slot_10] },
+    				$$slots: { default: [create_default_slot_13] },
     				$$scope: { ctx }
     			},
     			$$inline: true
@@ -26062,7 +29040,7 @@ var app = (function () {
     		p: function update(ctx, dirty) {
     			const section_changes = {};
 
-    			if (dirty & /*$$scope, title*/ 17) {
+    			if (dirty & /*$$scope, title*/ 4097) {
     				section_changes.$$scope = { dirty, ctx };
     			}
 
@@ -26084,23 +29062,23 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_default_slot_9.name,
+    		id: create_default_slot_12.name,
     		type: "slot",
-    		source: "(14:1) <Row>",
+    		source: "(34:1) <Row>",
     		ctx
     	});
 
     	return block;
     }
 
-    // (13:0) <TopAppBar variant="static">
-    function create_default_slot_8(ctx) {
+    // (33:0) <TopAppBar variant="static">
+    function create_default_slot_11(ctx) {
     	let row;
     	let current;
 
     	row = new Row({
     			props: {
-    				$$slots: { default: [create_default_slot_9] },
+    				$$slots: { default: [create_default_slot_12] },
     				$$scope: { ctx }
     			},
     			$$inline: true
@@ -26117,7 +29095,7 @@ var app = (function () {
     		p: function update(ctx, dirty) {
     			const row_changes = {};
 
-    			if (dirty & /*$$scope, title*/ 17) {
+    			if (dirty & /*$$scope, title*/ 4097) {
     				row_changes.$$scope = { dirty, ctx };
     			}
 
@@ -26139,17 +29117,17 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_default_slot_8.name,
+    		id: create_default_slot_11.name,
     		type: "slot",
-    		source: "(13:0) <TopAppBar variant=\\\"static\\\">",
+    		source: "(33:0) <TopAppBar variant=\\\"static\\\">",
     		ctx
     	});
 
     	return block;
     }
 
-    // (23:2) <Content>
-    function create_default_slot_7(ctx) {
+    // (44:2) <Content>
+    function create_default_slot_10(ctx) {
     	let textfield;
     	let updating_value;
     	let t0;
@@ -26159,22 +29137,24 @@ var app = (function () {
     	let current;
 
     	function textfield_value_binding(value) {
-    		/*textfield_value_binding*/ ctx[3](value);
+    		/*textfield_value_binding*/ ctx[5](value);
     	}
 
     	let textfield_props = { label: "Search..." };
 
-    	if (/*searchKeyword*/ ctx[2] !== void 0) {
-    		textfield_props.value = /*searchKeyword*/ ctx[2];
+    	if (/*searchKeyword*/ ctx[1] !== void 0) {
+    		textfield_props.value = /*searchKeyword*/ ctx[1];
     	}
 
     	textfield = new Textfield({ props: textfield_props, $$inline: true });
     	binding_callbacks.push(() => bind(textfield, 'value', textfield_value_binding));
 
     	taxonomyfilter = new TaxonomyFilter({
-    			props: { trees: /*vocabularies*/ ctx[1] },
+    			props: { trees: /*vocabularies*/ ctx[3] },
     			$$inline: true
     		});
+
+    	taxonomyfilter.$on("change", /*onFilterUpdate*/ ctx[4]);
 
     	const block = {
     		c: function create() {
@@ -26184,8 +29164,8 @@ var app = (function () {
     			span.textContent = "Advanced Filters";
     			t2 = space();
     			create_component(taxonomyfilter.$$.fragment);
-    			attr_dev(span, "class", "filter-header svelte-s584p0");
-    			add_location(span, file, 24, 3, 768);
+    			attr_dev(span, "class", "filter-header svelte-1wyfxk7");
+    			add_location(span, file, 45, 3, 1565);
     		},
     		m: function mount(target, anchor) {
     			mount_component(textfield, target, anchor);
@@ -26198,16 +29178,13 @@ var app = (function () {
     		p: function update(ctx, dirty) {
     			const textfield_changes = {};
 
-    			if (!updating_value && dirty & /*searchKeyword*/ 4) {
+    			if (!updating_value && dirty & /*searchKeyword*/ 2) {
     				updating_value = true;
-    				textfield_changes.value = /*searchKeyword*/ ctx[2];
+    				textfield_changes.value = /*searchKeyword*/ ctx[1];
     				add_flush_callback(() => updating_value = false);
     			}
 
     			textfield.$set(textfield_changes);
-    			const taxonomyfilter_changes = {};
-    			if (dirty & /*vocabularies*/ 2) taxonomyfilter_changes.trees = /*vocabularies*/ ctx[1];
-    			taxonomyfilter.$set(taxonomyfilter_changes);
     		},
     		i: function intro(local) {
     			if (current) return;
@@ -26231,23 +29208,23 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_default_slot_7.name,
+    		id: create_default_slot_10.name,
     		type: "slot",
-    		source: "(23:2) <Content>",
+    		source: "(44:2) <Content>",
     		ctx
     	});
 
     	return block;
     }
 
-    // (22:1) <Drawer>
-    function create_default_slot_6(ctx) {
+    // (43:1) <Drawer>
+    function create_default_slot_9(ctx) {
     	let content;
     	let current;
 
     	content = new Content({
     			props: {
-    				$$slots: { default: [create_default_slot_7] },
+    				$$slots: { default: [create_default_slot_10] },
     				$$scope: { ctx }
     			},
     			$$inline: true
@@ -26264,7 +29241,7 @@ var app = (function () {
     		p: function update(ctx, dirty) {
     			const content_changes = {};
 
-    			if (dirty & /*$$scope, vocabularies, searchKeyword*/ 22) {
+    			if (dirty & /*$$scope, searchKeyword*/ 4098) {
     				content_changes.$$scope = { dirty, ctx };
     			}
 
@@ -26286,25 +29263,29 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_default_slot_6.name,
+    		id: create_default_slot_9.name,
     		type: "slot",
-    		source: "(22:1) <Drawer>",
+    		source: "(43:1) <Drawer>",
     		ctx
     	});
 
     	return block;
     }
 
-    // (35:6) <PrimaryText>
-    function create_default_slot_5(ctx) {
+    // (56:7) <PrimaryText>
+    function create_default_slot_8(ctx) {
+    	let t_value = /*item*/ ctx[6].Data[0].Label + "";
     	let t;
 
     	const block = {
     		c: function create() {
-    			t = text("Title");
+    			t = text(t_value);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, t, anchor);
+    		},
+    		p: function update(ctx, dirty) {
+    			if (dirty & /*items*/ 4 && t_value !== (t_value = /*item*/ ctx[6].Data[0].Label + "")) set_data_dev(t, t_value);
     		},
     		d: function destroy(detaching) {
     			if (detaching) detach_dev(t);
@@ -26313,44 +29294,57 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_default_slot_5.name,
+    		id: create_default_slot_8.name,
     		type: "slot",
-    		source: "(35:6) <PrimaryText>",
+    		source: "(56:7) <PrimaryText>",
     		ctx
     	});
 
     	return block;
     }
 
-    // (36:6) <SecondaryText>
-    function create_default_slot_4(ctx) {
-    	let t;
+    // (57:7) <SecondaryText>
+    function create_default_slot_7(ctx) {
+    	let t0_value = Math.floor(Math.random() * 10) + 1 + "";
+    	let t0;
+    	let t1;
+    	let a;
 
     	const block = {
     		c: function create() {
-    			t = text("Subtitle");
+    			t0 = text(t0_value);
+    			t1 = text(" revisions. ");
+    			a = element("a");
+    			a.textContent = "Earlier versions.";
+    			attr_dev(a, "class", "svelte-1wyfxk7");
+    			add_location(a, file, 56, 68, 1936);
     		},
     		m: function mount(target, anchor) {
-    			insert_dev(target, t, anchor);
+    			insert_dev(target, t0, anchor);
+    			insert_dev(target, t1, anchor);
+    			insert_dev(target, a, anchor);
     		},
+    		p: noop,
     		d: function destroy(detaching) {
-    			if (detaching) detach_dev(t);
+    			if (detaching) detach_dev(t0);
+    			if (detaching) detach_dev(t1);
+    			if (detaching) detach_dev(a);
     		}
     	};
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_default_slot_4.name,
+    		id: create_default_slot_7.name,
     		type: "slot",
-    		source: "(36:6) <SecondaryText>",
+    		source: "(57:7) <SecondaryText>",
     		ctx
     	});
 
     	return block;
     }
 
-    // (34:5) <Text>
-    function create_default_slot_3(ctx) {
+    // (55:6) <Text>
+    function create_default_slot_6(ctx) {
     	let primarytext;
     	let t;
     	let secondarytext;
@@ -26358,7 +29352,7 @@ var app = (function () {
 
     	primarytext = new PrimaryText({
     			props: {
-    				$$slots: { default: [create_default_slot_5] },
+    				$$slots: { default: [create_default_slot_8] },
     				$$scope: { ctx }
     			},
     			$$inline: true
@@ -26366,7 +29360,7 @@ var app = (function () {
 
     	secondarytext = new SecondaryText({
     			props: {
-    				$$slots: { default: [create_default_slot_4] },
+    				$$slots: { default: [create_default_slot_7] },
     				$$scope: { ctx }
     			},
     			$$inline: true
@@ -26387,14 +29381,14 @@ var app = (function () {
     		p: function update(ctx, dirty) {
     			const primarytext_changes = {};
 
-    			if (dirty & /*$$scope*/ 16) {
+    			if (dirty & /*$$scope, items*/ 4100) {
     				primarytext_changes.$$scope = { dirty, ctx };
     			}
 
     			primarytext.$set(primarytext_changes);
     			const secondarytext_changes = {};
 
-    			if (dirty & /*$$scope*/ 16) {
+    			if (dirty & /*$$scope*/ 4096) {
     				secondarytext_changes.$$scope = { dirty, ctx };
     			}
 
@@ -26420,23 +29414,23 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_default_slot_3.name,
+    		id: create_default_slot_6.name,
     		type: "slot",
-    		source: "(34:5) <Text>",
+    		source: "(55:6) <Text>",
     		ctx
     	});
 
     	return block;
     }
 
-    // (33:4) <Item>
-    function create_default_slot_2(ctx) {
+    // (63:6) {:else}
+    function create_else_block(ctx) {
     	let text_1;
     	let current;
 
     	text_1 = new Text({
     			props: {
-    				$$slots: { default: [create_default_slot_3] },
+    				$$slots: { default: [create_default_slot_5] },
     				$$scope: { ctx }
     			},
     			$$inline: true
@@ -26453,7 +29447,7 @@ var app = (function () {
     		p: function update(ctx, dirty) {
     			const text_1_changes = {};
 
-    			if (dirty & /*$$scope*/ 16) {
+    			if (dirty & /*$$scope, items*/ 4100) {
     				text_1_changes.$$scope = { dirty, ctx };
     			}
 
@@ -26475,17 +29469,406 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_default_slot_2.name,
-    		type: "slot",
-    		source: "(33:4) <Item>",
+    		id: create_else_block.name,
+    		type: "else",
+    		source: "(63:6) {:else}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (31:3) <List twoLine avatarList singleSelection>
-    function create_default_slot_1(ctx) {
+    // (61:6) {#if tag.value}
+    function create_if_block(ctx) {
+    	let text_1;
+    	let current;
+
+    	text_1 = new Text({
+    			props: {
+    				$$slots: { default: [create_default_slot_4] },
+    				$$scope: { ctx }
+    			},
+    			$$inline: true
+    		});
+
+    	const block = {
+    		c: function create() {
+    			create_component(text_1.$$.fragment);
+    		},
+    		m: function mount(target, anchor) {
+    			mount_component(text_1, target, anchor);
+    			current = true;
+    		},
+    		p: function update(ctx, dirty) {
+    			const text_1_changes = {};
+
+    			if (dirty & /*$$scope, items*/ 4100) {
+    				text_1_changes.$$scope = { dirty, ctx };
+    			}
+
+    			text_1.$set(text_1_changes);
+    		},
+    		i: function intro(local) {
+    			if (current) return;
+    			transition_in(text_1.$$.fragment, local);
+    			current = true;
+    		},
+    		o: function outro(local) {
+    			transition_out(text_1.$$.fragment, local);
+    			current = false;
+    		},
+    		d: function destroy(detaching) {
+    			destroy_component(text_1, detaching);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_if_block.name,
+    		type: "if",
+    		source: "(61:6) {#if tag.value}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (64:8) <Text>
+    function create_default_slot_5(ctx) {
+    	let t_value = /*tag*/ ctx[9].name + "";
+    	let t;
+
+    	const block = {
+    		c: function create() {
+    			t = text(t_value);
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, t, anchor);
+    		},
+    		p: function update(ctx, dirty) {
+    			if (dirty & /*items*/ 4 && t_value !== (t_value = /*tag*/ ctx[9].name + "")) set_data_dev(t, t_value);
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(t);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_default_slot_5.name,
+    		type: "slot",
+    		source: "(64:8) <Text>",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (62:8) <Text>
+    function create_default_slot_4(ctx) {
+    	let t0_value = /*tag*/ ctx[9].name + "";
+    	let t0;
+    	let t1;
+    	let t2_value = /*tag*/ ctx[9].value + "";
+    	let t2;
+
+    	const block = {
+    		c: function create() {
+    			t0 = text(t0_value);
+    			t1 = text(": ");
+    			t2 = text(t2_value);
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, t0, anchor);
+    			insert_dev(target, t1, anchor);
+    			insert_dev(target, t2, anchor);
+    		},
+    		p: function update(ctx, dirty) {
+    			if (dirty & /*items*/ 4 && t0_value !== (t0_value = /*tag*/ ctx[9].name + "")) set_data_dev(t0, t0_value);
+    			if (dirty & /*items*/ 4 && t2_value !== (t2_value = /*tag*/ ctx[9].value + "")) set_data_dev(t2, t2_value);
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(t0);
+    			if (detaching) detach_dev(t1);
+    			if (detaching) detach_dev(t2);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_default_slot_4.name,
+    		type: "slot",
+    		source: "(62:8) <Text>",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (60:6) <Chip chip={tag.id}>
+    function create_default_slot_3(ctx) {
+    	let current_block_type_index;
+    	let if_block;
+    	let if_block_anchor;
+    	let current;
+    	const if_block_creators = [create_if_block, create_else_block];
+    	const if_blocks = [];
+
+    	function select_block_type(ctx, dirty) {
+    		if (/*tag*/ ctx[9].value) return 0;
+    		return 1;
+    	}
+
+    	current_block_type_index = select_block_type(ctx);
+    	if_block = if_blocks[current_block_type_index] = if_block_creators[current_block_type_index](ctx);
+
+    	const block = {
+    		c: function create() {
+    			if_block.c();
+    			if_block_anchor = empty();
+    		},
+    		m: function mount(target, anchor) {
+    			if_blocks[current_block_type_index].m(target, anchor);
+    			insert_dev(target, if_block_anchor, anchor);
+    			current = true;
+    		},
+    		p: function update(ctx, dirty) {
+    			let previous_block_index = current_block_type_index;
+    			current_block_type_index = select_block_type(ctx);
+
+    			if (current_block_type_index === previous_block_index) {
+    				if_blocks[current_block_type_index].p(ctx, dirty);
+    			} else {
+    				group_outros();
+
+    				transition_out(if_blocks[previous_block_index], 1, 1, () => {
+    					if_blocks[previous_block_index] = null;
+    				});
+
+    				check_outros();
+    				if_block = if_blocks[current_block_type_index];
+
+    				if (!if_block) {
+    					if_block = if_blocks[current_block_type_index] = if_block_creators[current_block_type_index](ctx);
+    					if_block.c();
+    				} else {
+    					if_block.p(ctx, dirty);
+    				}
+
+    				transition_in(if_block, 1);
+    				if_block.m(if_block_anchor.parentNode, if_block_anchor);
+    			}
+    		},
+    		i: function intro(local) {
+    			if (current) return;
+    			transition_in(if_block);
+    			current = true;
+    		},
+    		o: function outro(local) {
+    			transition_out(if_block);
+    			current = false;
+    		},
+    		d: function destroy(detaching) {
+    			if_blocks[current_block_type_index].d(detaching);
+    			if (detaching) detach_dev(if_block_anchor);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_default_slot_3.name,
+    		type: "slot",
+    		source: "(60:6) <Chip chip={tag.id}>",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (59:6) {#each item.Data[0].taxonomyTags as tag}
+    function create_each_block_1(ctx) {
+    	let chip;
+    	let current;
+
+    	chip = new Chip({
+    			props: {
+    				chip: /*tag*/ ctx[9].id,
+    				$$slots: { default: [create_default_slot_3] },
+    				$$scope: { ctx }
+    			},
+    			$$inline: true
+    		});
+
+    	const block = {
+    		c: function create() {
+    			create_component(chip.$$.fragment);
+    		},
+    		m: function mount(target, anchor) {
+    			mount_component(chip, target, anchor);
+    			current = true;
+    		},
+    		p: function update(ctx, dirty) {
+    			const chip_changes = {};
+    			if (dirty & /*items*/ 4) chip_changes.chip = /*tag*/ ctx[9].id;
+
+    			if (dirty & /*$$scope, items*/ 4100) {
+    				chip_changes.$$scope = { dirty, ctx };
+    			}
+
+    			chip.$set(chip_changes);
+    		},
+    		i: function intro(local) {
+    			if (current) return;
+    			transition_in(chip.$$.fragment, local);
+    			current = true;
+    		},
+    		o: function outro(local) {
+    			transition_out(chip.$$.fragment, local);
+    			current = false;
+    		},
+    		d: function destroy(detaching) {
+    			destroy_component(chip, detaching);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_each_block_1.name,
+    		type: "each",
+    		source: "(59:6) {#each item.Data[0].taxonomyTags as tag}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (54:5) <Item>
+    function create_default_slot_2(ctx) {
+    	let text_1;
+    	let t0;
+    	let t1;
+    	let current;
+
+    	text_1 = new Text({
+    			props: {
+    				$$slots: { default: [create_default_slot_6] },
+    				$$scope: { ctx }
+    			},
+    			$$inline: true
+    		});
+
+    	let each_value_1 = /*item*/ ctx[6].Data[0].taxonomyTags;
+    	validate_each_argument(each_value_1);
+    	let each_blocks = [];
+
+    	for (let i = 0; i < each_value_1.length; i += 1) {
+    		each_blocks[i] = create_each_block_1(get_each_context_1(ctx, each_value_1, i));
+    	}
+
+    	const out = i => transition_out(each_blocks[i], 1, 1, () => {
+    		each_blocks[i] = null;
+    	});
+
+    	const block = {
+    		c: function create() {
+    			create_component(text_1.$$.fragment);
+    			t0 = space();
+
+    			for (let i = 0; i < each_blocks.length; i += 1) {
+    				each_blocks[i].c();
+    			}
+
+    			t1 = space();
+    		},
+    		m: function mount(target, anchor) {
+    			mount_component(text_1, target, anchor);
+    			insert_dev(target, t0, anchor);
+
+    			for (let i = 0; i < each_blocks.length; i += 1) {
+    				each_blocks[i].m(target, anchor);
+    			}
+
+    			insert_dev(target, t1, anchor);
+    			current = true;
+    		},
+    		p: function update(ctx, dirty) {
+    			const text_1_changes = {};
+
+    			if (dirty & /*$$scope, items*/ 4100) {
+    				text_1_changes.$$scope = { dirty, ctx };
+    			}
+
+    			text_1.$set(text_1_changes);
+
+    			if (dirty & /*items*/ 4) {
+    				each_value_1 = /*item*/ ctx[6].Data[0].taxonomyTags;
+    				validate_each_argument(each_value_1);
+    				let i;
+
+    				for (i = 0; i < each_value_1.length; i += 1) {
+    					const child_ctx = get_each_context_1(ctx, each_value_1, i);
+
+    					if (each_blocks[i]) {
+    						each_blocks[i].p(child_ctx, dirty);
+    						transition_in(each_blocks[i], 1);
+    					} else {
+    						each_blocks[i] = create_each_block_1(child_ctx);
+    						each_blocks[i].c();
+    						transition_in(each_blocks[i], 1);
+    						each_blocks[i].m(t1.parentNode, t1);
+    					}
+    				}
+
+    				group_outros();
+
+    				for (i = each_value_1.length; i < each_blocks.length; i += 1) {
+    					out(i);
+    				}
+
+    				check_outros();
+    			}
+    		},
+    		i: function intro(local) {
+    			if (current) return;
+    			transition_in(text_1.$$.fragment, local);
+
+    			for (let i = 0; i < each_value_1.length; i += 1) {
+    				transition_in(each_blocks[i]);
+    			}
+
+    			current = true;
+    		},
+    		o: function outro(local) {
+    			transition_out(text_1.$$.fragment, local);
+    			each_blocks = each_blocks.filter(Boolean);
+
+    			for (let i = 0; i < each_blocks.length; i += 1) {
+    				transition_out(each_blocks[i]);
+    			}
+
+    			current = false;
+    		},
+    		d: function destroy(detaching) {
+    			destroy_component(text_1, detaching);
+    			if (detaching) detach_dev(t0);
+    			destroy_each(each_blocks, detaching);
+    			if (detaching) detach_dev(t1);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_default_slot_2.name,
+    		type: "slot",
+    		source: "(54:5) <Item>",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (53:4) {#each items as item}
+    function create_each_block(ctx) {
     	let item;
     	let current;
 
@@ -26508,7 +29891,7 @@ var app = (function () {
     		p: function update(ctx, dirty) {
     			const item_changes = {};
 
-    			if (dirty & /*$$scope*/ 16) {
+    			if (dirty & /*$$scope, items*/ 4100) {
     				item_changes.$$scope = { dirty, ctx };
     			}
 
@@ -26530,16 +29913,112 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_default_slot_1.name,
-    		type: "slot",
-    		source: "(31:3) <List twoLine avatarList singleSelection>",
+    		id: create_each_block.name,
+    		type: "each",
+    		source: "(53:4) {#each items as item}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (29:1) <AppContent>
+    // (52:3) <List twoLine avatarList>
+    function create_default_slot_1(ctx) {
+    	let each_1_anchor;
+    	let current;
+    	let each_value = /*items*/ ctx[2];
+    	validate_each_argument(each_value);
+    	let each_blocks = [];
+
+    	for (let i = 0; i < each_value.length; i += 1) {
+    		each_blocks[i] = create_each_block(get_each_context(ctx, each_value, i));
+    	}
+
+    	const out = i => transition_out(each_blocks[i], 1, 1, () => {
+    		each_blocks[i] = null;
+    	});
+
+    	const block = {
+    		c: function create() {
+    			for (let i = 0; i < each_blocks.length; i += 1) {
+    				each_blocks[i].c();
+    			}
+
+    			each_1_anchor = empty();
+    		},
+    		m: function mount(target, anchor) {
+    			for (let i = 0; i < each_blocks.length; i += 1) {
+    				each_blocks[i].m(target, anchor);
+    			}
+
+    			insert_dev(target, each_1_anchor, anchor);
+    			current = true;
+    		},
+    		p: function update(ctx, dirty) {
+    			if (dirty & /*items, Math*/ 4) {
+    				each_value = /*items*/ ctx[2];
+    				validate_each_argument(each_value);
+    				let i;
+
+    				for (i = 0; i < each_value.length; i += 1) {
+    					const child_ctx = get_each_context(ctx, each_value, i);
+
+    					if (each_blocks[i]) {
+    						each_blocks[i].p(child_ctx, dirty);
+    						transition_in(each_blocks[i], 1);
+    					} else {
+    						each_blocks[i] = create_each_block(child_ctx);
+    						each_blocks[i].c();
+    						transition_in(each_blocks[i], 1);
+    						each_blocks[i].m(each_1_anchor.parentNode, each_1_anchor);
+    					}
+    				}
+
+    				group_outros();
+
+    				for (i = each_value.length; i < each_blocks.length; i += 1) {
+    					out(i);
+    				}
+
+    				check_outros();
+    			}
+    		},
+    		i: function intro(local) {
+    			if (current) return;
+
+    			for (let i = 0; i < each_value.length; i += 1) {
+    				transition_in(each_blocks[i]);
+    			}
+
+    			current = true;
+    		},
+    		o: function outro(local) {
+    			each_blocks = each_blocks.filter(Boolean);
+
+    			for (let i = 0; i < each_blocks.length; i += 1) {
+    				transition_out(each_blocks[i]);
+    			}
+
+    			current = false;
+    		},
+    		d: function destroy(detaching) {
+    			destroy_each(each_blocks, detaching);
+    			if (detaching) detach_dev(each_1_anchor);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_default_slot_1.name,
+    		type: "slot",
+    		source: "(52:3) <List twoLine avatarList>",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (50:1) <AppContent>
     function create_default_slot(ctx) {
     	let main;
     	let list;
@@ -26549,7 +30028,6 @@ var app = (function () {
     			props: {
     				twoLine: true,
     				avatarList: true,
-    				singleSelection: true,
     				$$slots: { default: [create_default_slot_1] },
     				$$scope: { ctx }
     			},
@@ -26560,8 +30038,8 @@ var app = (function () {
     		c: function create() {
     			main = element("main");
     			create_component(list.$$.fragment);
-    			attr_dev(main, "class", "svelte-s584p0");
-    			add_location(main, file, 29, 2, 903);
+    			attr_dev(main, "class", "svelte-1wyfxk7");
+    			add_location(main, file, 50, 2, 1726);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, main, anchor);
@@ -26571,7 +30049,7 @@ var app = (function () {
     		p: function update(ctx, dirty) {
     			const list_changes = {};
 
-    			if (dirty & /*$$scope*/ 16) {
+    			if (dirty & /*$$scope, items*/ 4100) {
     				list_changes.$$scope = { dirty, ctx };
     			}
 
@@ -26596,7 +30074,7 @@ var app = (function () {
     		block,
     		id: create_default_slot.name,
     		type: "slot",
-    		source: "(29:1) <AppContent>",
+    		source: "(50:1) <AppContent>",
     		ctx
     	});
 
@@ -26606,6 +30084,7 @@ var app = (function () {
     function create_fragment(ctx) {
     	let topappbar;
     	let t0;
+    	let div;
     	let drawer;
     	let t1;
     	let appcontent;
@@ -26622,7 +30101,7 @@ var app = (function () {
     	topappbar = new TopAppBar({
     			props: {
     				variant: "static",
-    				$$slots: { default: [create_default_slot_8] },
+    				$$slots: { default: [create_default_slot_11] },
     				$$scope: { ctx }
     			},
     			$$inline: true
@@ -26630,7 +30109,7 @@ var app = (function () {
 
     	drawer = new Drawer({
     			props: {
-    				$$slots: { default: [create_default_slot_6] },
+    				$$slots: { default: [create_default_slot_9] },
     				$$scope: { ctx }
     			},
     			$$inline: true
@@ -26648,6 +30127,7 @@ var app = (function () {
     		c: function create() {
     			create_component(topappbar.$$.fragment);
     			t0 = space();
+    			div = element("div");
     			create_component(drawer.$$.fragment);
     			t1 = space();
     			create_component(appcontent.$$.fragment);
@@ -26659,18 +30139,24 @@ var app = (function () {
     			link2 = element("link");
     			t5 = space();
     			link3 = element("link");
+    			attr_dev(div, "class", "drawer-container svelte-1wyfxk7");
+    			add_location(div, file, 41, 0, 1448);
     			attr_dev(link0, "rel", "stylesheet");
     			attr_dev(link0, "href", "https://fonts.googleapis.com/icon?family=Material+Icons");
-    			add_location(link0, file, 43, 0, 1194);
+    			attr_dev(link0, "class", "svelte-1wyfxk7");
+    			add_location(link0, file, 75, 0, 2312);
     			attr_dev(link1, "rel", "stylesheet");
     			attr_dev(link1, "href", "https://fonts.googleapis.com/css?family=Roboto:300,400,500,600,700");
-    			add_location(link1, file, 48, 0, 1303);
+    			attr_dev(link1, "class", "svelte-1wyfxk7");
+    			add_location(link1, file, 80, 0, 2421);
     			attr_dev(link2, "rel", "stylesheet");
     			attr_dev(link2, "href", "https://fonts.googleapis.com/css?family=Roboto+Mono");
-    			add_location(link2, file, 53, 0, 1428);
+    			attr_dev(link2, "class", "svelte-1wyfxk7");
+    			add_location(link2, file, 85, 0, 2546);
     			attr_dev(link3, "rel", "stylesheet");
     			attr_dev(link3, "href", "https://cdn.jsdelivr.net/npm/svelte-material-ui@6.0.0/bare.min.css");
-    			add_location(link3, file, 58, 0, 1578);
+    			attr_dev(link3, "class", "svelte-1wyfxk7");
+    			add_location(link3, file, 90, 0, 2696);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -26678,9 +30164,10 @@ var app = (function () {
     		m: function mount(target, anchor) {
     			mount_component(topappbar, target, anchor);
     			insert_dev(target, t0, anchor);
-    			mount_component(drawer, target, anchor);
-    			insert_dev(target, t1, anchor);
-    			mount_component(appcontent, target, anchor);
+    			insert_dev(target, div, anchor);
+    			mount_component(drawer, div, null);
+    			append_dev(div, t1);
+    			mount_component(appcontent, div, null);
     			insert_dev(target, t2, anchor);
     			insert_dev(target, link0, anchor);
     			insert_dev(target, t3, anchor);
@@ -26694,21 +30181,21 @@ var app = (function () {
     		p: function update(ctx, [dirty]) {
     			const topappbar_changes = {};
 
-    			if (dirty & /*$$scope, title*/ 17) {
+    			if (dirty & /*$$scope, title*/ 4097) {
     				topappbar_changes.$$scope = { dirty, ctx };
     			}
 
     			topappbar.$set(topappbar_changes);
     			const drawer_changes = {};
 
-    			if (dirty & /*$$scope, vocabularies, searchKeyword*/ 22) {
+    			if (dirty & /*$$scope, searchKeyword*/ 4098) {
     				drawer_changes.$$scope = { dirty, ctx };
     			}
 
     			drawer.$set(drawer_changes);
     			const appcontent_changes = {};
 
-    			if (dirty & /*$$scope*/ 16) {
+    			if (dirty & /*$$scope, items*/ 4100) {
     				appcontent_changes.$$scope = { dirty, ctx };
     			}
 
@@ -26730,9 +30217,9 @@ var app = (function () {
     		d: function destroy(detaching) {
     			destroy_component(topappbar, detaching);
     			if (detaching) detach_dev(t0);
-    			destroy_component(drawer, detaching);
-    			if (detaching) detach_dev(t1);
-    			destroy_component(appcontent, detaching);
+    			if (detaching) detach_dev(div);
+    			destroy_component(drawer);
+    			destroy_component(appcontent);
     			if (detaching) detach_dev(t2);
     			if (detaching) detach_dev(link0);
     			if (detaching) detach_dev(t3);
@@ -26755,26 +30242,46 @@ var app = (function () {
     	return block;
     }
 
+    function isTypeOfTag(tag, typeTag) {
+    	// TODO: check if tag is type of typeTag (add inheritance)
+    	// TODO: handle inheritance
+    	return tag.id === typeTag.id && typeTag.value == tag.value;
+    }
+
     function instance($$self, $$props, $$invalidate) {
     	let { $$slots: slots = {}, $$scope } = $$props;
     	validate_slots('App', slots, []);
-    	let { title = 'Search Dashboard' } = $$props;
+    	let { title = 'Digital Phenotyping Dashboard ' } = $$props;
     	let searchKeyword = '';
-    	let { vocabularies = data.children[0].children } = $$props;
-    	const writable_props = ['title', 'vocabularies'];
+    	let vocabularies = data.children[0].children;
+    	let items$1 = items;
+
+    	function onFilterUpdate(event) {
+    		const { filterTags } = event.detail;
+
+    		const filter = item => {
+    			const [{ taxonomyTags }] = item.Data;
+    			const missingTag = filterTags.find(filterTag => !!taxonomyTags.find(tag => isTypeOfTag(tag, filterTag)));
+    			return !missingTag;
+    		};
+
+    		console.log('filter updated!');
+    		$$invalidate(2, items$1 = items.filter(item => filter(item)));
+    	}
+
+    	const writable_props = ['title'];
 
     	Object.keys($$props).forEach(key => {
-    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console.warn(`<App> was created with unknown prop '${key}'`);
+    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console_1.warn(`<App> was created with unknown prop '${key}'`);
     	});
 
     	function textfield_value_binding(value) {
     		searchKeyword = value;
-    		$$invalidate(2, searchKeyword);
+    		$$invalidate(1, searchKeyword);
     	}
 
     	$$self.$$set = $$props => {
     		if ('title' in $$props) $$invalidate(0, title = $$props.title);
-    		if ('vocabularies' in $$props) $$invalidate(1, vocabularies = $$props.vocabularies);
     	};
 
     	$$self.$capture_state = () => ({
@@ -26783,6 +30290,7 @@ var app = (function () {
     		Section,
     		Title,
     		Textfield,
+    		Chip,
     		List,
     		Item,
     		Text,
@@ -26795,26 +30303,40 @@ var app = (function () {
     		title,
     		searchKeyword,
     		testData: data,
-    		vocabularies
+    		vocabularies,
+    		testDataItems: items,
+    		items: items$1,
+    		isTypeOfTag,
+    		onFilterUpdate
     	});
 
     	$$self.$inject_state = $$props => {
     		if ('title' in $$props) $$invalidate(0, title = $$props.title);
-    		if ('searchKeyword' in $$props) $$invalidate(2, searchKeyword = $$props.searchKeyword);
-    		if ('vocabularies' in $$props) $$invalidate(1, vocabularies = $$props.vocabularies);
+    		if ('searchKeyword' in $$props) $$invalidate(1, searchKeyword = $$props.searchKeyword);
+    		if ('vocabularies' in $$props) $$invalidate(3, vocabularies = $$props.vocabularies);
+    		if ('items' in $$props) $$invalidate(2, items$1 = $$props.items);
     	};
 
     	if ($$props && "$$inject" in $$props) {
     		$$self.$inject_state($$props.$$inject);
     	}
 
-    	return [title, vocabularies, searchKeyword, textfield_value_binding];
+    	console.log('vocab changed:', vocabularies);
+
+    	return [
+    		title,
+    		searchKeyword,
+    		items$1,
+    		vocabularies,
+    		onFilterUpdate,
+    		textfield_value_binding
+    	];
     }
 
     class App extends SvelteComponentDev {
     	constructor(options) {
     		super(options);
-    		init(this, options, instance, create_fragment, safe_not_equal, { title: 0, vocabularies: 1 });
+    		init(this, options, instance, create_fragment, safe_not_equal, { title: 0 });
 
     		dispatch_dev("SvelteRegisterComponent", {
     			component: this,
@@ -26829,14 +30351,6 @@ var app = (function () {
     	}
 
     	set title(value) {
-    		throw new Error("<App>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
-    	}
-
-    	get vocabularies() {
-    		throw new Error("<App>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
-    	}
-
-    	set vocabularies(value) {
     		throw new Error("<App>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
     }

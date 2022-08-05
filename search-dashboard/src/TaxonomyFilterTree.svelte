@@ -18,28 +18,32 @@
 	}
 	$: arrowDown = expanded
 
-	let checked = tree.selected;
+	let checked = tree.selected === undefined ? false : tree.selected;
 
 	// TODO: select checkbox -> select all children; partial select all parents (if false)
 	// TODO: unselect checkbox -> unselect all children
 
 	// TODO: get the state of the tag and all the children
 	// mutate the existing data
+	import {createEventDispatcher} from 'svelte';
+	const dispatch = createEventDispatcher();
 	$: {
+		console.log('checked is now', checked);
 		if (checked !== tree.selected) {
 			console.log('selection state changed');
 
 			tree.selected = checked;
 			//tree.children.forEach(child => child.selected = checked);
 			console.log({tree})
-
-			if (checked) {
-			} else {
-			}
+			dispatch('change', {tree});
 		}
 		// TODO: emit an event when selected
 		// TODO: for any parents, set to indeterminate if single child is selected
 	};
+
+	export function getState() {
+		return tree;
+	}
 
 	// TODO: when any children are selected
 	let value = null;
@@ -49,31 +53,31 @@
 <ul>
 	<li>
 		{#if tree.type === 'TextField'}
-			<FormField>
-				<Checkbox bind:checked indeterminate={checked === null} />
-				<Textfield label={name} bind:value={value}/>
-			</FormField>
+		<FormField>
+			<Checkbox bind:checked indeterminate={checked === null} />
+			<Textfield label={name} bind:value={value}/>
+		</FormField>
 		{:else if tree.type === 'IntegerField'}
-			<FormField>
-				<Checkbox bind:checked indeterminate={checked === null} />
-				<Textfield label={name} bind:value={value} type='number'/>
-			</FormField>
+		<FormField>
+			<Checkbox bind:checked indeterminate={checked === null} />
+			<Textfield label={name} bind:value={value} type='number'/>
+		</FormField>
 		{:else if tree.type === 'EnumField'}
-			<FormField>
-				<Checkbox bind:checked indeterminate={checked === null} />
-				<Select bind:value label={name}>
-				{#each children as child}
-					<Option value={child.id}>{child.name}</Option>
-				{/each}
-				</Select>
-			</FormField>
+		<FormField>
+			<Checkbox bind:checked indeterminate={checked === null} />
+			<Select bind:value label={name}>
+			{#each children as child}
+				<Option value={child.id}>{child.name}</Option>
+			{/each}
+			</Select>
+		</FormField>
 		{:else}
-			<FormField>
-				<Checkbox bind:checked indeterminate={checked === null} />
-				<span slot="label">
-					{name}
-				</span>
-			</FormField>
+		<FormField>
+			<Checkbox bind:checked indeterminate={checked === null} />
+			<span slot="label">
+				{name}
+			</span>
+		</FormField>
 		{/if}
 
 

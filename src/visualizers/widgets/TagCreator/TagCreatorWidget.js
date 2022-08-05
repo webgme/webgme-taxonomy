@@ -30,7 +30,8 @@ define([
         }
 
         render (schema, uiSchema, formData, taxonomyPath) {
-            // TODO: what about the initial case
+            console.log({schema, formData});
+            console.log(schema);
             const onChange = (event) => formData = event.formData;
             const children = React.createElement('div', null, [
                 React.createElement('button', {
