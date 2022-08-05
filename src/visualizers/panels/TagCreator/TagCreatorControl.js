@@ -56,7 +56,7 @@ define([
 
             // add new members
             tags.forEach(tagInfo => {
-                const tagNode = nodesByGuid[tagInfo.tagID];
+                const tagNode = nodesByGuid[tagInfo.ID];
                 core.addMember(activeNode, TAG_SET_NAMES, tagNode);
 
                 const attributeNames = _.without(Object.keys(tagInfo), 'tagID', 'tagName');
