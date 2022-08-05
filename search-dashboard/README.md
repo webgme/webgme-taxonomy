@@ -1,4 +1,5 @@
-This is a starter standalone project for searching PDP
+This is a starter standalone project for searching PDP. It will be eventually migrated to the Search router.
+
 
 ## Questions
 - Can this be made generic enough to be a useful search dashboard in general?
@@ -12,7 +13,13 @@ This is a starter standalone project for searching PDP
 				- components.json -> define more adapters for the deployment
 
 ## To Do
-- [ ] generate the schema for the taxonomy
+- [ ] update parent/child checkbox state on click
+	- parents become indeterminate; children match parent (except for fields)
+
+- [ ] add autoformatting like prettier
+
+## Done
+- [x] generate the schema for the taxonomy
 	```javascript
 	[
 		{
@@ -29,7 +36,6 @@ This is a starter standalone project for searching PDP
 		}
 	]
 	```
-
 	- fields:
 		- integers
 			- in min, max (equal?)
@@ -38,3 +44,12 @@ This is a starter standalone project for searching PDP
 		- boolean
 		- enum
 			- checkboxes
+
+- [x] show the list of results in the main area (not below)
+
+- [x] generate an example dataset
+
+- [x] receive updates when the filter changes
+	- this isn't entirely clear to me...
+	- [-] create a filter object to actually perform the filtering?
+
