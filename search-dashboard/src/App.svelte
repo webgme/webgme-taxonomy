@@ -18,27 +18,35 @@
 	let items = testDataItems;
 
 	function isTypeOfTag(tag, typeTag) {
-			// TODO: check if tag is type of typeTag (add inheritance)
-			// TODO: handle inheritance
-			return tag.id === typeTag.id && typeTag.value == tag.value;
+		// TODO: check if tag is type of typeTag (add inheritance)
+		// TODO: handle inheritance
+		return tag.id === typeTag.id && typeTag.value == tag.value;
 	}
 
-	function onFilterUpdate(event) {
-		const {filterTags} = event.detail;
+	function onFilterUpdate(filterTags) {
 		const filter = item => {
-			const [{taxonomyTags}] = item.Data;
+			const [{label, taxonomyTags}] = item.Data;
 
-			const missingTag = filterTags
-					.find(filterTag => !!taxonomyTags.find(tag => isTypeOfTag(tag, filterTag)));
+			const matchingTags = filterTags
+					.every(filterTag => !!taxonomyTags.find(tag => isTypeOfTag(tag, filterTag)));
 
-			return !missingTag;
+			if (matchingTags) {
+					return searchKeyword ?
+						label.toLowerCase().includes(searchKeyword.toLowerCase()) : true;
+			}
+
+			return false;
 		};
 
 		console.log('filter updated!');
 		items = testDataItems.filter(item => filter(item));
 	}
+
 </script>
 
+<svelte:head>
+		<title>{title}</title>
+</svelte:head>
 <TopAppBar variant="static">
 	<Row>
 	  <Section>
@@ -53,7 +61,7 @@
 		<Content>
 			<Textfield label="Search..." bind:value={searchKeyword}/>
 			<span class="filter-header">Advanced Filters</span>
-			<TaxonomyFilter trees={vocabularies} on:change={onFilterUpdate}/>
+			<TaxonomyFilter trees={vocabularies} on:change={event => onFilterUpdate(event.detail.filterTags)}/>
 		</Content>
 	</Drawer>
 	<AppContent>
@@ -62,17 +70,17 @@
 				{#each items as item}
 					<Item>
 						<Text>
-							<PrimaryText>{item.Data[0].Label}</PrimaryText>
+							<PrimaryText>{item.Data[0].label}</PrimaryText>
 							<SecondaryText>{Math.floor(Math.random()*10) + 1} revisions. <a>Earlier versions.</a> </SecondaryText>
 						</Text>
 						{#each item.Data[0].taxonomyTags as tag}
-						<Chip chip={tag.id}>
-						{#if tag.value}
-								<Text>{tag.name}: {tag.value}</Text>
-						{:else}
-								<Text>{tag.name}</Text>
-						{/if}
-						</Chip>
+										<Chip chip={tag.id}>
+								{#if tag.value}
+						<Text>{tag.name}: {tag.value}</Text>
+								{:else}
+						<Text>{tag.name}</Text>
+								{/if}
+										</Chip>
 						{/each}
 					</Item>
 				{/each}

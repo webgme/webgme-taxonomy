@@ -28895,7 +28895,7 @@ var app = (function () {
     function getRandomData() {
     	const name = `Subject #${i++} data`;
     	return {
-    		Label: name,
+    		label: name,
     		taxonomyTags: data.children[0].children.flatMap(getRandomTags)
     	};
     }
@@ -28921,17 +28921,17 @@ var app = (function () {
 
     function get_each_context(ctx, list, i) {
     	const child_ctx = ctx.slice();
-    	child_ctx[6] = list[i];
+    	child_ctx[7] = list[i];
     	return child_ctx;
     }
 
     function get_each_context_1(ctx, list, i) {
     	const child_ctx = ctx.slice();
-    	child_ctx[9] = list[i];
+    	child_ctx[10] = list[i];
     	return child_ctx;
     }
 
-    // (36:2) <Title>
+    // (42:2) <Title>
     function create_default_slot_14(ctx) {
     	let t;
 
@@ -28954,14 +28954,14 @@ var app = (function () {
     		block,
     		id: create_default_slot_14.name,
     		type: "slot",
-    		source: "(36:2) <Title>",
+    		source: "(42:2) <Title>",
     		ctx
     	});
 
     	return block;
     }
 
-    // (35:3) <Section>
+    // (41:3) <Section>
     function create_default_slot_13(ctx) {
     	let title_1;
     	let current;
@@ -28985,7 +28985,7 @@ var app = (function () {
     		p: function update(ctx, dirty) {
     			const title_1_changes = {};
 
-    			if (dirty & /*$$scope, title*/ 4097) {
+    			if (dirty & /*$$scope, title*/ 8193) {
     				title_1_changes.$$scope = { dirty, ctx };
     			}
 
@@ -29009,14 +29009,14 @@ var app = (function () {
     		block,
     		id: create_default_slot_13.name,
     		type: "slot",
-    		source: "(35:3) <Section>",
+    		source: "(41:3) <Section>",
     		ctx
     	});
 
     	return block;
     }
 
-    // (34:1) <Row>
+    // (40:1) <Row>
     function create_default_slot_12(ctx) {
     	let section;
     	let current;
@@ -29040,7 +29040,7 @@ var app = (function () {
     		p: function update(ctx, dirty) {
     			const section_changes = {};
 
-    			if (dirty & /*$$scope, title*/ 4097) {
+    			if (dirty & /*$$scope, title*/ 8193) {
     				section_changes.$$scope = { dirty, ctx };
     			}
 
@@ -29064,14 +29064,14 @@ var app = (function () {
     		block,
     		id: create_default_slot_12.name,
     		type: "slot",
-    		source: "(34:1) <Row>",
+    		source: "(40:1) <Row>",
     		ctx
     	});
 
     	return block;
     }
 
-    // (33:0) <TopAppBar variant="static">
+    // (39:0) <TopAppBar variant="static">
     function create_default_slot_11(ctx) {
     	let row;
     	let current;
@@ -29095,7 +29095,7 @@ var app = (function () {
     		p: function update(ctx, dirty) {
     			const row_changes = {};
 
-    			if (dirty & /*$$scope, title*/ 4097) {
+    			if (dirty & /*$$scope, title*/ 8193) {
     				row_changes.$$scope = { dirty, ctx };
     			}
 
@@ -29119,14 +29119,14 @@ var app = (function () {
     		block,
     		id: create_default_slot_11.name,
     		type: "slot",
-    		source: "(33:0) <TopAppBar variant=\\\"static\\\">",
+    		source: "(39:0) <TopAppBar variant=\\\"static\\\">",
     		ctx
     	});
 
     	return block;
     }
 
-    // (44:2) <Content>
+    // (50:2) <Content>
     function create_default_slot_10(ctx) {
     	let textfield;
     	let updating_value;
@@ -29154,7 +29154,7 @@ var app = (function () {
     			$$inline: true
     		});
 
-    	taxonomyfilter.$on("change", /*onFilterUpdate*/ ctx[4]);
+    	taxonomyfilter.$on("change", /*change_handler*/ ctx[6]);
 
     	const block = {
     		c: function create() {
@@ -29165,7 +29165,7 @@ var app = (function () {
     			t2 = space();
     			create_component(taxonomyfilter.$$.fragment);
     			attr_dev(span, "class", "filter-header svelte-1wyfxk7");
-    			add_location(span, file, 45, 3, 1565);
+    			add_location(span, file, 51, 3, 1742);
     		},
     		m: function mount(target, anchor) {
     			mount_component(textfield, target, anchor);
@@ -29210,14 +29210,14 @@ var app = (function () {
     		block,
     		id: create_default_slot_10.name,
     		type: "slot",
-    		source: "(44:2) <Content>",
+    		source: "(50:2) <Content>",
     		ctx
     	});
 
     	return block;
     }
 
-    // (43:1) <Drawer>
+    // (49:1) <Drawer>
     function create_default_slot_9(ctx) {
     	let content;
     	let current;
@@ -29241,7 +29241,7 @@ var app = (function () {
     		p: function update(ctx, dirty) {
     			const content_changes = {};
 
-    			if (dirty & /*$$scope, searchKeyword*/ 4098) {
+    			if (dirty & /*$$scope, searchKeyword*/ 8194) {
     				content_changes.$$scope = { dirty, ctx };
     			}
 
@@ -29265,16 +29265,16 @@ var app = (function () {
     		block,
     		id: create_default_slot_9.name,
     		type: "slot",
-    		source: "(43:1) <Drawer>",
+    		source: "(49:1) <Drawer>",
     		ctx
     	});
 
     	return block;
     }
 
-    // (56:7) <PrimaryText>
+    // (62:7) <PrimaryText>
     function create_default_slot_8(ctx) {
-    	let t_value = /*item*/ ctx[6].Data[0].Label + "";
+    	let t_value = /*item*/ ctx[7].Data[0].label + "";
     	let t;
 
     	const block = {
@@ -29285,7 +29285,7 @@ var app = (function () {
     			insert_dev(target, t, anchor);
     		},
     		p: function update(ctx, dirty) {
-    			if (dirty & /*items*/ 4 && t_value !== (t_value = /*item*/ ctx[6].Data[0].Label + "")) set_data_dev(t, t_value);
+    			if (dirty & /*items*/ 4 && t_value !== (t_value = /*item*/ ctx[7].Data[0].label + "")) set_data_dev(t, t_value);
     		},
     		d: function destroy(detaching) {
     			if (detaching) detach_dev(t);
@@ -29296,14 +29296,14 @@ var app = (function () {
     		block,
     		id: create_default_slot_8.name,
     		type: "slot",
-    		source: "(56:7) <PrimaryText>",
+    		source: "(62:7) <PrimaryText>",
     		ctx
     	});
 
     	return block;
     }
 
-    // (57:7) <SecondaryText>
+    // (63:7) <SecondaryText>
     function create_default_slot_7(ctx) {
     	let t0_value = Math.floor(Math.random() * 10) + 1 + "";
     	let t0;
@@ -29317,7 +29317,7 @@ var app = (function () {
     			a = element("a");
     			a.textContent = "Earlier versions.";
     			attr_dev(a, "class", "svelte-1wyfxk7");
-    			add_location(a, file, 56, 68, 1936);
+    			add_location(a, file, 62, 68, 2147);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, t0, anchor);
@@ -29336,14 +29336,14 @@ var app = (function () {
     		block,
     		id: create_default_slot_7.name,
     		type: "slot",
-    		source: "(57:7) <SecondaryText>",
+    		source: "(63:7) <SecondaryText>",
     		ctx
     	});
 
     	return block;
     }
 
-    // (55:6) <Text>
+    // (61:6) <Text>
     function create_default_slot_6(ctx) {
     	let primarytext;
     	let t;
@@ -29381,14 +29381,14 @@ var app = (function () {
     		p: function update(ctx, dirty) {
     			const primarytext_changes = {};
 
-    			if (dirty & /*$$scope, items*/ 4100) {
+    			if (dirty & /*$$scope, items*/ 8196) {
     				primarytext_changes.$$scope = { dirty, ctx };
     			}
 
     			primarytext.$set(primarytext_changes);
     			const secondarytext_changes = {};
 
-    			if (dirty & /*$$scope*/ 4096) {
+    			if (dirty & /*$$scope*/ 8192) {
     				secondarytext_changes.$$scope = { dirty, ctx };
     			}
 
@@ -29416,14 +29416,14 @@ var app = (function () {
     		block,
     		id: create_default_slot_6.name,
     		type: "slot",
-    		source: "(55:6) <Text>",
+    		source: "(61:6) <Text>",
     		ctx
     	});
 
     	return block;
     }
 
-    // (63:6) {:else}
+    // (69:8) {:else}
     function create_else_block(ctx) {
     	let text_1;
     	let current;
@@ -29447,7 +29447,7 @@ var app = (function () {
     		p: function update(ctx, dirty) {
     			const text_1_changes = {};
 
-    			if (dirty & /*$$scope, items*/ 4100) {
+    			if (dirty & /*$$scope, items*/ 8196) {
     				text_1_changes.$$scope = { dirty, ctx };
     			}
 
@@ -29471,14 +29471,14 @@ var app = (function () {
     		block,
     		id: create_else_block.name,
     		type: "else",
-    		source: "(63:6) {:else}",
+    		source: "(69:8) {:else}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (61:6) {#if tag.value}
+    // (67:8) {#if tag.value}
     function create_if_block(ctx) {
     	let text_1;
     	let current;
@@ -29502,7 +29502,7 @@ var app = (function () {
     		p: function update(ctx, dirty) {
     			const text_1_changes = {};
 
-    			if (dirty & /*$$scope, items*/ 4100) {
+    			if (dirty & /*$$scope, items*/ 8196) {
     				text_1_changes.$$scope = { dirty, ctx };
     			}
 
@@ -29526,16 +29526,16 @@ var app = (function () {
     		block,
     		id: create_if_block.name,
     		type: "if",
-    		source: "(61:6) {#if tag.value}",
+    		source: "(67:8) {#if tag.value}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (64:8) <Text>
+    // (70:6) <Text>
     function create_default_slot_5(ctx) {
-    	let t_value = /*tag*/ ctx[9].name + "";
+    	let t_value = /*tag*/ ctx[10].name + "";
     	let t;
 
     	const block = {
@@ -29546,7 +29546,7 @@ var app = (function () {
     			insert_dev(target, t, anchor);
     		},
     		p: function update(ctx, dirty) {
-    			if (dirty & /*items*/ 4 && t_value !== (t_value = /*tag*/ ctx[9].name + "")) set_data_dev(t, t_value);
+    			if (dirty & /*items*/ 4 && t_value !== (t_value = /*tag*/ ctx[10].name + "")) set_data_dev(t, t_value);
     		},
     		d: function destroy(detaching) {
     			if (detaching) detach_dev(t);
@@ -29557,19 +29557,19 @@ var app = (function () {
     		block,
     		id: create_default_slot_5.name,
     		type: "slot",
-    		source: "(64:8) <Text>",
+    		source: "(70:6) <Text>",
     		ctx
     	});
 
     	return block;
     }
 
-    // (62:8) <Text>
+    // (68:6) <Text>
     function create_default_slot_4(ctx) {
-    	let t0_value = /*tag*/ ctx[9].name + "";
+    	let t0_value = /*tag*/ ctx[10].name + "";
     	let t0;
     	let t1;
-    	let t2_value = /*tag*/ ctx[9].value + "";
+    	let t2_value = /*tag*/ ctx[10].value + "";
     	let t2;
 
     	const block = {
@@ -29584,8 +29584,8 @@ var app = (function () {
     			insert_dev(target, t2, anchor);
     		},
     		p: function update(ctx, dirty) {
-    			if (dirty & /*items*/ 4 && t0_value !== (t0_value = /*tag*/ ctx[9].name + "")) set_data_dev(t0, t0_value);
-    			if (dirty & /*items*/ 4 && t2_value !== (t2_value = /*tag*/ ctx[9].value + "")) set_data_dev(t2, t2_value);
+    			if (dirty & /*items*/ 4 && t0_value !== (t0_value = /*tag*/ ctx[10].name + "")) set_data_dev(t0, t0_value);
+    			if (dirty & /*items*/ 4 && t2_value !== (t2_value = /*tag*/ ctx[10].value + "")) set_data_dev(t2, t2_value);
     		},
     		d: function destroy(detaching) {
     			if (detaching) detach_dev(t0);
@@ -29598,14 +29598,14 @@ var app = (function () {
     		block,
     		id: create_default_slot_4.name,
     		type: "slot",
-    		source: "(62:8) <Text>",
+    		source: "(68:6) <Text>",
     		ctx
     	});
 
     	return block;
     }
 
-    // (60:6) <Chip chip={tag.id}>
+    // (66:10) <Chip chip={tag.id}>
     function create_default_slot_3(ctx) {
     	let current_block_type_index;
     	let if_block;
@@ -29615,7 +29615,7 @@ var app = (function () {
     	const if_blocks = [];
 
     	function select_block_type(ctx, dirty) {
-    		if (/*tag*/ ctx[9].value) return 0;
+    		if (/*tag*/ ctx[10].value) return 0;
     		return 1;
     	}
 
@@ -29678,21 +29678,21 @@ var app = (function () {
     		block,
     		id: create_default_slot_3.name,
     		type: "slot",
-    		source: "(60:6) <Chip chip={tag.id}>",
+    		source: "(66:10) <Chip chip={tag.id}>",
     		ctx
     	});
 
     	return block;
     }
 
-    // (59:6) {#each item.Data[0].taxonomyTags as tag}
+    // (65:6) {#each item.Data[0].taxonomyTags as tag}
     function create_each_block_1(ctx) {
     	let chip;
     	let current;
 
     	chip = new Chip({
     			props: {
-    				chip: /*tag*/ ctx[9].id,
+    				chip: /*tag*/ ctx[10].id,
     				$$slots: { default: [create_default_slot_3] },
     				$$scope: { ctx }
     			},
@@ -29709,9 +29709,9 @@ var app = (function () {
     		},
     		p: function update(ctx, dirty) {
     			const chip_changes = {};
-    			if (dirty & /*items*/ 4) chip_changes.chip = /*tag*/ ctx[9].id;
+    			if (dirty & /*items*/ 4) chip_changes.chip = /*tag*/ ctx[10].id;
 
-    			if (dirty & /*$$scope, items*/ 4100) {
+    			if (dirty & /*$$scope, items*/ 8196) {
     				chip_changes.$$scope = { dirty, ctx };
     			}
 
@@ -29735,14 +29735,14 @@ var app = (function () {
     		block,
     		id: create_each_block_1.name,
     		type: "each",
-    		source: "(59:6) {#each item.Data[0].taxonomyTags as tag}",
+    		source: "(65:6) {#each item.Data[0].taxonomyTags as tag}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (54:5) <Item>
+    // (60:5) <Item>
     function create_default_slot_2(ctx) {
     	let text_1;
     	let t0;
@@ -29757,7 +29757,7 @@ var app = (function () {
     			$$inline: true
     		});
 
-    	let each_value_1 = /*item*/ ctx[6].Data[0].taxonomyTags;
+    	let each_value_1 = /*item*/ ctx[7].Data[0].taxonomyTags;
     	validate_each_argument(each_value_1);
     	let each_blocks = [];
 
@@ -29794,14 +29794,14 @@ var app = (function () {
     		p: function update(ctx, dirty) {
     			const text_1_changes = {};
 
-    			if (dirty & /*$$scope, items*/ 4100) {
+    			if (dirty & /*$$scope, items*/ 8196) {
     				text_1_changes.$$scope = { dirty, ctx };
     			}
 
     			text_1.$set(text_1_changes);
 
     			if (dirty & /*items*/ 4) {
-    				each_value_1 = /*item*/ ctx[6].Data[0].taxonomyTags;
+    				each_value_1 = /*item*/ ctx[7].Data[0].taxonomyTags;
     				validate_each_argument(each_value_1);
     				let i;
 
@@ -29860,14 +29860,14 @@ var app = (function () {
     		block,
     		id: create_default_slot_2.name,
     		type: "slot",
-    		source: "(54:5) <Item>",
+    		source: "(60:5) <Item>",
     		ctx
     	});
 
     	return block;
     }
 
-    // (53:4) {#each items as item}
+    // (59:4) {#each items as item}
     function create_each_block(ctx) {
     	let item;
     	let current;
@@ -29891,7 +29891,7 @@ var app = (function () {
     		p: function update(ctx, dirty) {
     			const item_changes = {};
 
-    			if (dirty & /*$$scope, items*/ 4100) {
+    			if (dirty & /*$$scope, items*/ 8196) {
     				item_changes.$$scope = { dirty, ctx };
     			}
 
@@ -29915,14 +29915,14 @@ var app = (function () {
     		block,
     		id: create_each_block.name,
     		type: "each",
-    		source: "(53:4) {#each items as item}",
+    		source: "(59:4) {#each items as item}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (52:3) <List twoLine avatarList>
+    // (58:3) <List twoLine avatarList>
     function create_default_slot_1(ctx) {
     	let each_1_anchor;
     	let current;
@@ -30011,14 +30011,14 @@ var app = (function () {
     		block,
     		id: create_default_slot_1.name,
     		type: "slot",
-    		source: "(52:3) <List twoLine avatarList>",
+    		source: "(58:3) <List twoLine avatarList>",
     		ctx
     	});
 
     	return block;
     }
 
-    // (50:1) <AppContent>
+    // (56:1) <AppContent>
     function create_default_slot(ctx) {
     	let main;
     	let list;
@@ -30039,7 +30039,7 @@ var app = (function () {
     			main = element("main");
     			create_component(list.$$.fragment);
     			attr_dev(main, "class", "svelte-1wyfxk7");
-    			add_location(main, file, 50, 2, 1726);
+    			add_location(main, file, 56, 2, 1937);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, main, anchor);
@@ -30049,7 +30049,7 @@ var app = (function () {
     		p: function update(ctx, dirty) {
     			const list_changes = {};
 
-    			if (dirty & /*$$scope, items*/ 4100) {
+    			if (dirty & /*$$scope, items*/ 8196) {
     				list_changes.$$scope = { dirty, ctx };
     			}
 
@@ -30074,7 +30074,7 @@ var app = (function () {
     		block,
     		id: create_default_slot.name,
     		type: "slot",
-    		source: "(50:1) <AppContent>",
+    		source: "(56:1) <AppContent>",
     		ctx
     	});
 
@@ -30082,21 +30082,24 @@ var app = (function () {
     }
 
     function create_fragment(ctx) {
-    	let topappbar;
+    	let title_value;
     	let t0;
+    	let topappbar;
+    	let t1;
     	let div;
     	let drawer;
-    	let t1;
-    	let appcontent;
     	let t2;
-    	let link0;
+    	let appcontent;
     	let t3;
-    	let link1;
+    	let link0;
     	let t4;
-    	let link2;
+    	let link1;
     	let t5;
+    	let link2;
+    	let t6;
     	let link3;
     	let current;
+    	document.title = title_value = /*title*/ ctx[0];
 
     	topappbar = new TopAppBar({
     			props: {
@@ -30125,77 +30128,83 @@ var app = (function () {
 
     	const block = {
     		c: function create() {
-    			create_component(topappbar.$$.fragment);
     			t0 = space();
+    			create_component(topappbar.$$.fragment);
+    			t1 = space();
     			div = element("div");
     			create_component(drawer.$$.fragment);
-    			t1 = space();
-    			create_component(appcontent.$$.fragment);
     			t2 = space();
-    			link0 = element("link");
+    			create_component(appcontent.$$.fragment);
     			t3 = space();
-    			link1 = element("link");
+    			link0 = element("link");
     			t4 = space();
-    			link2 = element("link");
+    			link1 = element("link");
     			t5 = space();
+    			link2 = element("link");
+    			t6 = space();
     			link3 = element("link");
     			attr_dev(div, "class", "drawer-container svelte-1wyfxk7");
-    			add_location(div, file, 41, 0, 1448);
+    			add_location(div, file, 47, 0, 1625);
     			attr_dev(link0, "rel", "stylesheet");
     			attr_dev(link0, "href", "https://fonts.googleapis.com/icon?family=Material+Icons");
     			attr_dev(link0, "class", "svelte-1wyfxk7");
-    			add_location(link0, file, 75, 0, 2312);
+    			add_location(link0, file, 81, 0, 2533);
     			attr_dev(link1, "rel", "stylesheet");
     			attr_dev(link1, "href", "https://fonts.googleapis.com/css?family=Roboto:300,400,500,600,700");
     			attr_dev(link1, "class", "svelte-1wyfxk7");
-    			add_location(link1, file, 80, 0, 2421);
+    			add_location(link1, file, 86, 0, 2642);
     			attr_dev(link2, "rel", "stylesheet");
     			attr_dev(link2, "href", "https://fonts.googleapis.com/css?family=Roboto+Mono");
     			attr_dev(link2, "class", "svelte-1wyfxk7");
-    			add_location(link2, file, 85, 0, 2546);
+    			add_location(link2, file, 91, 0, 2767);
     			attr_dev(link3, "rel", "stylesheet");
     			attr_dev(link3, "href", "https://cdn.jsdelivr.net/npm/svelte-material-ui@6.0.0/bare.min.css");
     			attr_dev(link3, "class", "svelte-1wyfxk7");
-    			add_location(link3, file, 90, 0, 2696);
+    			add_location(link3, file, 96, 0, 2917);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
     		},
     		m: function mount(target, anchor) {
-    			mount_component(topappbar, target, anchor);
     			insert_dev(target, t0, anchor);
+    			mount_component(topappbar, target, anchor);
+    			insert_dev(target, t1, anchor);
     			insert_dev(target, div, anchor);
     			mount_component(drawer, div, null);
-    			append_dev(div, t1);
+    			append_dev(div, t2);
     			mount_component(appcontent, div, null);
-    			insert_dev(target, t2, anchor);
-    			insert_dev(target, link0, anchor);
     			insert_dev(target, t3, anchor);
-    			insert_dev(target, link1, anchor);
+    			insert_dev(target, link0, anchor);
     			insert_dev(target, t4, anchor);
-    			insert_dev(target, link2, anchor);
+    			insert_dev(target, link1, anchor);
     			insert_dev(target, t5, anchor);
+    			insert_dev(target, link2, anchor);
+    			insert_dev(target, t6, anchor);
     			insert_dev(target, link3, anchor);
     			current = true;
     		},
     		p: function update(ctx, [dirty]) {
+    			if ((!current || dirty & /*title*/ 1) && title_value !== (title_value = /*title*/ ctx[0])) {
+    				document.title = title_value;
+    			}
+
     			const topappbar_changes = {};
 
-    			if (dirty & /*$$scope, title*/ 4097) {
+    			if (dirty & /*$$scope, title*/ 8193) {
     				topappbar_changes.$$scope = { dirty, ctx };
     			}
 
     			topappbar.$set(topappbar_changes);
     			const drawer_changes = {};
 
-    			if (dirty & /*$$scope, searchKeyword*/ 4098) {
+    			if (dirty & /*$$scope, searchKeyword*/ 8194) {
     				drawer_changes.$$scope = { dirty, ctx };
     			}
 
     			drawer.$set(drawer_changes);
     			const appcontent_changes = {};
 
-    			if (dirty & /*$$scope, items*/ 4100) {
+    			if (dirty & /*$$scope, items*/ 8196) {
     				appcontent_changes.$$scope = { dirty, ctx };
     			}
 
@@ -30215,18 +30224,19 @@ var app = (function () {
     			current = false;
     		},
     		d: function destroy(detaching) {
-    			destroy_component(topappbar, detaching);
     			if (detaching) detach_dev(t0);
+    			destroy_component(topappbar, detaching);
+    			if (detaching) detach_dev(t1);
     			if (detaching) detach_dev(div);
     			destroy_component(drawer);
     			destroy_component(appcontent);
-    			if (detaching) detach_dev(t2);
-    			if (detaching) detach_dev(link0);
     			if (detaching) detach_dev(t3);
-    			if (detaching) detach_dev(link1);
+    			if (detaching) detach_dev(link0);
     			if (detaching) detach_dev(t4);
-    			if (detaching) detach_dev(link2);
+    			if (detaching) detach_dev(link1);
     			if (detaching) detach_dev(t5);
+    			if (detaching) detach_dev(link2);
+    			if (detaching) detach_dev(t6);
     			if (detaching) detach_dev(link3);
     		}
     	};
@@ -30256,13 +30266,18 @@ var app = (function () {
     	let vocabularies = data.children[0].children;
     	let items$1 = items;
 
-    	function onFilterUpdate(event) {
-    		const { filterTags } = event.detail;
-
+    	function onFilterUpdate(filterTags) {
     		const filter = item => {
-    			const [{ taxonomyTags }] = item.Data;
-    			const missingTag = filterTags.find(filterTag => !!taxonomyTags.find(tag => isTypeOfTag(tag, filterTag)));
-    			return !missingTag;
+    			const [{ label, taxonomyTags }] = item.Data;
+    			const matchingTags = filterTags.every(filterTag => !!taxonomyTags.find(tag => isTypeOfTag(tag, filterTag)));
+
+    			if (matchingTags) {
+    				return searchKeyword
+    				? label.toLowerCase().includes(searchKeyword.toLowerCase())
+    				: true;
+    			}
+
+    			return false;
     		};
 
     		console.log('filter updated!');
@@ -30279,6 +30294,8 @@ var app = (function () {
     		searchKeyword = value;
     		$$invalidate(1, searchKeyword);
     	}
+
+    	const change_handler = event => onFilterUpdate(event.detail.filterTags);
 
     	$$self.$$set = $$props => {
     		if ('title' in $$props) $$invalidate(0, title = $$props.title);
@@ -30329,7 +30346,8 @@ var app = (function () {
     		items$1,
     		vocabularies,
     		onFilterUpdate,
-    		textfield_value_binding
+    		textfield_value_binding,
+    		change_handler
     	];
     }
 
