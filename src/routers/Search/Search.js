@@ -15,11 +15,14 @@
 
 // http://expressjs.com/en/guide/routing.html
 var express = require('express'),
-    router = express.Router();
+    router = express.Router(),
+    logger;
 
-/**
- * Called when the server is created but before it starts to listening to incoming requests.
- * N.B. gmeAuth, safeStorage and workerManager are not ready to use until the start function is called.
+const SearchFilterDataExporter = require('../../common/SearchFilterDataExporter');
+const webgme = require('webgme-engine');
+const gmeConfig = require('../../../config');
+
+/* N.B. gmeAuth, safeStorage and workerManager are not ready to use until the start function is called.
  * (However inside an incoming request they are all ensured to have been initialized.)
  *
  * @param {object} middlewareOpts - Passed by the webgme server.
@@ -32,10 +35,10 @@ var express = require('express'),
  * @param {object} middlewareOpts.workerManager - Spawns and keeps track of "worker" sub-processes.
  */
 function initialize(middlewareOpts) {
-    var logger = middlewareOpts.logger.fork('Search'),
-        ensureAuthenticated = middlewareOpts.ensureAuthenticated,
-        getUserId = middlewareOpts.getUserId;
+    const ensureAuthenticated = middlewareOpts.ensureAuthenticated;
+    const getUserId = middlewareOpts.getUserId;
 
+    logger = middlewareOpts.logger.fork('Search');
     logger.debug('initializing ...');
 
     // Ensure authenticated can be used only after this rule.
@@ -50,22 +53,35 @@ function initialize(middlewareOpts) {
     // Use ensureAuthenticated if the routes require authentication. (Can be set explicitly for each route.)
     router.use('*', ensureAuthenticated);
 
-    router.get('/index.html', function (req, res/*, next*/) {
+    router.get('/:projectId/branch/:branch/index.html', function (req, res/*, next*/) {
+        // TODO: return the search dashboard (index.html) file
         var userId = getUserId(req);
 
         res.json({userId: userId, message: 'get request was handled'});
-
-        // TODO: load the search dashboard
     });
 
-    router.get('/:project/:branch/taxonomy.json', function (req, res, next) {
-        // TODO: load the taxonomy schema for the given project, branch
+    router.use('/:projectId/branch/:branch/', (req, res, next) => {
+        // TODO: set the core, rootNode on the request object
+        //const gmeAuth = await webgme.getGmeAuth(gmeConfig);
+        //const storage = webgme.getStorage(logger.fork('storage'), gmeConfig, gmeAuth);
+        //await storage.openDatabase();
+    });
+
+    router.get('/:projectId/branch/:branch/taxonomy.json', async function (req, res, next) {
+        // TODO: use the core, rootNode, etc, to generate the taxonomy.json
+        const exporter = new SearchFilterDataExporter(core);
+        // TODO: find the taxonomy node
+        const data = await exporter.toSchema(node);
+        res.json(data);
     });
 
     router.post('/query', function (req, res/*, next*/) {
         // TODO: send the taxonomy, search query and return the results as JSON
+        // TODO: this should probably have the context (project, branch, etc), too
         res.sendStatus(201);
     });
+
+    // TODO: should we support uploading data? Probably
 
     logger.debug('ready');
 }
