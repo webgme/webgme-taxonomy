@@ -60,6 +60,7 @@ function initialize(middlewareOpts) {
         res.json({userId: userId, message: 'get request was handled'});
     });
 
+    // Perhaps the path should include the node ID, too...
     router.use('/:projectId/branch/:branch/', (req, res, next) => {
         // TODO: set the core, rootNode on the request object
         //const gmeAuth = await webgme.getGmeAuth(gmeConfig);
