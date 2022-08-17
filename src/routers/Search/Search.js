@@ -21,6 +21,7 @@ var express = require('express'),
 const SearchFilterDataExporter = require('../../common/SearchFilterDataExporter');
 const webgme = require('webgme-engine');
 const gmeConfig = require('../../../config');
+const Core = webgme.requirejs('common/core/coreQ');
 
 /* N.B. gmeAuth, safeStorage and workerManager are not ready to use until the start function is called.
  * (However inside an incoming request they are all ensured to have been initialized.)
@@ -37,6 +38,7 @@ const gmeConfig = require('../../../config');
 function initialize(middlewareOpts) {
     const ensureAuthenticated = middlewareOpts.ensureAuthenticated;
     const getUserId = middlewareOpts.getUserId;
+    const safeStorage = middlewareOpts.safeStorage;
 
     logger = middlewareOpts.logger.fork('Search');
     logger.debug('initializing ...');
@@ -61,7 +63,26 @@ function initialize(middlewareOpts) {
     });
 
     // Perhaps the path should include the node ID, too...
-    router.use('/:projectId/branch/:branch/', (req, res, next) => {
+    router.use('/:projectId/branch/:branch/', async (req, res, next) => {
+        const userId = getUserId(req);
+        try {
+            const context = {};
+
+            context.project = await safeStorage.openProject({username: userId, projectId: req.params.projectId});
+            context.core = new Core(context.project, {globConf: middlewareOpts.gmeConfig, logger: logger.fork('core')});
+            context.branchName = req.params.branch;
+            context.commitObject = await context.project.getCommitObject(context.branchName);
+            context.root = await context.core.loadRoot(context.commitObject.root);
+
+            req.webgmeContext = context;
+            next();
+        } catch (e) {
+            logger.error(e);
+            res.sendStatus(500);
+        }
+        
+       
+        
         // TODO: set the core, rootNode on the request object
         //const gmeAuth = await webgme.getGmeAuth(gmeConfig);
         //const storage = webgme.getStorage(logger.fork('storage'), gmeConfig, gmeAuth);
@@ -70,9 +91,9 @@ function initialize(middlewareOpts) {
 
     router.get('/:projectId/branch/:branch/taxonomy.json', async function (req, res, next) {
         // TODO: use the core, rootNode, etc, to generate the taxonomy.json
-        const exporter = new SearchFilterDataExporter(core);
+        const exporter = new SearchFilterDataExporter(req.webgmeContext.core);
         // TODO: find the taxonomy node
-        const data = await exporter.toSchema(node);
+        const data = await exporter.toSchemaSingleTaxonomyProject(req.webgmeContext.root);
         res.json(data);
     });
 
