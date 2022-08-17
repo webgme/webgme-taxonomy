@@ -89,12 +89,37 @@ function initialize(middlewareOpts) {
         //await storage.openDatabase();
     });
 
-    router.get('/:projectId/branch/:branch/taxonomy.json', async function (req, res, next) {
+    router.get('/:projectId/branch/:branch/taxonomy.json', async function (req, res) {
         // TODO: use the core, rootNode, etc, to generate the taxonomy.json
         const exporter = new SearchFilterDataExporter(req.webgmeContext.core);
         // TODO: find the taxonomy node
         const data = await exporter.toSchemaSingleTaxonomyProject(req.webgmeContext.root);
         res.json(data);
+    });
+
+    router.get('/datasets.json', async function (req, res) {
+        // TODO: Retrieve all datasets for a given user from PDP.
+        //
+        // A single entry should look like:
+        //
+        //{
+            //$type:"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta",
+            //IsFunction:false,
+            //ProcessType:"labassets",
+            //ProcessId:"abc03682-d5bd-490c-b088-c2a0ab5cf07a",
+            //IsMeasure:false,
+            //Index:1,
+            //Version:0,
+            //ObserverId:"95862b95-a22b-4d0b-bd5c-2fb5fca18841",
+            //StartTime:"2021-11-05T06:55:13.278+00:00",
+            //EndTime:null,
+            //ApplicationDependencies:[],
+            //ProcessDependencies:[],
+            //Data:[
+                //{taxonomyTags}
+            //],
+            //DataFiles:[]
+        //}
     });
 
     router.post('/query', function (req, res/*, next*/) {
