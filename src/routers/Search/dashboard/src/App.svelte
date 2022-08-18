@@ -1,11 +1,11 @@
 <script lang="ts">
   import TopAppBar, { Row, Section, Title } from "@smui/top-app-bar";
   import Textfield from "@smui/textfield";
-  import Chip from "@smui/chips";
+  /*import Chip from "@smui/chips";*/
   import List, { Item, Text, PrimaryText, SecondaryText } from "@smui/list";
   import Drawer, { Content, AppContent } from "@smui/drawer";
   import TaxonomyFilter from "./TaxonomyFilter.svelte";
-  import TaxonomyData from "./TaxonomyData.ts";
+  import type TaxonomyData from "./TaxonomyData.ts";
 
   export let title: string = "Digital Phenotyping Dashboard ";
   let searchKeyword: string = "";
@@ -37,7 +37,6 @@
       return false;
     };
 
-    console.log("filter updated!", filterTags);
     items = testDataItems.filter((item) => filter(item));
   }
 
@@ -59,13 +58,19 @@
     const url = chunks.join("/") + "/taxonomy.json";
     const response = await fetch(url);
     const taxonomy = await response.json();
-    console.log({ taxonomy });
-    return taxonomy.children[0].children;
+
+    let vocabs = [taxonomy];
+    while (vocabs.length === 1) {
+      vocabs = vocabs[0].children;
+    }
+
+    return vocabs;
   }
 
   async function fetchData() {
     vocabularies = await fetchVocabularies();
   }
+
   fetchData();
 </script>
 
