@@ -11,15 +11,23 @@
     "plugin": "node ./node_modules/webgme-engine/src/bin/run_plugin.js",
     "pluginHook": "node ./node_modules/webgme-engine/src/bin/plugin_hook.js",
     "users": "node ./node_modules/webgme-engine/src/bin/usermanager.js",
-    "clean_up": "node ./node_modules/webgme-engine/src/bin/clean_up.js"
+    "clean_up": "node ./node_modules/webgme-engine/src/bin/clean_up.js",
+    "prepare": "husky install"
   },
   "version": "1.0.0",
   "devDependencies": {
     "chai": "^4.3.6",
-    "mocha": "^5.2.0"
+    "husky": "^8.0.1",
+    "lint-staged": "^13.0.3",
+    "mocha": "^5.2.0",
+    "prettier": "^2.7.1",
+    "prettier-plugin-svelte": "^2.7.0"
   },
   "dependencies": {
     "webgme": "github:webgme/webgme",
     "webgme-json-importer": "github:deepforge-dev/webgme-json-importer"
+  },
+  "lint-staged": {
+    "*.{js,css,md,svelte}": "prettier --write --plugin-search-dir=."
   }
 }
