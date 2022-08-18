@@ -1,6 +1,7 @@
 <script lang="ts">
   import TopAppBar, { Row, Section, Title } from "@smui/top-app-bar";
   import Textfield from "@smui/textfield";
+  import IconButton from "@smui/icon-button";
   /*import Chip from "@smui/chips";*/
   import List, { Item, Text, PrimaryText, SecondaryText } from "@smui/list";
   import Drawer, { Content, AppContent } from "@smui/drawer";
@@ -11,8 +12,11 @@
   let searchKeyword: string = "";
   let vocabularies: TaxonomyData[] = [];
 
-  import testDataItems from "./TestResultData.js";
-  let items = testDataItems;
+  import PDP from "./storage/PDP.ts";
+  import token from "./Bearer.ts";
+  const storageAdapter = new PDP(token);
+  let allItems = [];
+  let items = [];
 
   function isTypeOfTag(tag, typeTag) {
     // TODO: check if tag is type of typeTag (add inheritance)
@@ -20,7 +24,7 @@
     return tag.id === typeTag.id && typeTag.value == tag.value;
   }
 
-  function onFilterUpdate(filterTags) {
+  function onFilterUpdate(filterTags = []) {
     const filter = (item) => {
       const [{ label, taxonomyTags }] = item.Data;
 
@@ -37,7 +41,7 @@
       return false;
     };
 
-    items = testDataItems.filter((item) => filter(item));
+    items = allItems.filter((item) => filter(item));
   }
 
   function getTag(id) {
@@ -69,6 +73,13 @@
 
   async function fetchData() {
     vocabularies = await fetchVocabularies();
+    allItems = await storageAdapter.listArtifacts();
+    onFilterUpdate();
+  }
+
+  async function uploadArtifact() {
+    // TODO: initiate upload
+    console.log("uploading!");
   }
 
   fetchData();
@@ -81,6 +92,14 @@
   <Row>
     <Section>
       <Title>{title}</Title>
+    </Section>
+    <Section align="end" toolbar>
+      <IconButton
+        class="material-icons"
+        aria-label="Upload dataset"
+        ripple={false}
+        on:click={uploadArtifact}>file_upload</IconButton
+      >
     </Section>
   </Row>
 </TopAppBar>
