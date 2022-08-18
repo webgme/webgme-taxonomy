@@ -7,12 +7,14 @@ define([
     'js/Constants',
     'js/Utils/GMEConcepts',
     'webgme-taxonomy/JSONSchemaExporter',
+    'webgme-taxonomy/Utils',
     'js/NodePropertyNames',
     'q',
 ], function (
     CONSTANTS,
     GMEConcepts,
     JSONSchemaExporter,
+    Utils,
     nodePropertyNames,
     Q,
 ) {
@@ -224,7 +226,7 @@ define([
         const {core, rootNode} = await this._getCoreInstance()
         const meta = this._toMetaDict(core, Object.values(core.getAllMetaNodes(rootNode)));
         const exporter = new JSONSchemaExporter(core, meta);
-        const node = await this._findTaxonomyNode(core, rootNode);
+        const node = await Utils.findTaxonomyNode(core, rootNode);
         if (node) {
             const taxonomyData = await exporter.getSchemas(node);
             taxonomyData.taxonomyPath = core.getPath(node);
@@ -232,28 +234,6 @@ define([
         } else {
             return {};
         }
-    };
-
-    TagCreatorControl.prototype._findTaxonomyNode = async function (core, node) {
-        // This finds the first taxonomy node and uses it
-        // In the future, it might be nice to find all of them
-        const isTaxonomyNode = n => {
-            const baseNode = core.getMetaType(n);
-            return baseNode && core.getAttribute(baseNode, 'name') === 'Taxonomy';
-        };
-        const searchLocations = [
-            core.getRoot(node),
-            ...core.getLibraryNames(node)
-                .map(name => core.getLibraryRoot(node, name))
-        ];
-
-        return searchLocations.reduce(async (prevSearch, location) => {
-            const taxNode = await prevSearch;
-            if (taxNode) return taxNode;
-
-            const children = await core.loadChildren(location);
-            return children.find(isTaxonomyNode);
-        }, Promise.resolve(null));
     };
 
     TagCreatorControl.prototype._getCoreInstance = async function () {

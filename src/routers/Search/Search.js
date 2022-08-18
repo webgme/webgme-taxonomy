@@ -18,6 +18,7 @@ var express = require('express'),
     router = express.Router(),
     logger;
 
+const Utils = require('../../common/Utils');
 const SearchFilterDataExporter = require('../../common/SearchFilterDataExporter');
 const webgme = require('webgme-engine');
 const gmeConfig = require('../../../config');
@@ -91,9 +92,10 @@ function initialize(middlewareOpts) {
 
     router.get('/:projectId/branch/:branch/taxonomy.json', async function (req, res) {
         // TODO: use the core, rootNode, etc, to generate the taxonomy.json
-        const exporter = new SearchFilterDataExporter(req.webgmeContext.core);
-        // TODO: find the taxonomy node
-        const data = await exporter.toSchemaSingleTaxonomyProject(req.webgmeContext.root);
+        const {root, core} = req.webgmeContext;
+        const exporter = new SearchFilterDataExporter(core);
+        const node = await Utils.findTaxonomyNode(core, root);
+        const data = await exporter.toSchema(node);
         res.json(data);
     });
 

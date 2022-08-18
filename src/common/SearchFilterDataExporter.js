@@ -27,23 +27,6 @@ function factory() {
                 ),
             };
         }
-
-        async toSchemaSingleTaxonomyProject(root) {
-            const children = await this.core.loadChildren(root);
-            let node = null;
-            children.forEach(child => {
-                const meta = this.core.getMetaType(child);
-                if (this.core.getAttribute(meta, 'name') === 'Taxonomy') {
-                    node = child;
-                }
-            });
-
-            if (node) {
-                return await this.toSchema(node);
-            } else {
-                throw new Error('Cannot find taxonomy node!');
-            }
-        }
     }
 
     return SearchFilterDataExporter;
