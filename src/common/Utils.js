@@ -1,6 +1,5 @@
 
 function factory() {
-    console.log('about to define utils');
     const Utils = {
         async findTaxonomyNode(core, node) {
             // This finds the first taxonomy node and uses it
@@ -25,7 +24,6 @@ function factory() {
         }
     };
 
-    console.log({Utils});
     return Utils;
 }
 
