@@ -9,10 +9,7 @@
 
   export let title: string = "Digital Phenotyping Dashboard ";
   let searchKeyword: string = "";
-
-  // TODO: fetch the taxonomy data from the rest endpoint
-  import testData from "./TestTaxonomyData.js";
-  let vocabularies: TaxonomyData[] = testData.children[0].children;
+  let vocabularies: TaxonomyData[] = [];
 
   import testDataItems from "./TestResultData.js";
   let items = testDataItems;
@@ -54,6 +51,22 @@
       queue.push(...node.children);
     }
   }
+
+  async function fetchVocabularies() {
+    const chunks = window.location.href.split("/");
+    chunks.pop();
+    chunks.pop();
+    const url = chunks.join("/") + "/taxonomy.json";
+    const response = await fetch(url);
+    const taxonomy = await response.json();
+    console.log({ taxonomy });
+    return taxonomy.children[0].children;
+  }
+
+  async function fetchData() {
+    vocabularies = await fetchVocabularies();
+  }
+  fetchData();
 </script>
 
 <svelte:head>
