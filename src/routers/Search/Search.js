@@ -23,6 +23,8 @@ const SearchFilterDataExporter = require('../../common/SearchFilterDataExporter'
 const webgme = require('webgme-engine');
 const gmeConfig = require('../../../config');
 const Core = webgme.requirejs('common/core/coreQ');
+const path = require('path');
+const staticPath = path.join(__dirname, 'dashboard', 'public');
 
 /* N.B. gmeAuth, safeStorage and workerManager are not ready to use until the start function is called.
  * (However inside an incoming request they are all ensured to have been initialized.)
@@ -56,12 +58,7 @@ function initialize(middlewareOpts) {
     // Use ensureAuthenticated if the routes require authentication. (Can be set explicitly for each route.)
     router.use('*', ensureAuthenticated);
 
-    router.get('/:projectId/branch/:branch/index.html', function (req, res/*, next*/) {
-        // TODO: return the search dashboard (index.html) file
-        var userId = getUserId(req);
-
-        res.json({userId: userId, message: 'get request was handled'});
-    });
+    router.use('/:projectId/branch/:branch/static/', express.static(staticPath));
 
     // Perhaps the path should include the node ID, too...
     router.use('/:projectId/branch/:branch/', async (req, res, next) => {

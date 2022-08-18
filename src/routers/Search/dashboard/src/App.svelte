@@ -120,7 +120,7 @@
 />
 <link
   rel="stylesheet"
-  href="/build/smui.css"
+  href="build/smui.css"
 />
 
 <style>
