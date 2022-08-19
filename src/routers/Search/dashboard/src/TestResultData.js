@@ -4487,7 +4487,6 @@ function getRandomData() {
 
 items.forEach((item) => {
   item.Data = [getRandomData()];
-  console.log(item.Data[0].taxonomyTags);
   const sample = Math.random();
   if (sample < 0.3) {
     item.Version += 1;
