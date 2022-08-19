@@ -10,7 +10,7 @@ class PDP {
 
   _getHeaders() {
     const headers = {
-      Authorization: this.token,
+      Authorization: `Bearer ${this.token}`,
     };
     return headers;
   }
