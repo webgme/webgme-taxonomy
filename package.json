@@ -24,6 +24,8 @@
     "prettier-plugin-svelte": "^2.7.0"
   },
   "dependencies": {
+    "node-fetch": "^3.2.10",
+    "svelte": "^3.49.0",
     "webgme": "github:webgme/webgme",
     "webgme-json-importer": "github:deepforge-dev/webgme-json-importer"
   },
