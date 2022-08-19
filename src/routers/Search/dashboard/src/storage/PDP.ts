@@ -12,9 +12,9 @@ class PDP {
   _getHeaders() {
     return {
       'Authorization': 'Bearer '+this.token,
-      'accept': 'application/json',
-      'Access-Control-Allow-Origin':'*',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS'
+      //'accept': 'application/json',
+      //'Access-Control-Allow-Origin':'*',
+      //'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS'
     };
   }
 
@@ -49,10 +49,10 @@ class PDP {
     const data : object[] = (await response.json() || [{}]).filter(element => element.processType === 'data');
     let realDataItems = [];
 
-    data.forEach(process => {
+    await Promise.all(data.map(async process => {
       const processObservations = await this._getAllObservations(process.processId);
       realDataItems = realDataItems.concat(processObservations);
-    });
+    }));
     
     return realDataItems;
   }
