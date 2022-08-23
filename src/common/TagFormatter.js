@@ -8,15 +8,18 @@ function factory() {
       this.nodeGuidLookup = nodeGuidLookup;
     }
 
+    /**
+     * Convert the given tag to GUID format. If `guid` is provided, use
+     * that for the top-level tag.
+     */
     toGuidFormat(tag, guid = null) {
-      // TODO: we need an optional 2nd arg for resolving `tag.Tag` to the correct node
       const data = omit(tag, "Tag");
       if (!guid) {
         guid = this.nodeGuidLookup.getGuid(tag.Tag, data);
       }
 
       const entries = Object.entries(data);
-      // TODO: given a property (or parent name), resolve it to a GUID
+      // given a property (or parent name), resolve it to a GUID
       const guidTag = Object.fromEntries(
         entries.map(([name, data]) => {
           const propertyGuid = this.nodeGuidLookup.getPropertyGuid(guid, name);
