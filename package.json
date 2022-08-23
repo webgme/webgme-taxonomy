@@ -31,6 +31,6 @@
     "webgme-json-importer": "github:deepforge-dev/webgme-json-importer"
   },
   "lint-staged": {
-    "*.{js,css,md,svelte}": "prettier --write --plugin-search-dir=."
+    "src/**/*.{js,css,md,svelte}": "prettier --write --plugin-search-dir=."
   }
 }

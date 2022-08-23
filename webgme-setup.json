@@ -33,6 +33,11 @@
         "src": "src/routers/Search",
         "test": "test/routers/Search",
         "mount": "routers/Search"
+      },
+      "TagFormat": {
+        "src": "src/routers/TagFormat",
+        "test": "test/routers/TagFormat",
+        "mount": "routers/TagFormat"
       }
     }
   },
