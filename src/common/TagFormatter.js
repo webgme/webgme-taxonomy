@@ -17,7 +17,6 @@ function factory() {
 
       const entries = Object.entries(data);
       // TODO: given a property (or parent name), resolve it to a GUID
-      // TODO: given a property (or parent name), resolve it to a GUID
       const guidTag = Object.fromEntries(
         entries.map(([name, data]) => {
           const propertyGuid = this.nodeGuidLookup.getPropertyGuid(guid, name);

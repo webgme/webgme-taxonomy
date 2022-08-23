@@ -63,55 +63,7 @@ describe("TagFormatter", function () {
     });
   });
 
-  it("should throw error if ambiguous tag names (ctor)", function () {});
+  it.skip("should throw error if ambiguous tag names (ctor)", function () {
+    throw new Error('todo!');  // TODO
+  });
 });
-
-//## Uses the form and creates the following tag:
-//```javascript
-//[
-//{
-//"Tag": "Subject",
-//"Height": 123,
-//"Sex": "Male",
-//"Study": {
-//"PI": ...
-//}
-//},
-//... // Other tags
-//]
-//```
-
-//## (Edit or pass to the CLI)
-
-//## CLI: Convert to...
-//```javascript
-//{
-//"taxonomyTags": [
-//{
-//"ID": "GUID_OF_SUBJECT",
-//"GUID_OF_HEIGHT": 123,
-//"GUID_OF_SEX": "GUID_OF_MALE",
-//"GUID_OF_PARENT":
-//}
-//... // Other tags
-//],
-//}
-//```
-
-//## Conversion:
-//- walk the JSON schema and build HashMap<GUID, Name>
-//- For each guid, look up name
-//- we can just generate this file from the taxonomy editor
-//- expose via REST API (ie, a webgme router)
-//- toTaxonomyGUIDsFile
-//- Tag Lookup Table: HashMap<GUID, Name>
-//- Property Lookup Table: HashMap<(tag) GUID, HashMap<Name, (property)GUID>>
-//- dict[GUID_OF_SUBJECT][GUID_OF_HEIGHT] = "Height"
-//- toHumanReadableTaxonomyFile
-//- HashMap<GUID, Name>
-
-//- make a resolver between formats for this
-
-//## Change of format?
-//- I think I actually do need to change the format...
-//- The current format needs us to embed ID
