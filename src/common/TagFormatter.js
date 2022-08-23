@@ -48,22 +48,35 @@ function factory() {
 
     static async from(core, taxonomyRoot) {
       // Construct the lookup tables for the display names and GUIDs
-      const nodes = await core.loadSubtree(taxonomyRoot);
-      const namedNodes = nodes.map((node) => [
+      const nodes = await core.loadSubTree(taxonomyRoot);
+      const namesAndGuids = nodes.map((node) => [
         core.getAttribute(node, "name"),
         core.getGuid(node),
-        node,
       ]);
 
       const nodeNameDict = Object.fromEntries(
-        namedNodes.map(([name, guid]) => [guid, name])
+        namesAndGuids.map(([name, guid]) => [guid, name])
       );
 
       // Construct the lookup table for the GUID (given the name).
       // The key may not be unique so the data structure is a little more involved.
-      // TODO
-      // For each node, record the GUID, property names, and parent name?
-      const nodeGuidLookup = await NodeGuidLookupTable.from(core, namedNodes);
+      const propsForGuid = await Promise.all(
+        nodes.map(async (node) => {
+          const children = await core.loadChildren(node);
+          const properties = children.filter((node) => !isTerm(core, node));
+          const propertyDict = Object.fromEntries(
+            properties.map((node) => [
+              core.getAttribute(node, "name"),
+              core.getGuid(node),
+            ])
+          );
+          return [core.getGuid(node), propertyDict];
+        })
+      );
+      const nodeGuidLookup = new NodeGuidLookupTable(
+        namesAndGuids,
+        Object.fromEntries(propsForGuid)
+      );
       return new TagFormatter(nodeNameDict, nodeGuidLookup);
     }
   }
@@ -81,7 +94,9 @@ function factory() {
           tagName === name
         ); /*&& setEquals(this.getProperties(guid), properties)*/
       });
-      if (matchingNames.length > 1) {
+      if (matchingNames.length === 0) {
+        throw new TagNotFoundError(tagName);
+      } else if (matchingNames.length > 1) {
         throw new Error(
           `Resolving ambiguous taxonomy terms is currently unsupported (${tagName})`
         );
@@ -94,23 +109,31 @@ function factory() {
     getPropertyGuid(guid, propertyName) {
       return this.tagProperties[guid][propertyName];
     }
-
-    static async from(core, namedNodes) {
-      namedNodes.map(([name, guid, node]) => {
-        //TODO: how to disambiguate btwn nodes with the same name? Possibilities:
-        //  - parent names
-        //  - property names
-        //const parent = core.getParent(node);
-        //const parentName = core.getAttribute(parent, 'name');
-        [name, guid];
-      });
-    }
   }
 
   function isObject(thing) {
     return thing && typeof thing === "object" && !Array.isArray(thing);
   }
+  function isTerm(core, node) {
+    let basenode = core.getMetaType(node);
+    while (basenode) {
+      if (core.getAttribute(basenode, "name") === "Term") {
+        return true;
+      }
+      basenode = core.getBase(basenode);
+    }
 
+    return false;
+  }
+
+  class FormatError extends Error {}
+  class TagNotFoundError extends FormatError {
+    constructor(tagName) {
+      super(`Tag not found: ${tagName}`);
+    }
+  }
+
+  TagFormatter.FormatError = FormatError;
   function omit(obj, ...keys) {
     return Object.fromEntries(
       Object.entries(obj).filter(([k /*v*/]) => !keys.includes(k))

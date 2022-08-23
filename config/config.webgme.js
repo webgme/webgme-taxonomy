@@ -21,6 +21,11 @@ config.rest.components['Search'] = {
   mount: 'routers/Search',
   options: {}
 };
+config.rest.components['TagFormat'] = {
+  src: __dirname + '/../src/routers/TagFormat/TagFormat.js',
+  mount: 'routers/TagFormat',
+  options: {}
+};
 
 // Visualizer descriptors
 config.visualization.visualizerDescriptors.push(__dirname + '/../src/visualizers/Visualizers.json');
