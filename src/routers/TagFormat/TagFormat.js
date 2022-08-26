@@ -64,7 +64,7 @@ function initialize(middlewareOpts) {
       try {
         tags = JSON.parse(tags);
       } catch (err) {
-        res.status(400).send("Tags are not valid JSON.");
+        return res.status(400).send("Tags are not valid JSON.");
       }
       const { root, core } = req.webgmeContext;
       const node = await Utils.findTaxonomyNode(core, root);
