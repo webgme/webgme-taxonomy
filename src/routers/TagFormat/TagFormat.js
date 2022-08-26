@@ -69,13 +69,9 @@ function initialize(middlewareOpts) {
       const { root, core } = req.webgmeContext;
       const node = await Utils.findTaxonomyNode(core, root);
       const formatter = await TagFormatter.from(core, node);
-      const convertTag = (tag) =>
-        format === "guid"
-          ? formatter.toGuidFormat(tag)
-          : formatter.toHumanFormat(tag);
 
       try {
-        res.json(tags.map(convertTag));
+        res.json(await formatter.toHumanFormat(tags));
       } catch (err) {
         if (err instanceof TagFormatter.FormatError) {
           res.status(400).send(err.message);

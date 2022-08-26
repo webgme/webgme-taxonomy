@@ -1,7 +1,7 @@
 /*globals define*/
 /*eslint-env node, browser*/
 
-define([], function () {
+function factory() {
   class JSONSchemaExporter {
     constructor(core, META) {
       this.core = core;
@@ -161,7 +161,23 @@ define([], function () {
       }
       return [guid, fieldSchema];
     }
+
+    static from(core, node) {
+      const metanodes = Object.values(core.getAllMetaNodes(node));
+      const meta = Object.fromEntries(
+        metanodes.map(n => [core.getAttribute(n, 'name'), n])
+      );
+      return new JSONSchemaExporter(core, meta);
+    }
   }
 
   return JSONSchemaExporter;
-});
+}
+
+if (typeof define !== 'undefined') {
+  define([], factory);
+} else if (typeof module !== 'undefined') {
+  module.exports = factory();
+} else {
+  this.JSONSchemaExporter = factory();
+}

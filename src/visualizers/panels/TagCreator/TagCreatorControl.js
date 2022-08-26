@@ -8,6 +8,7 @@ define([
     'js/Utils/GMEConcepts',
     'webgme-taxonomy/JSONSchemaExporter',
     'webgme-taxonomy/Utils',
+    'webgme-taxonomy/TagFormatter',
     'js/NodePropertyNames',
     'q',
 ], function (
@@ -15,6 +16,7 @@ define([
     GMEConcepts,
     JSONSchemaExporter,
     Utils,
+    TagFormatter,
     nodePropertyNames,
     Q,
 ) {
@@ -127,10 +129,11 @@ define([
                         () => Promise.all([
                             this._getJSONSchemas(nodeId),
                             this._getCurrentFormData(nodeId),
+                            this._getFormatter(nodeId),
                         ]),
-                        ([schemas, formData]) => {
+                        ([schemas, formData, formatter]) => {
                             const {taxonomyPath, schema, uiSchema} = schemas;
-                            this._widget.render(schema, uiSchema, formData, taxonomyPath);
+                            this._widget.render(schema, uiSchema, formData, taxonomyPath, formatter);
                         },
                     ]
                 );
@@ -234,6 +237,12 @@ define([
         } else {
             return {};
         }
+    };
+
+    TagCreatorControl.prototype._getFormatter = async function (nodeId) {
+        const {core, rootNode} = await this._getCoreInstance()
+        const node = await Utils.findTaxonomyNode(core, rootNode);
+        return await TagFormatter.from(core, node);
     };
 
     TagCreatorControl.prototype._getCoreInstance = async function () {

@@ -38,6 +38,11 @@
         "src": "src/routers/TagFormat",
         "test": "test/routers/TagFormat",
         "mount": "routers/TagFormat"
+      },
+      "TagCreator": {
+        "src": "src/routers/TagCreator",
+        "test": "test/routers/TagCreator",
+        "mount": "routers/TagCreator"
       }
     }
   },

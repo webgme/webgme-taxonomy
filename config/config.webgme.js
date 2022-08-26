@@ -26,6 +26,11 @@ config.rest.components['TagFormat'] = {
   mount: 'routers/TagFormat',
   options: {}
 };
+config.rest.components['TagCreator'] = {
+  src: __dirname + '/../src/routers/TagCreator/TagCreator.js',
+  mount: 'routers/TagCreator',
+  options: {}
+};
 
 // Visualizer descriptors
 config.visualization.visualizerDescriptors.push(__dirname + '/../src/visualizers/Visualizers.json');
