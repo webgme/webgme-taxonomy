@@ -7,6 +7,7 @@ function factory() {
     }
 
     render(data) {
+
       const Form = JSONSchemaForm.default;
       const {schema, uiSchema, formData, formatter} = data;
       const children = React.createElement('div', null, [
