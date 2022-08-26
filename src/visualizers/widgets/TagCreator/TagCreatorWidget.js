@@ -16,6 +16,7 @@ define([
 
     const WIDGET_CLASS = 'tag-creator';
     TagCreatorForm.inject(React, ReactDOM, JSONSchemaForm);
+    const FormRenderData = TagCreatorForm.FormRenderData;
 
     class TagCreatorWidget {
         constructor(logger, container) {
