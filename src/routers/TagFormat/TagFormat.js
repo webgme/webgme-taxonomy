@@ -71,7 +71,11 @@ function initialize(middlewareOpts) {
       const formatter = await TagFormatter.from(core, node);
 
       try {
-        res.json(await formatter.toHumanFormat(tags));
+        if (format === 'human') {
+          res.json(await formatter.toHumanFormat(tags));
+        } else {
+          res.json(await formatter.toGuidFormat(tags));
+        }
       } catch (err) {
         if (err instanceof TagFormatter.FormatError) {
           res.status(400).send(err.message);

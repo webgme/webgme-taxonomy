@@ -9,10 +9,14 @@ function factory() {
     }
 
     /**
-     * Convert the given tag to GUID format. If `guid` is provided, use
+     * Convert the given tags to GUID format. If `guid` is provided, use
      * that for the top-level tag.
      */
-    toGuidFormat(tag, guid = null) {
+    toGuidFormat(tags) {
+      return tags.map(tag => this._toGuidFormat(tag));
+    }
+
+    _toGuidFormat(tag, guid = null) {
       const data = omit(tag, "Tag");
       if (!guid) {
         guid = this.nodeGuidLookup.getGuid(tag.Tag, data);
@@ -24,7 +28,7 @@ function factory() {
         entries.map(([name, data]) => {
           const propertyGuid = this.nodeGuidLookup.getPropertyGuid(guid, name);
           if (isObject(data)) {
-            data = this.toGuidFormat(data, propertyGuid);
+            data = this._toGuidFormat(data, propertyGuid);
           }
 
           return [propertyGuid, data];
@@ -35,12 +39,16 @@ function factory() {
       return guidTag;
     }
 
-    toHumanFormat(tag) {
+    toHumanFormat(tags) {
+      return tags.map(tag => this._toHumanFormat(tag));
+    }
+
+    _toHumanFormat(tag) {
       const entries = Object.entries(tag).filter(([k]) => k !== "ID");
       const humanReadable = Object.fromEntries(
         entries.map(([guid, data]) => {
           const name = this.nodeNameDict[guid];
-          const newData = isObject(data) ? this.toHumanFormat(data) : data;
+          const newData = isObject(data) ? this._toHumanFormat(data) : data;
           return [name, newData];
         })
       );
