@@ -84,38 +84,39 @@ function initialize(middlewareOpts) {
     }
   );
 
-  router.get("/datasets.json", async function (req, res) {
-    // TODO: Retrieve all datasets for a given user from PDP.
-    //
-    // A single entry should look like:
-    //
-    //{
-    //$type:"Premonition.Common.Meta.Data.Observation, Premonition.Common.Meta",
-    //IsFunction:false,
-    //ProcessType:"labassets",
-    //ProcessId:"abc03682-d5bd-490c-b088-c2a0ab5cf07a",
-    //IsMeasure:false,
-    //Index:1,
-    //Version:0,
-    //ObserverId:"95862b95-a22b-4d0b-bd5c-2fb5fca18841",
-    //StartTime:"2021-11-05T06:55:13.278+00:00",
-    //EndTime:null,
-    //ApplicationDependencies:[],
-    //ProcessDependencies:[],
-    //Data:[
-    //{taxonomyTags}
-    //],
-    //DataFiles:[]
-    //}
-  });
+  // Accessing and updating data via the storage adapter
+  router.get(
+    "/:projectId/branch/:branch/artifacts/",
+    async function (req, res) {
+      // TODO: list the artifacts
+      // TODO: optional query?
+      res.json(data);
+    }
+  );
 
-  router.post("/query", function (req, res /*, next*/) {
-    // TODO: send the taxonomy, search query and return the results as JSON
-    // TODO: this should probably have the context (project, branch, etc), too
-    res.sendStatus(201);
-  });
+  router.post(
+    "/:projectId/branch/:branch/artifacts/",
+    async function (req, res) {
+      // TODO: create new artifact
+      res.json(data);
+    }
+  );
 
-  // TODO: should we support uploading data? Probably
+  router.patch(
+    "/:projectId/branch/:branch/artifacts/:id",
+    async function (req, res) {
+      // TODO: update artifact
+      res.json(data);
+    }
+  );
+
+  router.get(
+    "/:projectId/branch/:branch/artifacts/:id",
+    async function (req, res) {
+      // TODO: download an artifact
+      res.json(data);
+    }
+  );
 
   logger.debug("ready");
 }
