@@ -82,6 +82,42 @@
     console.log("uploading!");
   }
 
+  class EmbeddedEvent {
+    type: string;
+    data: string;
+
+    constructor(type: string, data: any) {
+      this.type = type;
+      this.data = data;
+    }
+  }
+
+  class SelectEvent extends EmbeddedEvent {
+    constructor(item: any) {
+      super("ItemSelected", item);
+    }
+  }
+
+  const listeners = [];
+  let selectedItem;
+  function receiveMessage(event) {
+    const { data } = event;
+    if (data.type === "subscribe") {
+      listeners.push([event.source, event.origin]);
+      if (selectedItem) {
+        event.source.postMessage(new SelectEvent(selectedItem), event.origin);
+      }
+    }
+  }
+
+  window.addEventListener("message", receiveMessage, false);
+  function onItemClicked(item) {
+    selectedItem = item;
+    listeners.forEach(([listener, origin]) =>
+      listener.postMessage(new SelectEvent(item), origin)
+    );
+  }
+
   fetchData();
 </script>
 
@@ -120,7 +156,7 @@
     <main>
       <List twoLine avatarList>
         {#each items as item}
-          <Item>
+          <Item on:SMUI:action={() => onItemClicked(item)}>
             <Text>
               <PrimaryText>{item.Data[0].label}</PrimaryText>
               <SecondaryText
