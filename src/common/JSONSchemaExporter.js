@@ -34,17 +34,20 @@ function factory() {
         definitions,
       };
 
+      const hiddenProperties = this.getConstantProperties().map(([name]) => [
+          name,
+          {
+            "ui:widget": "hidden",
+          },
+        ]);
+      const defHiddenProperties = Object.fromEntries(
+        Object.keys(definitions).map(name => [name, hiddenProperties])
+      );
       const uiSchema = {
         taxonomyTags: {
-          // FIXME: need to update something here
           items: Object.fromEntries(
-            this.getConstantProperties().map(([name]) => [
-              name,
-              {
-                "ui:widget": "hidden",
-              },
-            ])
-          ),
+            termNodes.map(node => this.getUiSchemaEntry(node)).concat(hiddenProperties)
+          )
         },
       };
       return { schema, uiSchema };
@@ -54,6 +57,24 @@ function factory() {
       return (await this.core.loadSubTree(node)).filter((node) =>
         this.core.isTypeOf(node, this.META.Term)
       );
+    }
+
+    getUiSchemaEntry(node) {
+        const uiSchema = this.getConstantProperties().map(([name]) => [
+          name,
+          {
+            "ui:widget": "hidden",
+          },
+        ]);
+
+      const parent = this.core.getParent(node);
+      if (parent) {
+        const parentEntry = this.getUiSchemaEntry(parent);
+        uiSchema.push(parentEntry);
+      }
+
+      const guid = this.core.getGuid(node);
+      return [guid, Object.fromEntries(uiSchema)]
     }
 
     async getDefinitionEntries(node) {
@@ -94,7 +115,7 @@ function factory() {
         this.core.isTypeOf(child, this.META.Field)
       );
 
-      // TODO: if parent is a term, add it as a property
+      // if parent is a term, add it as a property
       const parent = this.core.getParent(node);
       if (this.core.isTypeOf(parent, this.META.Term)) {
         const guid = this.core.getGuid(parent);
