@@ -8,7 +8,7 @@ function factory() {
 
     render(data) {
       const Form = JSONSchemaForm.default;
-      const { schema, uiSchema, formData, formatter } = data;
+      const { schema, uiSchema, formatter } = data;
       const children = React.createElement("div", null, [
         ...data.buttons,
         React.createElement(
@@ -17,7 +17,7 @@ function factory() {
             type: "submit",
             className: "btn btn-secondary",
             onClick: async () => {
-              const downloadData = await this.formatData(formatter, formData);
+              const downloadData = await this.formatData(formatter, data.formData);
               this.downloadJSON(downloadData);
             },
           },
@@ -60,7 +60,7 @@ function factory() {
     constructor(schema, uiSchema, formData, formatter = DefaultFormatter) {
       this.schema = schema;
       this.uiSchema = uiSchema;
-      this.formData = formData;
+      this.formData = formData || {taxonomyTags: []};
       this.formatter = formatter;
       this.buttons = [];
     }
@@ -83,7 +83,7 @@ function factory() {
 
     getProperties() {
       let formData = this.formData;
-      const onChange = (event) => (formData = event.formData);
+      const onChange = (event) => (this.formData = event.formData);
       return {
         schema: this.schema,
         onChange,
