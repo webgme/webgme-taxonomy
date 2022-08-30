@@ -256,7 +256,7 @@
             <Text>
               <PrimaryText>{item.data[0].label}</PrimaryText>
               <SecondaryText
-                >{item.Version + 1} revisions. <a>Append data</a>
+                >{item.version + 1} revisions. <a>Append data</a>
               </SecondaryText>
             </Text>
             {#each item.data[0].taxonomyTags as tag}

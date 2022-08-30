@@ -19430,7 +19430,7 @@ var app = (function () {
     let t,
       n,
       i,
-      a = e[30].Version + 1 + "";
+      a = e[30].version + 1 + "";
     return {
       c() {
         (t = C(a)),
@@ -19443,7 +19443,7 @@ var app = (function () {
         v(e, t, a), v(e, n, a), v(e, i, a);
       },
       p(e, n) {
-        8 & n[0] && a !== (a = e[30].Version + 1 + "") && O(t, a);
+        8 & n[0] && a !== (a = e[30].version + 1 + "") && O(t, a);
       },
       d(e) {
         e && b(t), e && b(n), e && b(i);
