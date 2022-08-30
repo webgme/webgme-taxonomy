@@ -67,11 +67,7 @@ define([
         const tagNode = nodesByGuid[tagInfo.ID];
         core.addMember(activeNode, TAG_SET_NAMES, tagNode);
 
-        const attributeNames = _.without(
-          Object.keys(tagInfo),
-          "tagID",
-          "tagName"
-        );
+        const attributeNames = _.without(Object.keys(tagInfo), "ID");
         const tagPath = core.getPath(tagNode);
         attributeNames.forEach((name) => {
           const value = tagInfo[name];
@@ -91,7 +87,12 @@ define([
       const startCommit = this._client.getActiveCommitHash();
       const project = this._client.getProjectObject();
 
-      const tagNames = tags.map((tagInfo) => tagInfo.tagName).join(", ");
+      const tagNames = tags
+        .map((tagInfo) => {
+          const tagNode = nodesByGuid[tagInfo.ID];
+          return core.getAttribute(tagNode, "name");
+        })
+        .join(", ");
       const activeNodeName = core.getAttribute(activeNode, "name");
       const commitMsg = `Set taxonomy tags on ${activeNodeName} to ${tagNames}`;
 
@@ -210,8 +211,7 @@ define([
 
   TagCreatorControl.prototype._getTagData = function (memberNode, attrDict) {
     const tag = {
-      tagID: memberNode.getGuid(),
-      tagName: memberNode.getAttribute("name"),
+      ID: memberNode.getGuid(),
     };
     Object.assign(tag, attrDict);
     return tag;
