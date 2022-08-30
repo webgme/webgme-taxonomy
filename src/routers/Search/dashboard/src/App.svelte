@@ -5,6 +5,13 @@
   /*import Chip from "@smui/chips";*/
   import List, { Item, Text, PrimaryText, SecondaryText } from "@smui/list";
   import Drawer, { Content, AppContent } from "@smui/drawer";
+  import Dialog, {
+    Content as DialogContent,
+    Title as DialogTitle,
+    Actions,
+  } from "@smui/dialog";
+  import Button, { Label } from "@smui/button";
+  import Dropzone from "svelte-file-dropzone";
   import TaxonomyFilter from "./TaxonomyFilter.svelte";
   import type TaxonomyData from "./TaxonomyData.ts";
 
@@ -12,9 +19,10 @@
   let searchKeyword: string = "";
   let vocabularies: TaxonomyData[] = [];
 
-  import PDP from "./storage/PDP.ts";
+  import Storage from "./Storage.ts";
+  import TagCreatorForm from "../../../../common/TagCreatorForm";
   import token from "./Bearer.ts";
-  const storageAdapter = new PDP(token);
+  const storage = new Storage();
   let allItems = [];
   let items = [];
 
@@ -73,13 +81,8 @@
 
   async function fetchData() {
     vocabularies = await fetchVocabularies();
-    allItems = await storageAdapter.listArtifacts();
+    allItems = await storage.listArtifacts();
     onFilterUpdate();
-  }
-
-  async function uploadArtifact() {
-    // TODO: initiate upload
-    console.log("uploading!");
   }
 
   class EmbeddedEvent {
@@ -119,11 +122,94 @@
   }
 
   fetchData();
+
+  let uploadingArtifact = false;
+
+  let artifactFile;
+  function onFileDrop(event) {
+    const { acceptedFiles } = event.detail;
+    if (acceptedFiles.length) {
+      artifactFile = acceptedFiles[0];
+    }
+    // TODO: handle rejections
+  }
+
+  let uploadTags;
+  async function onTagsFileDrop(event) {
+    const [tagsFile] = event.detail.acceptedFiles;
+    if (tagsFile) {
+      uploadTags = JSON.parse(await readFile(tagsFile));
+      console.log(uploadTags);
+      // TODO: send the tags somewhere...
+    }
+  }
+
+  async function readFile(file: File) {
+    return new Promise((res, rej) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (reader.error) {
+          console.log("error:", reader.error);
+          return rej(reader.error);
+        } else {
+          return res(reader.result);
+        }
+      };
+      reader.readAsText(file);
+    });
+  }
+
+  async function onUploadClicked() {
+    if (!uploadTags) {
+      // TODO: validate tags
+    }
+    if (!artifactFile) {
+    }
+    await storage.createArtifact(uploadTags, artifactFile);
+  }
+
+  let artifactName = "";
 </script>
 
 <svelte:head>
   <title>{title}</title>
 </svelte:head>
+<Dialog
+  bind:open={uploadingArtifact}
+  aria-labelledby="title"
+  aria-describedby="content"
+>
+  <DialogTitle id="title">Create new dataset</DialogTitle>
+  <DialogContent id="content">
+    <Textfield label="Name" bind:value={artifactName} />
+    <!-- TODO: create process -->
+    <p>
+      Dataset file:
+      {artifactFile ? artifactFile.name : ""}
+    </p>
+    <Dropzone on:drop={onFileDrop}>
+      <p>Select dataset to upload.</p>
+    </Dropzone>
+    <p>
+      Taxonomy Terms:
+      {uploadTags
+        ? uploadTags.taxonomyTags.map((tag) => tag.Tag).join(", ")
+        : ""}
+    </p>
+    <Dropzone on:drop={onTagsFileDrop} accept=".json">
+      <p>Select tags file for dataset.</p>
+    </Dropzone>
+    <a>Click to select tags for your dataset.</a>
+  </DialogContent>
+  <Actions>
+    <Button>
+      <Label>Cancel</Label>
+    </Button>
+    <Button on:click={() => onUploadClicked()}>
+      <Label>Upload</Label>
+    </Button>
+  </Actions>
+</Dialog>
 <TopAppBar variant="static">
   <Row>
     <Section>
@@ -134,7 +220,7 @@
         class="material-icons"
         aria-label="Upload dataset"
         ripple={false}
-        on:click={uploadArtifact}>file_upload</IconButton
+        on:click={() => (uploadingArtifact = true)}>file_upload</IconButton
       >
     </Section>
   </Row>
@@ -160,7 +246,7 @@
             <Text>
               <PrimaryText>{item.Data[0].label}</PrimaryText>
               <SecondaryText
-                >{item.Version + 1} revisions. <a>Earlier versions.</a>
+                >{item.Version + 1} revisions. <a>Append data</a>
               </SecondaryText>
             </Text>
             {#each item.Data[0].taxonomyTags as tag}
