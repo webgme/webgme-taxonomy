@@ -20,7 +20,6 @@
   let vocabularies: TaxonomyData[] = [];
 
   import Storage from "./Storage.ts";
-  import TagCreatorForm from "../../../../common/TagCreatorForm";
   import token from "./Bearer.ts";
   const storage = new Storage();
   let allItems = [];
@@ -199,7 +198,11 @@
     <Dropzone on:drop={onTagsFileDrop} accept=".json">
       <p>Select tags file for dataset.</p>
     </Dropzone>
-    <a>Click to select tags for your dataset.</a>
+    <a
+      target="_blank"
+      href={window.location.href.replace("/Search/", "/TagCreator/")}
+      >Click to select tags for your dataset.</a
+    >
   </DialogContent>
   <Actions>
     <Button>

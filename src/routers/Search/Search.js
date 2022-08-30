@@ -24,31 +24,37 @@ const SearchFilterDataExporter = require("../../common/SearchFilterDataExporter"
 const path = require("path");
 const staticPath = path.join(__dirname, "dashboard", "public");
 
-const agent = require('superagent');
+const agent = require("superagent");
 let mainConfig = null;
-const pdpBase = 'https://leappremonitiondev.azurewebsites.net/v2/';
+const pdpBase = "https://leappremonitiondev.azurewebsites.net/v2/";
 const getAccessToken = (req) => {
   return req.cookies[mainConfig.authentication.azureActiveDirectory.cookieId];
 };
 
 const getProcessObservations = async (pid, token) => {
   const response = agent
-    .get(pdpBase + 'Process/GetProcessState')
-    .query({processId: pid})
-    .set('Authorization', 'Bearer ' + token)
-  
-  if(response.ok !== true) {
-    throw new Error('Cannot fetch process info ['+ pid + '] [' + resp.statusCode +']');
+    .get(pdpBase + "Process/GetProcessState")
+    .query({ processId: pid })
+    .set("Authorization", "Bearer " + token);
+
+  if (response.ok !== true) {
+    throw new Error(
+      "Cannot fetch process info [" + pid + "] [" + resp.statusCode + "]"
+    );
   }
   const obsInfo = response.body;
   const results = [];
-  for(let i=1; i<obsInfo.numObservations; i+=1) {
-    results.push( await agent
-      .get(pdpBase + 'Process/GetObservation?processId=' + pid + '&obsIndex=' + i)
-      .set('Authorization', 'Bearer ' + token));
+  for (let i = 1; i < obsInfo.numObservations; i += 1) {
+    results.push(
+      await agent
+        .get(
+          pdpBase + "Process/GetObservation?processId=" + pid + "&obsIndex=" + i
+        )
+        .set("Authorization", "Bearer " + token)
+    );
   }
   const observations = [];
-  results.forEach(result => {
+  results.forEach((result) => {
     observations.push(result.body);
   });
 
@@ -57,25 +63,29 @@ const getProcessObservations = async (pid, token) => {
 
 const listArtifacts = async (type, token) => {
   let processList = [];
-  let itemList = [];
   try {
     let response = await agent
-    .get(pdpBase+'Process/ListProcesses')
-    .query({permission: 'read'})
-    .set('Authorization', 'Bearer ' + token);
-    if(response.ok !== true) {
-      throw new Error('Initial list fetching failed [' + response.statusCode +']');
+      .get(pdpBase + "Process/ListProcesses")
+      .query({ permission: "read" })
+      .set("Authorization", "Bearer " + token);
+    if (response.ok !== true) {
+      throw new Error(
+        "Initial list fetching failed [" + response.statusCode + "]"
+      );
     }
 
-    processList = response.body.filter(element => element.processType === type);
+    processList = response.body.filter(
+      (element) => element.processType === type
+    );
 
-    await processList.map(async process => {
-      const list = await getProcessObservations(process.processId, token);
-      itemList = itemList.concat(list);
-    });
+    const processObservations = await Promise.all(
+      processList.map(
+        async (process) =>
+          await getProcessObservations(process.processId, token)
+      )
+    );
 
-    return itemList;
-
+    return processObservations.flat();
   } catch (e) {
     logger.error(e);
     return [];
@@ -149,7 +159,9 @@ function initialize(middlewareOpts) {
     "/:projectId/branch/:branch/artifacts/",
     async function (req, res) {
       try {
-        const full_list = listArtifacts('testdata', getAccessToken(req));
+        // TODO: make the collection/db part of the config
+        const full_list = listArtifacts("testdata", getAccessToken(req));
+        console.log({ full_list });
         res.status(200).json(full_list).end();
       } catch (e) {
         logger.error(e);
