@@ -24,6 +24,64 @@ const SearchFilterDataExporter = require("../../common/SearchFilterDataExporter"
 const path = require("path");
 const staticPath = path.join(__dirname, "dashboard", "public");
 
+const agent = require('superagent');
+let mainConfig = null;
+const pdpBase = 'https://leappremonitiondev.azurewebsites.net/v2/';
+const getAccessToken = (req) => {
+  return req.cookies[mainConfig.authentication.azureActiveDirectory.cookieId];
+};
+
+const getProcessObservations = async (pid, token) => {
+  const response = agent
+    .get(pdpBase + 'Process/GetProcessState')
+    .query({processId: pid})
+    .set('Authorization', 'Bearer ' + token)
+  
+  if(response.ok !== true) {
+    throw new Error('Cannot fetch process info ['+ pid + '] [' + resp.statusCode +']');
+  }
+  const obsInfo = response.body;
+  const results = [];
+  for(let i=1; i<obsInfo.numObservations; i+=1) {
+    results.push( await agent
+      .get(pdpBase + 'Process/GetObservation?processId=' + pid + '&obsIndex=' + i)
+      .set('Authorization', 'Bearer ' + token));
+  }
+  const observations = [];
+  results.forEach(result => {
+    observations.push(result.body);
+  });
+
+  return observations;
+};
+
+const listArtifacts = async (type, token) => {
+  let processList = [];
+  let itemList = [];
+  try {
+    let response = await agent
+    .get(pdpBase+'Process/ListProcesses')
+    .query({permission: 'read'})
+    .set('Authorization', 'Bearer ' + token);
+    if(response.ok !== true) {
+      throw new Error('Initial list fetching failed [' + response.statusCode +']');
+    }
+
+    processList = response.body.filter(element => element.processType === type);
+
+    await processList.map(async process => {
+      const list = await getProcessObservations(process.processId, token);
+      itemList = itemList.concat(list);
+    });
+
+    return itemList;
+
+  } catch (e) {
+    logger.error(e);
+    return [];
+  }
+};
+
 /* N.B. gmeAuth, safeStorage and workerManager are not ready to use until the start function is called.
  * (However inside an incoming request they are all ensured to have been initialized.)
  *
@@ -41,6 +99,8 @@ function initialize(middlewareOpts) {
 
   logger = middlewareOpts.logger.fork("Search");
   logger.debug("initializing ...");
+
+  mainConfig = middlewareOpts.gmeConfig;
 
   // Ensure authenticated can be used only after this rule.
   router.use("*", function (req, res, next) {
@@ -88,9 +148,13 @@ function initialize(middlewareOpts) {
   router.get(
     "/:projectId/branch/:branch/artifacts/",
     async function (req, res) {
-      // TODO: list the artifacts
-      // TODO: optional query?
-      res.json(data);
+      try {
+        const full_list = listArtifacts('testdata', getAccessToken(req));
+        res.status(200).json(full_list).end();
+      } catch (e) {
+        logger.error(e);
+        res.sendStatus(401);
+      }
     }
   );
 
