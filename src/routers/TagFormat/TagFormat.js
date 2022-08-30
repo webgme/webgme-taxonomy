@@ -63,6 +63,11 @@ function initialize(middlewareOpts) {
       let { tags } = req.query;
       try {
         tags = JSON.parse(tags);
+        if (!Array.isArray(tags)) {
+          return res
+            .status(400)
+            .send(`Expected a list of tags. Found ${JSON.stringify(tags)}`);
+        }
       } catch (err) {
         return res.status(400).send("Tags are not valid JSON.");
       }
@@ -71,7 +76,7 @@ function initialize(middlewareOpts) {
       const formatter = await TagFormatter.from(core, node);
 
       try {
-        if (format === 'human') {
+        if (format === "human") {
           res.json(await formatter.toHumanFormat(tags));
         } else {
           res.json(await formatter.toGuidFormat(tags));
