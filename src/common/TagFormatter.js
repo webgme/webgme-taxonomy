@@ -75,12 +75,19 @@ function factory() {
         nodes.map(async (node) => {
           const children = await core.loadChildren(node);
           const properties = children.filter((node) => !isTerm(core, node));
+
+          const parent = core.getParent(node);
+          if (parent) {
+            properties.push(parent);
+          }
+
           const propertyDict = Object.fromEntries(
             properties.map((node) => [
               core.getAttribute(node, "name"),
               core.getGuid(node),
             ])
           );
+
           return [core.getGuid(node), propertyDict];
         })
       );
