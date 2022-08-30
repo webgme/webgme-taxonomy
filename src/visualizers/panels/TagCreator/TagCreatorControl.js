@@ -4,352 +4,388 @@
  */
 
 define([
-    'js/Constants',
-    'js/Utils/GMEConcepts',
-    'webgme-taxonomy/JSONSchemaExporter',
-    'webgme-taxonomy/Utils',
-    'webgme-taxonomy/TagFormatter',
-    'js/NodePropertyNames',
-    'q',
+  "js/Constants",
+  "js/Utils/GMEConcepts",
+  "webgme-taxonomy/JSONSchemaExporter",
+  "webgme-taxonomy/Utils",
+  "webgme-taxonomy/TagFormatter",
+  "js/NodePropertyNames",
+  "q",
 ], function (
-    CONSTANTS,
-    GMEConcepts,
-    JSONSchemaExporter,
-    Utils,
-    TagFormatter,
-    nodePropertyNames,
-    Q,
+  CONSTANTS,
+  GMEConcepts,
+  JSONSchemaExporter,
+  Utils,
+  TagFormatter,
+  nodePropertyNames,
+  Q
 ) {
+  const TAG_SET_NAMES = "taxonomyTags";
+  ("use strict");
 
-    const TAG_SET_NAMES = 'taxonomyTags';
-    'use strict';
+  function TagCreatorControl(options) {
+    this._logger = options.logger.fork("Control");
 
-    function TagCreatorControl(options) {
+    this._client = options.client;
 
-        this._logger = options.logger.fork('Control');
+    // Initialize core collections and variables
+    this._widget = options.widget;
 
-        this._client = options.client;
+    this._currentNodeId = null;
+    this._currentNodeParentId = undefined;
 
-        // Initialize core collections and variables
-        this._widget = options.widget;
+    this._initWidgetEventHandlers();
 
-        this._currentNodeId = null;
-        this._currentNodeParentId = undefined;
+    this._logger.debug("ctor finished");
+  }
 
-        this._initWidgetEventHandlers();
+  TagCreatorControl.prototype._initWidgetEventHandlers = function () {
+    this._widget.addTags = async (taxonomyPath, formData) => {
+      const activeNodeId = this._currentNodeId;
+      const { core, rootNode } = await this._getCoreInstance();
+      const activeNode = await core.loadByPath(rootNode, activeNodeId);
+      const taxonomyNode = await core.loadByPath(rootNode, taxonomyPath);
+      const nodesByGuid = Object.fromEntries(
+        (await core.loadSubTree(taxonomyNode)).map((node) => [
+          core.getGuid(node),
+          node,
+        ])
+      );
 
-        this._logger.debug('ctor finished');
+      // remove existing members
+      const existingMemberPaths = core.getMemberPaths(
+        activeNode,
+        TAG_SET_NAMES
+      );
+      existingMemberPaths.forEach((memberPath) =>
+        core.delMember(activeNode, TAG_SET_NAMES, memberPath)
+      );
+
+      // add new members
+      const tags = formData.taxonomyTags;
+      tags.forEach((tagInfo) => {
+        const tagNode = nodesByGuid[tagInfo.ID];
+        core.addMember(activeNode, TAG_SET_NAMES, tagNode);
+
+        const attributeNames = _.without(
+          Object.keys(tagInfo),
+          "tagID",
+          "tagName"
+        );
+        const tagPath = core.getPath(tagNode);
+        attributeNames.forEach((name) => {
+          const value = tagInfo[name];
+          core.setMemberAttribute(
+            activeNode,
+            TAG_SET_NAMES,
+            tagPath,
+            name,
+            value
+          );
+        });
+      });
+
+      // save
+      const { rootHash, objects } = core.persist(rootNode);
+      const branch = this._client.getActiveBranchName();
+      const startCommit = this._client.getActiveCommitHash();
+      const project = this._client.getProjectObject();
+
+      const tagNames = tags.map((tagInfo) => tagInfo.tagName).join(", ");
+      const activeNodeName = core.getAttribute(activeNode, "name");
+      const commitMsg = `Set taxonomy tags on ${activeNodeName} to ${tagNames}`;
+
+      await project.makeCommit(
+        branch,
+        [startCommit],
+        rootHash,
+        objects,
+        commitMsg
+      );
+    };
+  };
+
+  /* * * * * * * * Visualizer content update callbacks * * * * * * * */
+  // One major concept here is with managing the territory. The territory
+  // defines the parts of the project that the visualizer is interested in
+  // (this allows the browser to then only load those relevant parts).
+  TagCreatorControl.prototype.selectedObjectChanged = function (nodeId) {
+    var desc = this._getObjectDescriptor(nodeId),
+      self = this;
+
+    self._logger.debug("activeObject nodeId '" + nodeId + "'");
+
+    // Remove current territory patterns
+    if (self._currentNodeId) {
+      self._client.removeUI(self._territoryId);
     }
 
-    TagCreatorControl.prototype._initWidgetEventHandlers = function () {
-        this._widget.addTags = async (taxonomyPath, tags) => {
-            const activeNodeId = this._currentNodeId;
-            const {core, rootNode} = await this._getCoreInstance();
-            const activeNode = await core.loadByPath(rootNode, activeNodeId);
-            const taxonomyNode = await core.loadByPath(rootNode, taxonomyPath);
-            const nodesByGuid = Object.fromEntries(
-                (await core.loadSubTree(taxonomyNode))
-                    .map(node => [core.getGuid(node), node])
-            );
+    self._currentNodeId = nodeId;
+    self._currentNodeParentId = undefined;
 
-            // remove existing members
-            const existingMemberPaths = core.getMemberPaths(activeNode, TAG_SET_NAMES);
-            existingMemberPaths.forEach(
-                memberPath => core.delMember(activeNode, TAG_SET_NAMES, memberPath)
-            );
+    if (typeof self._currentNodeId === "string") {
+      // Put new node's info into territory rules
+      self._selfPatterns = {};
+      self._selfPatterns[nodeId] = { children: 0 }; // Territory "rule"
 
-            // add new members
-            tags.forEach(tagInfo => {
-                const tagNode = nodesByGuid[tagInfo.ID];
-                core.addMember(activeNode, TAG_SET_NAMES, tagNode);
+      if (typeof desc.parentId === "string") {
+        self.$btnModelHierarchyUp.show();
+      } else {
+        self.$btnModelHierarchyUp.hide();
+      }
 
-                const attributeNames = _.without(Object.keys(tagInfo), 'tagID', 'tagName');
-                const tagPath = core.getPath(tagNode);
-                attributeNames.forEach(name => {
-                    const value = tagInfo[name];
-                    core.setMemberAttribute(activeNode, TAG_SET_NAMES, tagPath, name, value);
-                });
-            });
+      self._currentNodeParentId = desc.parentId;
 
-            // save
-            const {rootHash, objects} = core.persist(rootNode);
-            const branch = this._client.getActiveBranchName();
-            const startCommit = this._client.getActiveCommitHash();
-            const project = this._client.getProjectObject();
+      self._territoryId = self._client.addUI(self, async () => {
+        whileChain(
+          () => nodeId === self._currentNodeId,
+          [
+            () =>
+              Promise.all([
+                this._getJSONSchemas(nodeId),
+                this._getCurrentFormData(nodeId),
+                this._getFormatter(nodeId),
+              ]),
+            ([schemas, formData, formatter]) => {
+              const { taxonomyPath, schema, uiSchema } = schemas;
+              this._widget.render(
+                schema,
+                uiSchema,
+                formData,
+                taxonomyPath,
+                formatter
+              );
+            },
+          ]
+        );
+      });
 
-            const tagNames = tags.map(tagInfo => tagInfo.tagName).join(', ');
-            const activeNodeName = core.getAttribute(activeNode, 'name');
-            const commitMsg = `Set taxonomy tags on ${activeNodeName} to ${tagNames}`;
+      // Update the territory
+      self._client.updateTerritory(self._territoryId, self._selfPatterns);
 
-            await project.makeCommit(
-                branch,
-                [startCommit],
-                rootHash,
-                objects,
-                commitMsg
-            );
-        };
+      self._selfPatterns[nodeId] = { children: 1 };
+      self._client.updateTerritory(self._territoryId, self._selfPatterns);
+    }
+  };
+
+  async function whileChain(cond, chain) {
+    let lastResult = null;
+    while ((await cond()) && chain.length) {
+      lastResult = await chain.shift()(lastResult);
+    }
+    return lastResult;
+  }
+
+  // This next function retrieves the relevant node information for the widget
+  TagCreatorControl.prototype._getCurrentFormData = async function (nodeId) {
+    console.log(`Getting form data for "${nodeId}"`);
+    const node = this._client.getNode(nodeId);
+    //if (!node) return;
+    const supportsTags = node.getSetNames().includes(TAG_SET_NAMES);
+
+    console.log({ supportsTags });
+    if (supportsTags) {
+      const memberPaths = node.getMemberIds(TAG_SET_NAMES);
+      const memberAttrs = memberPaths.map((memberPath) => {
+        const attrDict = Object.fromEntries(
+          node
+            .getMemberAttributeNames(TAG_SET_NAMES, memberPath)
+            .map((name) => [
+              name,
+              node.getMemberAttribute(TAG_SET_NAMES, memberPath, name),
+            ])
+        );
+        return attrDict;
+      });
+
+      console.log({ memberPaths });
+      const memberNodes = await this._loadNodes(memberPaths);
+      const taxonomyTags = await Promise.all(
+        memberNodes.map((node, i) => this._getTagData(node, memberAttrs[i]))
+      );
+      console.log({ taxonomyTags });
+      return { taxonomyTags };
+    }
+  };
+
+  TagCreatorControl.prototype._getTagData = function (memberNode, attrDict) {
+    const tag = {
+      tagID: memberNode.getGuid(),
+      tagName: memberNode.getAttribute("name"),
     };
+    Object.assign(tag, attrDict);
+    return tag;
+  };
 
-    /* * * * * * * * Visualizer content update callbacks * * * * * * * */
-    // One major concept here is with managing the territory. The territory
-    // defines the parts of the project that the visualizer is interested in
-    // (this allows the browser to then only load those relevant parts).
-    TagCreatorControl.prototype.selectedObjectChanged = function (nodeId) {
-        var desc = this._getObjectDescriptor(nodeId),
-            self = this;
+  TagCreatorControl.prototype._loadNodes = async function (nodePaths) {
+    const deferred = Q.defer();
+    const territoryId = this._client.addUI(this, async () => {
+      this._client.removeUI(territoryId);
+      const nodes = nodePaths.map((nodePath) => this._client.getNode(nodePath));
+      return deferred.resolve(nodes);
+    });
+    const territory = Object.fromEntries(
+      nodePaths.map((path) => [path, { children: 0 }])
+    );
+    this._client.updateTerritory(territoryId, territory);
 
-        self._logger.debug('activeObject nodeId \'' + nodeId + '\'');
+    return deferred.promise;
+  };
 
-        // Remove current territory patterns
-        if (self._currentNodeId) {
-            self._client.removeUI(self._territoryId);
-        }
-
-        self._currentNodeId = nodeId;
-        self._currentNodeParentId = undefined;
-
-        if (typeof self._currentNodeId === 'string') {
-            // Put new node's info into territory rules
-            self._selfPatterns = {};
-            self._selfPatterns[nodeId] = {children: 0};  // Territory "rule"
-
-            if (typeof desc.parentId === 'string') {
-                self.$btnModelHierarchyUp.show();
-            } else {
-                self.$btnModelHierarchyUp.hide();
-            }
-
-            self._currentNodeParentId = desc.parentId;
-
-            self._territoryId = self._client.addUI(self, async () => {
-                whileChain(
-                    () => nodeId === self._currentNodeId,
-                    [
-                        () => Promise.all([
-                            this._getJSONSchemas(nodeId),
-                            this._getCurrentFormData(nodeId),
-                            this._getFormatter(nodeId),
-                        ]),
-                        ([schemas, formData, formatter]) => {
-                            const {taxonomyPath, schema, uiSchema} = schemas;
-                            this._widget.render(schema, uiSchema, formData, taxonomyPath, formatter);
-                        },
-                    ]
-                );
-            });
-
-            // Update the territory
-            self._client.updateTerritory(self._territoryId, self._selfPatterns);
-
-            self._selfPatterns[nodeId] = {children: 1};
-            self._client.updateTerritory(self._territoryId, self._selfPatterns);
-        }
-    };
-
-    async function whileChain(cond, chain) {
-        let lastResult = null;
-        while (await cond() && chain.length) {
-            lastResult = await chain.shift()(lastResult);
-        }
-        return lastResult;
+  TagCreatorControl.prototype._getObjectDescriptor = function (nodeId) {
+    var node = this._client.getNode(nodeId),
+      objDescriptor;
+    if (node) {
+      objDescriptor = {
+        id: node.getId(),
+        name: node.getAttribute(nodePropertyNames.Attributes.name),
+        childrenIds: node.getChildrenIds(),
+        parentId: node.getParentId(),
+        isConnection: GMEConcepts.isConnection(nodeId),
+      };
     }
 
-    // This next function retrieves the relevant node information for the widget
-    TagCreatorControl.prototype._getCurrentFormData = async function (nodeId) {
-        console.log(`Getting form data for "${nodeId}"`);
-        const node = this._client.getNode(nodeId);
-        //if (!node) return;
-        const supportsTags = node.getSetNames().includes(TAG_SET_NAMES);
+    return objDescriptor;
+  };
 
-        console.log({supportsTags});
-        if (supportsTags) {
-            const memberPaths = node.getMemberIds(TAG_SET_NAMES);
-            const memberAttrs = memberPaths.map(
-                memberPath => {
-                    const attrDict = Object.fromEntries(
-                        node.getMemberAttributeNames(TAG_SET_NAMES, memberPath).map(
-                            name => [name, node.getMemberAttribute(TAG_SET_NAMES, memberPath, name)]
-                        )
-                    );
-                    return attrDict;
-                }
-            );
+  /* * * * * * * * Node Event Handling * * * * * * * */
+  TagCreatorControl.prototype._getJSONSchemas = async function (nodeId) {
+    const { core, rootNode } = await this._getCoreInstance();
+    const meta = this._toMetaDict(
+      core,
+      Object.values(core.getAllMetaNodes(rootNode))
+    );
+    const exporter = new JSONSchemaExporter(core, meta);
+    const node = await Utils.findTaxonomyNode(core, rootNode);
+    if (node) {
+      const taxonomyData = await exporter.getSchemas(node);
+      taxonomyData.taxonomyPath = core.getPath(node);
+      return taxonomyData;
+    } else {
+      return {};
+    }
+  };
 
-            console.log({memberPaths});
-            const memberNodes = await this._loadNodes(memberPaths);
-            const taxonomyTags = await Promise.all(memberNodes.map((node, i) => this._getTagData(node, memberAttrs[i])));
-            console.log({taxonomyTags});
-            return {taxonomyTags};
-        }
-    };
+  TagCreatorControl.prototype._getFormatter = async function (nodeId) {
+    const { core, rootNode } = await this._getCoreInstance();
+    const node = await Utils.findTaxonomyNode(core, rootNode);
+    return await TagFormatter.from(core, node);
+  };
 
-    TagCreatorControl.prototype._getTagData = function (memberNode, attrDict) {
-        const tag = {
-            tagID: memberNode.getGuid(),
-            tagName: memberNode.getAttribute('name'),
-        };
-        Object.assign(tag, attrDict);
-        return tag;
-    };
+  TagCreatorControl.prototype._getCoreInstance = async function () {
+    return new Promise((res, rej) => {
+      this._client.getCoreInstance({}, (err, result) => {
+        if (err) return rej(err);
+        res(result);
+      });
+    });
+  };
 
-    TagCreatorControl.prototype._loadNodes = async function (nodePaths) {
-        const deferred = Q.defer();
-        const territoryId = this._client.addUI(this, async () => {
-            this._client.removeUI(territoryId);
-            const nodes = nodePaths.map(nodePath => this._client.getNode(nodePath));
-            return deferred.resolve(nodes);
-        });
-        const territory = Object.fromEntries(
-            nodePaths.map(path => [path, {children: 0}])
-        );
-        this._client.updateTerritory(territoryId, territory);
+  TagCreatorControl.prototype._toMetaDict = function (core, nodes) {
+    return Object.fromEntries(
+      nodes.map((node) => [core.getAttribute(node, "name"), node])
+    );
+  };
 
-        return deferred.promise;
-    };
+  TagCreatorControl.prototype._stateActiveObjectChanged = function (
+    model,
+    activeObjectId
+  ) {
+    if (this._currentNodeId === activeObjectId) {
+      // The same node selected as before - do not trigger
+    } else {
+      this.selectedObjectChanged(activeObjectId);
+    }
+  };
 
-    TagCreatorControl.prototype._getObjectDescriptor = function (nodeId) {
-        var node = this._client.getNode(nodeId),
-            objDescriptor;
-        if (node) {
-            objDescriptor = {
-                id: node.getId(),
-                name: node.getAttribute(nodePropertyNames.Attributes.name),
-                childrenIds: node.getChildrenIds(),
-                parentId: node.getParentId(),
-                isConnection: GMEConcepts.isConnection(nodeId)
-            };
-        }
+  /* * * * * * * * Visualizer life cycle callbacks * * * * * * * */
+  TagCreatorControl.prototype.destroy = function () {
+    this._detachClientEventListeners();
+    this._removeToolbarItems();
+  };
 
-        return objDescriptor;
-    };
+  TagCreatorControl.prototype._attachClientEventListeners = function () {
+    this._detachClientEventListeners();
+    WebGMEGlobal.State.on(
+      "change:" + CONSTANTS.STATE_ACTIVE_OBJECT,
+      this._stateActiveObjectChanged,
+      this
+    );
+  };
 
-    /* * * * * * * * Node Event Handling * * * * * * * */
-    TagCreatorControl.prototype._getJSONSchemas = async function (nodeId) {
-        const {core, rootNode} = await this._getCoreInstance()
-        const meta = this._toMetaDict(core, Object.values(core.getAllMetaNodes(rootNode)));
-        const exporter = new JSONSchemaExporter(core, meta);
-        const node = await Utils.findTaxonomyNode(core, rootNode);
-        if (node) {
-            const taxonomyData = await exporter.getSchemas(node);
-            taxonomyData.taxonomyPath = core.getPath(node);
-            return taxonomyData;
-        } else {
-            return {};
-        }
-    };
+  TagCreatorControl.prototype._detachClientEventListeners = function () {
+    WebGMEGlobal.State.off(
+      "change:" + CONSTANTS.STATE_ACTIVE_OBJECT,
+      this._stateActiveObjectChanged
+    );
+  };
 
-    TagCreatorControl.prototype._getFormatter = async function (nodeId) {
-        const {core, rootNode} = await this._getCoreInstance()
-        const node = await Utils.findTaxonomyNode(core, rootNode);
-        return await TagFormatter.from(core, node);
-    };
+  TagCreatorControl.prototype.onActivate = function () {
+    this._attachClientEventListeners();
+    this._displayToolbarItems();
 
-    TagCreatorControl.prototype._getCoreInstance = async function () {
-        return new Promise((res, rej) => {
-            this._client.getCoreInstance({}, (err, result) => {
-                if (err) return rej(err);
-                res(result);
-            });
-        });
-    };
+    if (typeof this._currentNodeId === "string") {
+      WebGMEGlobal.State.registerActiveObject(this._currentNodeId, {
+        suppressVisualizerFromNode: true,
+      });
+    }
+  };
 
-    TagCreatorControl.prototype._toMetaDict = function (core, nodes) {
-        return Object.fromEntries(
-            nodes.map(node => [core.getAttribute(node, 'name'), node])
-        );
-    };
+  TagCreatorControl.prototype.onDeactivate = function () {
+    this._detachClientEventListeners();
+    this._hideToolbarItems();
+  };
 
-    TagCreatorControl.prototype._stateActiveObjectChanged = function (model, activeObjectId) {
-        if (this._currentNodeId === activeObjectId) {
-            // The same node selected as before - do not trigger
-        } else {
-            this.selectedObjectChanged(activeObjectId);
-        }
-    };
+  /* * * * * * * * * * Updating the toolbar * * * * * * * * * */
+  TagCreatorControl.prototype._displayToolbarItems = function () {
+    if (this._toolbarInitialized === true) {
+      for (var i = this._toolbarItems.length; i--; ) {
+        this._toolbarItems[i].show();
+      }
+    } else {
+      this._initializeToolbar();
+    }
+  };
 
-    /* * * * * * * * Visualizer life cycle callbacks * * * * * * * */
-    TagCreatorControl.prototype.destroy = function () {
-        this._detachClientEventListeners();
-        this._removeToolbarItems();
-    };
+  TagCreatorControl.prototype._hideToolbarItems = function () {
+    if (this._toolbarInitialized === true) {
+      for (var i = this._toolbarItems.length; i--; ) {
+        this._toolbarItems[i].hide();
+      }
+    }
+  };
 
-    TagCreatorControl.prototype._attachClientEventListeners = function () {
-        this._detachClientEventListeners();
-        WebGMEGlobal.State.on('change:' + CONSTANTS.STATE_ACTIVE_OBJECT, this._stateActiveObjectChanged, this);
-    };
+  TagCreatorControl.prototype._removeToolbarItems = function () {
+    if (this._toolbarInitialized === true) {
+      for (var i = this._toolbarItems.length; i--; ) {
+        this._toolbarItems[i].destroy();
+      }
+    }
+  };
 
-    TagCreatorControl.prototype._detachClientEventListeners = function () {
-        WebGMEGlobal.State.off('change:' + CONSTANTS.STATE_ACTIVE_OBJECT, this._stateActiveObjectChanged);
-    };
+  TagCreatorControl.prototype._initializeToolbar = function () {
+    var self = this,
+      toolBar = WebGMEGlobal.Toolbar;
 
-    TagCreatorControl.prototype.onActivate = function () {
-        this._attachClientEventListeners();
-        this._displayToolbarItems();
+    this._toolbarItems = [];
 
-        if (typeof this._currentNodeId === 'string') {
-            WebGMEGlobal.State.registerActiveObject(this._currentNodeId, {suppressVisualizerFromNode: true});
-        }
-    };
+    this._toolbarItems.push(toolBar.addSeparator());
 
-    TagCreatorControl.prototype.onDeactivate = function () {
-        this._detachClientEventListeners();
-        this._hideToolbarItems();
-    };
+    /************** Go to hierarchical parent button ****************/
+    this.$btnModelHierarchyUp = toolBar.addButton({
+      title: "Go to parent",
+      icon: "glyphicon glyphicon-circle-arrow-up",
+      clickFn: function (/*data*/) {
+        WebGMEGlobal.State.registerActiveObject(self._currentNodeParentId);
+      },
+    });
+    this._toolbarItems.push(this.$btnModelHierarchyUp);
+    this.$btnModelHierarchyUp.hide();
 
-    /* * * * * * * * * * Updating the toolbar * * * * * * * * * */
-    TagCreatorControl.prototype._displayToolbarItems = function () {
+    /************** Checkbox example *******************/
 
-        if (this._toolbarInitialized === true) {
-            for (var i = this._toolbarItems.length; i--;) {
-                this._toolbarItems[i].show();
-            }
-        } else {
-            this._initializeToolbar();
-        }
-    };
+    this._toolbarInitialized = true;
+  };
 
-    TagCreatorControl.prototype._hideToolbarItems = function () {
-
-        if (this._toolbarInitialized === true) {
-            for (var i = this._toolbarItems.length; i--;) {
-                this._toolbarItems[i].hide();
-            }
-        }
-    };
-
-    TagCreatorControl.prototype._removeToolbarItems = function () {
-
-        if (this._toolbarInitialized === true) {
-            for (var i = this._toolbarItems.length; i--;) {
-                this._toolbarItems[i].destroy();
-            }
-        }
-    };
-
-    TagCreatorControl.prototype._initializeToolbar = function () {
-        var self = this,
-            toolBar = WebGMEGlobal.Toolbar;
-
-        this._toolbarItems = [];
-
-        this._toolbarItems.push(toolBar.addSeparator());
-
-        /************** Go to hierarchical parent button ****************/
-        this.$btnModelHierarchyUp = toolBar.addButton({
-            title: 'Go to parent',
-            icon: 'glyphicon glyphicon-circle-arrow-up',
-            clickFn: function (/*data*/) {
-                WebGMEGlobal.State.registerActiveObject(self._currentNodeParentId);
-            }
-        });
-        this._toolbarItems.push(this.$btnModelHierarchyUp);
-        this.$btnModelHierarchyUp.hide();
-
-        /************** Checkbox example *******************/
-
-        this._toolbarInitialized = true;
-    };
-
-    return TagCreatorControl;
+  return TagCreatorControl;
 });

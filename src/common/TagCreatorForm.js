@@ -17,7 +17,10 @@ function factory() {
             type: "submit",
             className: "btn btn-secondary",
             onClick: async () => {
-              const downloadData = await this.formatData(formatter, data.formData);
+              const downloadData = await this.formatData(
+                formatter,
+                data.formData
+              );
               this.downloadJSON(downloadData);
             },
           },
@@ -30,7 +33,7 @@ function factory() {
     }
 
     async formatData(formatter, formData) {
-      formData.taxonomyTags = await formatter.getHumanFormat(
+      formData.taxonomyTags = await formatter.toHumanFormat(
         formData.taxonomyTags
       );
       return formData;
@@ -60,7 +63,7 @@ function factory() {
     constructor(schema, uiSchema, formData, formatter = DefaultFormatter) {
       this.schema = schema;
       this.uiSchema = uiSchema;
-      this.formData = formData || {taxonomyTags: []};
+      this.formData = formData || { taxonomyTags: [] };
       this.formatter = formatter;
       this.buttons = [];
     }
@@ -94,7 +97,7 @@ function factory() {
   }
 
   const DefaultFormatter = {
-    getHumanFormat(tag) {
+    toHumanFormat(tag) {
       return tag;
     },
   };
