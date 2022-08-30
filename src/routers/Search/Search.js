@@ -18,6 +18,7 @@ var express = require("express"),
   router = express.Router(),
   logger;
 
+const fetch = require("node-fetch");
 const RouterUtils = require("../../common/routers/Utils");
 const Utils = require("../../common/Utils");
 const SearchFilterDataExporter = require("../../common/SearchFilterDataExporter");
@@ -28,21 +29,22 @@ const agent = require("superagent");
 let mainConfig = null;
 const pdpBase = "https://leappremonitiondev.azurewebsites.net/v2/";
 const getAccessToken = (req) => {
+  //return require('./token');
   return req.cookies[mainConfig.authentication.azureActiveDirectory.cookieId];
 };
 
 const getProcessObservations = async (pid, token) => {
-  const response = agent
-    .get(pdpBase + "Process/GetProcessState")
-    .query({ processId: pid })
-    .set("Authorization", "Bearer " + token);
+  const opts = {
+    headers: {
+      Authorization: "Bearer " + token,
+    },
+  };
+  const response = await fetch(
+    pdpBase + `Process/GetProcessState?processId=${pid}`,
+    opts
+  );
 
-  if (response.ok !== true) {
-    throw new Error(
-      "Cannot fetch process info [" + pid + "] [" + resp.statusCode + "]"
-    );
-  }
-  const obsInfo = response.body;
+  const obsInfo = await response.json();
   const results = [];
   for (let i = 1; i < obsInfo.numObservations; i += 1) {
     results.push(
@@ -53,16 +55,12 @@ const getProcessObservations = async (pid, token) => {
         .set("Authorization", "Bearer " + token)
     );
   }
-  const observations = [];
-  results.forEach((result) => {
-    observations.push(result.body);
-  });
+  const observations = results.map((result) => result.body);
 
   return observations;
 };
 
 const listArtifacts = async (type, token) => {
-  let processList = [];
   try {
     let response = await agent
       .get(pdpBase + "Process/ListProcesses")
@@ -74,7 +72,7 @@ const listArtifacts = async (type, token) => {
       );
     }
 
-    processList = response.body.filter(
+    const processList = response.body.filter(
       (element) => element.processType === type
     );
 
@@ -160,9 +158,8 @@ function initialize(middlewareOpts) {
     async function (req, res) {
       try {
         // TODO: make the collection/db part of the config
-        const full_list = listArtifacts("testdata", getAccessToken(req));
-        console.log({ full_list });
-        res.status(200).json(full_list).end();
+        const artifacts = await listArtifacts("testdata", getAccessToken(req));
+        res.status(200).json(artifacts).end();
       } catch (e) {
         logger.error(e);
         res.sendStatus(401);
