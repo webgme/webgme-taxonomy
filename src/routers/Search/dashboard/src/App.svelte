@@ -33,7 +33,7 @@
 
   function onFilterUpdate(filterTags = []) {
     const filter = (item) => {
-      const [{ label, taxonomyTags }] = item.data;
+      const [{ displayName, taxonomyTags }] = item.data;
 
       const matchingTags = filterTags.every(
         (filterTag) => !!taxonomyTags.find((tag) => isTypeOfTag(tag, filterTag))
@@ -41,7 +41,7 @@
 
       if (matchingTags) {
         return searchKeyword
-          ? label.toLowerCase().includes(searchKeyword.toLowerCase())
+          ? displayName.toLowerCase().includes(searchKeyword.toLowerCase())
           : true;
       }
 
@@ -136,7 +136,7 @@
   ////// Dataset Upload //////
   let uploadingArtifact = false;
   let artifactFile;
-  let uploadTags;
+  let uploadMetadata;
 
   function onFileDrop(event) {
     const { acceptedFiles } = event.detail;
@@ -149,9 +149,7 @@
   async function onTagsFileDrop(event) {
     const [tagsFile] = event.detail.acceptedFiles;
     if (tagsFile) {
-      uploadTags = JSON.parse(await readFile(tagsFile));
-      console.log(uploadTags);
-      // TODO: send the tags somewhere...
+      uploadMetadata = JSON.parse(await readFile(tagsFile));
     }
   }
 
@@ -171,12 +169,14 @@
   }
 
   async function onUploadClicked() {
-    if (!uploadTags) {
-      // TODO: validate tags
+    if (!uploadMetadata) {
+      // TODO: validate tags and convert to the GUID format
     }
     if (!artifactFile) {
+      // TODO: feedback on error
     }
-    await storage.createArtifact(uploadTags, artifactFile);
+    uploadMetadata.displayName = artifactName;
+    await storage.createArtifact(uploadMetadata, artifactFile);
   }
 
   let artifactName = "";
@@ -203,8 +203,8 @@
     </Dropzone>
     <p>
       Taxonomy Terms:
-      {uploadTags
-        ? uploadTags.taxonomyTags.map((tag) => tag.Tag).join(", ")
+      {uploadMetadata
+        ? uploadMetadata.taxonomyTags.map((tag) => tag.Tag).join(", ")
         : ""}
     </p>
     <Dropzone on:drop={onTagsFileDrop} accept=".json">
