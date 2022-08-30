@@ -5,6 +5,7 @@
   /*import Chip from "@smui/chips";*/
   import List, { Item, Text, PrimaryText, SecondaryText } from "@smui/list";
   import Drawer, { Content, AppContent } from "@smui/drawer";
+  import LinearProgress from "@smui/linear-progress";
   import Dialog, {
     Content as DialogContent,
     Title as DialogTitle,
@@ -20,7 +21,6 @@
   let vocabularies: TaxonomyData[] = [];
 
   import Storage from "./Storage.ts";
-  import token from "./Bearer.ts";
   const storage = new Storage();
   let allItems = [];
   let items = [];
@@ -33,7 +33,7 @@
 
   function onFilterUpdate(filterTags = []) {
     const filter = (item) => {
-      const [{ label, taxonomyTags }] = item.Data;
+      const [{ label, taxonomyTags }] = item.data;
 
       const matchingTags = filterTags.every(
         (filterTag) => !!taxonomyTags.find((tag) => isTypeOfTag(tag, filterTag))
@@ -78,9 +78,13 @@
     return vocabs;
   }
 
+  let isLoading = false;
   async function fetchData() {
     vocabularies = await fetchVocabularies();
+    isLoading = true;
     allItems = await storage.listArtifacts();
+    isLoading = false;
+    console.log({ allItems });
     onFilterUpdate();
   }
 
@@ -228,6 +232,9 @@
     </Section>
   </Row>
 </TopAppBar>
+{#if isLoading}
+  <LinearProgress indeterminate />
+{/if}
 
 <!-- TODO: make sure the drawer is collapsible -->
 <div class="drawer-container">
@@ -247,12 +254,12 @@
         {#each items as item}
           <Item on:SMUI:action={() => onItemClicked(item)}>
             <Text>
-              <PrimaryText>{item.Data[0].label}</PrimaryText>
+              <PrimaryText>{item.data[0].label}</PrimaryText>
               <SecondaryText
                 >{item.Version + 1} revisions. <a>Append data</a>
               </SecondaryText>
             </Text>
-            {#each item.Data[0].taxonomyTags as tag}
+            {#each item.data[0].taxonomyTags as tag}
               <!--
                                                         <Chip chip={tag.id}>
 								{#if tag.type === 'EnumField'}

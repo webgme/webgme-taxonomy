@@ -27,7 +27,7 @@ const staticPath = path.join(__dirname, "dashboard", "public");
 
 const agent = require("superagent");
 let mainConfig = null;
-const pdpBase = "https://leappremonitiondev.azurewebsites.net/v2/";
+const pdpBase = "https://leappremonitiondev.azurewebsites.net/";
 const getAccessToken = (req) => {
   //return require('./token');
   return req.cookies[mainConfig.authentication.azureActiveDirectory.cookieId];
@@ -40,7 +40,7 @@ const getProcessObservations = async (pid, token) => {
     },
   };
   const response = await fetch(
-    pdpBase + `Process/GetProcessState?processId=${pid}`,
+    pdpBase + `v2/Process/GetProcessState?processId=${pid}`,
     opts
   );
 
@@ -50,7 +50,11 @@ const getProcessObservations = async (pid, token) => {
     results.push(
       await agent
         .get(
-          pdpBase + "Process/GetObservation?processId=" + pid + "&obsIndex=" + i
+          pdpBase +
+            "v2/Process/GetObservation?processId=" +
+            pid +
+            "&obsIndex=" +
+            i
         )
         .set("Authorization", "Bearer " + token)
     );
@@ -63,7 +67,7 @@ const getProcessObservations = async (pid, token) => {
 const listArtifacts = async (type, token) => {
   try {
     let response = await agent
-      .get(pdpBase + "Process/ListProcesses")
+      .get(pdpBase + "v2/Process/ListProcesses")
       .query({ permission: "read" })
       .set("Authorization", "Bearer " + token);
     if (response.ok !== true) {
@@ -184,10 +188,33 @@ function initialize(middlewareOpts) {
   );
 
   router.get(
-    "/:projectId/branch/:branch/artifacts/:id",
+    "/:projectId/branch/:branch/artifacts/:id/downloadUrl",
     async function (req, res) {
-      // TODO: download an artifact
-      res.json(data);
+      const { id } = req.params;
+      const [processId, obsIndex, version] = id.split("_");
+      const queryDict = _.mapObject(
+        {
+          processId,
+          obsIndex,
+          version,
+          endObsIndex: obsIndex,
+        },
+        encodeURIComponent
+      );
+      const queryString = Object.entries(queryDict)
+        .map(([key, value]) => `${key}=${value}`)
+        .join("&");
+      const url = pdpBase + `v3/Files/GetObservationFiles?${queryString}`;
+      const opts = {
+        headers: {
+          Authorization: "Bearer " + token,
+        },
+      };
+      const response = await fetch(url, opts);
+      const result = await response.json();
+
+      console.log({ result });
+      res.json(result.files.map((file) => file.sasUrl));
     }
   );
 
