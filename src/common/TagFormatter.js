@@ -13,7 +13,7 @@ function factory() {
      * that for the top-level tag.
      */
     toGuidFormat(tags) {
-      return tags.map(tag => this._toGuidFormat(tag));
+      return tags.map((tag) => this._toGuidFormat(tag));
     }
 
     _toGuidFormat(tag, guid = null) {
@@ -40,7 +40,7 @@ function factory() {
     }
 
     toHumanFormat(tags) {
-      return tags.map(tag => this._toHumanFormat(tag));
+      return tags.map((tag) => this._toHumanFormat(tag));
     }
 
     _toHumanFormat(tag) {
@@ -48,6 +48,7 @@ function factory() {
       const humanReadable = Object.fromEntries(
         entries.map(([guid, data]) => {
           const name = this.nodeNameDict[guid];
+          if (name === undefined) throw new TagNotFoundError(guid);
           const newData = isObject(data) ? this._toHumanFormat(data) : data;
           return [name, newData];
         })
