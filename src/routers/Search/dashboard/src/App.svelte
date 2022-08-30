@@ -126,9 +126,18 @@
 
   fetchData();
 
-  let uploadingArtifact = false;
+  async function downloadItem(item) {
+    const url = await storage.getDownloadUrl(item);
+    const anchor = document.createElement("a");
+    anchor.setAttribute("href", url);
+    anchor.click();
+  }
 
+  ////// Dataset Upload //////
+  let uploadingArtifact = false;
   let artifactFile;
+  let uploadTags;
+
   function onFileDrop(event) {
     const { acceptedFiles } = event.detail;
     if (acceptedFiles.length) {
@@ -137,7 +146,6 @@
     // TODO: handle rejections
   }
 
-  let uploadTags;
   async function onTagsFileDrop(event) {
     const [tagsFile] = event.detail.acceptedFiles;
     if (tagsFile) {
@@ -256,7 +264,8 @@
             <Text>
               <PrimaryText>{item.data[0].label}</PrimaryText>
               <SecondaryText
-                >{item.version + 1} revisions. <a>Append data</a>
+                >{item.version + 1} revisions.
+                <a on:click={downloadItem(item)}>Download</a>
               </SecondaryText>
             </Text>
             {#each item.data[0].taxonomyTags as tag}

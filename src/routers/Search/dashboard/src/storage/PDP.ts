@@ -36,19 +36,20 @@ class PDP {
   }
 
   async listArtifacts() {
-    const response = await fetch('https://leappremonitiondev.azurewebsites.net/v2/Process/ListProcesses?permission=read', {
-      method: 'get',
-      headers: this._getHeaders()
-      });
-    const data : object[] = (await response.json() || [{}]).filter(element => element.processType === 'data');
-    let realDataItems = [];
+    //const response = await fetch('https://leappremonitiondev.azurewebsites.net/v2/Process/ListProcesses?permission=read', {
+      //method: 'get',
+      //headers: this._getHeaders()
+      //});
+    //const data : object[] = (await response.json() || [{}]).filter(element => element.processType === 'data');
+    //let realDataItems = [];
 
-    await Promise.all(data.map(async process => {
-      const processObservations = await this._getAllObservations(process.processId);
-      realDataItems = realDataItems.concat(processObservations);
-    }));
+    //await Promise.all(data.map(async process => {
+      //const processObservations = await this._getAllObservations(process.processId);
+      //realDataItems = realDataItems.concat(processObservations);
+    //}));
     
-    return realDataItems;
+    //return realDataItems;
+    return testDataItems;
   }
 
   async downloadArtifact(metadata) {

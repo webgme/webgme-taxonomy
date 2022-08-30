@@ -18,6 +18,7 @@ var express = require("express"),
   router = express.Router(),
   logger;
 
+const _ = require("underscore");
 const fetch = require("node-fetch");
 const RouterUtils = require("../../common/routers/Utils");
 const Utils = require("../../common/Utils");
@@ -94,6 +95,31 @@ const listArtifacts = async (type, token) => {
   }
 };
 
+const getDownloadUrls = async (processId, obsIndex, version, token) => {
+  const queryDict = _.mapObject(
+    {
+      processId,
+      obsIndex,
+      version,
+      endObsIndex: obsIndex + 1,
+    },
+    encodeURIComponent
+  );
+  const queryString = Object.entries(queryDict)
+    .map(([key, value]) => `${key}=${value}`)
+    .join("&");
+  const url = pdpBase + `v3/Files/GetObservationFiles?${queryString}`;
+  const opts = {
+    headers: {
+      Authorization: "Bearer " + token,
+    },
+  };
+  const response = await fetch(url, opts);
+  console.log(response.status);
+  const result = await response.json();
+  return result.files.map((file) => file.sasUrl);
+};
+
 /* N.B. gmeAuth, safeStorage and workerManager are not ready to use until the start function is called.
  * (However inside an incoming request they are all ensured to have been initialized.)
  *
@@ -159,10 +185,19 @@ function initialize(middlewareOpts) {
   // Accessing and updating data via the storage adapter
   router.get(
     "/:projectId/branch/:branch/artifacts/",
+    // TODO: add the artifact ID...
     async function (req, res) {
       try {
         // TODO: make the collection/db part of the config
         const artifacts = await listArtifacts("testdata", getAccessToken(req));
+        artifacts.forEach(
+          (artifact) =>
+            (artifact.id = [
+              artifact.processId,
+              artifact.index,
+              artifact.index,
+            ].join("_"))
+        );
         res.status(200).json(artifacts).end();
       } catch (e) {
         logger.error(e);
@@ -191,30 +226,16 @@ function initialize(middlewareOpts) {
     "/:projectId/branch/:branch/artifacts/:id/downloadUrl",
     async function (req, res) {
       const { id } = req.params;
+      console.log("getting download URL", id);
       const [processId, obsIndex, version] = id.split("_");
-      const queryDict = _.mapObject(
-        {
-          processId,
-          obsIndex,
-          version,
-          endObsIndex: obsIndex,
-        },
-        encodeURIComponent
-      );
-      const queryString = Object.entries(queryDict)
-        .map(([key, value]) => `${key}=${value}`)
-        .join("&");
-      const url = pdpBase + `v3/Files/GetObservationFiles?${queryString}`;
-      const opts = {
-        headers: {
-          Authorization: "Bearer " + token,
-        },
-      };
-      const response = await fetch(url, opts);
-      const result = await response.json();
 
-      console.log({ result });
-      res.json(result.files.map((file) => file.sasUrl));
+      const urls = await getDownloadUrls(
+        processId,
+        obsIndex,
+        version,
+        getAccessToken(req)
+      );
+      return res.json(urls);
     }
   );
 
