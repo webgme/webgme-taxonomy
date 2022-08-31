@@ -18598,11 +18598,11 @@ var app = (function () {
       }),
       (e.$$.update = () => {
         2 & e.$$.dirty && n(4, (i = o)),
-          5 & e.$$.dirty &&
+          13 & e.$$.dirty &&
             (console.log("checked:", l),
             n(0, (a.selected = l), a),
-            c("change", { tree: a })),
-          8 & e.$$.dirty && n(0, (a.value = d), a);
+            n(0, (a.value = d), a),
+            c("change", { tree: a }));
       }),
       [
         a,
@@ -18756,20 +18756,25 @@ var app = (function () {
   class Dl {
     constructor() {
       const e = window.location.href.split("/");
-      e.pop(), e.pop(), (this.baseUrl = e.join("/") + "/");
+      e.pop(), e.pop(), (this.baseUrl = e.join("/") + "/artifacts/");
     }
     async listArtifacts() {
-      return (await fetch(this.baseUrl + "artifacts/")).json();
+      const e = await fetch(this.baseUrl);
+      return await e.json();
     }
     async getDownloadUrl(e) {
-      const t = this.baseUrl + "artifacts/" + e.id + "/downloadUrl";
-      return (await fetch(t)).json();
+      const t = this.baseUrl + e.id + "/downloadUrl",
+        n = await fetch(t);
+      return await n.json();
     }
     async updateArtifact(e, t) {
       console.log("Updating artifact:", e, t);
     }
     async createArtifact(e, t) {
       console.log("Creating artifact:", e, t);
+      const n = this.baseUrl + e.id + "/downloadUrl",
+        i = await fetch(n, { method: "POST" });
+      console.log("create artifact response:", await i.json());
     }
   }
   const { document: wl } = oe;
@@ -19821,26 +19826,29 @@ var app = (function () {
     let o = [],
       l = [];
     function c(e = []) {
-      const t = (t) => {
-        const [{ displayName: n, taxonomyTags: i }] = t.data;
-        return (
-          !!e.every(
-            (e) =>
-              !!i.find((t) =>
-                (function (e, t) {
-                  return (
-                    console.log(e.ID, t.id),
-                    (e.ID === t.id && t.value == e.value) ||
-                      (e.hasOwnProperty(t.id) && e[t.id] === t.value)
-                  );
-                })(t, e)
-              )
-          ) &&
-          (!a || n.toLowerCase().includes(a.toLowerCase()))
-        );
-      };
       console.log({ filterTags: e, item: l[0] }),
-        n(3, (l = o.filter((e) => t(e))));
+        n(
+          3,
+          (l = o.filter((t) =>
+            ((t) => {
+              const [{ displayName: n, taxonomyTags: i }] = t.data;
+              return (
+                !!e.every(
+                  (e) =>
+                    !!i.find((t) =>
+                      (function (e, t) {
+                        return (
+                          (e.ID === t.id && t.value == e.value) ||
+                          (e.hasOwnProperty(t.id) && e[t.id] === t.value)
+                        );
+                      })(t, e)
+                    )
+                ) &&
+                (!a || n.toLowerCase().includes(a.toLowerCase()))
+              );
+            })(t)
+          ))
+        );
     }
     let d = !1;
     class u extends class {

@@ -20,6 +20,7 @@
   $: arrowDown = expanded;
 
   let checked = tree.selected === undefined ? false : tree.selected;
+  let value = null;
 
   // TODO: select checkbox -> select all children; partial select all parents (if false)
   // TODO: unselect checkbox -> unselect all children
@@ -33,15 +34,12 @@
 
     console.log("checked:", checked);
     tree.selected = checked;
+    tree.value = value;
     //tree.children.forEach(child => child.selected = checked);
     dispatch("change", { tree });
     //}
     // TODO: for any parents, set to indeterminate if single child is selected
   }
-
-  // TODO: when any children are selected
-  let value = null;
-  $: tree.value = value;
 </script>
 
 <ul>
