@@ -35,6 +35,11 @@
     const filter = (item) => {
       const [{ displayName, taxonomyTags }] = item.data;
 
+      if (!displayName) {
+        console.log("Found data without display name:", item);
+        return false;
+      }
+
       const matchingTags = filterTags.every(
         (filterTag) => !!taxonomyTags.find((tag) => isTypeOfTag(tag, filterTag))
       );
