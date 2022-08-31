@@ -6,7 +6,21 @@ const Utils = {
     const { safeStorage, getUserId, gmeConfig, logger } = middlewareOpts;
     const userId = getUserId(req);
 
+    console.log('CTX-user:',userId);
+    console.log(Object.keys(safeStorage));
     const context = {};
+
+    const projectList = await safeStorage.getProjects({
+      username: userId
+    });
+    console.log('CTX-projects: ', projectList);
+    const projectAuthParams = {
+      entityType: safeStorage.authorizer.ENTITY_TYPES.PROJECT
+    };
+    const authorizations = await Promise.all(projectList.map(async projectInfo => 
+      await safeStorage.authorizer.getAccessRights(userId, projectInfo.projectId, projectAuthParams)
+    ));
+    console.log('CTX-authorizations: ', authorizations);
 
     context.project = await safeStorage.openProject({
       username: userId,

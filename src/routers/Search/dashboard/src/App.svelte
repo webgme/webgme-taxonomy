@@ -262,7 +262,7 @@
         {#each items as item}
           <Item on:SMUI:action={() => onItemClicked(item)}>
             <Text>
-              <PrimaryText>{item.data[0].label}</PrimaryText>
+              <PrimaryText>{item.data[0].displayName}</PrimaryText>
               <SecondaryText
                 >{item.version + 1} revisions.
                 <a on:click={downloadItem(item)}>Download</a>

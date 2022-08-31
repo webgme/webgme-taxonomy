@@ -101,7 +101,7 @@ const getDownloadUrls = async (processId, obsIndex, version, token) => {
       processId,
       obsIndex,
       version,
-      endObsIndex: obsIndex + 1,
+      endObsIndex: obsIndex
     },
     encodeURIComponent
   );
@@ -110,6 +110,7 @@ const getDownloadUrls = async (processId, obsIndex, version, token) => {
     .join("&");
   const url = pdpBase + `v3/Files/GetObservationFiles?${queryString}`;
   const opts = {
+    method: 'PUT',
     headers: {
       Authorization: "Bearer " + token,
     },
@@ -117,6 +118,8 @@ const getDownloadUrls = async (processId, obsIndex, version, token) => {
   const response = await fetch(url, opts);
   console.log(response.status);
   const result = await response.json();
+  console.log(response.body);
+  console.log(result);
   return result.files.map((file) => file.sasUrl);
 };
 
@@ -156,8 +159,10 @@ function initialize(middlewareOpts) {
 
   // Perhaps the path should include the node ID, too...
   router.use("/:projectId/branch/:branch/", async (req, res, next) => {
+    console.log('getting some context???');
     try {
       const { projectId, branch } = req.params;
+      console.log('CTX:', projectId, branch);
       req.webgmeContext = await RouterUtils.getWebGMEContext(
         middlewareOpts,
         req,
@@ -189,7 +194,8 @@ function initialize(middlewareOpts) {
     async function (req, res) {
       try {
         // TODO: make the collection/db part of the config
-        const artifacts = await listArtifacts("testdata", getAccessToken(req));
+        const type = req.params.projectId.indexOf('WFTax') !== -1 ? 'workflow': 'testdata';
+        const artifacts = await listArtifacts(type, getAccessToken(req));
         artifacts.forEach(
           (artifact) =>
             (artifact.id = [
