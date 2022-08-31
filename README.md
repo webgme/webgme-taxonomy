@@ -8,6 +8,32 @@ Second, start mongodb locally by running the `mongod` executable in your mongodb
 
 Then, run `webgme start` from the project root to start . Finally, navigate to `http://localhost:8888` to start using webgme-taxonomy!
 
+## Creating a Taxonomy
+The easiest way to create a taxonomy is to simply import a CSV file. Here are the steps:
+- First, create a taxonomy in a spreadsheet where properties have `(text)`, `(int)`, `(bool)`, `(enum)`, etc, appended to the given property name. Each child term/property should be on a line below the parent and indented by 1 cell. Next, export the page as a CSV. An example as a CSV is shown below:
+	```
+		parentTerm,,,
+		,childTerm,,,
+		,,name (text),
+		,,age (int),
+		,,color (enum),
+		,,,red
+		,,,blue
+		,,,green
+
+	```
+- Next, use `./bin/taxonomy-from-csv <path-to-csv> > taxonomy.json` to generate a JSON representation that can be imported into the environment.
+- Create a new project in the design studio and import the `taxonomy` seed as a library.
+- Create a new `Taxonomy` node in the root node.
+- Enable the `SetStateFromJSON` plugin for this new node.
+- Run `SetStateFromJSON` on this new `Taxonomy` node with the `taxonomy.json` file generated in the second step.
+- All done!
+
+## Integrated Tools
+There are a few integrated tools in the design studio which are automatically configured using projects in the design studio:
+- Search Dashboard: This is a web-based dashboard for viewing data associated with terms in the taxonomy. Currently, only Microsoft Premonition Data Platform is supported to store artifacts but this shouldn't be hard to generalize. (Generalization has been the hopes :).)
+- Taxonomy Term Creator (Form): This is a web-based form for selecting terms given the taxonomy defined in the studio.
+
 ## Misc To Do
 - [ ] errors in validation when creating tags... Why?
 - [ ] update PDP integration (Yogesh, right?)
@@ -20,21 +46,3 @@ Then, run `webgme start` from the project root to start . Finally, navigate to `
 		- configuration opts:
 			- collection name
 				- validation so not colliding with others
-
-## Done
-- [x] router for the form download
-	- [x] add TagCreator router
-	- [x] refactor the visualizer form...
-		- [ ] should I wrap it all and use FormRenderData?
-			- [ ] yeah, let's do this
-			- [ ] I need to load with requirejs...
-				- this is a little annoying bc then I need requirejs on the client. Probably fine...
-				- how hard is it to configure requirejs?
-		- [ ] how about we just allow some code duplication for now
-	- [x] how to embed?
-		- [ ] it would be great if we could build a single static file (svelte) and just include that
-- [x] update form download to use the human-readable format
-	- [x] add logic to visualizer
-	- [x] missing ID field...
-		- I see it in the schema, I think
-	- [x] need to merge the format logic then should be about there
