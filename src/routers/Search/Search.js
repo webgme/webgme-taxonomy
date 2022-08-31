@@ -18,110 +18,14 @@ var express = require("express"),
   router = express.Router(),
   logger;
 
-const _ = require("underscore");
-const fetch = require("node-fetch");
 const RouterUtils = require("../../common/routers/Utils");
 const Utils = require("../../common/Utils");
 const SearchFilterDataExporter = require("../../common/SearchFilterDataExporter");
 const path = require("path");
 const staticPath = path.join(__dirname, "dashboard", "public");
 
-const agent = require("superagent");
+const PDP = require("./PDP");
 let mainConfig = null;
-const pdpBase = "https://leappremonitiondev.azurewebsites.net/";
-const getAccessToken = (req) => {
-  //return require('./token');
-  return req.cookies[mainConfig.authentication.azureActiveDirectory.cookieId];
-};
-
-const getProcessObservations = async (pid, token) => {
-  const opts = {
-    headers: {
-      Authorization: "Bearer " + token,
-    },
-  };
-  const response = await fetch(
-    pdpBase + `v2/Process/GetProcessState?processId=${pid}`,
-    opts
-  );
-
-  const obsInfo = await response.json();
-  const results = [];
-  for (let i = 1; i < obsInfo.numObservations; i += 1) {
-    results.push(
-      await agent
-        .get(
-          pdpBase +
-            "v2/Process/GetObservation?processId=" +
-            pid +
-            "&obsIndex=" +
-            i
-        )
-        .set("Authorization", "Bearer " + token)
-    );
-  }
-  const observations = results.map((result) => result.body);
-
-  return observations;
-};
-
-const listArtifacts = async (type, token) => {
-  try {
-    let response = await agent
-      .get(pdpBase + "v2/Process/ListProcesses")
-      .query({ permission: "read" })
-      .set("Authorization", "Bearer " + token);
-    if (response.ok !== true) {
-      throw new Error(
-        "Initial list fetching failed [" + response.statusCode + "]"
-      );
-    }
-
-    const processList = response.body.filter(
-      (element) => element.processType === type
-    );
-
-    const processObservations = await Promise.all(
-      processList.map(
-        async (process) =>
-          await getProcessObservations(process.processId, token)
-      )
-    );
-
-    return processObservations.flat();
-  } catch (e) {
-    logger.error(e);
-    return [];
-  }
-};
-
-const getDownloadUrls = async (processId, obsIndex, version, token) => {
-  const queryDict = _.mapObject(
-    {
-      processId,
-      obsIndex,
-      version,
-      endObsIndex: obsIndex,
-    },
-    encodeURIComponent
-  );
-  const queryString = Object.entries(queryDict)
-    .map(([key, value]) => `${key}=${value}`)
-    .join("&");
-  const url = pdpBase + `v3/Files/GetObservationFiles?${queryString}`;
-  const opts = {
-    method: "PUT",
-    headers: {
-      Authorization: "Bearer " + token,
-    },
-  };
-  const response = await fetch(url, opts);
-  console.log(response.status);
-  const result = await response.json();
-  console.log(response.body);
-  console.log(result);
-  return result.files.map((file) => file.sasUrl);
-};
 
 /* N.B. gmeAuth, safeStorage and workerManager are not ready to use until the start function is called.
  * (However inside an incoming request they are all ensured to have been initialized.)
@@ -194,11 +98,10 @@ function initialize(middlewareOpts) {
     async function (req, res) {
       try {
         // TODO: make the collection/db part of the config
-        const type =
-          req.params.projectId.indexOf("WFTax") !== -1
-            ? "workflow"
-            : "testdata";
-        const artifacts = await listArtifacts(type, getAccessToken(req));
+        const type = await getArtifactType(req);
+        const storage = PDP.from(req);
+        const artifacts = await storage.listArtifacts(type);
+        console.log({ artifacts });
         artifacts.forEach(
           (artifact) =>
             (artifact.id = [
@@ -218,8 +121,12 @@ function initialize(middlewareOpts) {
   router.post(
     "/:projectId/branch/:branch/artifacts/",
     async function (req, res) {
+      const type = await getArtifactType(req);
+      const storage = PDP.from(req);
+      const { processId } = await storage.createArtifact(type);
+      console.log("body:", req.body);
       // TODO: create new artifact
-      res.json(data);
+      res.json("Not supported yet...");
     }
   );
 
@@ -238,13 +145,8 @@ function initialize(middlewareOpts) {
       console.log("getting download URL", id);
       const [processId, obsIndex, version] = id.split("_");
 
-      const urls = await getDownloadUrls(
-        processId,
-        obsIndex,
-        version,
-        getAccessToken(req)
-      );
-      await sleep(5000); // FIXME: check for it to be ready. Not very pretty currently...
+      const storage = PDP.from(req);
+      const urls = await storage.getDownloadUrls(processId, obsIndex, version);
       return res.json(urls);
     }
   );
@@ -268,9 +170,14 @@ function stop(callback) {
   callback();
 }
 
-async function sleep(duration) {
-  return new Promise((res) => setTimeout(res, duration));
+async function getArtifactType(req) {
+  const type =
+    req.params.projectId.indexOf("WFTax") !== -1 ? "workflow" : "testdata";
+
+  return type;
 }
+
+async function createProcess(type) {}
 
 module.exports = {
   initialize: initialize,
