@@ -28,20 +28,18 @@
   function isTypeOfTag(tag, typeTag) {
     // TODO: check if tag is type of typeTag (add inheritance)
     // TODO: handle inheritance
-    return tag.id === typeTag.id && typeTag.value == tag.value;
+    const isMatchingTag = tag.ID === typeTag.id && typeTag.value == tag.value;
+    if (isMatchingTag) {
+      return true;
+    }
+    const tagHasAttribute =
+      tag.hasOwnProperty(typeTag.id) && tag[typeTag.id] === typeTag.value;
+    return tagHasAttribute;
   }
 
   function onFilterUpdate(filterTags = []) {
     const filter = (item) => {
       const [{ displayName, taxonomyTags }] = item.data;
-
-      if (!displayName) {
-        console.log(
-          "Found data without display name. Filtering out. Data:",
-          item
-        );
-        return false;
-      }
 
       const matchingTags = filterTags.every(
         (filterTag) => !!taxonomyTags.find((tag) => isTypeOfTag(tag, filterTag))
@@ -56,6 +54,7 @@
       return false;
     };
 
+    console.log({ filterTags, item: items[0] });
     items = allItems.filter((item) => filter(item));
   }
 
@@ -90,7 +89,16 @@
   async function fetchData() {
     vocabularies = await fetchVocabularies();
     isLoading = true;
-    allItems = await storage.listArtifacts();
+    allItems = (await storage.listArtifacts()).filter((artifact) => {
+      const hasDisplayName = !!artifact.data[0].displayName;
+      if (!hasDisplayName) {
+        console.log(
+          "Found data without display name. Filtering out. Data:",
+          artifact
+        );
+      }
+      return hasDisplayName;
+    });
     isLoading = false;
     console.log({ allItems });
     onFilterUpdate();
