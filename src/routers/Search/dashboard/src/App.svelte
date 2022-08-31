@@ -17,7 +17,6 @@
   import type TaxonomyData from "./TaxonomyData.ts";
 
   export let title: string = "Digital Phenotyping Dashboard ";
-  let searchKeyword: string = "";
   let vocabularies: TaxonomyData[] = [];
 
   import Storage from "./Storage.ts";
@@ -37,7 +36,10 @@
     return tagHasAttribute;
   }
 
-  function onFilterUpdate(filterTags = []) {
+  let searchKeyword: string = "";
+  let filterTags = [];
+
+  function onFilterUpdate(searchKeyword, filterTags) {
     const filter = (item) => {
       const [{ displayName, taxonomyTags }] = item.data;
 
@@ -57,6 +59,8 @@
     console.log({ filterTags, item: items[0] });
     items = allItems.filter((item) => filter(item));
   }
+
+  $: onFilterUpdate(searchKeyword, filterTags);
 
   function getTag(id) {
     const queue = vocabularies;
@@ -101,7 +105,7 @@
     });
     isLoading = false;
     console.log({ allItems });
-    onFilterUpdate();
+    onFilterUpdate(searchKeyword, filterTags);
   }
 
   class EmbeddedEvent {
@@ -269,7 +273,7 @@
       <span class="filter-header">Advanced Filters</span>
       <TaxonomyFilter
         trees={vocabularies}
-        on:change={(event) => onFilterUpdate(event.detail.filterTags)}
+        on:change={(event) => (filterTags = event.detail.filterTags)}
       />
     </Content>
   </Drawer>
@@ -281,7 +285,7 @@
             <Text>
               <PrimaryText>{item.data[0].displayName}</PrimaryText>
               <SecondaryText
-                >{item.version + 1} revisions.
+                >{item.index + 1} revisions.
                 <a on:click={downloadItem(item)}>Download</a>
               </SecondaryText>
             </Text>
