@@ -25,6 +25,17 @@ class Storage {
 
   async createArtifact(metadata, content) {
     console.log('Creating artifact:', metadata, content);
+    const opts = {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        metadata,
+      })
+    };
+    const response = await fetch(this.baseUrl, opts);
+    console.log('create artifact response:', await response.json());
   }
 }
 
