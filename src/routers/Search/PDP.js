@@ -11,7 +11,6 @@ class PDP {
     const allProcesses = await this._fetch(
       "v2/Process/ListProcesses?permission=read"
     );
-    console.log({ allProcesses });
     const processList = allProcesses.filter(
       (element) => element.processType === type
     );
@@ -22,7 +21,6 @@ class PDP {
       )
     );
 
-    console.log({ processObservations });
     return processObservations.flat();
   }
 
@@ -36,7 +34,6 @@ class PDP {
       },
       encodeURIComponent
     );
-    console.log("getDownloadUrls:", queryDict);
     const queryString = Object.entries(queryDict)
       .map(([key, value]) => `${key}=${value}`)
       .join("&");
@@ -45,7 +42,6 @@ class PDP {
       method: "PUT",
     };
     const result = await this._fetch(url, opts);
-    console.log(result);
     await sleep(5000); // FIXME: check for it to be ready. Not very pretty currently...
     return result.files.map((file) => file.sasUrl);
   }
