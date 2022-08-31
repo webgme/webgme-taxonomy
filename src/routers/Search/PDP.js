@@ -17,7 +17,7 @@ class PDP {
 
     const processObservations = await Promise.all(
       processList.map(
-        async (process) => await this.getProcessObservations(process.processId)
+        async (process) => await this.getLatestObservation(process.processId)
       )
     );
 
@@ -44,6 +44,21 @@ class PDP {
     const result = await this._fetch(url, opts);
     await sleep(5000); // FIXME: check for it to be ready. Not very pretty currently...
     return result.files.map((file) => file.sasUrl);
+  }
+
+  async getLatestObservation(pid) {
+    const obsInfo = await this._fetch(
+      `v2/Process/GetProcessState?processId=${pid}`
+    );
+
+    const observations = await this._fetch(
+      "v2/Process/GetObservation?processId=" +
+        pid +
+        "&obsIndex=" +
+        (obsInfo.numObservations - 1)
+    );
+
+    return observations;
   }
 
   async getProcessObservations(pid) {
