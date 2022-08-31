@@ -101,7 +101,7 @@ const getDownloadUrls = async (processId, obsIndex, version, token) => {
       processId,
       obsIndex,
       version,
-      endObsIndex: obsIndex
+      endObsIndex: obsIndex,
     },
     encodeURIComponent
   );
@@ -110,7 +110,7 @@ const getDownloadUrls = async (processId, obsIndex, version, token) => {
     .join("&");
   const url = pdpBase + `v3/Files/GetObservationFiles?${queryString}`;
   const opts = {
-    method: 'PUT',
+    method: "PUT",
     headers: {
       Authorization: "Bearer " + token,
     },
@@ -159,10 +159,10 @@ function initialize(middlewareOpts) {
 
   // Perhaps the path should include the node ID, too...
   router.use("/:projectId/branch/:branch/", async (req, res, next) => {
-    console.log('getting some context???');
+    console.log("getting some context???");
     try {
       const { projectId, branch } = req.params;
-      console.log('CTX:', projectId, branch);
+      console.log("CTX:", projectId, branch);
       req.webgmeContext = await RouterUtils.getWebGMEContext(
         middlewareOpts,
         req,
@@ -194,14 +194,17 @@ function initialize(middlewareOpts) {
     async function (req, res) {
       try {
         // TODO: make the collection/db part of the config
-        const type = req.params.projectId.indexOf('WFTax') !== -1 ? 'workflow': 'testdata';
+        const type =
+          req.params.projectId.indexOf("WFTax") !== -1
+            ? "workflow"
+            : "testdata";
         const artifacts = await listArtifacts(type, getAccessToken(req));
         artifacts.forEach(
           (artifact) =>
             (artifact.id = [
               artifact.processId,
               artifact.index,
-              artifact.index,
+              artifact.version,
             ].join("_"))
         );
         res.status(200).json(artifacts).end();
@@ -241,6 +244,7 @@ function initialize(middlewareOpts) {
         version,
         getAccessToken(req)
       );
+      await sleep(5000); // FIXME: check for it to be ready. Not very pretty currently...
       return res.json(urls);
     }
   );
@@ -262,6 +266,10 @@ function start(callback) {
  */
 function stop(callback) {
   callback();
+}
+
+async function sleep(duration) {
+  return new Promise((res) => setTimeout(res, duration));
 }
 
 module.exports = {

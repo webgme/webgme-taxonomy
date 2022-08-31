@@ -19836,7 +19836,11 @@ var app = (function () {
                     )
                 ) &&
                   (!a || n.toLowerCase().includes(a.toLowerCase()))
-              : (console.log("Found data without display name:", t), !1);
+              : (console.log(
+                  "Found data without display name. Filtering out. Data:",
+                  t
+                ),
+                !1);
           })(t)
         ))
       );
@@ -19911,7 +19915,9 @@ var app = (function () {
         async function (e) {
           const t = await s.getDownloadUrl(e),
             n = document.createElement("a");
-          n.setAttribute("href", t), n.click();
+          n.setAttribute("href", t),
+            n.setAttribute("target", "_blank"),
+            n.click();
         },
         function (e) {
           const { acceptedFiles: t } = e.detail;

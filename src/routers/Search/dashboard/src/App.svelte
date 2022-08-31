@@ -36,7 +36,10 @@
       const [{ displayName, taxonomyTags }] = item.data;
 
       if (!displayName) {
-        console.log("Found data without display name:", item);
+        console.log(
+          "Found data without display name. Filtering out. Data:",
+          item
+        );
         return false;
       }
 
@@ -135,6 +138,7 @@
     const url = await storage.getDownloadUrl(item);
     const anchor = document.createElement("a");
     anchor.setAttribute("href", url);
+    anchor.setAttribute("target", "_blank");
     anchor.click();
   }
 
