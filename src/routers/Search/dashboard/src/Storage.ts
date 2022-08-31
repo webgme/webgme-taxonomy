@@ -5,18 +5,18 @@ class Storage {
     const chunks = window.location.href.split('/');  // TODO:
     chunks.pop();
     chunks.pop();
-    this.baseUrl = chunks.join('/') + '/';
+    this.baseUrl = chunks.join('/') + '/artifacts/';
   }
 
   async listArtifacts() {
-    const response = await fetch(this.baseUrl + 'artifacts/');
-    return response.json();
+    const response = await fetch(this.baseUrl);
+    return await response.json();
   }
 
   async getDownloadUrl(metadata) {
-    const url = this.baseUrl + 'artifacts/' + metadata.id + '/downloadUrl';
+    const url = this.baseUrl + metadata.id + '/downloadUrl';
     const response = await fetch(url);
-    return response.json();
+    return await response.json();
   }
 
   async updateArtifact(metadata, newContent) {
