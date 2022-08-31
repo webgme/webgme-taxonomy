@@ -116,8 +116,8 @@ class PDP {
   }
 
   static from(req) {
-    const token = require("./token");
-    //return req.cookies[mainConfig.authentication.azureActiveDirectory.cookieId];
+    //const token = require("./token");
+    return req.cookies[mainConfig.authentication.azureActiveDirectory.cookieId];
     return new PDP(token);
   }
 }
