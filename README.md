@@ -32,7 +32,11 @@ The easiest way to create a taxonomy is to simply import a CSV file. Here are th
 ## Integrated Tools
 There are a few integrated tools in the design studio which are automatically configured using projects in the design studio:
 - Search Dashboard: This is a web-based dashboard for viewing data associated with terms in the taxonomy. Currently, only Microsoft Premonition Data Platform is supported to store artifacts but this shouldn't be hard to generalize. (Generalization has been the hopes :).)
+	- This is available at: `<deployment url>/routers/Search/<projectId>/branch/<branch>/static/index.html`
+	- For example, if it is running locally on port 8888, and you want to open a dashboard using a taxonomy project named `TaxonomyDemo` and owned by `guest`, you can open the dashboard using the master branch with [http://localhost:8888/routers/Search/guest%2BTaxonomyDemo/branch/master/static/index.html](http://localhost:8888/routers/Search/guest%2BTaxonomyDemo/branch/master/static/index.html)
 - Taxonomy Term Creator (Form): This is a web-based form for selecting terms given the taxonomy defined in the studio.
+	- This is available at: `<deployment url>/routers/TagCreator/<projectId>/branch/<branch>/static/index.html`
+	- For example, if it is running locally on port 8888, and you want to open the term creator form using a taxonomy project named `TaxonomyDemo` and owned by `guest`, you can open the dashboard using the master branch with [http://localhost:8888/routers/TagCreator/guest%2BTaxonomyDemo/branch/master/static/index.html](http://localhost:8888/routers/TagCreator/guest%2BTaxonomyDemo/branch/master/static/index.html)
 
 ## Misc To Do
 - [ ] errors in validation when creating tags... Why?
