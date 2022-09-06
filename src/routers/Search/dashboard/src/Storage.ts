@@ -39,15 +39,19 @@ class Storage {
     return (await this._fetch(this.baseUrl, opts))
       .mapError(err => new CreateError(err.message))
       .unwrap();
-    //console.log('create artifact response:', await response.json());
   }
 
-  async _fetch(url, opts=null) {
+  async _fetch(url: string, opts=null) {
     const response = await fetch(url, opts);
     return RequestResult.from(response);
   }
 }
 
+/**
+ * A RequestResult is the result from a request. Errors can be mapped (like combinators).
+ * Unwrapping the result will either throw an error (if an error occurred) or return the
+ * parsed result from the request.
+ */
 class RequestResult {
   _response: Response;
   _error: Error | null;

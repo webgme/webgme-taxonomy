@@ -20388,7 +20388,12 @@ var app = (function () {
         },
       }));
     let N = e[7] && Ic(),
-      M = { labelText: e[4], $$slots: { default: [Ec] }, $$scope: { ctx: e } };
+      M = {
+        labelText: e[4],
+        timeoutMs: -1,
+        $$slots: { default: [Ec] },
+        $$scope: { ctx: e },
+      };
     return (
       (c = new ps({ props: M })),
       e[21](c),

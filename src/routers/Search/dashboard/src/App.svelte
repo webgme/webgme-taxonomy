@@ -95,7 +95,7 @@
   }
 
   let snackbar: SnackbarComponentDev;
-  let errorMessage;
+  let errorMessage: string;
   $: errorMessage && snackbar.open();
 
   let isLoading = false;
@@ -286,7 +286,7 @@
 {#if isLoading}
   <LinearProgress indeterminate />
 {/if}
-<Snackbar bind:this={snackbar} labelText={errorMessage}>
+<Snackbar bind:this={snackbar} labelText={errorMessage} timeoutMs={-1}>
   <SnackbarLabel />
   <SnackbarActions>
     <IconButton class="material-icons" title="Dismiss">close</IconButton>
