@@ -16,7 +16,7 @@
   import TaxonomyFilter from "./TaxonomyFilter.svelte";
   import type TaxonomyData from "./TaxonomyData.ts";
 
-  export let title: string = "Digital Phenotyping Dashboard ";
+  export let title: string = "Data Dashboard ";
   let vocabularies: TaxonomyData[] = [];
 
   import Storage from "./Storage.ts";
