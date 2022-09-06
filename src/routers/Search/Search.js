@@ -63,10 +63,9 @@ function initialize(middlewareOpts) {
 
   // Perhaps the path should include the node ID, too...
   router.use("/:projectId/branch/:branch/", async (req, res, next) => {
-    console.log("getting some context???");
     try {
       const { projectId, branch } = req.params;
-      console.log("CTX:", projectId, branch);
+      // console.log("CTX:", projectId, branch);
       req.webgmeContext = await RouterUtils.getWebGMEContext(
         middlewareOpts,
         req,
@@ -99,9 +98,9 @@ function initialize(middlewareOpts) {
       try {
         // TODO: make the collection/db part of the config
         const type = await getArtifactType(req);
-        const storage = PDP.from(req);
+        const storage = PDP.from(req, mainConfig);
         const artifacts = await storage.listArtifacts(type);
-        console.log({ artifacts });
+        // console.log({ artifacts });
         artifacts.forEach(
           (artifact) =>
             (artifact.id = [
@@ -122,19 +121,36 @@ function initialize(middlewareOpts) {
     "/:projectId/branch/:branch/artifacts/",
     async function (req, res) {
       const type = await getArtifactType(req);
-      const storage = PDP.from(req);
-      const { processId } = await storage.createArtifact(type);
-      console.log("body:", req.body);
-      // TODO: create new artifact
-      res.json("Not supported yet...");
+      const storage = PDP.from(req, mainConfig);
+      // console.log("body:", req.body);
+      console.log('eleje:', type, ':vege');
+      const { processId } = await storage.createArtifact(type, req.body);
+      // TODO: create new artifact - check what else we need...
+      res.json({processId});
     }
   );
 
+  //TODO format the code properly
   router.patch(
-    "/:projectId/branch/:branch/artifacts/:id",
+    "/:projectId/branch/:branch/artifacts/:id/uploadUrl",
     async function (req, res) {
       // TODO: update artifact
-      res.json(data);
+      //the body is a json with the metadata and the list of file paths
+      const { id } = req.params;
+      const type = await getArtifactType(req);
+      const storage = PDP.from(req, mainConfig);
+      const [processId, obsIndex, version] = id.split("_");
+      // console.log("body:", req.body);
+      const urls = await storage.getUploadUrls(
+        type, 
+        processId, 
+        obsIndex, 
+        version, 
+        req.body.metadata, 
+        req.body.files
+      );
+      console.log(urls);
+      res.json(urls);
     }
   );
 
@@ -145,7 +161,7 @@ function initialize(middlewareOpts) {
       console.log("getting download URL", id);
       const [processId, obsIndex, version] = id.split("_");
 
-      const storage = PDP.from(req);
+      const storage = PDP.from(req, mainConfig);
       const urls = await storage.getDownloadUrls(processId, obsIndex, version);
       return res.json(urls);
     }
@@ -170,6 +186,7 @@ function stop(callback) {
   callback();
 }
 
+//TODO: probably we should remove this for the a1 release - noone cares about workflows...
 async function getArtifactType(req) {
   const type =
     req.params.projectId.indexOf("WFTax") !== -1 ? "workflow" : "testdata";

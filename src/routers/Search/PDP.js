@@ -1,6 +1,7 @@
 const pdpBase = "https://leappremonitiondev.azurewebsites.net/";
 const fetch = require("node-fetch");
 const _ = require("underscore");
+const RouterUtils = require("../../common/routers/Utils");
 
 class PDP {
   constructor(token) {
@@ -78,9 +79,15 @@ class PDP {
   }
 
   async createArtifact(type, metadata) {
-    const { processId } = await this._createProcess(type);
-    await this._appendObservation(processId, type, metadata);
+    const newProc = await this._createProcess(type);
+    // console.log(newProc);
+    await this._appendObservation(newProc.processId, type, metadata);
+    return newProc;
     // TODO: upload the data file
+  }
+
+  async getUploadUrls(type, processId, index, version, metadata, files) {
+    return await this._appendObservationWithFiles(processId, index, version, type, metadata, files);
   }
 
   async _appendObservation(processId, type, data) {
@@ -88,6 +95,7 @@ class PDP {
       isFunction: false,
       processType: type,
       processId,
+      observerId: RouterUtils.getObserverIdFromToken(this.token),
       isMeasure: false,
       index: 0,
       version: 0,
@@ -96,13 +104,40 @@ class PDP {
       data: [data],
       dataFiles: [],
     };
+
+    const response = await this._fetch(`v3/Process/AppendObservation?processId=${processId}`,{
+      method:'post',
+      body:observation
+    });
+
   }
 
-  async _createProcess(type) {
-    const url = `v2/Process/CreateProcess?isFunction=false&isVirtual=false&processType=${encodeURIComponent(
-      type
-    )}`;
-    return await this._fetch(url);
+  async _appendObservationWithFiles(processId, index, version, type, data, files) {
+    const observation = {
+      isFunction: false,
+      processType: type,
+      processId,
+      observerId: RouterUtils.getObserverIdFromToken(this.token),
+      isMeasure: false,
+      index,
+      version,
+      applicationDependencies: [],
+      processDependencies: [],
+      data: [data],
+      dataFiles: files,
+    };
+
+    const response = await this._fetch(`v3/Process/AppendObservation?processId=${processId}&uploadExpiresInMins=60`,{
+      method:'post',
+      body:observation
+    });
+
+  }
+
+  async _createProcess(type) { //TODO we probably need description field
+    console.log('why??', type);
+    const url = `v2/Process/CreateProcess?isFunction=false&isVirtual=false&processType=testdata&processDescription=leapDataSet`;
+    return await this._fetch(url, {method:'put'});
   }
 
   async _fetch(url, opts = {}) {
@@ -115,10 +150,11 @@ class PDP {
     return await response.json();
   }
 
-  static from(req) {
+  
+  static from(req, gmeConfig) {
     //const token = require("./token");
-    return req.cookies[mainConfig.authentication.azureActiveDirectory.cookieId];
-    return new PDP(token);
+    // return req.cookies[mainConfig.authentication.azureActiveDirectory.cookieId];
+    return new PDP(req.cookies[gmeConfig.authentication.azureActiveDirectory.cookieId]);
   }
 }
 
