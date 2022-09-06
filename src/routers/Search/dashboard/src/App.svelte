@@ -11,6 +11,11 @@
     Title as DialogTitle,
     Actions,
   } from "@smui/dialog";
+  import type { SnackbarComponentDev } from "@smui/snackbar";
+  import Snackbar, {
+    Actions as SnackbarActions,
+    Label as SnackbarLabel,
+  } from "@smui/snackbar";
   import Button, { Label } from "@smui/button";
   import Dropzone from "svelte-file-dropzone";
   import TaxonomyFilter from "./TaxonomyFilter.svelte";
@@ -89,20 +94,28 @@
     return vocabs;
   }
 
+  let snackbar: SnackbarComponentDev;
+  let errorMessage;
+  $: errorMessage && snackbar.open();
+
   let isLoading = false;
   async function fetchData() {
     vocabularies = await fetchVocabularies();
     isLoading = true;
-    allItems = (await storage.listArtifacts()).filter((artifact) => {
-      const hasDisplayName = !!artifact.data[0].displayName;
-      if (!hasDisplayName) {
-        console.log(
-          "Found data without display name. Filtering out. Data:",
-          artifact
-        );
-      }
-      return hasDisplayName;
-    });
+    try {
+      allItems = (await storage.listArtifacts()).filter((artifact) => {
+        const hasDisplayName = !!artifact.data[0].displayName;
+        if (!hasDisplayName) {
+          console.log(
+            "Found data without display name. Filtering out. Data:",
+            artifact
+          );
+        }
+        return hasDisplayName;
+      });
+    } catch (err) {
+      errorMessage = err.message;
+    }
     isLoading = false;
     console.log({ allItems });
     onFilterUpdate(searchKeyword, filterTags);
@@ -273,8 +286,14 @@
 {#if isLoading}
   <LinearProgress indeterminate />
 {/if}
+<Snackbar bind:this={snackbar} labelText={errorMessage}>
+  <SnackbarLabel />
+  <SnackbarActions>
+    <IconButton class="material-icons" title="Dismiss">close</IconButton>
+  </SnackbarActions>
+</Snackbar>
 
-<!-- TODO: make sure the drawer is collapsible -->
+<!-- TODO: make the drawer collapsible? -->
 <div class="drawer-container">
   <Drawer style="width: 360px">
     <Content>

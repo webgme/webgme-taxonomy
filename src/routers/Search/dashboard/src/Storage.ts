@@ -9,14 +9,16 @@ class Storage {
   }
 
   async listArtifacts() {
-    const response = await fetch(this.baseUrl);
-    return await response.json();
+    return (await this._fetch(this.baseUrl))
+      .mapError(err => new ListError(err.message))
+      .unwrap();
   }
 
   async getDownloadUrl(metadata) {
     const url = this.baseUrl + metadata.id + '/downloadUrl';
-    const response = await fetch(url);
-    return await response.json();
+    return (await this._fetch(url))
+      .mapError(err => new DownloadError(err.message))
+      .unwrap();
   }
 
   async updateArtifact(metadata, newContent) {
@@ -34,8 +36,78 @@ class Storage {
         metadata,
       })
     };
-    const response = await fetch(this.baseUrl, opts);
-    console.log('create artifact response:', await response.json());
+    return (await this._fetch(this.baseUrl, opts))
+      .mapError(err => new CreateError(err.message))
+      .unwrap();
+    //console.log('create artifact response:', await response.json());
+  }
+
+  async _fetch(url, opts=null) {
+    const response = await fetch(url, opts);
+    return RequestResult.from(response);
+  }
+}
+
+class RequestResult {
+  _response: Response;
+  _error: Error | null;
+
+  constructor(response: Response, error: Error) {
+    this._response = response;
+    this._error = error;
+  }
+
+  mapError(errFn: (err: Error) => Error) {
+    this._error = this._error && errFn(this._error);
+    return this;
+  }
+
+  async unwrap() {
+    if (this._error) {
+      throw this._error;
+    }
+
+    return this._response.json();
+  }
+
+  static async from(response: Response) {
+    let error = null;
+    if (response.status > 399) {
+      error = new RequestError(await response.text());
+    }
+    return new RequestResult(response, error);
+  }
+
+}
+class
+RequestError extends Error {
+  constructor(msg: string) {
+    super(msg);
+  }
+}
+
+class
+StorageError extends Error {
+  constructor(actionDisplayName: string, msg: string) {
+    super(`Unable to ${actionDisplayName}: ${msg}`);
+  }
+}
+
+class ListError extends StorageError {
+  constructor(msg) {
+    super('list artifacts', msg);  // FIXME: rename "artifact"?
+  }
+}
+
+class DownloadError extends StorageError {
+  constructor(msg) {
+    super('download', msg);
+  }
+}
+
+class CreateError extends StorageError {
+  constructor(msg) {
+    super('create', msg);
   }
 }
 
