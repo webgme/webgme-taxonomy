@@ -155,7 +155,8 @@
   }
 
   ////// Dataset Upload //////
-  let uploadingArtifact = false;
+  const queryDict = parseQueryString(window.location.href);
+  let uploadingArtifact = queryDict.action === "create";
   let artifactFile;
   let uploadMetadata;
 
@@ -201,6 +202,14 @@
   }
 
   let artifactName = "";
+
+  function parseQueryString(url: string) {
+    return Object.fromEntries(
+      (url.split("?")[1] || "")
+        .split("&")
+        .map((chunk: string) => chunk.split("="))
+    );
+  }
 </script>
 
 <svelte:head>
