@@ -39,8 +39,8 @@ There are a few integrated tools in the design studio which are automatically co
 	- For example, if it is running locally on port 8888, and you want to open the term creator form using a taxonomy project named `TaxonomyDemo` and owned by `guest`, you can open the dashboard using the master branch with [http://localhost:8888/routers/TagCreator/guest%2BTaxonomyDemo/branch/master/static/index.html](http://localhost:8888/routers/TagCreator/guest%2BTaxonomyDemo/branch/master/static/index.html)
 
 ## Misc To Do
-- [ ] errors in validation when creating tags... Why?
-- [ ] update PDP integration (Yogesh, right?)
+- [ ] upload datasets
+- [ ] fix dl datasets
 - [ ] use it for webgme libraries?
 	- publish from within webgme
 	- define a taxonomy

@@ -87,7 +87,14 @@ class PDP {
   }
 
   async getUploadUrls(type, processId, index, version, metadata, files) {
-    return await this._appendObservationWithFiles(processId, index, version, type, metadata, files);
+    return await this._appendObservationWithFiles(
+      processId,
+      index,
+      version,
+      type,
+      metadata,
+      files
+    );
   }
 
   async _appendObservation(processId, type, data) {
@@ -105,14 +112,23 @@ class PDP {
       dataFiles: [],
     };
 
-    const response = await this._fetch(`v3/Process/AppendObservation?processId=${processId}`,{
-      method:'post',
-      body:observation
-    });
-
+    const response = await this._fetch(
+      `v3/Process/AppendObservation?processId=${processId}`,
+      {
+        method: "post",
+        body: observation,
+      }
+    );
   }
 
-  async _appendObservationWithFiles(processId, index, version, type, data, files) {
+  async _appendObservationWithFiles(
+    processId,
+    index,
+    version,
+    type,
+    data,
+    files
+  ) {
     const observation = {
       isFunction: false,
       processType: type,
@@ -127,17 +143,30 @@ class PDP {
       dataFiles: files,
     };
 
-    const response = await this._fetch(`v3/Process/AppendObservation?processId=${processId}&uploadExpiresInMins=60`,{
-      method:'post',
-      body:observation
-    });
-
+    const response = await this._fetch(
+      `v3/Process/AppendObservation?processId=${processId}&uploadExpiresInMins=60`,
+      {
+        method: "post",
+        body: observation,
+      }
+    );
   }
 
-  async _createProcess(type) { //TODO we probably need description field
-    console.log('why??', type);
-    const url = `v2/Process/CreateProcess?isFunction=false&isVirtual=false&processType=testdata&processDescription=leapDataSet`;
-    return await this._fetch(url, {method:'put'});
+  async _createProcess(type) {
+    //TODO we probably need description field
+    const queryDict = {
+      isFunction: false,
+      isVirtual: false,
+      processType: encodeURIComponent(type),
+      processDescription: encodeURIComponent(
+        "A process created from webgme-taxonomy"
+      ),
+    };
+    const queryString = Object.entries(queryDict)
+      .map((part) => part.join("="))
+      .join("&");
+    const url = `v2/Process/CreateProcess?${queryString}`;
+    return await this._fetch(url, { method: "put" });
   }
 
   async _fetch(url, opts = {}) {
@@ -150,11 +179,11 @@ class PDP {
     return await response.json();
   }
 
-  
   static from(req, gmeConfig) {
     //const token = require("./token");
-    // return req.cookies[mainConfig.authentication.azureActiveDirectory.cookieId];
-    return new PDP(req.cookies[gmeConfig.authentication.azureActiveDirectory.cookieId]);
+    const token =
+      req.cookies[gmeConfig.authentication.azureActiveDirectory.cookieId];
+    return new PDP(token);
   }
 }
 
