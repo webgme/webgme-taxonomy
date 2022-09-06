@@ -21,6 +21,10 @@ class Storage {
       .unwrap();
   }
 
+  async appendArtifact(metadata, newContent) {
+    console.log('Append artifact:', metadata, newContent);
+  }
+
   async updateArtifact(metadata, newContent) {
     console.log('Updating artifact:', metadata, newContent);
   }

@@ -98,6 +98,10 @@
   let errorMessage: string;
   $: errorMessage && snackbar.open();
 
+  function displayError(msg: string) {
+    errorMessage = msg;
+  }
+
   let isLoading = false;
   async function fetchData() {
     vocabularies = await fetchVocabularies();
@@ -114,7 +118,7 @@
         return hasDisplayName;
       });
     } catch (err) {
-      errorMessage = err.message;
+      displayError(err.message);
     }
     isLoading = false;
     console.log({ allItems });
@@ -159,7 +163,8 @@
 
   fetchData();
 
-  async function downloadItem(item) {
+  ////// Item actions //////
+  async function onDownloadItem(item) {
     const url = await storage.getDownloadUrl(item);
     const anchor = document.createElement("a");
     anchor.setAttribute("href", url);
@@ -167,9 +172,33 @@
     anchor.click();
   }
 
+  let appendArtifact = false;
+  let appendFile;
+  let appendItem;
+  async function onAppendItem(item) {
+    appendItem = item;
+    appendArtifact = true;
+  }
+
+  function onAppendFileDrop(event) {
+    const { acceptedFiles } = event.detail;
+    if (acceptedFiles.length) {
+      appendFile = acceptedFiles[0];
+    }
+    // TODO: handle rejections
+  }
+
+  async function onAppendClicked() {
+    if (!appendFile) {
+      return displayError("Dataset file required.");
+    }
+
+    await storage.appendArtifact(appendItem, appendFile);
+  }
+
   ////// Dataset Upload //////
   const queryDict = parseQueryString(window.location.href);
-  let uploadingArtifact = queryDict.action === "create";
+  let creatingArtifact = queryDict.action === "create";
   let artifactFile;
   let uploadMetadata;
 
@@ -228,8 +257,37 @@
 <svelte:head>
   <title>{title}</title>
 </svelte:head>
+<!-- Artifact append dialog -->
 <Dialog
-  bind:open={uploadingArtifact}
+  bind:open={appendArtifact}
+  aria-labelledby="title"
+  aria-describedby="content"
+>
+  <DialogTitle id="title"
+    >Append data to {appendItem && appendItem.data[0].displayName}</DialogTitle
+  >
+  <DialogContent id="content">
+    <p>
+      Dataset file:
+      {appendFile ? appendFile.name : ""}
+    </p>
+    <Dropzone on:drop={onAppendFileDrop}>
+      <p>Select dataset to upload.</p>
+    </Dropzone>
+  </DialogContent>
+  <Actions>
+    <Button>
+      <Label>Cancel</Label>
+    </Button>
+    <Button on:click={() => onAppendClicked()}>
+      <Label>Upload</Label>
+    </Button>
+  </Actions>
+</Dialog>
+
+<!-- Artifact creation dialog -->
+<Dialog
+  bind:open={creatingArtifact}
   aria-labelledby="title"
   aria-describedby="content"
 >
@@ -268,6 +326,7 @@
     </Button>
   </Actions>
 </Dialog>
+<!-- Main app -->
 <TopAppBar variant="static">
   <Row>
     <Section>
@@ -278,7 +337,7 @@
         class="material-icons"
         aria-label="Upload dataset"
         ripple={false}
-        on:click={() => (uploadingArtifact = true)}>file_upload</IconButton
+        on:click={() => (creatingArtifact = true)}>file_upload</IconButton
       >
     </Section>
   </Row>
@@ -312,11 +371,20 @@
           <Item on:SMUI:action={() => onItemClicked(item)}>
             <Text>
               <PrimaryText>{item.data[0].displayName}</PrimaryText>
-              <SecondaryText
-                >{item.index + 1} revisions.
-                <a on:click={downloadItem(item)}>Download</a>
+              <SecondaryText>
+                <a style="margin-right: 15px" on:click={onDownloadItem(item)}
+                  >Download</a
+                >
+                <!-- TODO: check if they have permissions to append to it -->
+                <a style="margin-right: 15px" on:click={onAppendItem(item)}
+                  >Append Data</a
+                >
               </SecondaryText>
             </Text>
+            <!--
+            <IconButton class="material-icons" on:click={() => onDownloadItem(item)}>file_download</IconButton>
+            <IconButton class="material-icons" on:click={() => onAppendItem(item)}>file_upload</IconButton>
+            -->
             {#each item.data[0].taxonomyTags as tag}
               <!--
                                                         <Chip chip={tag.id}>
