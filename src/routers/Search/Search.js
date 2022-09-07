@@ -21,6 +21,7 @@ var express = require("express"),
 const RouterUtils = require("../../common/routers/Utils");
 const Utils = require("../../common/Utils");
 const SearchFilterDataExporter = require("../../common/SearchFilterDataExporter");
+const fsp = require("fs/promises");
 const path = require("path");
 const staticPath = path.join(__dirname, "dashboard", "public");
 
@@ -72,11 +73,15 @@ function initialize(middlewareOpts) {
         projectId,
         branch
       );
-      console.log('CTX received:', req.originalUrl);
+      console.log("CTX received:", req.originalUrl);
       next();
     } catch (e) {
-      logger.error(e);
-      res.sendStatus(500);
+      if (e instanceof RouterUtils.UserError) {
+        res.status(400).send(e.message);
+      } else {
+        logger.error(e);
+        res.sendStatus(500);
+      }
     }
   });
 
@@ -125,7 +130,7 @@ function initialize(middlewareOpts) {
       const storage = PDP.from(req, mainConfig);
       const { processId } = await storage.createArtifact(type, req.body);
       // TODO: create new artifact - check what else we need...
-      res.json({processId});
+      res.json({ processId });
     }
   );
 
@@ -133,7 +138,7 @@ function initialize(middlewareOpts) {
   router.patch(
     "/:projectId/branch/:branch/artifacts/:id/uploadUrl",
     async function (req, res) {
-      console.log('upload?');
+      console.log("upload?");
       // TODO: update artifact
       //the body is a json with the metadata and the list of file paths
       const { id } = req.params;
@@ -142,11 +147,11 @@ function initialize(middlewareOpts) {
       const [processId, obsIndex, version] = id.split("_");
       console.log("body:", req.body);
       const urls = await storage.getUploadUrls(
-        type, 
-        processId, 
-        obsIndex, 
-        version, 
-        req.body.metadata, 
+        type,
+        processId,
+        obsIndex,
+        version,
+        req.body.metadata,
         req.body.files
       );
       console.log(urls);
@@ -162,11 +167,20 @@ function initialize(middlewareOpts) {
       const [processId, obsIndex, version] = id.split("_");
 
       const storage = PDP.from(req, mainConfig);
-      const zipPath = await storage.getDownloadPath(processId, obsIndex, version);
-      await res.download(zipPath);
-      storage.clearDownloadPath(zipPath);
+      const zipPath = await storage.getDownloadPath(
+        processId,
+        obsIndex,
+        version
+      );
+      if (zipPath) {
+        await res.download(zipPath);
+        await fsp.unlink(zipPath);
+      } else {
+        // no files associated with the artifact
+        return res.sendStatus(204);
+      }
     }
-  )
+  );
   router.get(
     "/:projectId/branch/:branch/artifacts/:id/downloadUrl",
     async function (req, res) {
@@ -203,10 +217,8 @@ function stop(callback) {
 async function getArtifactType(req) {
   // const type = req.params.projectId.indexOf("WFTax") !== -1 ? "workflow" : "testdata";
   // return type;
-  return 'testdata';
+  return "testdata";
 }
-
-async function createProcess(type) {}
 
 module.exports = {
   initialize: initialize,

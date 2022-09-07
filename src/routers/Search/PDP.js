@@ -1,9 +1,15 @@
 const pdpBase = "https://leappremonitiondev.azurewebsites.net/";
 const fetch = require("node-fetch");
-const _ = require("underscore");
-const fs = require('fs');
-const https = require('https');
+const { zip, COMPRESSION_LEVEL } = require("zip-a-folder");
+const fs = require("fs");
+const path = require("path");
+const os = require("os");
+const fsp = require("fs/promises");
+const Q = require("q");
 const RouterUtils = require("../../common/routers/Utils");
+const { pipeline } = require("stream");
+const { promisify } = require("util");
+const streamPipeline = promisify(pipeline);
 
 class PDP {
   constructor(token) {
@@ -11,7 +17,7 @@ class PDP {
   }
 
   async listArtifacts(type) {
-    const allProcesses = await this._fetch(
+    const allProcesses = await this._fetchJson(
       "v2/Process/ListProcesses?permission=read"
     );
     const processList = allProcesses.filter(
@@ -28,33 +34,36 @@ class PDP {
   }
 
   async getDownloadUrls(processId, obsIndex, version) {
-    const queryDict = _.mapObject(
-      {
-        processId,
-        obsIndex,
-        version,
-        endObsIndex: obsIndex,
-      },
-      encodeURIComponent
-    );
-    const queryString = Object.entries(queryDict)
-      .map(([key, value]) => `${key}=${value}`)
-      .join("&");
-    const url = `v3/Files/GetObservationFiles?${queryString}`;
-    const opts = {
-      method: "PUT",
-    };
-    const result = await this._fetch(url, opts);
+    const result = await this._getObsFiles(processId, obsIndex, version);
+    console.log({ result });
     await sleep(5000); // FIXME: check for it to be ready. Not very pretty currently...
     return result.files.map((file) => file.sasUrl);
   }
 
+  async _getObsFiles(processId, obsIndex, version) {
+    const queryDict = {
+      processId,
+      obsIndex,
+      version,
+      endObsIndex: obsIndex,
+    };
+    const url = PDP._addQueryParams("v3/Files/GetObservations", queryDict);
+    const opts = {
+      method: "put",
+      //headers: {
+      //"Content-Type":'application/json-patch+json'
+      //},
+      //body: '["string"]'
+    };
+    return await this._fetchJson(url, opts);
+  }
+
   async getLatestObservation(pid) {
-    const obsInfo = await this._fetch(
+    const obsInfo = await this._fetchJson(
       `v2/Process/GetProcessState?processId=${pid}`
     );
 
-    const observations = await this._fetch(
+    const observations = await this._fetchJson(
       "v2/Process/GetObservation?processId=" +
         pid +
         "&obsIndex=" +
@@ -65,13 +74,13 @@ class PDP {
   }
 
   async getProcessObservations(pid) {
-    const obsInfo = await this._fetch(
+    const obsInfo = await this._fetchJson(
       `v2/Process/GetProcessState?processId=${pid}`
     );
 
     const observations = await Promise.all(
       range(1, obsInfo.numObservations).map((i) =>
-        this._fetch(
+        this._fetchJson(
           "v2/Process/GetObservation?processId=" + pid + "&obsIndex=" + i
         )
       )
@@ -89,34 +98,32 @@ class PDP {
   }
 
   async getDownloadPath(processId, obsIndex, version) {
-    const deferred = Q.defer();
-    let downloadDir = null;
-    let downloadName = null;
+    const response = await this._getObsFiles(processId, obsIndex, version);
+    console.log(JSON.stringify(response, null, 2));
+    if (response.files.length === 0) {
+      return;
+    }
 
-    _getObsFiles(processId, obsIndex, this.token)
-    .then(response => {
-        // console.log(response);
-        //download all files into files of their places...
-        downloadName = _prepareDownloadDir();
-        downloadDir = './OUTPUT/' + downloadName;
-        const promises = [];
-        response.files.forEach(file => {
-            promises.push(_getFile(_correctFilePath(downloadDir,file.name, index), file.sasUrl));
-        });
-        return Q.all(promises);
-    })
-    .then(results => {
-        return zip(downloadDir, './OUTPUT/' + downloadName + '.zip', {compression:COMPRESSION_LEVEL.medium});
-    })
-    .then(() => {
-        fs.rmdirSync(downloadDir,{recursive:true});
-        deferred.resolve('./OUTPUT/' + downloadName + '.zip');
-    })
-    .catch(deferred.reject);
+    const tmpDir = await PDP._prepareDownloadDir();
+    const downloadDir = path.join(tmpDir, "download");
+    const zipPath = path.join(tmpDir, `${processId}.zip`);
 
-    return deferred.promise;
+    console.log("about to download files");
+    await Promise.all(
+      response.files.map((file) =>
+        this._downloadFile(
+          PDP._correctFilePath(downloadDir, file.name, obsIndex),
+          file.sasUrl
+        )
+      )
+    );
+
+    await zip(downloadDir, zipPath, { compression: COMPRESSION_LEVEL.medium });
+    await fsp.rm(downloadDir, { recursive: true });
+
+    return zipPath;
   }
-  
+
   async getUploadUrls(type, processId, index, version, metadata, files) {
     return await this._appendObservationWithFiles(
       processId,
@@ -128,100 +135,27 @@ class PDP {
     );
   }
 
-  async _getObsFiles (pid, index, token) {
-    const deferred = Q.defer();
-    let response = '';
-    const req = https.request({
-        host:'leappremonitiondev.azurewebsites.net',
-        path:'/v3/Files/GetObservationFiles?processId=' + pid + 
-        '&obsIndex=' + index + '&expiresInMins=10&endObsIndex=' + index +
-        '&filePattern=%2A%2A%2F%2A.%2A',
-        headers: {
-            Authorization: 'Bearer ' + token
-        },
-        method: 'PUT'
-    }, res => {
-        if(res.statusCode !== 200) {
-            console.log(res.statusCode);
-            return deferred.reject(new Error('failed to fetch transfer url\'s'));
-        }
+  async _downloadFile(filePath, url) {
+    console.log("about to download", filePath, "from", url);
+    const dirPath = path.dirname(filePath) + path.sep;
+    console.log("making", dirPath);
+    const dir = await fsp.mkdir(dirPath + "a/b/c/d", { recursive: true });
 
-        res.on('data', d => {
-            response += new Buffer.from(d).toString();
-        });
-
-        res.on('end', () => {
-            try {
-                // console.log(response);
-                return deferred.resolve(JSON.parse(response));
-            } catch (e) {
-                return deferred.reject(e);
-            }
-        });
-    });
-
-    req.on('error', error => {
-        // console.error(error);
-        return deferred.reject(error);
-    });
-
-    req.end();
-
-    return deferred.promise;
+    console.log("created!", dir);
+    const writeStream = fs.createWriteStream(filePath);
+    const response = await this._fetch(url);
+    console.log("streaming from", url, "to", filePath);
+    //await streamPipeline(response.body, writeStream);
+    await streamPipeline(response.body, writeStream);
   }
 
-  static _getFile (path, url) {
-    console.log('GF:',path,url);
-    const deferred = Q.defer();
-    const pathArray = path.split('/');
-    for(let i=1;i<pathArray.length-1;i+=1) {
-        let inpath = '';
-        for(let j=0;j<=i;j+=1) {
-            inpath += pathArray[j] + '/';
-        }
-        inpath = inpath.slice(0, -1);
-        if (!fs.existsSync(inpath)) {
-            console.log('letsDIR:', inpath);
-            fs.mkdirSync(inpath);
-        }
-    }
-    const writeStream = fs.createWriteStream(path);
-    https.get(url, response => {
-        response.pipe(writeStream);
-        writeStream.on('finish', () => {
-            writeStream.close();
-            deferred.resolve(path);
-        });
-    });
-
-    return deferred.promise;
-  };
-
-  static _prepareDownloadDir () {
-    console.log(__dirname);
-    const length = 16;
-    let downloadDir = '';
-    let downloadName = '';
-    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    const charactersLength = characters.length;
-    for (let i = 0; i < length; i += 1 ) {
-        downloadName += characters.charAt(Math.floor(Math.random() * charactersLength));
-    }
-    downloadDir = './OUTPUT/' + downloadName;
-    const err = fs.mkdirSync(downloadDir);
-    if (err) {
-        throw new Error('canot reserve local directory for transfering data');
-    }
-
-    return downloadName;
+  static async _prepareDownloadDir() {
+    return await fsp.mkdtemp(path.join(os.tmpdir(), "webgme-taxonomy-"));
   }
 
-  static _correctFilePath (downloadDir, filename, index) {
-    const result = downloadDir + filename.replace('dat/'+index, '');
-    console.log(downloadDir,filename);
-    console.log(result);
-    return result;
-  };
+  static _correctFilePath(downloadDir, filename, index) {
+    return path.join(downloadDir, filename.replace("dat/" + index, ""));
+  }
 
   async _appendObservation(processId, type, data) {
     const observation = {
@@ -238,7 +172,7 @@ class PDP {
       dataFiles: [],
     };
 
-    const response = await this._fetch(
+    const response = await this._fetchJson(
       `v3/Process/AppendObservation?processId=${processId}`,
       {
         method: "post",
@@ -267,13 +201,13 @@ class PDP {
       dataFiles: files,
     };
 
-    console.log('uploading?');
-    return await this._fetch(
+    console.log("uploading?");
+    return await this._fetchJson(
       `v3/Process/AppendObservation?processId=${processId}&uploadExpiresInMins=180`,
       {
         method: "post",
         headers: {
-          "Content-Type":'application/json-patch+json'
+          "Content-Type": "application/json-patch+json",
         },
         body: observation,
       }
@@ -290,11 +224,15 @@ class PDP {
         "A process created from webgme-taxonomy"
       ),
     };
+    const url = PDP._addQueryParams("v2/Process/CreateProcess", queryDict);
+    return await this._fetchJson(url, { method: "put" });
+  }
+
+  static _addQueryParams(baseUrl, queryDict) {
     const queryString = Object.entries(queryDict)
       .map((part) => part.join("="))
       .join("&");
-    const url = `v2/Process/CreateProcess?${queryString}`;
-    return await this._fetch(url, { method: "put" });
+    return baseUrl.replace(/\??$/, "?") + queryString;
   }
 
   async _fetch(url, opts = {}) {
@@ -302,8 +240,16 @@ class PDP {
     opts.headers = opts.headers || {};
     opts.headers.Authorization = "Bearer " + this.token;
     opts.headers.accept = opts.headers.accept || "application/json";
-    const response = await fetch(url, opts);
     // TODO: Check response status code
+    return await fetch(url, opts);
+  }
+
+  async _fetchJson(url, opts = {}) {
+    const response = await this._fetch(url, opts);
+    if (response.status > 399) {
+      console.log("STATUS:", response.status);
+      console.log("Text:", await response.text());
+    }
     return await response.json();
   }
 

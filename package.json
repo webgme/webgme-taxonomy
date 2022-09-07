@@ -29,7 +29,8 @@
     "node-fetch": "^2.6.6",
     "svelte": "^3.50.0",
     "webgme": "github:webgme/webgme#azure",
-    "webgme-json-importer": "github:deepforge-dev/webgme-json-importer"
+    "webgme-json-importer": "github:deepforge-dev/webgme-json-importer",
+    "zip-a-folder": "^1.1.5"
   },
   "lint-staged": {
     "src/**/*.{js,css,md,svelte}": "prettier --write --plugin-search-dir=."
