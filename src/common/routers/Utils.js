@@ -1,5 +1,6 @@
 const webgme = require("webgme-engine");
 const Core = webgme.requirejs("common/core/coreQ");
+const jwt = require('jsonwebtoken');
 
 const Utils = {
   async getWebGMEContext(middlewareOpts, req, projectId, branch = "master") {
@@ -7,7 +8,8 @@ const Utils = {
     const userId = getUserId(req);
 
     console.log('CTX-user:',userId);
-    console.log(Object.keys(safeStorage));
+    console.log('CTX-project:',projectId);
+    console.log('CTX-branch:',branch);
     const context = {};
 
     const projectList = await safeStorage.getProjects({
@@ -18,7 +20,7 @@ const Utils = {
       entityType: safeStorage.authorizer.ENTITY_TYPES.PROJECT
     };
     const authorizations = await Promise.all(projectList.map(async projectInfo => 
-      await safeStorage.authorizer.getAccessRights(userId, projectInfo.projectId, projectAuthParams)
+      await safeStorage.authorizer.getAccessRights(userId, projectInfo._id, projectAuthParams)
     ));
     console.log('CTX-authorizations: ', authorizations);
 
@@ -26,6 +28,8 @@ const Utils = {
       username: userId,
       projectId,
     });
+    context.project.setUser(userId);
+    
     context.core = new Core(context.project, {
       globConf: gmeConfig,
       logger: logger.fork("core"),
@@ -35,9 +39,13 @@ const Utils = {
       context.branchName
     );
     context.root = await context.core.loadRoot(context.commitObject.root);
-
+    
+    console.log('got context!!!');
     return context;
   },
+  getObserverIdFromToken(token) {
+    return jwt.decode(token).oid; //TODO maybe we need a complete class for token functions?
+  }
 };
 
 module.exports = Utils;
