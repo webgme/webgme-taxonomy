@@ -15,17 +15,18 @@ class Storage {
   }
 
   async getDownloadUrl(metadata) {
-    const url = this.baseUrl + metadata.id + '/downloadUrl';
-    return (await this._fetch(url))
-        // TODO: map based on status code?
-        .map(response => {
-          if (response.status === 204) {
-            throw new DownloadError('No files found.');
-          }
-          return response.json();
-        })
-        .mapError(err => new DownloadError(err.message))
-        .unwrap();
+    return this.baseUrl + metadata.id + '/download';
+    //const url = this.baseUrl + metadata.id + '/downloadUrl';
+    //return (await this._fetch(url))
+        //// TODO: map based on status code?
+        //.map(response => {
+          //if (response.status === 204) {
+            //throw new DownloadError('No files found.');
+          //}
+          //return response.json();
+        //})
+        //.mapError(err => new DownloadError(err.message))
+        //.unwrap();
   }
 
   async appendArtifact(metadata, newContent) {

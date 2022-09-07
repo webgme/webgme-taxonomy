@@ -5,11 +5,11 @@ const fs = require("fs");
 const path = require("path");
 const os = require("os");
 const fsp = require("fs/promises");
-const Q = require("q");
 const RouterUtils = require("../../common/routers/Utils");
 const { pipeline } = require("stream");
 const { promisify } = require("util");
 const streamPipeline = promisify(pipeline);
+const DownloadFile = require("./DownloadFile");
 
 class PDP {
   constructor(token) {
@@ -35,7 +35,6 @@ class PDP {
 
   async getDownloadUrls(processId, obsIndex, version) {
     const result = await this._getObsFiles(processId, obsIndex, version);
-    console.log({ result });
     await sleep(5000); // FIXME: check for it to be ready. Not very pretty currently...
     return result.files.map((file) => file.sasUrl);
   }
@@ -91,7 +90,6 @@ class PDP {
 
   async createArtifact(type, metadata) {
     const newProc = await this._createProcess(type);
-    // console.log(newProc);
     await this._appendObservation(newProc.processId, type, metadata);
     return newProc;
     // TODO: upload the data file
@@ -99,7 +97,6 @@ class PDP {
 
   async getDownloadPath(processId, obsIndex, version) {
     const response = await this._getObsFiles(processId, obsIndex, version);
-    console.log(JSON.stringify(response, null, 2));
     if (response.files.length === 0) {
       return;
     }
@@ -108,7 +105,6 @@ class PDP {
     const downloadDir = path.join(tmpDir, "download");
     const zipPath = path.join(tmpDir, `${processId}.zip`);
 
-    console.log("about to download files");
     await Promise.all(
       response.files.map((file) =>
         this._downloadFile(
@@ -121,7 +117,7 @@ class PDP {
     await zip(downloadDir, zipPath, { compression: COMPRESSION_LEVEL.medium });
     await fsp.rm(downloadDir, { recursive: true });
 
-    return zipPath;
+    return new ObservationFilesArchive(zipPath, tmpDir);
   }
 
   async getUploadUrls(type, processId, index, version, metadata, files) {
@@ -136,16 +132,11 @@ class PDP {
   }
 
   async _downloadFile(filePath, url) {
-    console.log("about to download", filePath, "from", url);
     const dirPath = path.dirname(filePath) + path.sep;
-    console.log("making", dirPath);
-    const dir = await fsp.mkdir(dirPath + "a/b/c/d", { recursive: true });
+    await fsp.mkdir(dirPath, { recursive: true });
 
-    console.log("created!", dir);
     const writeStream = fs.createWriteStream(filePath);
-    const response = await this._fetch(url);
-    console.log("streaming from", url, "to", filePath);
-    //await streamPipeline(response.body, writeStream);
+    const response = await fetch(url);
     await streamPipeline(response.body, writeStream);
   }
 
@@ -246,10 +237,6 @@ class PDP {
 
   async _fetchJson(url, opts = {}) {
     const response = await this._fetch(url, opts);
-    if (response.status > 399) {
-      console.log("STATUS:", response.status);
-      console.log("Text:", await response.text());
-    }
     return await response.json();
   }
 
@@ -258,6 +245,17 @@ class PDP {
     const token =
       req.cookies[gmeConfig.authentication.azureActiveDirectory.cookieId];
     return new PDP(token);
+  }
+}
+
+class ObservationFilesArchive extends DownloadFile {
+  constructor(archivePath, tmpDir) {
+    super(archivePath);
+    this.tmpDir = tmpDir;
+  }
+
+  async cleanUp() {
+    await fsp.rm(this.tmpDir, { recursive: true });
   }
 }
 

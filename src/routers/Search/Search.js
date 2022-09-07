@@ -160,21 +160,22 @@ function initialize(middlewareOpts) {
   );
 
   router.get(
-    "/:projectId/branch/:branch/artifacts/:id/downloadUrl",
+    "/:projectId/branch/:branch/artifacts/:id/download",
     async function (req, res) {
       const { id } = req.params;
       console.log("getting download URL", id);
       const [processId, obsIndex, version] = id.split("_");
 
       const storage = PDP.from(req, mainConfig);
-      const zipPath = await storage.getDownloadPath(
+      const zipFile = await storage.getDownloadPath(
         processId,
         obsIndex,
         version
       );
-      if (zipPath) {
-        await res.download(zipPath);
-        await fsp.unlink(zipPath);
+      if (zipFile) {
+        await res.download(zipFile.path, path.basename(zipFile.name), () =>
+          zipFile.cleanUp()
+        );
       } else {
         // no files associated with the artifact
         return res.sendStatus(204);

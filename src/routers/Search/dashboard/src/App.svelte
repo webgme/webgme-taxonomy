@@ -167,13 +167,13 @@
   async function onDownloadItem(item) {
     try {
       const url = await storage.getDownloadUrl(item);
+      const anchor = document.createElement("a");
+      anchor.setAttribute("href", url);
+      anchor.setAttribute("target", "_blank");
+      anchor.click();
     } catch (err) {
       return displayError(err.message);
     }
-    const anchor = document.createElement("a");
-    anchor.setAttribute("href", url);
-    anchor.setAttribute("target", "_blank");
-    anchor.click();
   }
 
   let appendArtifact = false;
