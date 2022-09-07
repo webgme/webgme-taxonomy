@@ -20,6 +20,7 @@ function factory() {
       const data = omit(tag, "Tag");
       if (!guid) {
         guid = this.nodeGuidLookup.getGuid(tag.Tag, data);
+        assert(guid, new TagNotFoundError(tag.Tag));
       }
 
       const entries = Object.entries(data);
@@ -27,6 +28,7 @@ function factory() {
       const guidTag = Object.fromEntries(
         entries.map(([name, data]) => {
           const propertyGuid = this.nodeGuidLookup.getPropertyGuid(guid, name);
+          assert(propertyGuid, new PropertyNotFoundError(name));
           if (isObject(data)) {
             data = this._toGuidFormat(data, propertyGuid);
           }
@@ -48,7 +50,7 @@ function factory() {
       const humanReadable = Object.fromEntries(
         entries.map(([guid, data]) => {
           const name = this.nodeNameDict[guid];
-          if (name === undefined) throw new TagNotFoundError(guid);
+          assert(name, new TagNotFoundError(guid));
           const newData = isObject(data) ? this._toHumanFormat(data) : data;
           return [name, newData];
         })
@@ -150,12 +152,21 @@ function factory() {
       super(`Tag not found: ${tagName}`);
     }
   }
+  class PropertyNotFoundError extends FormatError {
+    constructor(name) {
+      super(`Property not found: ${name}`);
+    }
+  }
 
   TagFormatter.FormatError = FormatError;
   function omit(obj, ...keys) {
     return Object.fromEntries(
       Object.entries(obj).filter(([k /*v*/]) => !keys.includes(k))
     );
+  }
+
+  function assert(cond, err) {
+    if (!cond) throw err;
   }
 
   TagFormatter.GuidLookupTable = NodeGuidLookupTable;

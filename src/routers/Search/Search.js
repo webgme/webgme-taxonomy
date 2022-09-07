@@ -21,7 +21,7 @@ var express = require("express"),
 const RouterUtils = require("../../common/routers/Utils");
 const Utils = require("../../common/Utils");
 const SearchFilterDataExporter = require("../../common/SearchFilterDataExporter");
-const fsp = require("fs/promises");
+const TagFormatter = require("../../common/TagFormatter");
 const path = require("path");
 const staticPath = path.join(__dirname, "dashboard", "public");
 
@@ -127,6 +127,20 @@ function initialize(middlewareOpts) {
     "/:projectId/branch/:branch/artifacts/",
     async function (req, res) {
       const type = await getArtifactType(req);
+      const { root, core } = req.webgmeContext;
+      const node = await Utils.findTaxonomyNode(core, root);
+      const formatter = await TagFormatter.from(core, node);
+      const { metadata } = req.body;
+      try {
+        metadata.taxonomyTags = formatter.toGuidFormat(metadata.taxonomyTags);
+      } catch (err) {
+        if (err instanceof TagFormatter.FormatError) {
+          res.status(400).send(err.message);
+        } else {
+          res.sendStatus(500);
+        }
+      }
+
       const storage = PDP.from(req, mainConfig);
       const { processId } = await storage.createArtifact(type, req.body);
       // TODO: create new artifact - check what else we need...
@@ -180,18 +194,6 @@ function initialize(middlewareOpts) {
         // no files associated with the artifact
         return res.sendStatus(204);
       }
-    }
-  );
-  router.get(
-    "/:projectId/branch/:branch/artifacts/:id/downloadUrl",
-    async function (req, res) {
-      const { id } = req.params;
-      console.log("getting download URL", id);
-      const [processId, obsIndex, version] = id.split("_");
-
-      const storage = PDP.from(req, mainConfig);
-      const urls = await storage.getDownloadUrls(processId, obsIndex, version);
-      return res.json(urls);
     }
   );
 
