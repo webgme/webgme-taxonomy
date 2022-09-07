@@ -165,7 +165,11 @@
 
   ////// Item actions //////
   async function onDownloadItem(item) {
-    const url = await storage.getDownloadUrl(item);
+    try {
+      const url = await storage.getDownloadUrl(item);
+    } catch (err) {
+      return displayError(err.message);
+    }
     const anchor = document.createElement("a");
     anchor.setAttribute("href", url);
     anchor.setAttribute("target", "_blank");
