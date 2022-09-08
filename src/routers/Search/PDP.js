@@ -192,15 +192,15 @@ class PDP {
       dataFiles: files,
     };
 
-    console.log("uploading?");
+    // console.log("uploading?", observation);
     return await this._fetchJson(
       `v3/Process/AppendObservation?processId=${processId}&uploadExpiresInMins=180`,
       {
         method: "post",
         headers: {
-          "Content-Type": "application/json-patch+json",
+          "Content-Type": "application/json",
         },
-        body: observation,
+        body: JSON.stringify(observation),
       }
     );
   }
@@ -237,6 +237,7 @@ class PDP {
 
   async _fetchJson(url, opts = {}) {
     const response = await this._fetch(url, opts);
+    // console.log(response);
     return await response.json();
   }
 
