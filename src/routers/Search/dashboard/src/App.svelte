@@ -243,8 +243,9 @@
     //if (artifactFiles.length === 0) {
     //  return displayError("No dataset files provided");
     //}
-    uploadMetadata.displayName = artifactName;
-    await storage.createArtifact(uploadMetadata, artifactFiles);
+    //uploadMetadata.displayName = artifactName;
+    //await storage.createArtifact(uploadMetadata, artifactFiles);
+    await storage.createArtifact({ displayName: artifactName }, artifactFiles);
     displayError("Submitted creation request."); // FIXME: this isn't really an error...
   }
 
@@ -312,7 +313,6 @@
     <Dropzone on:drop={onFileDrop} multiple={true}>
       <p>Select dataset to upload.</p>
     </Dropzone>
-    -->
     <p>
       Taxonomy Terms:
       {uploadMetadata
@@ -327,13 +327,14 @@
       href={window.location.href.replace("/Search/", "/TagCreator/")}
       >Click to select tags for your dataset.</a
     >
+    -->
   </DialogContent>
   <Actions>
     <Button>
       <Label>Cancel</Label>
     </Button>
     <Button on:click={() => onUploadClicked()}>
-      <Label>Upload</Label>
+      <Label>Submit</Label>
     </Button>
   </Actions>
 </Dialog>

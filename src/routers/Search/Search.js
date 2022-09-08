@@ -132,16 +132,17 @@ function initialize(middlewareOpts) {
       const node = await Utils.findTaxonomyNode(core, root);
       const formatter = await TagFormatter.from(core, node);
       const { metadata } = req.body;
-      try {
-        metadata.taxonomyTags = formatter.toGuidFormat(metadata.taxonomyTags);
-      } catch (err) {
-        if (err instanceof TagFormatter.FormatError) {
-          res.status(400).send(err.message);
-        } else {
-          res.sendStatus(500);
-        }
-      }
+      //try {
+      //metadata.taxonomyTags = formatter.toGuidFormat(metadata.taxonomyTags);
+      //} catch (err) {
+      //if (err instanceof TagFormatter.FormatError) {
+      //res.status(400).send(err.message);
+      //} else {
+      //res.sendStatus(500);
+      //}
+      //}
 
+      metadata.taxonomyId = req.params.projectId;
       const storage = PDP.from(req, mainConfig);
       const result = await storage.createArtifact(type, metadata);
       // TODO: create new artifact - check what else we need...
