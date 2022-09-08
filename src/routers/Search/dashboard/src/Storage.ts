@@ -2,16 +2,17 @@ class Storage {
   baseUrl: string;
 
   constructor() {
-    const chunks = window.location.href.split('/');  // TODO:
+    const chunks = window.location.href.split('/'); // TODO:
     chunks.pop();
     chunks.pop();
     this.baseUrl = chunks.join('/') + '/artifacts/';
   }
 
   async listArtifacts() {
-    return (await this._fetch(this.baseUrl))
-        .mapError(err => new ListError(err.message))
-        .unwrap();
+    const result = (await this._fetch(this.baseUrl))
+        .mapError(err => new ListError(err.message));
+    const items = await result.unwrap();
+    return filterMap(items, item => Artifact.tryFrom(item));
   }
 
   async getDownloadUrl(metadata) {
@@ -32,7 +33,7 @@ class Storage {
   async appendArtifact(item, files: File[]) {
     const [metadata] = item.data;
     console.log({metadata, files});
-    const url = this.baseUrl + metadata.id + '/uploadUrl';
+    const url = this.baseUrl + item.id + '/uploadUrl';
     const filenames = files.map((file: File) => file.name);
     const opts = {
       method: 'patch',
@@ -121,7 +122,7 @@ class RequestResult {
   }
 }
 
-class RequestError extends Error {
+export class RequestError extends Error {
   constructor(msg: string) { super(msg); }
 }
 
@@ -147,6 +148,30 @@ class CreateError extends StorageError {
 
 class AppendDataError extends StorageError {
   constructor(msg) { super('append', msg); }
+}
+
+function filterMap<I, O>(list: I[], fn: (x: I) => O): O[] {
+  return list.reduce((items, input) => {
+    const mapped = fn(input);
+    if (mapped !== undefined) {
+      items.push(mapped);
+    }
+    return items;
+  }, []);
+}
+
+class Artifact {
+  static tryFrom(item: any) {
+    const metadata = item.data ? item.data[0] : null;
+    if (!metadata || !metadata.displayName) {
+        console.log(
+          "Found malformed data. Filtering out. Data:",
+          item
+        );
+    } else {
+      return item;
+    }
+  }
 }
 
 export default Storage;

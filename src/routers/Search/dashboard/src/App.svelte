@@ -24,7 +24,7 @@
   export let title: string = "Data Dashboard ";
   let vocabularies: TaxonomyData[] = [];
 
-  import Storage from "./Storage.ts";
+  import Storage, { RequestError } from "./Storage.ts";
   const storage = new Storage();
   let allItems = [];
   let items = [];
@@ -107,18 +107,17 @@
     vocabularies = await fetchVocabularies();
     isLoading = true;
     try {
-      allItems = (await storage.listArtifacts()).filter((artifact) => {
-        const hasDisplayName = !!artifact.data[0].displayName;
-        if (!hasDisplayName) {
-          console.log(
-            "Found data without display name. Filtering out. Data:",
-            artifact
-          );
-        }
-        return hasDisplayName;
-      });
+      allItems = await storage.listArtifacts();
     } catch (err) {
-      displayError(err.message);
+      const errMessage =
+        err instanceof RequestError
+          ? err.message
+          : "An error occurred. Please try again later";
+      displayError(errMessage);
+
+      if (!(err instanceof RequestError)) {
+        throw err;
+      }
     }
     isLoading = false;
     console.log({ allItems });
