@@ -46,7 +46,7 @@ class PDP {
       version,
       endObsIndex: obsIndex,
     };
-    const url = PDP._addQueryParams("v3/Files/GetObservations", queryDict);
+    const url = PDP._addQueryParams("v3/Files/GetObservationFiles", queryDict);
     const opts = {
       method: "put",
       //headers: {
@@ -237,7 +237,7 @@ class PDP {
 
   async _fetchJson(url, opts = {}) {
     const response = await this._fetch(url, opts);
-    // console.log(response);
+    console.log(response);
     return await response.json();
   }
 
