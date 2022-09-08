@@ -126,7 +126,7 @@ export class RequestError extends Error {
   constructor(msg: string) { super(msg); }
 }
 
-class StorageError extends Error {
+class StorageError extends RequestError {
   constructor(actionDisplayName: string, msg: string) {
     super(`Unable to ${actionDisplayName}: ${msg}`);
   }

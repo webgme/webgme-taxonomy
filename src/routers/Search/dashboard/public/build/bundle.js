@@ -19368,11 +19368,11 @@ var app = (function () {
     }
     async appendArtifact(e, t) {
       const [n] = e.data;
-      console.log({ metadata: n, files: t });
+      console.log({ action: "append", metadata: n, files: t });
       const i = this.baseUrl + e.id + "/uploadUrl",
         a = t.map((e) => e.name),
         r = {
-          method: "patch",
+          method: "put",
           body: JSON.stringify({ metadata: n, filenames: a }),
         },
         s = await (await this._fetch(i, r))
@@ -19423,7 +19423,7 @@ var app = (function () {
       super(e);
     }
   }
-  class Ql extends Error {
+  class Ql extends Yl {
     constructor(e, t) {
       super(`Unable to ${e}: ${t}`);
     }
