@@ -161,7 +161,7 @@ function initialize(middlewareOpts) {
       const urls = await storage.getUploadUrls(
         type,
         processId,
-        +obsIndex,
+        +obsIndex + 1,
         +version,
         req.body.metadata,
         req.body.filenames
