@@ -133,21 +133,21 @@ class StorageError extends Error {
 }
 
 class ListError extends StorageError {
-  constructor(msg) {
+  constructor(msg: string) {
     super('list artifacts', msg); // FIXME: rename "artifact"?
   }
 }
 
 class DownloadError extends StorageError {
-  constructor(msg) { super('download', msg); }
+  constructor(msg: string) { super('download', msg); }
 }
 
 class CreateError extends StorageError {
-  constructor(msg) { super('create', msg); }
+  constructor(msg: string) { super('create', msg); }
 }
 
 class AppendDataError extends StorageError {
-  constructor(msg) { super('append', msg); }
+  constructor(msg: string) { super('append', msg); }
 }
 
 function filterMap<I, O>(list: I[], fn: (x: I) => O): O[] {
