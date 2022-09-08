@@ -223,7 +223,6 @@ class PDP {
       dataFiles: files,
     };
 
-    // console.log("uploading?", observation);
     return await this._fetchJson(
       `v3/Process/AppendObservation?processId=${processId}&uploadExpiresInMins=180`,
       {
