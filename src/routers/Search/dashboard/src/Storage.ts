@@ -29,7 +29,22 @@ class Storage {
         //.unwrap();
   }
 
-  async appendArtifact(metadata, newContent) {
+  async appendArtifact(item, files: File[]) {
+    const [metadata] = item.data;
+    console.log({metadata, files});
+    const url = this.baseUrl + metadata.id + '/uploadUrl';
+    const filenames = files.map((file: File) => file.name);
+    const opts = {
+      method: 'patch',
+      body: JSON.stringify({
+        metadata,
+        filenames,
+      })
+    };
+    const urls = await (await this._fetch(url, opts))
+      .mapError(err => new AppendDataError(err.message))
+      .unwrap();
+    console.log({urls});
     console.log('Append artifact:', metadata, newContent);
   }
 
@@ -128,6 +143,10 @@ class DownloadError extends StorageError {
 
 class CreateError extends StorageError {
   constructor(msg) { super('create', msg); }
+}
+
+class AppendDataError extends StorageError {
+  constructor(msg) { super('append', msg); }
 }
 
 export default Storage;

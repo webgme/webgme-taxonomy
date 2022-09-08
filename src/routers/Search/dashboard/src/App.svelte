@@ -177,7 +177,7 @@
   }
 
   let appendArtifact = false;
-  let appendFile;
+  let appendFiles = [];
   let appendItem;
   async function onAppendItem(item) {
     appendItem = item;
@@ -187,17 +187,17 @@
   function onAppendFileDrop(event) {
     const { acceptedFiles } = event.detail;
     if (acceptedFiles.length) {
-      appendFile = acceptedFiles[0];
+      appendFiles = acceptedFiles;
     }
     // TODO: handle rejections
   }
 
   async function onAppendClicked() {
-    if (!appendFile) {
+    if (!appendFiles) {
       return displayError("Dataset file required.");
     }
 
-    await storage.appendArtifact(appendItem, appendFile);
+    await storage.appendArtifact(appendItem, appendFiles);
   }
 
   ////// Dataset Upload //////
@@ -271,11 +271,13 @@
     >Append data to {appendItem && appendItem.data[0].displayName}</DialogTitle
   >
   <DialogContent id="content">
-    <p>
-      Dataset file:
-      {appendFile ? appendFile.name : ""}
-    </p>
-    <Dropzone on:drop={onAppendFileDrop}>
+    <p>Dataset files:</p>
+    <ul>
+      {#each appendFiles as file}
+        <li>{file.name}</li>
+      {/each}
+    </ul>
+    <Dropzone on:drop={onAppendFileDrop} multiple={true}>
       <p>Select dataset to upload.</p>
     </Dropzone>
   </DialogContent>
