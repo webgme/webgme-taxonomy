@@ -45,15 +45,15 @@ class Storage {
       .mapError(err => new AppendDataError(err.message))
       .unwrap();
     console.log({urls});
-    console.log('Append artifact:', metadata, newContent);
+    console.log('Append artifact:', metadata, files);
   }
 
   async updateArtifact(metadata, newContent) {
     console.log('Updating artifact:', metadata, newContent);
   }
 
-  async createArtifact(metadata, content) {
-    console.log('Creating artifact:', metadata, content);
+  async createArtifact(metadata, files) {
+    console.log('Creating artifact:', metadata, files);
     const opts = {
       method : 'POST',
       headers : {'Content-Type' : 'application/json'},

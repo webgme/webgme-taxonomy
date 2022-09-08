@@ -203,13 +203,13 @@
   ////// Dataset Upload //////
   const queryDict = parseQueryString(window.location.href);
   let creatingArtifact = queryDict.action === "create";
-  let artifactFile;
+  let artifactFiles = [];
   let uploadMetadata;
 
   function onFileDrop(event) {
     const { acceptedFiles } = event.detail;
     if (acceptedFiles.length) {
-      artifactFile = acceptedFiles[0];
+      artifactFiles = acceptedFiles;
     }
     // TODO: handle rejections
   }
@@ -238,13 +238,13 @@
 
   async function onUploadClicked() {
     if (!uploadMetadata) {
-      // TODO: validate tags and convert to the GUID format
+      // TODO: require tags?
     }
-    if (!artifactFile) {
-      // TODO: feedback on error
+    if (artifactFiles.length === 0) {
+      return displayError("No dataset files provided");
     }
     uploadMetadata.displayName = artifactName;
-    await storage.createArtifact(uploadMetadata, artifactFile);
+    await storage.createArtifact(uploadMetadata, artifactFiles);
   }
 
   let artifactName = "";
@@ -301,11 +301,13 @@
   <DialogContent id="content">
     <Textfield label="Name" bind:value={artifactName} />
     <!-- TODO: create process -->
-    <p>
-      Dataset file:
-      {artifactFile ? artifactFile.name : ""}
-    </p>
-    <Dropzone on:drop={onFileDrop}>
+    <p>Dataset files:</p>
+    <ul>
+      {#each artifactFiles as file}
+        <li>{file.name}</li>
+      {/each}
+    </ul>
+    <Dropzone on:drop={onFileDrop} multiple={true}>
       <p>Select dataset to upload.</p>
     </Dropzone>
     <p>
@@ -445,10 +447,6 @@
     position: relative;
     display: flex;
     height: 100%;
-  }
-
-  .drawer {
-    width: 360px;
   }
 
   * :global(.app-content) {
