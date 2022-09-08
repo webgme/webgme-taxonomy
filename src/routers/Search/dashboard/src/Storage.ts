@@ -32,16 +32,20 @@ class Storage {
 
   async appendArtifact(item, files: File[]) {
     const [metadata] = item.data;
-    console.log({metadata, files});
+    console.log({action: 'append', metadata, files});
     const url = this.baseUrl + item.id + '/uploadUrl';
     const filenames = files.map((file: File) => file.name);
     const opts = {
-      method: 'patch',
+      method: 'post',
+      headers: {
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify({
         metadata,
         filenames,
       })
     };
+    console.log('append w/ body:', opts.body);
     const urls = await (await this._fetch(url, opts))
       .mapError(err => new AppendDataError(err.message))
       .unwrap();

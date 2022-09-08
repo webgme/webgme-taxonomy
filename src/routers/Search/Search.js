@@ -148,7 +148,7 @@ function initialize(middlewareOpts) {
     }
   );
 
-  router.patch(
+  router.post(
     "/:projectId/branch/:branch/artifacts/:id/uploadUrl",
     async function (req, res) {
       // TODO: update artifact
@@ -158,12 +158,11 @@ function initialize(middlewareOpts) {
       const type = await getArtifactType(req);
       const storage = PDP.from(req, mainConfig);
       const [processId, obsIndex, version] = id.split("_");
-      // console.log("body:", req.body);
       const urls = await storage.getUploadUrls(
         type,
         processId,
-        obsIndex,
-        version,
+        +obsIndex,
+        +version,
         req.body.metadata,
         req.body.filenames
       );
