@@ -66,15 +66,9 @@ class PDP {
     const url = PDP._addQueryParams("v2/Files/GetTransferState", queryDict);
     const opts = {
       method: "get",
-      //headers: {
-      //"Content-Type":'application/json-patch+json'
-      //},
-      //body: '["string"]'
     };
     return await this._fetchJson(url, opts);
   }
-
-
 
   async getLatestObservation(pid) {
     const obsInfo = await this._fetchJson(
@@ -120,15 +114,22 @@ class PDP {
       return;
     }
 
-    // _getFileTransferStatus
-  if(response.transferId != null)
-    {
-        var transferStatus = await this._getFileTransferStatus(response.processId,response.directoryId,response.transferId)
-        while(transferStatus && transferStatus.status != "Succeeded"){
-          console.log("Ctx: About to wait for the download...")
-          await sleep(1000)
-          transferStatus = await this._getFileTransferStatus(response.processId,response.directoryId,response.transferId)
-        }
+    // wait for the transfer to complete and the files to be available
+    if (response.transferId != null) {
+      let transferStatus = await this._getFileTransferStatus(
+        response.processId,
+        response.directoryId,
+        response.transferId
+      );
+      while (transferStatus && transferStatus.status != "Succeeded") {
+        console.log("Ctx: About to wait for the download...");
+        await sleep(1000);
+        transferStatus = await this._getFileTransferStatus(
+          response.processId,
+          response.directoryId,
+          response.transferId
+        );
+      }
     }
 
     const tmpDir = await PDP._prepareDownloadDir();
