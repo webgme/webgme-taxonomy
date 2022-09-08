@@ -239,11 +239,13 @@
     if (!uploadMetadata) {
       // TODO: require tags?
     }
-    if (artifactFiles.length === 0) {
-      return displayError("No dataset files provided");
-    }
+    // TODO: re-enable this once they can create datasets on their own
+    //if (artifactFiles.length === 0) {
+    //  return displayError("No dataset files provided");
+    //}
     uploadMetadata.displayName = artifactName;
     await storage.createArtifact(uploadMetadata, artifactFiles);
+    displayError("Submitted creation request."); // FIXME: this isn't really an error...
   }
 
   let artifactName = "";
@@ -300,6 +302,7 @@
   <DialogContent id="content">
     <Textfield label="Name" bind:value={artifactName} />
     <!-- TODO: create process -->
+    <!-- TODO: re-enable this when we can automatically create processes
     <p>Dataset files:</p>
     <ul>
       {#each artifactFiles as file}
@@ -309,6 +312,7 @@
     <Dropzone on:drop={onFileDrop} multiple={true}>
       <p>Select dataset to upload.</p>
     </Dropzone>
+    -->
     <p>
       Taxonomy Terms:
       {uploadMetadata

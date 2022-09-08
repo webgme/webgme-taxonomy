@@ -10,6 +10,9 @@ const { pipeline } = require("stream");
 const { promisify } = require("util");
 const streamPipeline = promisify(pipeline);
 const DownloadFile = require("../../DownloadFile");
+const CreateRequestLogger = require("./CreateRequestLogger");
+const logFilePath = process.env.CREATE_LOG_PATH || "./CreateProcesses.jsonl";
+const reqLogger = new CreateRequestLogger(logFilePath);
 
 class PDP {
   constructor(token) {
@@ -99,11 +102,13 @@ class PDP {
 
   async createArtifact(type, metadata) {
     const observerId = RouterUtils.getObserverIdFromToken(this.token);
-    // TODO: record the create request
-    const newProc = await this._createProcess(type);
-    await this._appendObservation(newProc.processId, type, metadata);
+    reqLogger.log(observerId, metadata);
 
-    return newProc;
+    // TODO: update this to actually create the processes
+    //const newProc = await this._createProcess(type);
+    //await this._appendObservation(newProc.processId, type, metadata);
+
+    //return newProc;
     // TODO: upload the data file
   }
 

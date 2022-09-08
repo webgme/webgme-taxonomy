@@ -64,7 +64,7 @@ function initialize(middlewareOpts) {
 
   // Perhaps the path should include the node ID, too...
   router.use("/:projectId/branch/:branch/", async (req, res, next) => {
-    console.log('received request');
+    console.log("received request");
     try {
       const { projectId, branch } = req.params;
       console.log("CTX:", projectId, branch);
@@ -143,9 +143,9 @@ function initialize(middlewareOpts) {
       }
 
       const storage = PDP.from(req, mainConfig);
-      const { processId } = await storage.createArtifact(type, req.body);
+      const result = await storage.createArtifact(type, metadata);
       // TODO: create new artifact - check what else we need...
-      res.json({ processId });
+      res.json("Submitted create request!");
     }
   );
 
