@@ -5,11 +5,11 @@ const fs = require("fs");
 const path = require("path");
 const os = require("os");
 const fsp = require("fs/promises");
-const RouterUtils = require("../../common/routers/Utils");
+const RouterUtils = require("../../../../common/routers/Utils");
 const { pipeline } = require("stream");
 const { promisify } = require("util");
 const streamPipeline = promisify(pipeline);
-const DownloadFile = require("./DownloadFile");
+const DownloadFile = require("../../DownloadFile");
 
 class PDP {
   constructor(token) {
@@ -49,10 +49,6 @@ class PDP {
     const url = PDP._addQueryParams("v3/Files/GetObservationFiles", queryDict);
     const opts = {
       method: "put",
-      //headers: {
-      //"Content-Type":'application/json-patch+json'
-      //},
-      //body: '["string"]'
     };
     return await this._fetchJson(url, opts);
   }
@@ -102,8 +98,11 @@ class PDP {
   }
 
   async createArtifact(type, metadata) {
+    const observerId = RouterUtils.getObserverIdFromToken(this.token);
+    // TODO: record the create request
     const newProc = await this._createProcess(type);
     await this._appendObservation(newProc.processId, type, metadata);
+
     return newProc;
     // TODO: upload the data file
   }
@@ -224,6 +223,7 @@ class PDP {
       dataFiles: files,
     };
 
+    console.log({ observation });
     return await this._fetchJson(
       `v3/Process/AppendObservation?processId=${processId}&uploadExpiresInMins=180`,
       {
@@ -273,9 +273,9 @@ class PDP {
   }
 
   static from(req, gmeConfig) {
-    //const token = require("./token");
-    const token =
-      req.cookies[gmeConfig.authentication.azureActiveDirectory.cookieId];
+    const token = require("./token");
+    //const token =
+    //req.cookies[gmeConfig.authentication.azureActiveDirectory.cookieId];
     return new PDP(token);
   }
 }

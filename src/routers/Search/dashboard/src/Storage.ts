@@ -10,47 +10,47 @@ class Storage {
 
   async listArtifacts() {
     const result = (await this._fetch(this.baseUrl))
-        .mapError(err => new ListError(err.message));
+                       .mapError(err => new ListError(err.message));
     const items = await result.unwrap();
     return filterMap(items, item => Artifact.tryFrom(item));
   }
 
   async getDownloadUrl(metadata) {
     return this.baseUrl + metadata.id + '/download';
-    //const url = this.baseUrl + metadata.id + '/downloadUrl';
-    //return (await this._fetch(url))
-        //// TODO: map based on status code?
-        //.map(response => {
-          //if (response.status === 204) {
-            //throw new DownloadError('No files found.');
-          //}
-          //return response.json();
-        //})
-        //.mapError(err => new DownloadError(err.message))
-        //.unwrap();
+    // const url = this.baseUrl + metadata.id + '/downloadUrl';
+    // return (await this._fetch(url))
+    //// TODO: map based on status code?
+    //.map(response => {
+    // if (response.status === 204) {
+    // throw new DownloadError('No files found.');
+    //}
+    // return response.json();
+    //})
+    //.mapError(err => new DownloadError(err.message))
+    //.unwrap();
   }
 
   async appendArtifact(item, files: File[]) {
     const [metadata] = item.data;
-    console.log({action: 'append', metadata, files});
     const url = this.baseUrl + item.id + '/uploadUrl';
     const filenames = files.map((file: File) => file.name);
     const opts = {
-      method: 'post',
-      headers: {
-        'Content-Type': 'application/json',
+      method : 'post',
+      headers : {
+        'Content-Type' : 'application/json',
       },
-      body: JSON.stringify({
+      body : JSON.stringify({
         metadata,
         filenames,
       })
     };
 
-    const uploadInfo = await (await this._fetch(url, opts))
-      .mapError(err => new AppendDataError(err.message))
-      .unwrap();
+    const reqResult = await this._fetch(url, opts);
+    const uploadInfo =
+        await reqResult.mapError(err => new AppendDataError(err.message))
+            .unwrap();
 
-      // TODO: use the upload info to push the files
+    // TODO: use the upload info to push the files
     console.log({uploadInfo});
     console.log('Append artifact:', metadata, files);
   }
@@ -170,10 +170,7 @@ class Artifact {
   static tryFrom(item: any) {
     const metadata = item.data ? item.data[0] : null;
     if (!metadata || !metadata.displayName) {
-        console.log(
-          "Found malformed data. Filtering out. Data:",
-          item
-        );
+      console.log("Found malformed data. Filtering out. Data:", item);
     } else {
       return item;
     }

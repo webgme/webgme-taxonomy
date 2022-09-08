@@ -25,7 +25,7 @@ const TagFormatter = require("../../common/TagFormatter");
 const path = require("path");
 const staticPath = path.join(__dirname, "dashboard", "public");
 
-const PDP = require("./PDP");
+const PDP = require("./adapters/PDP");
 let mainConfig = null;
 
 /* N.B. gmeAuth, safeStorage and workerManager are not ready to use until the start function is called.
@@ -64,6 +64,7 @@ function initialize(middlewareOpts) {
 
   // Perhaps the path should include the node ID, too...
   router.use("/:projectId/branch/:branch/", async (req, res, next) => {
+    console.log('received request');
     try {
       const { projectId, branch } = req.params;
       console.log("CTX:", projectId, branch);

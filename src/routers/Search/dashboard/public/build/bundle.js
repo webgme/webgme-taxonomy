@@ -19367,6 +19367,7 @@ var app = (function () {
       return this.baseUrl + e.id + "/download";
     }
     async appendArtifact(e, t) {
+      console.log(t[0].stream);
       const [n] = e.data;
       console.log({ action: "append", metadata: n, files: t });
       const i = this.baseUrl + e.id + "/uploadUrl",
@@ -19376,10 +19377,9 @@ var app = (function () {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ metadata: n, filenames: a }),
         },
-        r = await (await this._fetch(i, s))
-          .mapError((e) => new ec(e.message))
-          .unwrap();
-      console.log({ uploadInfo: r }), console.log("Append artifact:", n, t);
+        r = await this._fetch(i, s),
+        o = await r.mapError((e) => new ec(e.message)).unwrap();
+      console.log({ uploadInfo: o }), console.log("Append artifact:", n, t);
     }
     async updateArtifact(e, t) {
       console.log("Updating artifact:", e, t);
@@ -21103,7 +21103,6 @@ var app = (function () {
         )).action,
       S = [];
     async function x() {
-      if (0 === S.length) return f("No dataset files provided");
       n(13, (C.displayName = T), C), await s.createArtifact(C, S);
     }
     let T = "";
