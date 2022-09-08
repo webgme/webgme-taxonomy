@@ -45,11 +45,13 @@ class Storage {
         filenames,
       })
     };
-    console.log('append w/ body:', opts.body);
-    const urls = await (await this._fetch(url, opts))
+
+    const uploadInfo = await (await this._fetch(url, opts))
       .mapError(err => new AppendDataError(err.message))
       .unwrap();
-    console.log({urls});
+
+      // TODO: use the upload info to push the files
+    console.log({uploadInfo});
     console.log('Append artifact:', metadata, files);
   }
 

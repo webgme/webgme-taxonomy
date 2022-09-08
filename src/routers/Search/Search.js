@@ -158,7 +158,7 @@ function initialize(middlewareOpts) {
       const type = await getArtifactType(req);
       const storage = PDP.from(req, mainConfig);
       const [processId, obsIndex, version] = id.split("_");
-      const urls = await storage.getUploadUrls(
+      const fileUploadInfo = await storage.getUploadUrls(
         type,
         processId,
         +obsIndex + 1,
@@ -166,8 +166,7 @@ function initialize(middlewareOpts) {
         req.body.metadata,
         req.body.filenames
       );
-      console.log(urls);
-      res.json(urls);
+      res.json(fileUploadInfo);
     }
   );
 

@@ -152,7 +152,7 @@ class PDP {
   }
 
   async getUploadUrls(type, processId, index, version, metadata, files) {
-    return await this._appendObservationWithFiles(
+    const result = await this._appendObservationWithFiles(
       processId,
       index,
       version,
@@ -160,6 +160,7 @@ class PDP {
       metadata,
       files
     );
+    return result.uploadDataFiles.files;
   }
 
   async _downloadFile(filePath, url) {

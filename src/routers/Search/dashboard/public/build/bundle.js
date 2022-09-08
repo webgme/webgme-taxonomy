@@ -19375,12 +19375,11 @@ var app = (function () {
           method: "post",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ metadata: n, filenames: a }),
-        };
-      console.log("append w/ body:", s.body);
-      const r = await (await this._fetch(i, s))
-        .mapError((e) => new ec(e.message))
-        .unwrap();
-      console.log({ urls: r }), console.log("Append artifact:", n, t);
+        },
+        r = await (await this._fetch(i, s))
+          .mapError((e) => new ec(e.message))
+          .unwrap();
+      console.log({ uploadInfo: r }), console.log("Append artifact:", n, t);
     }
     async updateArtifact(e, t) {
       console.log("Updating artifact:", e, t);
