@@ -19423,10 +19423,11 @@ var app = (function () {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ metadata: n, filenames: a }),
         },
-        s = await (await this._fetchJson(i, r))
-          .mapError((e) => new ec(e.message))
-          .unwrap(),
-        o = s.map(async (e) => {
+        s = (
+          await (await this._fetchJson(i, r))
+            .mapError((e) => new ec(e.message))
+            .unwrap()
+        ).map(async (e) => {
           const n = e.name.substring(4),
             i = t.find((e) => e.name == n);
           !(function (e, t) {
@@ -19434,9 +19435,7 @@ var app = (function () {
           })(!!i, new ec("Could not find upload URL for " + n)),
             await this.pushArtifact(i, e.sasUrl);
         });
-      await Promise.all(o),
-        console.log({ uploadInfo: s }),
-        console.log("Append artifact:", n, t);
+      await Promise.all(s), console.log("Append artifact:", n, t);
     }
     async updateArtifact(e, t) {
       console.log("Updating artifact:", e, t);
