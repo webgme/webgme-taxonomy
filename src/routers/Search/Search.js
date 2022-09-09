@@ -142,10 +142,12 @@ function initialize(middlewareOpts) {
       //}
       //}
 
-      metadata.taxonomyId = req.params.projectId;
+      metadata.taxonomy = {
+        projectId: req.params.projectId,
+        branch: req.params.branch,
+      };
       const storage = PDP.from(req, mainConfig);
       const result = await storage.createArtifact(type, metadata);
-      // TODO: create new artifact - check what else we need...
       res.json("Submitted create request!");
     }
   );
