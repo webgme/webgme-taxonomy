@@ -82,9 +82,10 @@
     const chunks = window.location.href.split("/");
     chunks.pop();
     chunks.pop();
-    const url = chunks.join("/") + "/taxonomy.json";
+    const url = chunks.join("/") + "/configuration.json";
     const response = await fetch(url);
-    const taxonomy = await response.json();
+    const config = await response.json();
+    const { taxonomy } = config;
 
     let vocabs = [taxonomy];
     while (vocabs.length === 1) {

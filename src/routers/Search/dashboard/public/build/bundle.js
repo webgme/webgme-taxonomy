@@ -20882,11 +20882,13 @@ var app = (function () {
           (a = await (async function () {
             const e = window.location.href.split("/");
             e.pop(), e.pop();
-            const t = e.join("/") + "/taxonomy.json",
-              n = await fetch(t);
-            let i = [await n.json()];
-            for (; 1 === i.length; ) i = i[0].children;
-            return i;
+            const t = e.join("/") + "/configuration.json",
+              n = await fetch(t),
+              i = await n.json(),
+              { taxonomy: a } = i;
+            let r = [a];
+            for (; 1 === r.length; ) r = r[0].children;
+            return r;
           })())
         ),
           n(7, (m = !0));

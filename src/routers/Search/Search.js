@@ -87,13 +87,13 @@ function initialize(middlewareOpts) {
   });
 
   router.get(
-    "/:projectId/branch/:branch/taxonomy.json",
+    "/:projectId/branch/:branch/configuration.json",
     async function (req, res) {
       const { root, core } = req.webgmeContext;
       const exporter = new SearchFilterDataExporter(core);
       const node = await Utils.findTaxonomyNode(core, root);
-      const data = await exporter.toSchema(node);
-      res.json(data);
+      const taxonomy = await exporter.toSchema(node);
+      res.json({ taxonomy });
     }
   );
 
