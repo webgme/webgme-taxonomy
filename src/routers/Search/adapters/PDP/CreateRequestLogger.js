@@ -16,7 +16,6 @@ module.exports = class CreateRequestLogger {
       time: new Date(),
     };
 
-    // TODO: send an email, too
     this._writeTask = this._writeTask.then(() =>
       fsp.appendFile(this.filepath, JSON.stringify(request) + "\n")
     );

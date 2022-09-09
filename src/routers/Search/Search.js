@@ -132,6 +132,7 @@ function initialize(middlewareOpts) {
       const node = await Utils.findTaxonomyNode(core, root);
       const formatter = await TagFormatter.from(core, node);
       const { metadata } = req.body;
+      // TODO: re-enable tag conversion once the process is created automatically
       //try {
       //metadata.taxonomyTags = formatter.toGuidFormat(metadata.taxonomyTags);
       //} catch (err) {
