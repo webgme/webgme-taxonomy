@@ -53,19 +53,23 @@ class Storage {
     const opts = {
       method : 'PUT',
       headers : {
-        'Connection' : 'keep-alive',
-        'x-ms-blob-type' : 'BlockBlob',
-        'Content-Type' : 'application/octet-stream',
-        'Accept' : 'application/xml',
-        'x-ms-version' : '2020-10-02',
-        'x-ms-client-request-id' : 'b71bb1f3-491e-4000-b8a6-fc86a0a48c37',
-        'x-ms-encryption-algorithm' : 'AES256',
+        'Connection': 'keep-alive',
+        'sec-ch-ua': '" Not;A Brand";v="99", "Google Chrome";v="97", "Chromium";v="97"',
+        'x-ms-blob-type': 'BlockBlob',
+        'sec-ch-ua-mobile': '?0',
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.71 Safari/537.36',
+        'Content-Type': 'application/octet-stream',
+        'Accept': 'application/xml',
+        'x-ms-version': '2020-10-02',
+        'x-ms-client-request-id': 'b71bb1f3-491e-4000-b8a6-fc86a0a48c37',
+        'x-ms-encryption-algorithm': 'AES256',
+        'sec-ch-ua-platform': '"macOS"',
         'Origin': 'https://leappremonition.azurewebsites.net',
         'Sec-Fetch-Site': 'cross-site',
         'Sec-Fetch-Mode': 'cors',
         'Sec-Fetch-Dest': 'empty',
         'Referer': 'https://leappremonition.azurewebsites.net/',
-        'Accept-Language': 'en-US,en;q=0.9'
+        'Accept-Language': 'en-US,en;q=0.9',
       },
       body : myString
     };
