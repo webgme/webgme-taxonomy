@@ -1,3 +1,5 @@
+import {filterMap, Result} from './Utils';
+
 class Storage {
   baseUrl: string;
   constructor() {
@@ -8,16 +10,16 @@ class Storage {
   }
 
   async listArtifacts() {
-    const result = (await this._fetch(this.baseUrl))
-                       .mapError(err => new ListError(err.message));
-    const items = await result.unwrap();
+    const result = (await this._fetchJson(this.baseUrl))
+                       .mapError((err: Error) => new ListError(err.message));
+    const items: any[] = await result.unwrap();
     return filterMap(items, item => Artifact.tryFrom(item));
   }
 
   async getDownloadUrl(metadata) {
     return this.baseUrl + metadata.id + '/download';
     // const url = this.baseUrl + metadata.id + '/downloadUrl';
-    // return (await this._fetch(url))
+    // return (await this._fetchJson(url))
     //// TODO: map based on status code?
     //.map(response => {
     // if (response.status === 204) {
@@ -44,24 +46,20 @@ class Storage {
     });
   }
 
-  async pushArtifact(file: File,sasUrl: string) {
+  async pushArtifact(file: File, sasUrl: string) {
     console.log('Uploading to', sasUrl, file.name);
     const myString = await this.readFile(file)
     console.log(myString)
     const opts = {
       method : 'PUT',
-      headers: {
-        'Connection': 'keep-alive',
-        'sec-ch-ua': '" Not;A Brand";v="99", "Google Chrome";v="97", "Chromium";v="97"',
-        'x-ms-blob-type': 'BlockBlob',
-        'sec-ch-ua-mobile': '?0',
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.71 Safari/537.36',
-        'Content-Type': 'application/octet-stream',
-        'Accept': 'application/xml',
-        'x-ms-version': '2020-10-02',
-        'x-ms-client-request-id': 'b71bb1f3-491e-4000-b8a6-fc86a0a48c37',
-        'x-ms-encryption-algorithm': 'AES256',
-        'sec-ch-ua-platform': '"macOS"',
+      headers : {
+        'Connection' : 'keep-alive',
+        'x-ms-blob-type' : 'BlockBlob',
+        'Content-Type' : 'application/octet-stream',
+        'Accept' : 'application/xml',
+        'x-ms-version' : '2020-10-02',
+        'x-ms-client-request-id' : 'b71bb1f3-491e-4000-b8a6-fc86a0a48c37',
+        'x-ms-encryption-algorithm' : 'AES256',
         'Origin': 'https://leappremonition.azurewebsites.net',
         'Sec-Fetch-Site': 'cross-site',
         'Sec-Fetch-Mode': 'cors',
@@ -72,13 +70,13 @@ class Storage {
       body : myString
     };
     return (await this._fetch(sasUrl, opts))
-        .mapError(err => new CreateError(err.message))
+        .mapError(err => new AppendDataError(err.message))
         .unwrap();
   }
 
   async appendArtifact(item, files: File[]) {
     const [metadata] = item.data;
-    console.log({action: 'append', metadata, files});
+    console.log({action : 'append', metadata, files});
     const url = this.baseUrl + item.id + '/uploadUrl';
     const filenames = files.map((file: File) => file.name);
 
@@ -90,26 +88,26 @@ class Storage {
       headers : {
         'Content-Type' : 'application/json',
       },
-      body: JSON.stringify({
+      body : JSON.stringify({
         metadata,
         filenames,
       })
     };
 
-    const uploadInfo = await (await this._fetch(url, opts))
-      .mapError(err => new AppendDataError(err.message))
-      .unwrap();
+    const uploadInfo = await (await this._fetchJson(url, opts))
+                           .mapError(err => new AppendDataError(err.message))
+                           .unwrap();
 
-      // TODO: use the upload info to push the files
-    if(uploadInfo){
-      uploadInfo.map(async (element) =>  {
-        const targetFile = files.filter(a => a.name==element.name.substring(4))
-        await this.pushArtifact(targetFile[0], element.sasUrl)
-      })
-
+    // TODO: use the upload info to push the files
+    if (uploadInfo) {
+      uploadInfo.map(
+          async (element) => {
+              const targetFile =
+                  files
+                      .filter(a => a.name == element.name.substring(4))
+                          await this.pushArtifact(targetFile[0],
+                                                  element.sasUrl)})
     }
-
-
 
     // TODO: use the upload info to push the files
     console.log({uploadInfo});
@@ -129,63 +127,22 @@ class Storage {
         metadata,
       })
     };
-    return (await this._fetch(this.baseUrl, opts))
+    return (await this._fetchJson(this.baseUrl, opts))
         .mapError(err => new CreateError(err.message))
         .unwrap();
   }
 
   async _fetch(url: string, opts = null) {
     const response = await fetch(url, opts);
-    return RequestResult.from(response);
-  }
-}
-
-/**
- * A RequestResult is the result from a request. Errors can be mapped (like
- * combinators). Unwrapping the result will either throw an error (if an error
- * occurred) or return the parsed result from the request.
- */
-class RequestResult {
-  _response: Response;
-  _error: Error|null;
-  _result: any;
-
-  constructor(response: Response, error: Error) {
-    this._response = response;
-    this._error = error;
-    this._result = null;
-  }
-
-  map(fn: (response: Response) => any) {
-    if (!this._error) {
-      this._result = fn(this._response);
-    }
-    return this;
-  }
-
-  mapError(errFn: (err: Error) => Error) {
-    this._error = this._error && errFn(this._error);
-    return this;
-  }
-
-  async unwrap() {
-    if (this._error) {
-      throw this._error;
-    }
-
-    if (this._result) {
-      return await this._result;
-    }
-
-    return await this._response.json();
-  }
-
-  static async from(response: Response) {
     let error = null;
     if (response.status > 399) {
       error = new RequestError(await response.text());
     }
-    return new RequestResult(response, error);
+    return new Result(response, error);
+  }
+
+  async _fetchJson(url: string, opts = null) {
+    return (await this._fetch(url, opts)).map(response => response.json());
   }
 }
 
@@ -215,16 +172,6 @@ class CreateError extends StorageError {
 
 class AppendDataError extends StorageError {
   constructor(msg: string) { super('append', msg); }
-}
-
-function filterMap<I, O>(list: I[], fn: (x: I) => O): O[] {
-  return list.reduce((items, input) => {
-    const mapped = fn(input);
-    if (mapped !== undefined) {
-      items.push(mapped);
-    }
-    return items;
-  }, []);
 }
 
 class Artifact {
