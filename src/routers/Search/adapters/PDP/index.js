@@ -278,9 +278,9 @@ class PDP {
   }
 
   static from(req, gmeConfig) {
-    const token = require("./token");
-    //const token =
-    //req.cookies[gmeConfig.authentication.azureActiveDirectory.cookieId];
+    // const token = require("./token");
+    const token =
+    req.cookies[gmeConfig.authentication.azureActiveDirectory.cookieId];
     return new PDP(token);
   }
 }
