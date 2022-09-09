@@ -30,25 +30,70 @@ class Storage {
     //.unwrap();
   }
 
+  async readFile(file: File) {
+    return new Promise((res, rej) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (reader.error) {
+          console.log("error:", reader.error);
+          return rej(reader.error);
+        } else {
+          return res(reader.result);
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    });
+  }
+
+  async pushArtifact(file: File,sasUrl: string) {
+    console.log('Uploading to', sasUrl, file.name);
+    const myString = await this.readFile(file)
+    console.log(myString)
+    const opts = {
+      method : 'PUT',
+      mode: 'no-cors',
+      // headers : {'Content-Type' : 'application/json'},
+      body : myString
+    };
+    return (await this._fetch(sasUrl, opts))
+        .mapError(err => new CreateError(err.message))
+        .unwrap();
+  }
+
   async appendArtifact(item, files: File[]) {
     const [metadata] = item.data;
+    console.log({action: 'append', metadata, files});
     const url = this.baseUrl + item.id + '/uploadUrl';
     const filenames = files.map((file: File) => file.name);
+
+    // const myString = await this.readFile(files[0])
+    // console.log(myString)
+
     const opts = {
       method : 'post',
       headers : {
         'Content-Type' : 'application/json',
       },
-      body : JSON.stringify({
+      body: JSON.stringify({
         metadata,
         filenames,
       })
     };
 
-    const reqResult = await this._fetch(url, opts);
-    const uploadInfo =
-        await reqResult.mapError(err => new AppendDataError(err.message))
-            .unwrap();
+    const uploadInfo = await (await this._fetch(url, opts))
+      .mapError(err => new AppendDataError(err.message))
+      .unwrap();
+
+      // TODO: use the upload info to push the files
+    if(uploadInfo){
+      uploadInfo.map(async (element) =>  {
+        const targetFile = files.filter(a => a.name==element.name.substring(4))
+        await this.pushArtifact(targetFile[0], element.sasUrl)
+      })
+
+    }
+
+
 
     // TODO: use the upload info to push the files
     console.log({uploadInfo});
