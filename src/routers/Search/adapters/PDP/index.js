@@ -55,12 +55,12 @@ class PDP {
     };
     return await this._fetchJson(url, opts);
   }
-  
+
   async _getObs(processId, obsIndex, version) {
     const queryDict = {
       processId,
       obsIndex,
-      version
+      version,
     };
     const url = PDP._addQueryParams("v2/Process/GetObservation", queryDict);
     const opts = {
@@ -126,8 +126,11 @@ class PDP {
   }
 
   async getDownloadPath(processId, obsIndex, version) {
-    
-    const responseObservation = await this._getObs(processId, obsIndex, version);
+    const responseObservation = await this._getObs(
+      processId,
+      obsIndex,
+      version
+    );
     const response = await this._getObsFiles(processId, obsIndex, version);
     if (response.files.length === 0) {
       return;
@@ -155,9 +158,9 @@ class PDP {
     const downloadDir = path.join(tmpDir, "download");
     const zipPath = path.join(tmpDir, `${processId}.zip`);
 
-    const objFilePath = path.join(downloadDir,`observation.json`)
-   
-    await this._downloadObservationFile(objFilePath,responseObservation)
+    const objFilePath = path.join(downloadDir, `observation.json`);
+
+    await this._downloadObservationFile(objFilePath, responseObservation);
     await Promise.all(
       response.files.map((file) =>
         this._downloadFile(
@@ -197,10 +200,7 @@ class PDP {
   async _downloadObservationFile(filePath, response) {
     const dirPath = path.dirname(filePath) + path.sep;
     await fsp.mkdir(dirPath, { recursive: true });
-    await fs.writeFile(filePath,JSON.stringify(response) , function (err) {
-        if (err) throw err;
-        console.log('File is created successfully.');
-      });
+    await fsp.writeFile(filePath, JSON.stringify(response));
   }
 
   static async _prepareDownloadDir() {
@@ -307,7 +307,7 @@ class PDP {
   static from(req, gmeConfig) {
     // const token = require("./token");
     const token =
-    req.cookies[gmeConfig.authentication.azureActiveDirectory.cookieId];
+      req.cookies[gmeConfig.authentication.azureActiveDirectory.cookieId];
     return new PDP(token);
   }
 }
