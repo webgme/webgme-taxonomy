@@ -1,4 +1,4 @@
-import {filterMap, Result} from './Utils';
+import {filterMap, Result, assert} from './Utils';
 
 class Storage {
   baseUrl: string;
@@ -51,10 +51,10 @@ class Storage {
     const opts = {
       method : 'PUT',
       headers : {
-        'Accept': 'application/xml',
-        'Content-Type': 'application/octet-stream',
-        'x-ms-blob-type': 'BlockBlob',
-        'x-ms-encryption-algorithm': 'AES256',
+        'Accept' : 'application/xml',
+        'Content-Type' : 'application/octet-stream',
+        'x-ms-blob-type' : 'BlockBlob',
+        'x-ms-encryption-algorithm' : 'AES256',
       },
       body : await this.readFile(file),
     };
@@ -87,19 +87,15 @@ class Storage {
                            .mapError(err => new AppendDataError(err.message))
                            .unwrap();
 
-    // TODO: use the upload info to push the files
-    if (uploadInfo) {
-      uploadInfo.map(
-          async (element) => {
-              const targetFile =
-                  files
-                      .filter(a => a.name == element.name.substring(4))
-                          await this.pushArtifact(targetFile[0],
-                                                  element.sasUrl)})
-    }
+    const uploadTasks = uploadInfo.map(async (element) => {
+      const filename = element.name.substring(4);
+      const targetFile = files.find(a => a.name == filename);
+      assert(!!targetFile, new AppendDataError('Could not find upload URL for ' + filename));
+      await this.pushArtifact(targetFile, element.sasUrl)
+    });
 
-    // TODO: use the upload info to push the files
-    console.log({uploadInfo});
+    await Promise.all(uploadTasks);
+
     console.log('Append artifact:', metadata, files);
   }
 

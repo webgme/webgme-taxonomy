@@ -50,3 +50,9 @@ export function filterMap<I, O>(list: I[], fn: (x: I) => O): O[] {
   }, []);
 }
 
+export function assert(cond: boolean, err: Error) {
+  if (!cond) {
+    throw err;
+  }
+}
+
