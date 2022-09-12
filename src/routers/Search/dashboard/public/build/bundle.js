@@ -19488,11 +19488,11 @@ var app = (function () {
   const { document: tc } = le;
   function nc(e, t, n) {
     const i = e.slice();
-    return (i[45] = t[n]), i;
+    return (i[46] = t[n]), i;
   }
   function ic(e, t, n) {
     const i = e.slice();
-    return (i[51] = t[n]), i;
+    return (i[52] = t[n]), i;
   }
   function ac(e) {
     let t,
@@ -19518,7 +19518,7 @@ var app = (function () {
   function rc(e) {
     let t,
       n,
-      i = e[51].name + "";
+      i = e[52].name + "";
     return {
       c() {
         (t = E("li")), (n = C(i)), T(t, "class", "svelte-1l4jzu8");
@@ -19527,7 +19527,7 @@ var app = (function () {
         v(e, t, i), I(t, n);
       },
       p(e, t) {
-        512 & t[0] && i !== (i = e[51].name + "") && L(n, i);
+        512 & t[0] && i !== (i = e[52].name + "") && L(n, i);
       },
       d(e) {
         e && b(t);
@@ -19598,7 +19598,7 @@ var app = (function () {
             l.length = o.length;
           }
           const n = {};
-          8388608 & t[1] && (n.$$scope = { dirty: t, ctx: e }), r.$set(n);
+          16777216 & t[1] && (n.$$scope = { dirty: t, ctx: e }), r.$set(n);
         },
         i(e) {
           s || (se(r.$$.fragment, e), (s = !0));
@@ -19641,7 +19641,7 @@ var app = (function () {
         },
         p(e, n) {
           const i = {};
-          8388608 & n[1] && (i.$$scope = { dirty: n, ctx: e }), t.$set(i);
+          16777216 & n[1] && (i.$$scope = { dirty: n, ctx: e }), t.$set(i);
         },
         i(e) {
           n || (se(t.$$.fragment, e), (n = !0));
@@ -19684,7 +19684,7 @@ var app = (function () {
         },
         p(e, n) {
           const i = {};
-          8388608 & n[1] && (i.$$scope = { dirty: n, ctx: e }), t.$set(i);
+          16777216 & n[1] && (i.$$scope = { dirty: n, ctx: e }), t.$set(i);
         },
         i(e) {
           n || (se(t.$$.fragment, e), (n = !0));
@@ -19717,9 +19717,9 @@ var app = (function () {
         },
         p(e, n) {
           const a = {};
-          8388608 & n[1] && (a.$$scope = { dirty: n, ctx: e }), t.$set(a);
+          16777216 & n[1] && (a.$$scope = { dirty: n, ctx: e }), t.$set(a);
           const r = {};
-          8388608 & n[1] && (r.$$scope = { dirty: n, ctx: e }), i.$set(r);
+          16777216 & n[1] && (r.$$scope = { dirty: n, ctx: e }), i.$set(r);
         },
         i(e) {
           a || (se(t.$$.fragment, e), se(i.$$.fragment, e), (a = !0));
@@ -19767,14 +19767,15 @@ var app = (function () {
         },
         p(e, n) {
           const a = {};
-          (1024 & n[0]) | (8388608 & n[1]) &&
+          (1024 & n[0]) | (16777216 & n[1]) &&
             (a.$$scope = { dirty: n, ctx: e }),
             t.$set(a);
           const s = {};
-          (512 & n[0]) | (8388608 & n[1]) && (s.$$scope = { dirty: n, ctx: e }),
+          (512 & n[0]) | (16777216 & n[1]) &&
+            (s.$$scope = { dirty: n, ctx: e }),
             i.$set(s);
           const o = {};
-          8388608 & n[1] && (o.$$scope = { dirty: n, ctx: e }), r.$set(o);
+          16777216 & n[1] && (o.$$scope = { dirty: n, ctx: e }), r.$set(o);
         },
         i(e) {
           s ||
@@ -19872,7 +19873,7 @@ var app = (function () {
         },
         p(e, n) {
           const i = {};
-          8388608 & n[1] && (i.$$scope = { dirty: n, ctx: e }), t.$set(i);
+          16777216 & n[1] && (i.$$scope = { dirty: n, ctx: e }), t.$set(i);
         },
         i(e) {
           n || (se(t.$$.fragment, e), (n = !0));
@@ -19915,7 +19916,7 @@ var app = (function () {
         },
         p(e, n) {
           const i = {};
-          8388608 & n[1] && (i.$$scope = { dirty: n, ctx: e }), t.$set(i);
+          16777216 & n[1] && (i.$$scope = { dirty: n, ctx: e }), t.$set(i);
         },
         i(e) {
           n || (se(t.$$.fragment, e), (n = !0));
@@ -19948,9 +19949,9 @@ var app = (function () {
         },
         p(e, n) {
           const a = {};
-          8388608 & n[1] && (a.$$scope = { dirty: n, ctx: e }), t.$set(a);
+          16777216 & n[1] && (a.$$scope = { dirty: n, ctx: e }), t.$set(a);
           const r = {};
-          8388608 & n[1] && (r.$$scope = { dirty: n, ctx: e }), i.$set(r);
+          16777216 & n[1] && (r.$$scope = { dirty: n, ctx: e }), i.$set(r);
         },
         i(e) {
           a || (se(t.$$.fragment, e), se(i.$$.fragment, e), (a = !0));
@@ -19998,13 +19999,13 @@ var app = (function () {
         },
         p(e, n) {
           const a = {};
-          8388608 & n[1] && (a.$$scope = { dirty: n, ctx: e }), t.$set(a);
+          16777216 & n[1] && (a.$$scope = { dirty: n, ctx: e }), t.$set(a);
           const s = {};
-          (4096 & n[0]) | (8388608 & n[1]) &&
+          (4096 & n[0]) | (16777216 & n[1]) &&
             (s.$$scope = { dirty: n, ctx: e }),
             i.$set(s);
           const o = {};
-          8388608 & n[1] && (o.$$scope = { dirty: n, ctx: e }), r.$set(o);
+          16777216 & n[1] && (o.$$scope = { dirty: n, ctx: e }), r.$set(o);
         },
         i(e) {
           s ||
@@ -20057,7 +20058,7 @@ var app = (function () {
         },
         p(e, n) {
           const i = {};
-          (1 & n[0]) | (8388608 & n[1]) && (i.$$scope = { dirty: n, ctx: e }),
+          (1 & n[0]) | (16777216 & n[1]) && (i.$$scope = { dirty: n, ctx: e }),
             t.$set(i);
         },
         i(e) {
@@ -20108,7 +20109,7 @@ var app = (function () {
         },
         p(e, n) {
           const i = {};
-          8388608 & n[1] && (i.$$scope = { dirty: n, ctx: e }), t.$set(i);
+          16777216 & n[1] && (i.$$scope = { dirty: n, ctx: e }), t.$set(i);
         },
         i(e) {
           n || (se(t.$$.fragment, e), (n = !0));
@@ -20145,10 +20146,10 @@ var app = (function () {
         },
         p(e, n) {
           const a = {};
-          (1 & n[0]) | (8388608 & n[1]) && (a.$$scope = { dirty: n, ctx: e }),
+          (1 & n[0]) | (16777216 & n[1]) && (a.$$scope = { dirty: n, ctx: e }),
             t.$set(a);
           const r = {};
-          (2048 & n[0]) | (8388608 & n[1]) &&
+          (2048 & n[0]) | (16777216 & n[1]) &&
             (r.$$scope = { dirty: n, ctx: e }),
             i.$set(r);
         },
@@ -20179,7 +20180,7 @@ var app = (function () {
         },
         p(e, n) {
           const i = {};
-          (2049 & n[0]) | (8388608 & n[1]) &&
+          (2049 & n[0]) | (16777216 & n[1]) &&
             (i.$$scope = { dirty: n, ctx: e }),
             t.$set(i);
         },
@@ -20252,7 +20253,7 @@ var app = (function () {
         },
         p(e, n) {
           const i = {};
-          8388608 & n[1] && (i.$$scope = { dirty: n, ctx: e }), t.$set(i);
+          16777216 & n[1] && (i.$$scope = { dirty: n, ctx: e }), t.$set(i);
         },
         i(e) {
           n || (se(t.$$.fragment, e), (n = !0));
@@ -20282,7 +20283,7 @@ var app = (function () {
         },
         p(e, t) {
           const n = {};
-          8388608 & t[1] && (n.$$scope = { dirty: t, ctx: e }), i.$set(n);
+          16777216 & t[1] && (n.$$scope = { dirty: t, ctx: e }), i.$set(n);
         },
         i(e) {
           a || (se(t.$$.fragment, e), se(i.$$.fragment, e), (a = !0));
@@ -20360,7 +20361,7 @@ var app = (function () {
         },
         p(e, n) {
           const i = {};
-          (38 & n[0]) | (8388608 & n[1]) && (i.$$scope = { dirty: n, ctx: e }),
+          (38 & n[0]) | (16777216 & n[1]) && (i.$$scope = { dirty: n, ctx: e }),
             t.$set(i);
         },
         i(e) {
@@ -20377,7 +20378,7 @@ var app = (function () {
   }
   function Mc(e) {
     let t,
-      n = e[45].data[0].displayName + "";
+      n = e[46].data[0].displayName + "";
     return {
       c() {
         t = C(n);
@@ -20386,7 +20387,7 @@ var app = (function () {
         v(e, t, n);
       },
       p(e, i) {
-        64 & i[0] && n !== (n = e[45].data[0].displayName + "") && L(t, n);
+        64 & i[0] && n !== (n = e[46].data[0].displayName + "") && L(t, n);
       },
       d(e) {
         e && b(t);
@@ -20414,10 +20415,10 @@ var app = (function () {
           s ||
             ((o = [
               x(t, "click", function () {
-                r(e[14](e[45])) && e[14](e[45]).apply(this, arguments);
+                r(e[14](e[46])) && e[14](e[46]).apply(this, arguments);
               }),
               x(i, "click", function () {
-                r(e[15](e[45])) && e[15](e[45]).apply(this, arguments);
+                r(e[15](e[46])) && e[15](e[46]).apply(this, arguments);
               }),
             ]),
             (s = !0));
@@ -20448,10 +20449,10 @@ var app = (function () {
         },
         p(e, n) {
           const a = {};
-          (64 & n[0]) | (8388608 & n[1]) && (a.$$scope = { dirty: n, ctx: e }),
+          (64 & n[0]) | (16777216 & n[1]) && (a.$$scope = { dirty: n, ctx: e }),
             t.$set(a);
           const r = {};
-          (64 & n[0]) | (8388608 & n[1]) && (r.$$scope = { dirty: n, ctx: e }),
+          (64 & n[0]) | (16777216 & n[1]) && (r.$$scope = { dirty: n, ctx: e }),
             i.$set(r);
         },
         i(e) {
@@ -20481,7 +20482,7 @@ var app = (function () {
         },
         p(e, n) {
           const i = {};
-          (64 & n[0]) | (8388608 & n[1]) && (i.$$scope = { dirty: n, ctx: e }),
+          (64 & n[0]) | (16777216 & n[1]) && (i.$$scope = { dirty: n, ctx: e }),
             t.$set(i);
         },
         i(e) {
@@ -20503,7 +20504,7 @@ var app = (function () {
         props: { $$slots: { default: [kc] }, $$scope: { ctx: e } },
       })),
       t.$on("SMUI:action", function () {
-        return e[28](e[45]);
+        return e[28](e[46]);
       }),
       {
         c() {
@@ -20515,7 +20516,7 @@ var app = (function () {
         p(n, i) {
           e = n;
           const a = {};
-          (64 & i[0]) | (8388608 & i[1]) && (a.$$scope = { dirty: i, ctx: e }),
+          (64 & i[0]) | (16777216 & i[1]) && (a.$$scope = { dirty: i, ctx: e }),
             t.$set(a);
         },
         i(e) {
@@ -20601,7 +20602,7 @@ var app = (function () {
         },
         p(e, t) {
           const i = {};
-          (64 & t[0]) | (8388608 & t[1]) && (i.$$scope = { dirty: t, ctx: e }),
+          (64 & t[0]) | (16777216 & t[1]) && (i.$$scope = { dirty: t, ctx: e }),
             n.$set(i);
         },
         i(e) {
@@ -20771,19 +20772,19 @@ var app = (function () {
         p(e, n) {
           (!w || 1 & n[0]) && t !== (t = e[0]) && (tc.title = t);
           const r = {};
-          (1536 & n[0]) | (8388608 & n[1]) &&
+          (1536 & n[0]) | (16777216 & n[1]) &&
             (r.$$scope = { dirty: n, ctx: e }),
             !a && 256 & n[0] && ((a = !0), (r.open = e[8]), Q(() => (a = !1))),
             i.$set(r);
           const l = {};
-          (4096 & n[0]) | (8388608 & n[1]) &&
+          (4096 & n[0]) | (16777216 & n[1]) &&
             (l.$$scope = { dirty: n, ctx: e }),
             !o &&
               2048 & n[0] &&
               ((o = !0), (l.open = e[11]), Q(() => (o = !1))),
             s.$set(l);
           const d = {};
-          (2049 & n[0]) | (8388608 & n[1]) &&
+          (2049 & n[0]) | (16777216 & n[1]) &&
             (d.$$scope = { dirty: n, ctx: e }),
             c.$set(d),
             e[7]
@@ -20798,13 +20799,13 @@ var app = (function () {
                 re());
           const f = {};
           16 & n[0] && (f.labelText = e[4]),
-            8388608 & n[1] && (f.$$scope = { dirty: n, ctx: e }),
+            16777216 & n[1] && (f.$$scope = { dirty: n, ctx: e }),
             p.$set(f);
           const m = {};
-          (38 & n[0]) | (8388608 & n[1]) && (m.$$scope = { dirty: n, ctx: e }),
+          (38 & n[0]) | (16777216 & n[1]) && (m.$$scope = { dirty: n, ctx: e }),
             h.$set(m);
           const g = {};
-          (64 & n[0]) | (8388608 & n[1]) && (g.$$scope = { dirty: n, ctx: e }),
+          (64 & n[0]) | (16777216 & n[1]) && (g.$$scope = { dirty: n, ctx: e }),
             $.$set(g);
         },
         i(e) {
@@ -20925,13 +20926,22 @@ var app = (function () {
           (a = await (async function () {
             const e = window.location.href.split("/");
             e.pop(), e.pop();
-            const t = e.join("/") + "/configuration.json",
-              n = await fetch(t),
-              i = await n.json(),
-              { taxonomy: a } = i;
-            let r = [a];
-            for (; 1 === r.length; ) r = r[0].children;
-            return r;
+            const t = e.join("/") + "/configuration.json";
+            try {
+              const e = await fetch(t),
+                n = await e.json(),
+                { taxonomy: i } = n;
+              let a = [i];
+              for (; 1 === a.length; ) a = a[0].children;
+              return a;
+            } catch (e) {
+              throw (
+                (f(
+                  "An error occurred. Please double check the URL and try again."
+                ),
+                e)
+              );
+            }
           })())
         ),
           n(7, (m = !0));

@@ -83,16 +83,23 @@
     chunks.pop();
     chunks.pop();
     const url = chunks.join("/") + "/configuration.json";
-    const response = await fetch(url);
-    const config = await response.json();
-    const { taxonomy } = config;
+    try {
+      const response = await fetch(url);
+      const config = await response.json();
+      const { taxonomy } = config;
 
-    let vocabs = [taxonomy];
-    while (vocabs.length === 1) {
-      vocabs = vocabs[0].children;
+      let vocabs = [taxonomy];
+      while (vocabs.length === 1) {
+        vocabs = vocabs[0].children;
+      }
+
+      return vocabs;
+    } catch (err) {
+      displayError(
+        "An error occurred. Please double check the URL and try again."
+      );
+      throw err;
     }
-
-    return vocabs;
   }
 
   let snackbar: SnackbarComponentDev;
