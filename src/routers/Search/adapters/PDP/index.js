@@ -14,6 +14,23 @@ const CreateRequestLogger = require("./CreateRequestLogger");
 const logFilePath = process.env.CREATE_LOG_PATH || "./CreateProcesses.jsonl";
 const reqLogger = new CreateRequestLogger(logFilePath);
 
+
+
+class RESTTagFormatter {
+  constructor() {
+    // this.projectId = "aadid_yogesh_p_d_p_barve_at_vanderbilt_p_edu%2BLeapTaxonomy_v1a"
+     this.baseUrl =  "http://localhost:12345/routers/TagFormat/aadid_yogesh_p_d_p_barve_at_vanderbilt_p_edu%2BLeapTaxonomy_v1a/branch/master/human"
+  }
+
+  async toHumanFormat(tags) {
+    const encodedTags = encodeURIComponent(JSON.stringify(tags));
+    const url = `${this.baseUrl}?tags=${encodedTags}`;
+    const response = await fetch(url);
+    return await response.json();
+  }
+}
+
+
 class PDP {
   constructor(token) {
     this.token = token;
@@ -160,6 +177,9 @@ class PDP {
 
     const objFilePath = path.join(downloadDir, `observation.json`);
 
+
+    const _toHumanFormatter = new RESTTagFormatter()
+    const humanTag = _toHumanFormatter.toHumanFormat(responseObservation.data[0].taxonomyTags)
     await this._downloadObservationFile(objFilePath, responseObservation);
     await Promise.all(
       response.files.map((file) =>
