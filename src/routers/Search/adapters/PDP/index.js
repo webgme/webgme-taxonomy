@@ -179,7 +179,7 @@ class PDP {
 
 
     const _toHumanFormatter = new RESTTagFormatter()
-    const humanTag = _toHumanFormatter.toHumanFormat(responseObservation.data[0].taxonomyTags)
+    const humanTag = await _toHumanFormatter.toHumanFormat(responseObservation.data[0].taxonomyTags)
     await this._downloadObservationFile(objFilePath, responseObservation);
     await Promise.all(
       response.files.map((file) =>
