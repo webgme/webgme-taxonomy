@@ -57,9 +57,9 @@ const Utils = {
 };
 
 class UserError extends Error {
-  constructor(msg, code) {
+  constructor(msg, code = 400) {
     super(msg);
-    self.statusCode = 400;
+    this.statusCode = code;
   }
 }
 
