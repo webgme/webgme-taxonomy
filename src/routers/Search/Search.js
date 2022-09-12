@@ -78,7 +78,7 @@ function initialize(middlewareOpts) {
       next();
     } catch (e) {
       if (e instanceof RouterUtils.UserError) {
-        res.status(400).send(e.message);
+        res.status(e.statusCode).send(e.message);
       } else {
         logger.error(e);
         res.sendStatus(500);
