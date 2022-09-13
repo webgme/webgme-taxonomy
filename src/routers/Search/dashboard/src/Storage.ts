@@ -16,8 +16,10 @@ class Storage {
     return filterMap(items, item => Artifact.tryFrom(item));
   }
 
-  async getDownloadUrl(metadata) {
-    return this.baseUrl + metadata.id + '/download';
+  async getDownloadUrl(parentId, ...ids) {
+    // TODO: add item IDs
+    const qs = `ids=${encodeURIComponent(JSON.stringify(ids))}`;
+    return this.baseUrl + parentId + `/download?${qs}`;
     // const url = this.baseUrl + metadata.id + '/downloadUrl';
     // return (await this._fetchJson(url))
     //// TODO: map based on status code?
@@ -64,9 +66,12 @@ class Storage {
   }
 
   async appendArtifact(item, files: File[]) {
-    const [metadata] = item.data;
+    const metadata = {
+      displayName: item.displayName,
+      taxonomyTags: item.taxonomyTags,
+    };
     console.log({action : 'append', metadata, files});
-    const url = this.baseUrl + item.id + '/uploadUrl';
+    const url = `${this.baseUrl}${item.parentId}/${item.id}/uploadUrl`;
     const filenames = files.map((file: File) => file.name);
 
     // const myString = await this.readFile(files[0])
@@ -161,8 +166,7 @@ class AppendDataError extends StorageError {
 
 class Artifact {
   static tryFrom(item: any) {
-    const metadata = item.data ? item.data[0] : null;
-    if (!metadata || !metadata.displayName) {
+    if (!item.displayName) {
       console.log("Found malformed data. Filtering out. Data:", item);
     } else {
       return item;

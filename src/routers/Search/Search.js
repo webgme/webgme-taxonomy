@@ -108,17 +108,9 @@ function initialize(middlewareOpts) {
         const storage = PDP.from(req, mainConfig);
         const artifacts = await storage.listArtifacts(type);
         console.log({ artifacts });
-        artifacts.forEach(
-          (artifact) =>
-            (artifact.id = [
-              artifact.processId,
-              artifact.index,
-              artifact.version,
-            ].join("_"))
-        );
         res.status(200).json(artifacts).end();
       } catch (e) {
-        logger.error(e);
+        logger.error(e.stack);
         res.sendStatus(401);
       }
     }
@@ -154,7 +146,7 @@ function initialize(middlewareOpts) {
   );
 
   router.post(
-    "/:projectId/branch/:branch/artifacts/:id/uploadUrl",
+    "/:projectId/branch/:branch/artifacts/:parentId/:id/uploadUrl",
     async function (req, res) {
       // TODO: update artifact
       //the body is a json with the metadata and the list of file paths

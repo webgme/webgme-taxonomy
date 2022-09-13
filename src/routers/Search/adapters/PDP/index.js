@@ -10,6 +10,7 @@ const { pipeline } = require("stream");
 const { promisify } = require("util");
 const streamPipeline = promisify(pipeline);
 const DownloadFile = require("../../DownloadFile");
+const Artifact = require("../../Artifact");
 const CreateRequestLogger = require("./CreateRequestLogger");
 const logFilePath = process.env.CREATE_LOG_PATH || "./CreateProcesses.jsonl";
 const reqLogger = new CreateRequestLogger(logFilePath);
@@ -32,8 +33,7 @@ class PDP {
         async (process) => await this.getLatestObservation(process.processId)
       )
     );
-
-    return processObservations.flat();
+    return filterMap(processObservations.flat(), parseArtifact);
   }
 
   async getDownloadUrls(processId, obsIndex, version) {
@@ -260,7 +260,6 @@ class PDP {
       dataFiles: files,
     };
 
-    console.log({ observation });
     return await this._fetchJson(
       `v3/Process/AppendObservation?processId=${processId}&uploadExpiresInMins=180`,
       {
@@ -328,6 +327,19 @@ class ObservationFilesArchive extends DownloadFile {
   }
 }
 
+function parseArtifact(obs) {
+  console.log("parse", obs);
+  const metadata = obs.data && obs.data[0];
+  if (metadata && metadata.displayName) {
+    return new Artifact(
+      obs.processId,
+      obs.index + "_" + obs.version,
+      metadata.displayName,
+      metadata.taxonomyTags
+    );
+  }
+}
+
 async function sleep(duration) {
   return new Promise((res) => setTimeout(res, duration));
 }
@@ -335,6 +347,16 @@ async function sleep(duration) {
 function range(start, end) {
   const len = end - start;
   return [...new Array(len)].map((v, index) => start + index);
+}
+
+function filterMap(list, fn) {
+  return list.reduce((keep, next) => {
+    const result = fn(next);
+    if (result !== undefined) {
+      keep.push(result);
+    }
+    return keep;
+  }, []);
 }
 
 module.exports = PDP;

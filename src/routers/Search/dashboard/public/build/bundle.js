@@ -19374,8 +19374,7 @@ var app = (function () {
         (n = (e) =>
           class {
             static tryFrom(e) {
-              const t = e.data ? e.data[0] : null;
-              if (t && t.displayName) return e;
+              if (e.displayName) return e;
               console.log("Found malformed data. Filtering out. Data:", e);
             }
           }.tryFrom(e)),
@@ -19386,8 +19385,9 @@ var app = (function () {
       );
       var n;
     }
-    async getDownloadUrl(e) {
-      return this.baseUrl + e.id + "/download";
+    async getDownloadUrl(e, ...t) {
+      const n = `ids=${encodeURIComponent(JSON.stringify(t))}`;
+      return this.baseUrl + e + `/download?${n}`;
     }
     async readFile(e) {
       return new Promise((t, n) => {
@@ -19414,9 +19414,9 @@ var app = (function () {
         .unwrap();
     }
     async appendArtifact(e, t) {
-      const [n] = e.data;
+      const n = { displayName: e.displayName, taxonomyTags: e.taxonomyTags };
       console.log({ action: "append", metadata: n, files: t });
-      const i = this.baseUrl + e.id + "/uploadUrl",
+      const i = `${this.baseUrl}${e.parentId}/${e.id}/uploadUrl`,
         a = t.map((e) => e.name),
         r = {
           method: "post",
@@ -19497,7 +19497,7 @@ var app = (function () {
   function ac(e) {
     let t,
       n,
-      i = (e[10] && e[10].data[0].displayName) + "";
+      i = (e[10] && e[10].displayName) + "";
     return {
       c() {
         (t = C("Append data to ")), (n = C(i));
@@ -19506,9 +19506,7 @@ var app = (function () {
         v(e, t, i), v(e, n, i);
       },
       p(e, t) {
-        1024 & t[0] &&
-          i !== (i = (e[10] && e[10].data[0].displayName) + "") &&
-          L(n, i);
+        1024 & t[0] && i !== (i = (e[10] && e[10].displayName) + "") && L(n, i);
       },
       d(e) {
         e && b(t), e && b(n);
@@ -20378,7 +20376,7 @@ var app = (function () {
   }
   function Mc(e) {
     let t,
-      n = e[46].data[0].displayName + "";
+      n = e[46].displayName + "";
     return {
       c() {
         t = C(n);
@@ -20387,7 +20385,7 @@ var app = (function () {
         v(e, t, n);
       },
       p(e, i) {
-        64 & i[0] && n !== (n = e[46].data[0].displayName + "") && L(t, n);
+        64 & i[0] && n !== (n = e[46].displayName + "") && L(t, n);
       },
       d(e) {
         e && b(t);
@@ -20873,7 +20871,7 @@ var app = (function () {
           6,
           (c = l.filter((n) =>
             ((n) => {
-              const [{ displayName: i, taxonomyTags: a }] = n.data;
+              const { displayName: i, taxonomyTags: a } = n;
               return (
                 !!t.every(
                   (e) =>

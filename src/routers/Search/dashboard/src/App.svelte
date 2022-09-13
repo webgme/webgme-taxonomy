@@ -44,9 +44,9 @@
   let searchKeyword: string = "";
   let filterTags = [];
 
-  function onFilterUpdate(searchKeyword, filterTags) {
+  function onFilterUpdate(searchKeyword: string, filterTags) {
     const filter = (item) => {
-      const [{ displayName, taxonomyTags }] = item.data;
+      const { displayName, taxonomyTags } = item;
 
       const matchingTags = filterTags.every(
         (filterTag) => !!taxonomyTags.find((tag) => isTypeOfTag(tag, filterTag))
@@ -278,7 +278,7 @@
   aria-describedby="content"
 >
   <DialogTitle id="title"
-    >Append data to {appendItem && appendItem.data[0].displayName}</DialogTitle
+    >Append data to {appendItem && appendItem.displayName}</DialogTitle
   >
   <DialogContent id="content">
     <p>Dataset files:</p>
@@ -390,7 +390,7 @@
         {#each items as item}
           <Item on:SMUI:action={() => onItemClicked(item)}>
             <Text>
-              <PrimaryText>{item.data[0].displayName}</PrimaryText>
+              <PrimaryText>{item.displayName}</PrimaryText>
               <SecondaryText>
                 <a style="margin-right: 15px" on:click={onDownloadItem(item)}
                   >Download</a
@@ -405,7 +405,7 @@
             <IconButton class="material-icons" on:click={() => onDownloadItem(item)}>file_download</IconButton>
             <IconButton class="material-icons" on:click={() => onAppendItem(item)}>file_upload</IconButton>
             -->
-            {#each item.data[0].taxonomyTags as tag}
+            {#each item.taxonomyTags as tag}
               <!--
                                                         <Chip chip={tag.id}>
 								{#if tag.type === 'EnumField'}
