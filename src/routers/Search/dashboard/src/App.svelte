@@ -266,6 +266,14 @@
         .map((chunk: string) => chunk.split("="))
     );
   }
+
+  //////// Artifact Sets ////////
+  let artifactSets = [];
+  $: artifactSets = getArtifactSets(items);
+
+  function getArtifactSets(items) {
+    return [];
+  }
 </script>
 
 <svelte:head>
@@ -386,6 +394,43 @@
   </Drawer>
   <AppContent>
     <main>
+      <!-- ArtifactSet list -->
+      <List twoLine avatarList>
+        {#each artifactSets as item}
+          <Item on:SMUI:action={() => onItemClicked(item)}>
+            <Text>
+              <PrimaryText>{item.displayName}</PrimaryText>
+              <SecondaryText>
+                <a style="margin-right: 15px" on:click={onDownloadItem(item)}
+                  >Download</a
+                >
+                <!-- TODO: check if they have permissions to append to it -->
+                <a style="margin-right: 15px" on:click={onAppendItem(item)}
+                  >Append Data</a
+                >
+              </SecondaryText>
+            </Text>
+            <!--
+            <IconButton class="material-icons" on:click={() => onDownloadItem(item)}>file_download</IconButton>
+            <IconButton class="material-icons" on:click={() => onAppendItem(item)}>file_upload</IconButton>
+            -->
+            {#each item.taxonomyTags as tag}
+              <!--
+                                                        <Chip chip={tag.id}>
+								{#if tag.type === 'EnumField'}
+						<Text>{tag.name}</Text>
+                                        {:else if tag.value}
+						<Text>{tag.name}: {tag.value}</Text>
+								{:else}
+						<Text>{tag.name}</Text>
+								{/if}
+                                                        </Chip>
+							-->
+            {/each}
+          </Item>
+        {/each}
+      </List>
+      <!-- Artifact list -->
       <List twoLine avatarList>
         {#each items as item}
           <Item on:SMUI:action={() => onItemClicked(item)}>

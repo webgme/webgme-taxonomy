@@ -30,9 +30,10 @@ class PDP {
 
     const processObservations = await Promise.all(
       processList.map(
-        async (process) => await this.getLatestObservation(process.processId)
+        async (process) => await this.getProcessObservations(process.processId)
       )
     );
+    // TODO: make these artifact sets?
     return filterMap(processObservations.flat(), parseArtifact);
   }
 
@@ -102,6 +103,10 @@ class PDP {
       `v2/Process/GetProcessState?processId=${pid}`
     );
 
+    if (obsInfo.numObservations === 0) {
+      return [];
+    }
+
     const observations = await Promise.all(
       range(1, obsInfo.numObservations).map((i) =>
         this._fetchJson(
@@ -110,6 +115,7 @@ class PDP {
       )
     );
 
+    console.log(observations[0]);
     return observations;
   }
 

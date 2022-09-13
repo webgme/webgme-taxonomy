@@ -168,9 +168,10 @@ function initialize(middlewareOpts) {
   );
 
   router.get(
-    "/:projectId/branch/:branch/artifacts/:id/download",
+    "/:projectId/branch/:branch/artifacts/:parentId/download",
     async function (req, res) {
-      const { id } = req.params;
+      const { parentId } = req.params;
+      // TODO: get the IDs for the specific observations to get
       console.log("getting download URL", id);
       const { root, core } = req.webgmeContext;
       const node = await Utils.findTaxonomyNode(core, root);
