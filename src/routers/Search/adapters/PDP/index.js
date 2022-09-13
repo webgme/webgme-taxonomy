@@ -132,7 +132,12 @@ class PDP {
   }
 
   // TODO: update method signature to be more generic
-  async getDownloadPath(processId, obsIndex, version, formatter) {
+  async getDownloadPath(processId, ids, formatter) {
+    const obsIdxAndVersions = ids.map((idString) =>
+      idString.split("_").map((n) => +n)
+    );
+    // obsIdxAndVersions is now a list of tuples (index, version) for each observation
+    // to download
     const responseObservation = await this._getObs(
       processId,
       obsIndex,
