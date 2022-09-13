@@ -24,6 +24,7 @@
   export let title: string = "Data Dashboard ";
   let vocabularies: TaxonomyData[] = [];
 
+  import TagFormatter from "./Formatter.ts";
   import Storage, { RequestError } from "./Storage.ts";
   const storage = new Storage();
   let allItems = [];
@@ -186,8 +187,16 @@
   let appendArtifact = false;
   let appendFiles = [];
   let appendItem;
+  let appendMetadata;
+  let appendName = "";
+  let formatter = new TagFormatter();
   async function onAppendItem(item) {
     appendItem = item;
+    appendName = appendItem.data[0].displayName;
+    appendMetadata = Object.assign({}, appendItem.data[0]);
+    appendMetadata.taxonomyTags = await formatter.toHumanFormat(
+      appendMetadata.taxonomyTags
+    );
     appendArtifact = true;
   }
 
@@ -199,12 +208,21 @@
     // TODO: handle rejections
   }
 
+  async function onAppendTagsFileDrop(event) {
+    const [tagsFile] = event.detail.acceptedFiles;
+    if (tagsFile) {
+      appendMetadata = JSON.parse(await readFile(tagsFile));
+    }
+  }
+
   async function onAppendClicked() {
     if (!appendFiles) {
       return displayError("Dataset file required.");
     }
 
-    await storage.appendArtifact(appendItem, appendFiles);
+    const metadata = appendMetadata;
+    metadata.displayName = appendName;
+    await storage.appendArtifact(appendItem.id, metadata, appendFiles);
   }
 
   ////// Dataset Upload //////
@@ -281,6 +299,7 @@
     >Append data to {appendItem && appendItem.data[0].displayName}</DialogTitle
   >
   <DialogContent id="content">
+    <Textfield label="Name" bind:value={appendName} />
     <p>Dataset files:</p>
     <ul>
       {#each appendFiles as file}
@@ -290,6 +309,20 @@
     <Dropzone on:drop={onAppendFileDrop} multiple={true}>
       <p>Select dataset to upload.</p>
     </Dropzone>
+    <p>
+      Taxonomy Terms <span style="font-style:italic">(optional)</span>:<br />
+      {appendMetadata
+        ? appendMetadata.taxonomyTags.map((tag) => tag.Tag).join(", ")
+        : ""}
+    </p>
+    <Dropzone on:drop={onAppendTagsFileDrop} accept=".json">
+      <p>Select tags file for dataset.</p>
+    </Dropzone>
+    <a
+      target="_blank"
+      href={window.location.href.replace("/Search/", "/TagCreator/")}
+      >Click to select tags for your dataset.</a
+    >
   </DialogContent>
   <Actions>
     <Button>
