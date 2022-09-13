@@ -63,10 +63,9 @@ class Storage {
         .unwrap();
   }
 
-  async appendArtifact(item, files: File[]) {
-    const [metadata] = item.data;
+  async appendArtifact(id, metadata, files: File[]) {
     console.log({action : 'append', metadata, files});
-    const url = this.baseUrl + item.id + '/uploadUrl';
+    const url = this.baseUrl + id + '/uploadUrl';
     const filenames = files.map((file: File) => file.name);
 
     // const myString = await this.readFile(files[0])
