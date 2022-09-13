@@ -439,8 +439,9 @@
             <Text>
               <PrimaryText>{item.displayName}</PrimaryText>
               <SecondaryText>
-                <a style="margin-right: 15px" on:click={onDownloadItem(item)}
-                  >Download</a
+                <a
+                  style="margin-right: 15px"
+                  on:click={() => (downloadArtifacts = true)}>Download</a
                 >
                 <!-- TODO: check if they have permissions to append to it -->
                 <a style="margin-right: 15px" on:click={onAppendItem(item)}
