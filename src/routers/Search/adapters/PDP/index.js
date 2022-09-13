@@ -125,7 +125,8 @@ class PDP {
     // TODO: upload the data file
   }
 
-  async getDownloadPath(processId, obsIndex, version) {
+  // TODO: update method signature to be more generic
+  async getDownloadPath(processId, obsIndex, version, formatter) {
     const responseObservation = await this._getObs(
       processId,
       obsIndex,
@@ -160,7 +161,11 @@ class PDP {
 
     const metadataPath = path.join(downloadDir, `metadata.json`);
 
-    await this._downloadMetadataFile(metadataPath, responseObservation);
+    const metadata = responseObservation.data[0];
+    metadata.taxonomyTags = await formatter.toHumanFormat(
+      metadata.taxonomyTags
+    );
+    await this._downloadMetadataFile(metadataPath, metadata);
     await Promise.all(
       response.files.map((file) =>
         this._downloadFile(
@@ -197,10 +202,10 @@ class PDP {
     await streamPipeline(response.body, writeStream);
   }
 
-  async _downloadMetadataFile(filePath, response) {
+  async _downloadMetadataFile(filePath, metadata) {
     const dirPath = path.dirname(filePath) + path.sep;
     await fsp.mkdir(dirPath, { recursive: true });
-    await fsp.writeFile(filePath, JSON.stringify(response.data[0]));
+    await fsp.writeFile(filePath, JSON.stringify(metadata));
   }
 
   static async _prepareDownloadDir() {

@@ -50,11 +50,11 @@ function initialize(middlewareOpts) {
 
   // Ensure authenticated can be used only after this rule.
   // router.use("*", function (req, res, next) {
-    // TODO: set all headers, check rate limit, etc.
+  // TODO: set all headers, check rate limit, etc.
 
-    // This header ensures that any failures with authentication won't redirect.
-    // res.setHeader("X-WebGME-Media-Type", "webgme.v1");
-    // next();
+  // This header ensures that any failures with authentication won't redirect.
+  // res.setHeader("X-WebGME-Media-Type", "webgme.v1");
+  // next();
   // });
 
   // Use ensureAuthenticated if the routes require authentication. (Can be set explicitly for each route.)
@@ -180,13 +180,17 @@ function initialize(middlewareOpts) {
     async function (req, res) {
       const { id } = req.params;
       console.log("getting download URL", id);
-      const [processId, obsIndex, version] = id.split("_");
+      const { root, core } = req.webgmeContext;
+      const node = await Utils.findTaxonomyNode(core, root);
+      const formatter = await TagFormatter.from(core, node);
 
+      const [processId, obsIndex, version] = id.split("_");
       const storage = PDP.from(req, mainConfig);
       const zipFile = await storage.getDownloadPath(
         processId,
         obsIndex,
-        version
+        version,
+        formatter
       );
       if (zipFile) {
         await res.download(zipFile.path, path.basename(zipFile.name), () =>
