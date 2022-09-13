@@ -49,13 +49,13 @@ function initialize(middlewareOpts) {
   mainConfig = middlewareOpts.gmeConfig;
 
   // Ensure authenticated can be used only after this rule.
-  router.use("*", function (req, res, next) {
+  // router.use("*", function (req, res, next) {
     // TODO: set all headers, check rate limit, etc.
 
     // This header ensures that any failures with authentication won't redirect.
-    res.setHeader("X-WebGME-Media-Type", "webgme.v1");
-    next();
-  });
+    // res.setHeader("X-WebGME-Media-Type", "webgme.v1");
+    // next();
+  // });
 
   // Use ensureAuthenticated if the routes require authentication. (Can be set explicitly for each route.)
   router.use("*", ensureAuthenticated);
