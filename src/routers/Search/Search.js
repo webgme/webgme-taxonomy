@@ -172,19 +172,20 @@ function initialize(middlewareOpts) {
     async function (req, res) {
       const { parentId } = req.params;
       // TODO: get the IDs for the specific observations to get
+      let ids;
+      try {
+        ids = JSON.parse(req.query.ids);
+      } catch (err) {
+        return res.status(400).send("List of artifact IDs required");
+      }
+
       console.log("getting download URL", id);
       const { root, core } = req.webgmeContext;
       const node = await Utils.findTaxonomyNode(core, root);
       const formatter = await TagFormatter.from(core, node);
 
-      const [processId, obsIndex, version] = id.split("_");
       const storage = PDP.from(req, mainConfig);
-      const zipFile = await storage.getDownloadPath(
-        processId,
-        obsIndex,
-        version,
-        formatter
-      );
+      const zipFile = await storage.getDownloadPath(parentId, ids, formatter);
       if (zipFile) {
         await res.download(zipFile.path, path.basename(zipFile.name), () =>
           zipFile.cleanUp()

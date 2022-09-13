@@ -6,6 +6,7 @@
   import List, { Item, Text, PrimaryText, SecondaryText } from "@smui/list";
   import Drawer, { Content, AppContent } from "@smui/drawer";
   import LinearProgress from "@smui/linear-progress";
+  import Select, { Option } from "@smui/select";
   import Dialog, {
     Content as DialogContent,
     Title as DialogTitle,
@@ -257,9 +258,18 @@
 
   //////// Download ////////
   let downloadArtifacts = false;
-  async function onDownloadItem(item) {
+  let downloadItem;
+  let downloadSetting = "all";
+  async function onDownloadClicked() {
     try {
-      const url = await storage.getDownloadUrl(item);
+      // TODO: get the artifact IDs
+      const ids = [];
+      if (downloadSetting === "all") {
+        // TODO
+      } else {
+        // TODO
+      }
+      const url = await storage.getDownloadUrl(downloadItem, ...ids);
       const anchor = document.createElement("a");
       anchor.setAttribute("href", url);
       anchor.setAttribute("target", "_blank");
@@ -283,30 +293,26 @@
 </svelte:head>
 <!-- Download Dialog -->
 <Dialog
-  bind:open={appendArtifact}
+  bind:open={downloadArtifacts}
   aria-labelledby="title"
   aria-describedby="content"
 >
   <DialogTitle id="title"
-    >Append data to {appendItem && appendItem.displayName}</DialogTitle
+    >Download {downloadItem && downloadItem.displayName}</DialogTitle
   >
   <DialogContent id="content">
-    <p>Dataset files:</p>
-    <ul>
-      {#each appendFiles as file}
-        <li>{file.name}</li>
-      {/each}
-    </ul>
-    <Dropzone on:drop={onAppendFileDrop} multiple={true}>
-      <p>Select dataset to upload.</p>
-    </Dropzone>
+    <p>What uploads would you like to download?</p>
+    <Select bind:value={downloadSetting}>
+      <Option value="all">All Data</Option>
+      <Option value="latest">Latest Data</Option>
+    </Select>
   </DialogContent>
   <Actions>
     <Button>
       <Label>Cancel</Label>
     </Button>
-    <Button on:click={() => onAppendClicked()}>
-      <Label>Upload</Label>
+    <Button on:click={() => onDownloadClicked()}>
+      <Label>Download</Label>
     </Button>
   </Actions>
 </Dialog>
