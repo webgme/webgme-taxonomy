@@ -158,9 +158,9 @@ class PDP {
     const downloadDir = path.join(tmpDir, "download");
     const zipPath = path.join(tmpDir, `${processId}.zip`);
 
-    const objFilePath = path.join(downloadDir, `observation.json`);
+    const metadataPath = path.join(downloadDir, `metadata.json`);
 
-    await this._downloadObservationFile(objFilePath, responseObservation);
+    await this._downloadMetadataFile(metadataPath, responseObservation);
     await Promise.all(
       response.files.map((file) =>
         this._downloadFile(
@@ -197,10 +197,10 @@ class PDP {
     await streamPipeline(response.body, writeStream);
   }
 
-  async _downloadObservationFile(filePath, response) {
+  async _downloadMetadataFile(filePath, response) {
     const dirPath = path.dirname(filePath) + path.sep;
     await fsp.mkdir(dirPath, { recursive: true });
-    await fsp.writeFile(filePath, JSON.stringify(response));
+    await fsp.writeFile(filePath, JSON.stringify(response.data[0]));
   }
 
   static async _prepareDownloadDir() {
