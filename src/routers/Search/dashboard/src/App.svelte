@@ -171,18 +171,6 @@
   fetchData();
 
   ////// Item actions //////
-  async function onDownloadItem(item) {
-    try {
-      const url = await storage.getDownloadUrl(item);
-      const anchor = document.createElement("a");
-      anchor.setAttribute("href", url);
-      anchor.setAttribute("target", "_blank");
-      anchor.click();
-    } catch (err) {
-      return displayError(err.message);
-    }
-  }
-
   let appendArtifact = false;
   let appendFiles = [];
   let appendItem;
@@ -267,6 +255,20 @@
     );
   }
 
+  //////// Download ////////
+  let downloadArtifacts = false;
+  async function onDownloadItem(item) {
+    try {
+      const url = await storage.getDownloadUrl(item);
+      const anchor = document.createElement("a");
+      anchor.setAttribute("href", url);
+      anchor.setAttribute("target", "_blank");
+      anchor.click();
+    } catch (err) {
+      return displayError(err.message);
+    }
+  }
+
   //////// Artifact Sets ////////
   let artifactSets = [];
   $: artifactSets = getArtifactSets(items);
@@ -279,6 +281,36 @@
 <svelte:head>
   <title>{title}</title>
 </svelte:head>
+<!-- Download Dialog -->
+<Dialog
+  bind:open={appendArtifact}
+  aria-labelledby="title"
+  aria-describedby="content"
+>
+  <DialogTitle id="title"
+    >Append data to {appendItem && appendItem.displayName}</DialogTitle
+  >
+  <DialogContent id="content">
+    <p>Dataset files:</p>
+    <ul>
+      {#each appendFiles as file}
+        <li>{file.name}</li>
+      {/each}
+    </ul>
+    <Dropzone on:drop={onAppendFileDrop} multiple={true}>
+      <p>Select dataset to upload.</p>
+    </Dropzone>
+  </DialogContent>
+  <Actions>
+    <Button>
+      <Label>Cancel</Label>
+    </Button>
+    <Button on:click={() => onAppendClicked()}>
+      <Label>Upload</Label>
+    </Button>
+  </Actions>
+</Dialog>
+
 <!-- Artifact append dialog -->
 <Dialog
   bind:open={appendArtifact}
