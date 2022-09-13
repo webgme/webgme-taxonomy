@@ -79,28 +79,31 @@
     }
   }
 
-  async function fetchVocabularies() {
+  async function fetchConfiguration() {
     const chunks = window.location.href.split("/");
     chunks.pop();
     chunks.pop();
     const url = chunks.join("/") + "/configuration.json";
     try {
       const response = await fetch(url);
-      const config = await response.json();
-      const { taxonomy } = config;
-
-      let vocabs = [taxonomy];
-      while (vocabs.length === 1) {
-        vocabs = vocabs[0].children;
-      }
-
-      return vocabs;
+      return await response.json();
     } catch (err) {
       displayError(
         "An error occurred. Please double check the URL and try again."
       );
       throw err;
     }
+  }
+
+  function getVocabularies(config) {
+    const { taxonomy } = config;
+
+    let vocabs = [taxonomy];
+    while (vocabs.length === 1) {
+      vocabs = vocabs[0].children;
+    }
+
+    return vocabs;
   }
 
   let snackbar: SnackbarComponentDev;
@@ -111,9 +114,11 @@
     errorMessage = msg;
   }
 
+  let config = {};
   let isLoading = false;
   async function fetchData() {
-    vocabularies = await fetchVocabularies();
+    config = await fetchConfiguration();
+    vocabularies = getVocabularies(config);
     isLoading = true;
     try {
       allItems = await storage.listArtifacts();
@@ -284,6 +289,14 @@
         .map((chunk: string) => chunk.split("="))
     );
   }
+
+  ///////// Logout /////////
+  async function logout() {
+    const response = await fetch(config.logoutUrl, { method: "post" });
+    if (response.status > 399) {
+      console.error(`Unable to logout: ${await response.text()}`);
+    }
+  }
 </script>
 
 <svelte:head>
@@ -392,6 +405,14 @@
         ripple={false}
         on:click={() => (creatingArtifact = true)}>file_upload</IconButton
       >
+      {#if config.logoutUrl}
+        <IconButton
+          class="material-icons"
+          aria-label="Logout"
+          ripple={false}
+          on:click={logout}>logout</IconButton
+        >
+      {/if}
     </Section>
   </Row>
 </TopAppBar>

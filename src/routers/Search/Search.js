@@ -93,7 +93,8 @@ function initialize(middlewareOpts) {
       const exporter = new SearchFilterDataExporter(core);
       const node = await Utils.findTaxonomyNode(core, root);
       const taxonomy = await exporter.toSchema(node);
-      res.json({ taxonomy });
+      const logoutUrl = mainConfig.authentication.logoutUrl;
+      res.json({ logoutUrl, taxonomy });
     }
   );
 
