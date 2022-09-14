@@ -152,7 +152,6 @@ function initialize(middlewareOpts) {
       const { lastId } = req.query;
       const type = await getArtifactType(req);
       const storage = PDP.from(req, mainConfig);
-      const [obsIndex, version] = id.split("_");
       const fileUploadInfo = await storage.getUploadUrls(
         type,
         parentId,

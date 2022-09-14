@@ -60,10 +60,9 @@ export function assert(cond: boolean, err: Error) {
 // share the generated code across the client and server. This method should be available
 // on the ArtifactSet class instead of here
 export function getLatestArtifact(artifactSet: any): any {
-    const latest = artifactSet.children
-      .sort((i1, i2) => (i1.time < i2.time ? -1 : 1))
-      .pop();
+    artifactSet.children
+      .sort((i1, i2) => (i1.time < i2.time ? -1 : 1));
 
-    return latest;
+    return artifactSet.children[artifactSet.children.length - 1];
 }
 

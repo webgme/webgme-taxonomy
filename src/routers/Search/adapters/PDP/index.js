@@ -204,9 +204,10 @@ class PDP {
   }
 
   async getUploadUrls(type, processId, lastId, metadata, files) {
-    let index = 1;
-    const version = 1;
+    let index = 0;
+    const version = 0;
     if (lastId) {
+      console.log("lastId", lastId);
       const chunks = lastId.split("_");
       index = +chunks[0] + 1;
     }
