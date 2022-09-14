@@ -204,8 +204,10 @@ class PDP {
     );
     });
 
+    
     const p = Promise.all(resolvePromist)
     console.log("Done with all...")
+    //TODO: Somehow this is called before all the earlier methods are complete..??? 
     await zip(downloadDir, zipPath, { compression: COMPRESSION_LEVEL.medium });
     await fsp.rm(downloadDir, { recursive: true });
     return new ObservationFilesArchive(zipPath, tmpDir);
