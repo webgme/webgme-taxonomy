@@ -153,59 +153,61 @@ class PDP {
     const downloadDir = path.join(tmpDir, "download");
     const zipPath = path.join(tmpDir, `${processId}.zip`);
     
-    const resolvePromist = await obsIdxAndVersions.map(async (obsIndex,version)=> {
-    console.log(obsIndex,version)
-
-    // Let's first get the observation metadata 
-    const responseObservation = await this._getObs(
-      processId,
-      obsIndex[0],
-      version
-    );
-    const metadata = responseObservation.data[0];
-    metadata.taxonomyTags = await formatter.toHumanFormat(
-      metadata.taxonomyTags
-    );
-    const metadataPath = path.join(downloadDir, `${obsIndex}`,`${version}`, `metadata.json`);
-    //let's save the observation metadata to a file metada.json
-    await this._downloadMetadataFile(metadataPath, metadata);
-
-    // Lets download the actual files associated with this observation,index  
-    const response = await this._getObsFiles(processId, obsIndex, version);
-    if (response.files.length === 0) {
-      return;
-    }
-
-    // wait for the transfer to complete and the files to be available
-    if (response.transferId != null) {
-      let transferStatus = await this._getFileTransferStatus(
-        response.processId,
-        response.directoryId,
-        response.transferId
+    const resolvePromist = await obsIdxAndVersions.forEach(
+      async (element) => {
+        obsIndex = element[0]
+        versopm = element[1]
+      console.log(obsIndex, version)
+      // Let's first get the observation metadata 
+      const responseObservation = await this._getObs(
+        processId,
+        obsIndex,
+        version
       );
-      while (transferStatus && transferStatus.status != "Succeeded") {
-        console.log("Ctx: About to wait for the download...");
-        await sleep(1000);
-        transferStatus = await this._getFileTransferStatus(
+      const metadata = responseObservation.data[0];
+      metadata.taxonomyTags = await formatter.toHumanFormat(
+        metadata.taxonomyTags
+      );
+      const metadataPath = path.join(downloadDir, `${obsIndex}`, `${version}`, `metadata.json`);
+      //let's save the observation metadata to a file metada.json
+      await this._downloadMetadataFile(metadataPath, metadata);
+
+      // Lets download the actual files associated with this observation,index  
+      const response = await this._getObsFiles(processId, obsIndex, version);
+      if (response.files.length === 0) {
+        return;
+      }
+
+      // wait for the transfer to complete and the files to be available
+      if (response.transferId != null) {
+        let transferStatus = await this._getFileTransferStatus(
           response.processId,
           response.directoryId,
           response.transferId
         );
+        while (transferStatus && transferStatus.status != "Succeeded") {
+          console.log("Ctx: About to wait for the download...");
+          await sleep(1000);
+          transferStatus = await this._getFileTransferStatus(
+            response.processId,
+            response.directoryId,
+            response.transferId
+          );
+        }
       }
-    }
 
-    await Promise.all(
-      response.files.map((file) =>
-        this._downloadFile(
-          PDP._correctFilePath(downloadDir, file.name, obsIndex,version),
-          file.sasUrl
+      await Promise.all(
+        response.files.map((file) =>
+          this._downloadFile(
+            PDP._correctFilePath(downloadDir, file.name, obsIndex, version),
+            file.sasUrl
+          )
         )
-      )
-    );
+      );
     });
 
-    
-    const p = Promise.all(resolvePromist)
+
+    const p = await Promise.all(resolvePromist)
     console.log("Done with all...")
     //TODO: Somehow this is called before all the earlier methods are complete..??? 
     await zip(downloadDir, zipPath, { compression: COMPRESSION_LEVEL.medium });
