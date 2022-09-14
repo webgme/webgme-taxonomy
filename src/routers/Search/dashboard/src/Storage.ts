@@ -169,6 +169,11 @@ class ArtifactSet {
     if (!item.displayName) {
       console.log("Found malformed data. Filtering out. Data:", item);
     } else {
+      const hash = [
+        item.id,
+        ...item.children.map(child => child.id).sort()
+      ].join('/');
+      item.hash = hash;
       return item;
     }
   }

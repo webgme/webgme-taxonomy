@@ -128,8 +128,12 @@
   }
 
   let isLoading = false;
-  async function fetchData() {
+  async function initialize() {
     vocabularies = await fetchVocabularies();
+    fetchData();
+  }
+
+  async function fetchData() {
     isLoading = true;
     try {
       allItems = await storage.listArtifacts();
@@ -185,7 +189,7 @@
     );
   }
 
-  fetchData();
+  initialize();
 
   ////// Item actions //////
   let appendArtifact = false;
@@ -239,6 +243,7 @@
     displayMessage("Upload in progress");
     await storage.appendArtifact(appendItem, metadata, appendFiles);
     displayMessage("Upload complete!");
+    fetchData();
   }
 
   ////// Dataset Upload //////
@@ -525,7 +530,7 @@
     <main>
       <!-- Artifact list -->
       <List twoLine avatarList>
-        {#each items as item}
+        {#each items as item (item.hash)}
           <Item on:SMUI:action={() => onItemClicked(item)}>
             <Text>
               <PrimaryText>{item.displayName}</PrimaryText>
