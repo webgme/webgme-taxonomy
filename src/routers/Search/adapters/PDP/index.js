@@ -149,11 +149,28 @@ class PDP {
     );
     // obsIdxAndVersions is now a list of tuples (index, version) for each observation
     // to download
+    const tmpDir = await PDP._prepareDownloadDir();
+    const downloadDir = path.join(tmpDir, "download");
+    const zipPath = path.join(tmpDir, `${processId}.zip`);
+    
+    const resolvePromist = await obsIdxAndVersions.map(async (obsIndex,version)=> {
+    console.log(obsIndex,version)
+
+    // Let's first get the observation metadata 
     const responseObservation = await this._getObs(
       processId,
-      obsIndex,
+      obsIndex[0],
       version
     );
+    const metadata = responseObservation.data[0];
+    metadata.taxonomyTags = await formatter.toHumanFormat(
+      metadata.taxonomyTags
+    );
+    const metadataPath = path.join(downloadDir, `${obsIndex}`,`${version}`, `metadata.json`);
+    //let's save the observation metadata to a file metada.json
+    await this._downloadMetadataFile(metadataPath, metadata);
+
+    // Lets download the actual files associated with this observation,index  
     const response = await this._getObsFiles(processId, obsIndex, version);
     if (response.files.length === 0) {
       return;
@@ -177,29 +194,20 @@ class PDP {
       }
     }
 
-    const tmpDir = await PDP._prepareDownloadDir();
-    const downloadDir = path.join(tmpDir, "download");
-    const zipPath = path.join(tmpDir, `${processId}.zip`);
-
-    const metadataPath = path.join(downloadDir, `metadata.json`);
-
-    const metadata = responseObservation.data[0];
-    metadata.taxonomyTags = await formatter.toHumanFormat(
-      metadata.taxonomyTags
-    );
-    await this._downloadMetadataFile(metadataPath, metadata);
     await Promise.all(
       response.files.map((file) =>
         this._downloadFile(
-          PDP._correctFilePath(downloadDir, file.name, obsIndex),
+          PDP._correctFilePath(downloadDir, file.name, obsIndex,version),
           file.sasUrl
         )
       )
     );
+    });
 
+    const p = Promise.all(resolvePromist)
+    console.log("Done with all...")
     await zip(downloadDir, zipPath, { compression: COMPRESSION_LEVEL.medium });
     await fsp.rm(downloadDir, { recursive: true });
-
     return new ObservationFilesArchive(zipPath, tmpDir);
   }
 
@@ -250,8 +258,8 @@ class PDP {
     return await fsp.mkdtemp(path.join(os.tmpdir(), "webgme-taxonomy-"));
   }
 
-  static _correctFilePath(downloadDir, filename, index) {
-    return path.join(downloadDir, filename.replace("dat/" + index, ""));
+  static _correctFilePath(downloadDir, filename, index,version) {
+    return path.join(downloadDir, index, version, filename.replace("dat/" + index, ""));
   }
 
   _createObservationData(processId, type, data) {
