@@ -228,6 +228,7 @@ class PDP {
   }
 
   async _appendObservation(processId, type, data) {
+    const timestamp = new Date().toISOString();
     const observation = {
       isFunction: false,
       processType: type,
@@ -236,6 +237,7 @@ class PDP {
       isMeasure: false,
       index: 0,
       version: 0,
+      startTime: timestamp,
       applicationDependencies: [],
       processDependencies: [],
       data: [data],
@@ -346,7 +348,8 @@ function parseArtifact(obs) {
       obs.processId,
       obs.index + "_" + obs.version,
       metadata.displayName,
-      metadata.taxonomyTags
+      metadata.taxonomyTags,
+      obs.startTime
     );
   }
 }

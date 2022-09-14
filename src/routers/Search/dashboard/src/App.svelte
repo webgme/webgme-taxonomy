@@ -263,12 +263,10 @@
   async function onDownloadClicked() {
     try {
       // TODO: get the artifact IDs
-      const ids = [];
-      if (downloadSetting === "all") {
-        // TODO
-      } else {
-        // TODO
-      }
+      const ids =
+        downloadSetting === "all"
+          ? getAllArtifactIds(downloadItem.parentId)
+          : getLatestArtifactId(downloadItem.parentId);
       const url = await storage.getDownloadUrl(downloadItem, ...ids);
       const anchor = document.createElement("a");
       anchor.setAttribute("href", url);
@@ -277,6 +275,25 @@
     } catch (err) {
       return displayError(err.message);
     }
+  }
+
+  function getAllArtifactIds(parentId) {
+    return allItems
+      .filter((item) => item.parentId === parentId)
+      .map((item) => item.id);
+  }
+
+  function getLatestArtifactId(parentId) {
+    const latest = allItems
+      .filter((item) => item.parentId === parentId)
+      .sort((i1, i2) => (i1.time < i2.time ? -1 : 1))
+      .pop();
+    return latest && latest.id;
+  }
+
+  function onOpenDownloadDialog(item) {
+    downloadItem = item;
+    downloadArtifacts = true;
   }
 
   //////// Artifact Sets ////////
@@ -301,7 +318,7 @@
     >Download {downloadItem && downloadItem.displayName}</DialogTitle
   >
   <DialogContent id="content">
-    <p>What uploads would you like to download?</p>
+    <p>What would you like to download?</p>
     <Select bind:value={downloadSetting}>
       <Option value="all">All Data</Option>
       <Option value="latest">Latest Data</Option>
@@ -432,43 +449,6 @@
   </Drawer>
   <AppContent>
     <main>
-      <!-- ArtifactSet list -->
-      <List twoLine avatarList>
-        {#each artifactSets as item}
-          <Item on:SMUI:action={() => onItemClicked(item)}>
-            <Text>
-              <PrimaryText>{item.displayName}</PrimaryText>
-              <SecondaryText>
-                <a
-                  style="margin-right: 15px"
-                  on:click={() => (downloadArtifacts = true)}>Download</a
-                >
-                <!-- TODO: check if they have permissions to append to it -->
-                <a style="margin-right: 15px" on:click={onAppendItem(item)}
-                  >Append Data</a
-                >
-              </SecondaryText>
-            </Text>
-            <!--
-            <IconButton class="material-icons" on:click={() => onDownloadItem(item)}>file_download</IconButton>
-            <IconButton class="material-icons" on:click={() => onAppendItem(item)}>file_upload</IconButton>
-            -->
-            {#each item.taxonomyTags as tag}
-              <!--
-                                                        <Chip chip={tag.id}>
-								{#if tag.type === 'EnumField'}
-						<Text>{tag.name}</Text>
-                                        {:else if tag.value}
-						<Text>{tag.name}: {tag.value}</Text>
-								{:else}
-						<Text>{tag.name}</Text>
-								{/if}
-                                                        </Chip>
-							-->
-            {/each}
-          </Item>
-        {/each}
-      </List>
       <!-- Artifact list -->
       <List twoLine avatarList>
         {#each items as item}
@@ -476,8 +456,9 @@
             <Text>
               <PrimaryText>{item.displayName}</PrimaryText>
               <SecondaryText>
-                <a style="margin-right: 15px" on:click={onDownloadItem(item)}
-                  >Download</a
+                <a
+                  style="margin-right: 15px"
+                  on:click={onOpenDownloadDialog(item)}>Download</a
                 >
                 <!-- TODO: check if they have permissions to append to it -->
                 <a style="margin-right: 15px" on:click={onAppendItem(item)}
