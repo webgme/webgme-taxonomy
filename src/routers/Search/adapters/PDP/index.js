@@ -203,7 +203,13 @@ class PDP {
     return new ObservationFilesArchive(zipPath, tmpDir);
   }
 
-  async getUploadUrls(type, processId, index, version, metadata, files) {
+  async getUploadUrls(type, processId, lastId, metadata, files) {
+    let index = 1;
+    const version = 1;
+    if (lastId) {
+      const chunks = lastId.split("_");
+      index = +chunks[0] + 1;
+    }
     console.log(
       "getUploadUrls",
       type,

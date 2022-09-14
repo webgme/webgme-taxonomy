@@ -146,20 +146,17 @@ function initialize(middlewareOpts) {
   );
 
   router.post(
-    "/:projectId/branch/:branch/artifacts/:parentId/:id/uploadUrl",
+    "/:projectId/branch/:branch/artifacts/:parentId/uploadUrl",
     async function (req, res) {
-      // TODO: update artifact
-      //the body is a json with the metadata and the list of file paths
-      console.log("appending data artifact");
-      const { parentId, id } = req.params;
+      const { parentId } = req.params;
+      const { lastId } = req.query;
       const type = await getArtifactType(req);
       const storage = PDP.from(req, mainConfig);
       const [obsIndex, version] = id.split("_");
       const fileUploadInfo = await storage.getUploadUrls(
         type,
         parentId,
-        +obsIndex + 1,
-        +version,
+        lastId,
         req.body.metadata,
         req.body.filenames
       );

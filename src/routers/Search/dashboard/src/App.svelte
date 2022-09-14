@@ -1,5 +1,6 @@
 <script lang="ts">
   import TopAppBar, { Row, Section, Title } from "@smui/top-app-bar";
+  import { getLatestArtifact } from "./Utils.ts";
   import Textfield from "@smui/textfield";
   import IconButton from "@smui/icon-button";
   /*import Chip from "@smui/chips";*/
@@ -189,11 +190,10 @@
   let formatter = new TagFormatter();
   async function onAppendItem(item) {
     appendItem = item;
-    appendName = appendItem.data[0].displayName;
-    appendMetadata = Object.assign({}, appendItem.data[0]);
-    appendMetadata.taxonomyTags = await formatter.toHumanFormat(
-      appendMetadata.taxonomyTags
-    );
+    appendName = appendItem.displayName;
+    appendMetadata = {
+      taxonomyTags: await formatter.toHumanFormat(appendItem.taxonomyTags),
+    };
     appendArtifact = true;
   }
 
@@ -219,7 +219,7 @@
 
     const metadata = appendMetadata;
     metadata.displayName = appendName;
-    await storage.appendArtifact(appendItem.id, metadata, appendFiles);
+    await storage.appendArtifact(appendItem, metadata, appendFiles);
   }
 
   ////// Dataset Upload //////
@@ -308,9 +308,7 @@
   }
 
   function getLatestArtifactId(artifactSet) {
-    const latest = artifactSet.children
-      .sort((i1, i2) => (i1.time < i2.time ? -1 : 1))
-      .pop();
+    const latest = getLatestArtifact(artifactSet);
     return latest && latest.id;
   }
 
