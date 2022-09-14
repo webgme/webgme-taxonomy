@@ -207,7 +207,6 @@ class PDP {
     let index = 0;
     const version = 0;
     if (lastId) {
-      console.log("lastId", lastId);
       const chunks = lastId.split("_");
       index = +chunks[0] + 1;
     }
@@ -255,14 +254,14 @@ class PDP {
     return path.join(downloadDir, filename.replace("dat/" + index, ""));
   }
 
-  async _appendObservation(processId, type, data) {
+  _createObservationData(processId, type, data) {
     const timestamp = new Date().toISOString();
-    const observation = {
+    return {
       isFunction: false,
       processType: type,
       processId,
       observerId: RouterUtils.getObserverIdFromToken(this.token),
-      isMeasure: false,
+      isMeasure: true,
       index: 0,
       version: 0,
       startTime: timestamp,
@@ -271,7 +270,10 @@ class PDP {
       data: [data],
       dataFiles: [],
     };
+  }
 
+  async _appendObservation(processId, type, data) {
+    const observation = this._createObservationData(processId, type, data);
     const response = await this._fetchJson(
       `v3/Process/AppendObservation?processId=${processId}`,
       {
@@ -289,18 +291,12 @@ class PDP {
     data,
     files
   ) {
-    const observation = {
-      isFunction: false,
-      processType: type,
-      processId,
-      observerId: RouterUtils.getObserverIdFromToken(this.token),
-      isMeasure: true,
-      index,
-      version,
-      data: [data],
-      dataFiles: files,
-    };
+    const observation = this._createObservationData(processId, type, data);
+    observation.index = index;
+    observation.version = version;
+    observation.dataFiles = files;
 
+    console.log(observation);
     return await this._fetchJson(
       `v3/Process/AppendObservation?processId=${processId}&uploadExpiresInMins=180`,
       {
