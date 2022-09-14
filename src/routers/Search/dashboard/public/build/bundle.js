@@ -22018,13 +22018,16 @@ var app = (function () {
     async function M() {
       try {
         const e =
-            "all" === N
-              ? L.children.map((e) => e.id)
-              : (function (e) {
-                  const t = Xt(e);
-                  return t && t.id;
-                })(L),
-          t = await r.getDownloadUrl(L.id, ...e),
+          "all" === N
+            ? L.children.map((e) => e.id)
+            : (function (e) {
+                const t = Xt(e),
+                  n = [];
+                t && n.push(t.id);
+                return n;
+              })(L);
+        if (0 === e.length) return f("Nothing to download: No data found.");
+        const t = await r.getDownloadUrl(L.id, ...e),
           n = document.createElement("a");
         n.setAttribute("href", t),
           n.setAttribute("target", "_blank"),

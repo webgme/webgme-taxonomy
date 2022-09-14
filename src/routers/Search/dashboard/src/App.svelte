@@ -304,6 +304,10 @@
         downloadSetting === "all"
           ? getAllArtifactIds(downloadArtifactSet)
           : getLatestArtifactId(downloadArtifactSet);
+
+      if (ids.length === 0) {
+        return displayError("Nothing to download: No data found.");
+      }
       const url = await storage.getDownloadUrl(downloadArtifactSet.id, ...ids);
       const anchor = document.createElement("a");
       anchor.setAttribute("href", url);
@@ -320,7 +324,11 @@
 
   function getLatestArtifactId(artifactSet) {
     const latest = getLatestArtifact(artifactSet);
-    return latest && latest.id;
+    const ids = [];
+    if (latest) {
+      ids.push(latest.id);
+    }
+    return ids;
   }
 
   function onOpenDownloadDialog(item) {
