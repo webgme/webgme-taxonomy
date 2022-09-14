@@ -96,18 +96,20 @@ class PDP {
   }
 
   async getLatestObservation(pid) {
-    const obsInfo = await this._fetchJson(
-      `v2/Process/GetProcessState?processId=${pid}`
-    );
+    const procInfo = await this._getProcessState(pid);
 
     const observations = await this._fetchJson(
       "v2/Process/GetObservation?processId=" +
         pid +
         "&obsIndex=" +
-        (obsInfo.numObservations - 1)
+        (procInfo.numObservations - 1)
     );
 
     return observations;
+  }
+
+  async _getProcessState(pid) {
+    return await this._fetchJson(`v2/Process/GetProcessState?processId=${pid}`);
   }
 
   async getProcessObservations(pid) {
@@ -266,21 +268,9 @@ class PDP {
   }
 
   async getUploadUrls(type, processId, lastId, metadata, files) {
-    let index = 0;
+    const procInfo = await this._getProcessState(processId);
+    const index = procInfo.numObservations;
     const version = 0;
-    if (lastId) {
-      const chunks = lastId.split("_");
-      index = +chunks[0] + 1;
-    }
-    console.log(
-      "getUploadUrls",
-      type,
-      processId,
-      index,
-      version,
-      metadata,
-      files
-    );
     const result = await this._appendObservationWithFiles(
       processId,
       index,
@@ -289,7 +279,6 @@ class PDP {
       metadata,
       files
     );
-    console.log({ result });
     return result.uploadDataFiles.files;
   }
 

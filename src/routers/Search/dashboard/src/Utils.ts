@@ -56,13 +56,16 @@ export function assert(cond: boolean, err: Error) {
   }
 }
 
-// FIXME: we need to combine Artifact.js (in the router directory) w/ a TS definition and
-// share the generated code across the client and server. This method should be available
-// on the ArtifactSet class instead of here
+// FIXME: we need to combine Artifact.js (in the router directory) w/ a TS
+// definition and share the generated code across the client and server. This
+// method should be available on the ArtifactSet class instead of here
 export function getLatestArtifact(artifactSet: any): any {
-    artifactSet.children
-      .sort((i1, i2) => (i1.time < i2.time ? -1 : 1));
+  artifactSet.children.sort((i1, i2) => {
+    if (i1.time === i2.time) {
+      return i1.displayName < i2.displayName ? -1 : 1;
+    }
+    return i1.time < i2.time ? -1 : 1;
+  });
 
-    return artifactSet.children[artifactSet.children.length - 1];
+  return artifactSet.children[artifactSet.children.length - 1];
 }
-
