@@ -108,17 +108,9 @@ function initialize(middlewareOpts) {
         const storage = PDP.from(req, mainConfig);
         const artifacts = await storage.listArtifacts(type);
         console.log({ artifacts });
-        artifacts.forEach(
-          (artifact) =>
-            (artifact.id = [
-              artifact.processId,
-              artifact.index,
-              artifact.version,
-            ].join("_"))
-        );
         res.status(200).json(artifacts).end();
       } catch (e) {
-        logger.error(e);
+        logger.error(e.stack);
         res.sendStatus(401);
       }
     }
@@ -154,20 +146,16 @@ function initialize(middlewareOpts) {
   );
 
   router.post(
-    "/:projectId/branch/:branch/artifacts/:id/uploadUrl",
+    "/:projectId/branch/:branch/artifacts/:parentId/uploadUrl",
     async function (req, res) {
-      // TODO: update artifact
-      //the body is a json with the metadata and the list of file paths
-      console.log("appending data artifact");
-      const { id } = req.params;
+      const { parentId } = req.params;
+      const { lastId } = req.query;
       const type = await getArtifactType(req);
       const storage = PDP.from(req, mainConfig);
-      const [processId, obsIndex, version] = id.split("_");
       const fileUploadInfo = await storage.getUploadUrls(
         type,
-        processId,
-        +obsIndex + 1,
-        +version,
+        parentId,
+        lastId,
         req.body.metadata,
         req.body.filenames
       );
@@ -176,22 +164,24 @@ function initialize(middlewareOpts) {
   );
 
   router.get(
-    "/:projectId/branch/:branch/artifacts/:id/download",
+    "/:projectId/branch/:branch/artifacts/:parentId/download",
     async function (req, res) {
-      const { id } = req.params;
-      console.log("getting download URL", id);
+      const { parentId } = req.params;
+      // TODO: get the IDs for the specific observations to get
+      let ids;
+      try {
+        ids = JSON.parse(req.query.ids);
+      } catch (err) {
+        return res.status(400).send("List of artifact IDs required");
+      }
+
+      console.log("getting download URL", parentId, ids);
       const { root, core } = req.webgmeContext;
       const node = await Utils.findTaxonomyNode(core, root);
       const formatter = await TagFormatter.from(core, node);
 
-      const [processId, obsIndex, version] = id.split("_");
       const storage = PDP.from(req, mainConfig);
-      const zipFile = await storage.getDownloadPath(
-        processId,
-        obsIndex,
-        version,
-        formatter
-      );
+      const zipFile = await storage.getDownloadPath(parentId, ids, formatter);
       if (zipFile) {
         await res.download(zipFile.path, path.basename(zipFile.name), () =>
           zipFile.cleanUp()

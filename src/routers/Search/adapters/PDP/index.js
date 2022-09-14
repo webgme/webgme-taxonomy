@@ -2,14 +2,17 @@ const pdpBase = "https://leappremonitiondev.azurewebsites.net/";
 const fetch = require("node-fetch");
 const { zip, COMPRESSION_LEVEL } = require("zip-a-folder");
 const fs = require("fs");
+const _ = require("underscore");
 const path = require("path");
 const os = require("os");
 const fsp = require("fs/promises");
 const RouterUtils = require("../../../../common/routers/Utils");
+const { FormatError } = require("../../../../common/TagFormatter");
 const { pipeline } = require("stream");
 const { promisify } = require("util");
 const streamPipeline = promisify(pipeline);
 const DownloadFile = require("../../DownloadFile");
+const { Artifact, ArtifactSet } = require("../../Artifact");
 const CreateRequestLogger = require("./CreateRequestLogger");
 const logFilePath = process.env.CREATE_LOG_PATH || "./CreateProcesses.jsonl";
 const reqLogger = new CreateRequestLogger(logFilePath);
@@ -29,11 +32,21 @@ class PDP {
 
     const processObservations = await Promise.all(
       processList.map(
-        async (process) => await this.getLatestObservation(process.processId)
+        async (process) => await this.getProcessObservations(process.processId)
       )
     );
 
-    return processObservations.flat();
+    const artifacts = filterMap(processObservations.flat(), parseArtifact);
+    const artifactSets = Object.entries(
+      _.groupBy(artifacts, (artifact) => artifact.parentId)
+    ).map(([parentId, artifacts]) => {
+      const latestArtifact = artifacts
+        .sort((a1, a2) => (a1.time < a2.time ? -1 : 1))
+        .pop();
+      const { displayName, taxonomyTags } = latestArtifact;
+      return new ArtifactSet(parentId, displayName, taxonomyTags, artifacts);
+    });
+    return artifactSets;
   }
 
   async getDownloadUrls(processId, obsIndex, version) {
@@ -102,6 +115,10 @@ class PDP {
       `v2/Process/GetProcessState?processId=${pid}`
     );
 
+    if (obsInfo.numObservations === 0) {
+      return [];
+    }
+
     const observations = await Promise.all(
       range(1, obsInfo.numObservations).map((i) =>
         this._fetchJson(
@@ -110,6 +127,7 @@ class PDP {
       )
     );
 
+    console.log(observations[0]);
     return observations;
   }
 
@@ -126,12 +144,89 @@ class PDP {
   }
 
   // TODO: update method signature to be more generic
-  async getDownloadPath(processId, obsIndex, version, formatter) {
+  async getDownloadPath(processId, ids, formatter) {
+    const obsIdxAndVersions = ids.map((idString) =>
+      idString.split("_").map((n) => +n)
+    );
+    // obsIdxAndVersions is now a list of tuples (index, version) for each observation
+    // to download
+    const tmpDir = await PDP._prepareDownloadDir();
+    const downloadDir = path.join(tmpDir, "download");
+    const zipPath = path.join(tmpDir, `${processId}.zip`);
+
+    await Promise.all(
+      obsIdxAndVersions.map(([index, version]) =>
+        this._downloadObservation(
+          processId,
+          index,
+          version,
+          downloadDir,
+          formatter
+        )
+      )
+    );
+
+    await zip(downloadDir, zipPath, { compression: COMPRESSION_LEVEL.medium });
+    await fsp.rm(downloadDir, { recursive: true });
+    return new ObservationFilesArchive(zipPath, tmpDir);
+  }
+
+  async _downloadObservation(
+    processId,
+    obsIndex,
+    version,
+    downloadDir,
+    formatter
+  ) {
+    console.log(obsIndex, version);
+    // Let's first get the observation metadata
     const responseObservation = await this._getObs(
       processId,
       obsIndex,
       version
     );
+    try {
+      const metadata = responseObservation.data[0];
+      metadata.taxonomyTags = await formatter.toHumanFormat(
+        metadata.taxonomyTags
+      );
+      const metadataPath = path.join(
+        downloadDir,
+        `${obsIndex}`,
+        `${version}`,
+        `metadata.json`
+      );
+      //let's save the observation metadata to a file metada.json
+      await this._writeJsonData(metadataPath, metadata);
+    } catch (err) {
+      const logPath = path.join(
+        downloadDir,
+        `${obsIndex}`,
+        `${version}`,
+        `warnings.txt`
+      );
+      if (err instanceof FormatError) {
+        const metadata = responseObservation.data[0];
+        const metadataPath = path.join(
+          downloadDir,
+          `${obsIndex}`,
+          `${version}`,
+          `metadata.json`
+        );
+        await this._writeJsonData(metadataPath, metadata);
+        this._writeData(
+          logPath,
+          `An error occurred when converting the taxonomy tags: ${err.message}\n\nThe internal format has been saved in metadata.json.`
+        );
+      } else {
+        this._writeData(
+          logPath,
+          `An error occurred when generating metadata.json: ${err.message}`
+        );
+      }
+    }
+
+    // Lets download the actual files associated with this observation,index
     const response = await this._getObsFiles(processId, obsIndex, version);
     if (response.files.length === 0) {
       return;
@@ -155,33 +250,37 @@ class PDP {
       }
     }
 
-    const tmpDir = await PDP._prepareDownloadDir();
-    const downloadDir = path.join(tmpDir, "download");
-    const zipPath = path.join(tmpDir, `${processId}.zip`);
-
-    const metadataPath = path.join(downloadDir, `metadata.json`);
-
-    const metadata = responseObservation.data[0];
-    metadata.taxonomyTags = await formatter.toHumanFormat(
-      metadata.taxonomyTags
-    );
-    await this._downloadMetadataFile(metadataPath, metadata);
     await Promise.all(
       response.files.map((file) =>
         this._downloadFile(
-          PDP._correctFilePath(downloadDir, file.name, obsIndex),
+          PDP._correctFilePath(
+            downloadDir,
+            file.name,
+            obsIndex.toString(),
+            version.toString()
+          ),
           file.sasUrl
         )
       )
     );
-
-    await zip(downloadDir, zipPath, { compression: COMPRESSION_LEVEL.medium });
-    await fsp.rm(downloadDir, { recursive: true });
-
-    return new ObservationFilesArchive(zipPath, tmpDir);
   }
 
-  async getUploadUrls(type, processId, index, version, metadata, files) {
+  async getUploadUrls(type, processId, lastId, metadata, files) {
+    let index = 0;
+    const version = 0;
+    if (lastId) {
+      const chunks = lastId.split("_");
+      index = +chunks[0] + 1;
+    }
+    console.log(
+      "getUploadUrls",
+      type,
+      processId,
+      index,
+      version,
+      metadata,
+      files
+    );
     const result = await this._appendObservationWithFiles(
       processId,
       index,
@@ -190,6 +289,7 @@ class PDP {
       metadata,
       files
     );
+    console.log({ result });
     return result.uploadDataFiles.files;
   }
 
@@ -202,35 +302,49 @@ class PDP {
     await streamPipeline(response.body, writeStream);
   }
 
-  async _downloadMetadataFile(filePath, metadata) {
+  async _writeData(filePath, data) {
     const dirPath = path.dirname(filePath) + path.sep;
     await fsp.mkdir(dirPath, { recursive: true });
-    await fsp.writeFile(filePath, JSON.stringify(metadata));
+    await fsp.writeFile(filePath, data);
+  }
+
+  async _writeJsonData(filePath, metadata) {
+    this._writeData(filePath, JSON.stringify(metadata));
   }
 
   static async _prepareDownloadDir() {
     return await fsp.mkdtemp(path.join(os.tmpdir(), "webgme-taxonomy-"));
   }
 
-  static _correctFilePath(downloadDir, filename, index) {
-    return path.join(downloadDir, filename.replace("dat/" + index, ""));
+  static _correctFilePath(downloadDir, filename, index, version) {
+    return path.join(
+      downloadDir,
+      index,
+      version,
+      filename.replace("dat/" + index, "")
+    );
   }
 
-  async _appendObservation(processId, type, data) {
-    const observation = {
+  _createObservationData(processId, type, data) {
+    const timestamp = new Date().toISOString();
+    return {
       isFunction: false,
       processType: type,
       processId,
       observerId: RouterUtils.getObserverIdFromToken(this.token),
-      isMeasure: false,
+      isMeasure: true,
       index: 0,
       version: 0,
+      startTime: timestamp,
       applicationDependencies: [],
       processDependencies: [],
       data: [data],
       dataFiles: [],
     };
+  }
 
+  async _appendObservation(processId, type, data) {
+    const observation = this._createObservationData(processId, type, data);
     const response = await this._fetchJson(
       `v3/Process/AppendObservation?processId=${processId}`,
       {
@@ -248,19 +362,12 @@ class PDP {
     data,
     files
   ) {
-    const observation = {
-      isFunction: false,
-      processType: type,
-      processId,
-      observerId: RouterUtils.getObserverIdFromToken(this.token),
-      isMeasure: true,
-      index,
-      version,
-      data: [data],
-      dataFiles: files,
-    };
+    const observation = this._createObservationData(processId, type, data);
+    observation.index = index;
+    observation.version = version;
+    observation.dataFiles = files;
 
-    console.log({ observation });
+    console.log(observation);
     return await this._fetchJson(
       `v3/Process/AppendObservation?processId=${processId}&uploadExpiresInMins=180`,
       {
@@ -328,6 +435,20 @@ class ObservationFilesArchive extends DownloadFile {
   }
 }
 
+function parseArtifact(obs) {
+  console.log("parse", obs);
+  const metadata = obs.data && obs.data[0];
+  if (metadata && metadata.displayName) {
+    return new Artifact(
+      obs.processId,
+      obs.index + "_" + obs.version,
+      metadata.displayName,
+      metadata.taxonomyTags,
+      obs.startTime
+    );
+  }
+}
+
 async function sleep(duration) {
   return new Promise((res) => setTimeout(res, duration));
 }
@@ -335,6 +456,16 @@ async function sleep(duration) {
 function range(start, end) {
   const len = end - start;
   return [...new Array(len)].map((v, index) => start + index);
+}
+
+function filterMap(list, fn) {
+  return list.reduce((keep, next) => {
+    const result = fn(next);
+    if (result !== undefined) {
+      keep.push(result);
+    }
+    return keep;
+  }, []);
 }
 
 module.exports = PDP;

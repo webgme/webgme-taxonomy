@@ -1,16 +1,26 @@
 <script lang="ts">
   import TopAppBar, { Row, Section, Title } from "@smui/top-app-bar";
+  import { getLatestArtifact } from "./Utils.ts";
   import Textfield from "@smui/textfield";
   import IconButton from "@smui/icon-button";
   /*import Chip from "@smui/chips";*/
-  import List, { Item, Text, PrimaryText, SecondaryText } from "@smui/list";
+  import List, {
+    Item,
+    Text,
+    Graphic,
+    PrimaryText,
+    SecondaryText,
+  } from "@smui/list";
   import Drawer, { Content, AppContent } from "@smui/drawer";
   import LinearProgress from "@smui/linear-progress";
+  import Select, { Option } from "@smui/select";
   import Dialog, {
     Content as DialogContent,
     Title as DialogTitle,
+    InitialFocus,
     Actions,
   } from "@smui/dialog";
+  import Radio from "@smui/radio";
   import type { SnackbarComponentDev } from "@smui/snackbar";
   import Snackbar, {
     Actions as SnackbarActions,
@@ -24,7 +34,7 @@
   export let title: string = "Data Dashboard ";
   let vocabularies: TaxonomyData[] = [];
 
-  import TagFormatter from "./Formatter.ts";
+  import TagFormatter, { FormatError } from "./Formatter.ts";
   import Storage, { RequestError } from "./Storage.ts";
   const storage = new Storage();
   let allItems = [];
@@ -45,9 +55,9 @@
   let searchKeyword: string = "";
   let filterTags = [];
 
-  function onFilterUpdate(searchKeyword, filterTags) {
+  function onFilterUpdate(searchKeyword: string, filterTags) {
     const filter = (item) => {
-      const [{ displayName, taxonomyTags }] = item.data;
+      const { displayName, taxonomyTags } = item;
 
       const matchingTags = filterTags.every(
         (filterTag) => !!taxonomyTags.find((tag) => isTypeOfTag(tag, filterTag))
@@ -172,18 +182,6 @@
   fetchData();
 
   ////// Item actions //////
-  async function onDownloadItem(item) {
-    try {
-      const url = await storage.getDownloadUrl(item);
-      const anchor = document.createElement("a");
-      anchor.setAttribute("href", url);
-      anchor.setAttribute("target", "_blank");
-      anchor.click();
-    } catch (err) {
-      return displayError(err.message);
-    }
-  }
-
   let appendArtifact = false;
   let appendFiles = [];
   let appendItem;
@@ -192,11 +190,21 @@
   let formatter = new TagFormatter();
   async function onAppendItem(item) {
     appendItem = item;
-    appendName = appendItem.data[0].displayName;
-    appendMetadata = Object.assign({}, appendItem.data[0]);
-    appendMetadata.taxonomyTags = await formatter.toHumanFormat(
-      appendMetadata.taxonomyTags
-    );
+    appendName = appendItem.displayName;
+    try {
+      appendMetadata = {
+        taxonomyTags: await formatter.toHumanFormat(appendItem.taxonomyTags),
+      };
+    } catch (err) {
+      if (err instanceof FormatError) {
+        console.warn("Latest artifact has invalid taxonomy tags:", err.message);
+      } else {
+        console.error(
+          "An error occurred while setting default tags",
+          err.stack
+        );
+      }
+    }
     appendArtifact = true;
   }
 
@@ -222,7 +230,7 @@
 
     const metadata = appendMetadata;
     metadata.displayName = appendName;
-    await storage.appendArtifact(appendItem.id, metadata, appendFiles);
+    await storage.appendArtifact(appendItem, metadata, appendFiles);
   }
 
   ////// Dataset Upload //////
@@ -284,11 +292,99 @@
         .map((chunk: string) => chunk.split("="))
     );
   }
+
+  //////// Download ////////
+  let downloadArtifacts = false;
+  let downloadArtifactSet;
+  let downloadSetting = "all";
+  async function onDownloadClicked() {
+    try {
+      // TODO: get the artifact IDs
+      const ids =
+        downloadSetting === "all"
+          ? getAllArtifactIds(downloadArtifactSet)
+          : getLatestArtifactId(downloadArtifactSet);
+
+      if (ids.length === 0) {
+        return displayError("Nothing to download: No data found.");
+      }
+      const url = await storage.getDownloadUrl(downloadArtifactSet.id, ...ids);
+      const anchor = document.createElement("a");
+      anchor.setAttribute("href", url);
+      anchor.setAttribute("target", "_blank");
+      anchor.click();
+    } catch (err) {
+      return displayError(err.message);
+    }
+  }
+
+  function getAllArtifactIds(artifactSet) {
+    return artifactSet.children.map((item) => item.id);
+  }
+
+  function getLatestArtifactId(artifactSet) {
+    const latest = getLatestArtifact(artifactSet);
+    const ids = [];
+    if (latest) {
+      ids.push(latest.id);
+    }
+    return ids;
+  }
+
+  function onOpenDownloadDialog(item) {
+    downloadArtifactSet = item;
+    downloadArtifacts = true;
+  }
+
+  //////// Artifact Sets ////////
+  let artifactSets = [];
+  $: artifactSets = getArtifactSets(items);
+
+  function getArtifactSets(items) {
+    return [];
+  }
 </script>
 
 <svelte:head>
   <title>{title}</title>
 </svelte:head>
+<!-- Download Dialog -->
+<Dialog
+  bind:open={downloadArtifacts}
+  aria-labelledby="title"
+  aria-describedby="content"
+>
+  <DialogTitle id="title"
+    >Download {downloadArtifactSet &&
+      downloadArtifactSet.displayName}</DialogTitle
+  >
+  <DialogContent id="content">
+    <p>What would you like to download?</p>
+    <List radioList>
+      <Item>
+        <Graphic>
+          <Radio bind:group={downloadSetting} value="all" />
+        </Graphic>
+        <Text>All Data</Text>
+      </Item>
+      <Item use={[InitialFocus]}>
+        <Graphic>
+          <Radio bind:group={downloadSetting} value="latest" />
+        </Graphic>
+        <Text>Latest Data</Text>
+      </Item>
+    </List>
+  </DialogContent>
+  <Actions>
+    <Button>
+      <Label>Cancel</Label>
+    </Button>
+    <Button on:click={() => onDownloadClicked()}>
+      <Label>Download</Label>
+    </Button>
+  </Actions>
+</Dialog>
+
 <!-- Artifact append dialog -->
 <Dialog
   bind:open={appendArtifact}
@@ -296,7 +392,7 @@
   aria-describedby="content"
 >
   <DialogTitle id="title"
-    >Append data to {appendItem && appendItem.data[0].displayName}</DialogTitle
+    >Append data to {appendItem && appendItem.displayName}</DialogTitle
   >
   <DialogContent id="content">
     <Textfield label="Name" bind:value={appendName} />
@@ -419,14 +515,16 @@
   </Drawer>
   <AppContent>
     <main>
+      <!-- Artifact list -->
       <List twoLine avatarList>
         {#each items as item}
           <Item on:SMUI:action={() => onItemClicked(item)}>
             <Text>
-              <PrimaryText>{item.data[0].displayName}</PrimaryText>
+              <PrimaryText>{item.displayName}</PrimaryText>
               <SecondaryText>
-                <a style="margin-right: 15px" on:click={onDownloadItem(item)}
-                  >Download</a
+                <a
+                  style="margin-right: 15px"
+                  on:click={onOpenDownloadDialog(item)}>Download</a
                 >
                 <!-- TODO: check if they have permissions to append to it -->
                 <a style="margin-right: 15px" on:click={onAppendItem(item)}
@@ -438,7 +536,7 @@
             <IconButton class="material-icons" on:click={() => onDownloadItem(item)}>file_download</IconButton>
             <IconButton class="material-icons" on:click={() => onAppendItem(item)}>file_upload</IconButton>
             -->
-            {#each item.data[0].taxonomyTags as tag}
+            {#each item.taxonomyTags as tag}
               <!--
                                                         <Chip chip={tag.id}>
 								{#if tag.type === 'EnumField'}
