@@ -7,6 +7,7 @@ const path = require("path");
 const os = require("os");
 const fsp = require("fs/promises");
 const RouterUtils = require("../../../../common/routers/Utils");
+const { FormatError } = require("../../../../common/TagFormatter");
 const { pipeline } = require("stream");
 const { promisify } = require("util");
 const streamPipeline = promisify(pipeline);
@@ -184,18 +185,46 @@ class PDP {
       obsIndex,
       version
     );
-    const metadata = responseObservation.data[0];
-    metadata.taxonomyTags = await formatter.toHumanFormat(
-      metadata.taxonomyTags
-    );
-    const metadataPath = path.join(
-      downloadDir,
-      `${obsIndex}`,
-      `${version}`,
-      `metadata.json`
-    );
-    //let's save the observation metadata to a file metada.json
-    await this._downloadMetadataFile(metadataPath, metadata);
+    try {
+      const metadata = responseObservation.data[0];
+      metadata.taxonomyTags = await formatter.toHumanFormat(
+        metadata.taxonomyTags
+      );
+      const metadataPath = path.join(
+        downloadDir,
+        `${obsIndex}`,
+        `${version}`,
+        `metadata.json`
+      );
+      //let's save the observation metadata to a file metada.json
+      await this._writeJsonData(metadataPath, metadata);
+    } catch (err) {
+      const logPath = path.join(
+        downloadDir,
+        `${obsIndex}`,
+        `${version}`,
+        `warnings.txt`
+      );
+      if (err instanceof FormatError) {
+        const metadata = responseObservation.data[0];
+        const metadataPath = path.join(
+          downloadDir,
+          `${obsIndex}`,
+          `${version}`,
+          `metadata.json`
+        );
+        await this._writeJsonData(metadataPath, metadata);
+        this._writeData(
+          logPath,
+          `An error occurred when converting the taxonomy tags: ${err.message}\n\nThe internal format has been saved in metadata.json.`
+        );
+      } else {
+        this._writeData(
+          logPath,
+          `An error occurred when generating metadata.json: ${err.message}`
+        );
+      }
+    }
 
     // Lets download the actual files associated with this observation,index
     const response = await this._getObsFiles(processId, obsIndex, version);
@@ -273,10 +302,14 @@ class PDP {
     await streamPipeline(response.body, writeStream);
   }
 
-  async _downloadMetadataFile(filePath, metadata) {
+  async _writeData(filePath, data) {
     const dirPath = path.dirname(filePath) + path.sep;
     await fsp.mkdir(dirPath, { recursive: true });
-    await fsp.writeFile(filePath, JSON.stringify(metadata));
+    await fsp.writeFile(filePath, data);
+  }
+
+  async _writeJsonData(filePath, metadata) {
+    this._writeData(filePath, JSON.stringify(metadata));
   }
 
   static async _prepareDownloadDir() {
