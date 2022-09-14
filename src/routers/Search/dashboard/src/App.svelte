@@ -117,7 +117,13 @@
   let errorMessage: string;
   $: errorMessage && snackbar.open();
 
+  // TODO: format the error with red
   function displayError(msg: string) {
+    errorMessage = msg;
+  }
+
+  // TODO: use a different color (& variable)
+  function displayMessage(msg: string) {
     errorMessage = msg;
   }
 
@@ -230,8 +236,9 @@
 
     const metadata = appendMetadata;
     metadata.displayName = appendName;
+    displayMessage("Upload in progress");
     await storage.appendArtifact(appendItem, metadata, appendFiles);
-    displayError("Upload complete!");
+    displayMessage("Upload complete!");
   }
 
   ////// Dataset Upload //////
