@@ -152,67 +152,88 @@ class PDP {
     const tmpDir = await PDP._prepareDownloadDir();
     const downloadDir = path.join(tmpDir, "download");
     const zipPath = path.join(tmpDir, `${processId}.zip`);
-    
-    const resolvePromist = await obsIdxAndVersions.forEach(
-      async (element) => {
-        obsIndex = element[0]
-        versopm = element[1]
-      console.log(obsIndex, version)
-      // Let's first get the observation metadata 
-      const responseObservation = await this._getObs(
-        processId,
-        obsIndex,
-        version
-      );
-      const metadata = responseObservation.data[0];
-      metadata.taxonomyTags = await formatter.toHumanFormat(
-        metadata.taxonomyTags
-      );
-      const metadataPath = path.join(downloadDir, `${obsIndex}`, `${version}`, `metadata.json`);
-      //let's save the observation metadata to a file metada.json
-      await this._downloadMetadataFile(metadataPath, metadata);
 
-      // Lets download the actual files associated with this observation,index  
-      const response = await this._getObsFiles(processId, obsIndex, version);
-      if (response.files.length === 0) {
-        return;
-      }
+    await Promise.all(
+      obsIdxAndVersions.map(([index, version]) =>
+        this._downloadObservation(
+          processId,
+          index,
+          version,
+          downloadDir,
+          formatter
+        )
+      )
+    );
 
-      // wait for the transfer to complete and the files to be available
-      if (response.transferId != null) {
-        let transferStatus = await this._getFileTransferStatus(
+    await zip(downloadDir, zipPath, { compression: COMPRESSION_LEVEL.medium });
+    await fsp.rm(downloadDir, { recursive: true });
+    return new ObservationFilesArchive(zipPath, tmpDir);
+  }
+
+  async _downloadObservation(
+    processId,
+    obsIndex,
+    version,
+    downloadDir,
+    formatter
+  ) {
+    console.log(obsIndex, version);
+    // Let's first get the observation metadata
+    const responseObservation = await this._getObs(
+      processId,
+      obsIndex,
+      version
+    );
+    const metadata = responseObservation.data[0];
+    metadata.taxonomyTags = await formatter.toHumanFormat(
+      metadata.taxonomyTags
+    );
+    const metadataPath = path.join(
+      downloadDir,
+      `${obsIndex}`,
+      `${version}`,
+      `metadata.json`
+    );
+    //let's save the observation metadata to a file metada.json
+    await this._downloadMetadataFile(metadataPath, metadata);
+
+    // Lets download the actual files associated with this observation,index
+    const response = await this._getObsFiles(processId, obsIndex, version);
+    if (response.files.length === 0) {
+      return;
+    }
+
+    // wait for the transfer to complete and the files to be available
+    if (response.transferId != null) {
+      let transferStatus = await this._getFileTransferStatus(
+        response.processId,
+        response.directoryId,
+        response.transferId
+      );
+      while (transferStatus && transferStatus.status != "Succeeded") {
+        console.log("Ctx: About to wait for the download...");
+        await sleep(1000);
+        transferStatus = await this._getFileTransferStatus(
           response.processId,
           response.directoryId,
           response.transferId
         );
-        while (transferStatus && transferStatus.status != "Succeeded") {
-          console.log("Ctx: About to wait for the download...");
-          await sleep(1000);
-          transferStatus = await this._getFileTransferStatus(
-            response.processId,
-            response.directoryId,
-            response.transferId
-          );
-        }
       }
+    }
 
-      await Promise.all(
-        response.files.map((file) =>
-          this._downloadFile(
-            PDP._correctFilePath(downloadDir, file.name, obsIndex, version),
-            file.sasUrl
-          )
+    await Promise.all(
+      response.files.map((file) =>
+        this._downloadFile(
+          PDP._correctFilePath(
+            downloadDir,
+            file.name,
+            obsIndex.toString(),
+            version.toString()
+          ),
+          file.sasUrl
         )
-      );
-    });
-
-
-    const p = await Promise.all(resolvePromist)
-    console.log("Done with all...")
-    //TODO: Somehow this is called before all the earlier methods are complete..??? 
-    await zip(downloadDir, zipPath, { compression: COMPRESSION_LEVEL.medium });
-    await fsp.rm(downloadDir, { recursive: true });
-    return new ObservationFilesArchive(zipPath, tmpDir);
+      )
+    );
   }
 
   async getUploadUrls(type, processId, lastId, metadata, files) {
@@ -262,8 +283,13 @@ class PDP {
     return await fsp.mkdtemp(path.join(os.tmpdir(), "webgme-taxonomy-"));
   }
 
-  static _correctFilePath(downloadDir, filename, index,version) {
-    return path.join(downloadDir, index, version, filename.replace("dat/" + index, ""));
+  static _correctFilePath(downloadDir, filename, index, version) {
+    return path.join(
+      downloadDir,
+      index,
+      version,
+      filename.replace("dat/" + index, "")
+    );
   }
 
   _createObservationData(processId, type, data) {
