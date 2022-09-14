@@ -231,6 +231,7 @@
     const metadata = appendMetadata;
     metadata.displayName = appendName;
     await storage.appendArtifact(appendItem, metadata, appendFiles);
+    displayError("Upload complete!");
   }
 
   ////// Dataset Upload //////
