@@ -3,15 +3,23 @@
   import Textfield from "@smui/textfield";
   import IconButton from "@smui/icon-button";
   /*import Chip from "@smui/chips";*/
-  import List, { Item, Text, PrimaryText, SecondaryText } from "@smui/list";
+  import List, {
+    Item,
+    Text,
+    Graphic,
+    PrimaryText,
+    SecondaryText,
+  } from "@smui/list";
   import Drawer, { Content, AppContent } from "@smui/drawer";
   import LinearProgress from "@smui/linear-progress";
   import Select, { Option } from "@smui/select";
   import Dialog, {
     Content as DialogContent,
     Title as DialogTitle,
+    InitialFocus,
     Actions,
   } from "@smui/dialog";
+  import Radio from "@smui/radio";
   import type { SnackbarComponentDev } from "@smui/snackbar";
   import Snackbar, {
     Actions as SnackbarActions,
@@ -258,16 +266,16 @@
 
   //////// Download ////////
   let downloadArtifacts = false;
-  let downloadItem;
+  let downloadArtifactSet;
   let downloadSetting = "all";
   async function onDownloadClicked() {
     try {
       // TODO: get the artifact IDs
       const ids =
         downloadSetting === "all"
-          ? getAllArtifactIds(downloadItem.parentId)
-          : getLatestArtifactId(downloadItem.parentId);
-      const url = await storage.getDownloadUrl(downloadItem, ...ids);
+          ? getAllArtifactIds(downloadArtifactSet)
+          : getLatestArtifactId(downloadArtifactSet);
+      const url = await storage.getDownloadUrl(downloadArtifactSet.id, ...ids);
       const anchor = document.createElement("a");
       anchor.setAttribute("href", url);
       anchor.setAttribute("target", "_blank");
@@ -277,22 +285,19 @@
     }
   }
 
-  function getAllArtifactIds(parentId) {
-    return allItems
-      .filter((item) => item.parentId === parentId)
-      .map((item) => item.id);
+  function getAllArtifactIds(artifactSet) {
+    return artifactSet.children.map((item) => item.id);
   }
 
-  function getLatestArtifactId(parentId) {
-    const latest = allItems
-      .filter((item) => item.parentId === parentId)
+  function getLatestArtifactId(artifactSet) {
+    const latest = artifactSet.children
       .sort((i1, i2) => (i1.time < i2.time ? -1 : 1))
       .pop();
     return latest && latest.id;
   }
 
   function onOpenDownloadDialog(item) {
-    downloadItem = item;
+    downloadArtifactSet = item;
     downloadArtifacts = true;
   }
 
@@ -315,14 +320,25 @@
   aria-describedby="content"
 >
   <DialogTitle id="title"
-    >Download {downloadItem && downloadItem.displayName}</DialogTitle
+    >Download {downloadArtifactSet &&
+      downloadArtifactSet.displayName}</DialogTitle
   >
   <DialogContent id="content">
     <p>What would you like to download?</p>
-    <Select bind:value={downloadSetting}>
-      <Option value="all">All Data</Option>
-      <Option value="latest">Latest Data</Option>
-    </Select>
+    <List radioList>
+      <Item>
+        <Graphic>
+          <Radio bind:group={downloadSetting} value="all" />
+        </Graphic>
+        <Text>All Data</Text>
+      </Item>
+      <Item use={[InitialFocus]}>
+        <Graphic>
+          <Radio bind:group={downloadSetting} value="latest" />
+        </Graphic>
+        <Text>Latest Data</Text>
+      </Item>
+    </List>
   </DialogContent>
   <Actions>
     <Button>

@@ -2,6 +2,7 @@ const pdpBase = "https://leappremonitiondev.azurewebsites.net/";
 const fetch = require("node-fetch");
 const { zip, COMPRESSION_LEVEL } = require("zip-a-folder");
 const fs = require("fs");
+const _ = require("underscore");
 const path = require("path");
 const os = require("os");
 const fsp = require("fs/promises");
@@ -10,7 +11,7 @@ const { pipeline } = require("stream");
 const { promisify } = require("util");
 const streamPipeline = promisify(pipeline);
 const DownloadFile = require("../../DownloadFile");
-const Artifact = require("../../Artifact");
+const { Artifact, ArtifactSet } = require("../../Artifact");
 const CreateRequestLogger = require("./CreateRequestLogger");
 const logFilePath = process.env.CREATE_LOG_PATH || "./CreateProcesses.jsonl";
 const reqLogger = new CreateRequestLogger(logFilePath);
@@ -33,8 +34,18 @@ class PDP {
         async (process) => await this.getProcessObservations(process.processId)
       )
     );
-    // TODO: make these artifact sets?
-    return filterMap(processObservations.flat(), parseArtifact);
+
+    const artifacts = filterMap(processObservations.flat(), parseArtifact);
+    const artifactSets = Object.entries(
+      _.groupBy(artifacts, (artifact) => artifact.parentId)
+    ).map(([parentId, artifacts]) => {
+      const latestArtifact = artifacts
+        .sort((a1, a2) => (a1.time < a2.time ? -1 : 1))
+        .pop();
+      const { displayName, taxonomyTags } = latestArtifact;
+      return new ArtifactSet(parentId, displayName, taxonomyTags, artifacts);
+    });
+    return artifactSets;
   }
 
   async getDownloadUrls(processId, obsIndex, version) {
@@ -193,6 +204,15 @@ class PDP {
   }
 
   async getUploadUrls(type, processId, index, version, metadata, files) {
+    console.log(
+      "getUploadUrls",
+      type,
+      processId,
+      index,
+      version,
+      metadata,
+      files
+    );
     const result = await this._appendObservationWithFiles(
       processId,
       index,
@@ -201,6 +221,7 @@ class PDP {
       metadata,
       files
     );
+    console.log({ result });
     return result.uploadDataFiles.files;
   }
 

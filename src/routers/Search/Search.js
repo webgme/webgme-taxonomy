@@ -151,13 +151,13 @@ function initialize(middlewareOpts) {
       // TODO: update artifact
       //the body is a json with the metadata and the list of file paths
       console.log("appending data artifact");
-      const { id } = req.params;
+      const { parentId, id } = req.params;
       const type = await getArtifactType(req);
       const storage = PDP.from(req, mainConfig);
-      const [processId, obsIndex, version] = id.split("_");
+      const [obsIndex, version] = id.split("_");
       const fileUploadInfo = await storage.getUploadUrls(
         type,
-        processId,
+        parentId,
         +obsIndex + 1,
         +version,
         req.body.metadata,
@@ -179,7 +179,7 @@ function initialize(middlewareOpts) {
         return res.status(400).send("List of artifact IDs required");
       }
 
-      console.log("getting download URL", id);
+      console.log("getting download URL", parentId, ids);
       const { root, core } = req.webgmeContext;
       const node = await Utils.findTaxonomyNode(core, root);
       const formatter = await TagFormatter.from(core, node);
