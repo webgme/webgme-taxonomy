@@ -1,4 +1,4 @@
-import {filterMap, Result, assert} from './Utils';
+import {filterMap, Result, assert, getLatestArtifact} from './Utils';
 
 class Storage {
   baseUrl: string;
@@ -13,7 +13,7 @@ class Storage {
     const result = (await this._fetchJson(this.baseUrl))
                        .mapError((err: Error) => new ListError(err.message));
     const items: any[] = await result.unwrap();
-    return filterMap(items, item => Artifact.tryFrom(item));
+    return filterMap(items, item => ArtifactSet.tryFrom(item));
   }
 
   async getDownloadUrl(parentId, ...ids) {
@@ -65,13 +65,13 @@ class Storage {
         .unwrap();
   }
 
-  async appendArtifact(item, files: File[]) {
-    const metadata = {
-      displayName: item.displayName,
-      taxonomyTags: item.taxonomyTags,
-    };
+  async appendArtifact(artifactSet, metadata, files: File[]) {
     console.log({action : 'append', metadata, files});
-    const url = `${this.baseUrl}${item.parentId}/${item.id}/uploadUrl`;
+    const last = getLatestArtifact(artifactSet);
+    const lastId = last && last.id;
+    const qs = lastId ? '?lastId=' + 
+      encodeURIComponent(lastId) : '';
+    const url = this.baseUrl + artifactSet.id + '/uploadUrl' + qs;
     const filenames = files.map((file: File) => file.name);
 
     // const myString = await this.readFile(files[0])
@@ -164,7 +164,7 @@ class AppendDataError extends StorageError {
   constructor(msg: string) { super('append', msg); }
 }
 
-class Artifact {
+class ArtifactSet {
   static tryFrom(item: any) {
     if (!item.displayName) {
       console.log("Found malformed data. Filtering out. Data:", item);
