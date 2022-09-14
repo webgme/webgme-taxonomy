@@ -34,7 +34,7 @@
   export let title: string = "Data Dashboard ";
   let vocabularies: TaxonomyData[] = [];
 
-  import TagFormatter from "./Formatter.ts";
+  import TagFormatter, { FormatError } from "./Formatter.ts";
   import Storage, { RequestError } from "./Storage.ts";
   const storage = new Storage();
   let allItems = [];
@@ -191,9 +191,20 @@
   async function onAppendItem(item) {
     appendItem = item;
     appendName = appendItem.displayName;
-    appendMetadata = {
-      taxonomyTags: await formatter.toHumanFormat(appendItem.taxonomyTags),
-    };
+    try {
+      appendMetadata = {
+        taxonomyTags: await formatter.toHumanFormat(appendItem.taxonomyTags),
+      };
+    } catch (err) {
+      if (err instanceof FormatError) {
+        console.warn("Latest artifact has invalid taxonomy tags:", err.message);
+      } else {
+        console.error(
+          "An error occurred while setting default tags",
+          err.stack
+        );
+      }
+    }
     appendArtifact = true;
   }
 

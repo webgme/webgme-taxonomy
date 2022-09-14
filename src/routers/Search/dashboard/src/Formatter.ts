@@ -11,6 +11,12 @@ export default class TagFormatter {
     const encodedTags = encodeURIComponent(JSON.stringify(tags));
     const url = `${this.baseUrl}?tags=${encodedTags}`;
     const response = await fetch(url);
+    if (response.status > 399) {
+      throw new FormatError(await response.text());
+    }
     return await response.json();
   }
+}
+
+export class FormatError extends Error {
 }
