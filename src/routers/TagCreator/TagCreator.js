@@ -11,15 +11,19 @@
  * <host>/path/subPath, for example GET <host>/path/subPath/getExample will be routed to the getExample below.
  */
 
-'use strict';
+"use strict";
 
 // http://expressjs.com/en/guide/routing.html
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const path = require('path');
+const path = require("path");
+const fs = require("fs");
+const fsp = fs.promises;
+const _ = require("underscore");
 const JSONSchemaExporter = require("../../common/JSONSchemaExporter");
 const RouterUtils = require("../../common/routers/Utils");
 const Utils = require("../../common/Utils");
+
 /**
  * Called when the server is created but before it starts to listening to incoming requests.
  * N.B. gmeAuth, safeStorage and workerManager are not ready to use until the start function is called.
@@ -35,27 +39,28 @@ const Utils = require("../../common/Utils");
  * @param {object} middlewareOpts.workerManager - Spawns and keeps track of "worker" sub-processes.
  */
 function initialize(middlewareOpts) {
-    var logger = middlewareOpts.logger.fork('TagCreator'),
-        ensureAuthenticated = middlewareOpts.ensureAuthenticated,
-        getUserId = middlewareOpts.getUserId;
+  var logger = middlewareOpts.logger.fork("TagCreator"),
+    ensureAuthenticated = middlewareOpts.ensureAuthenticated,
+    getUserId = middlewareOpts.getUserId;
 
-    logger.debug('initializing ...');
+  generateFormHtml(middlewareOpts.gmeConfig);
+  logger.debug("initializing ...");
 
-    // Ensure authenticated can be used only after this rule.
-    router.use('*', function (req, res, next) {
-        // TODO: set all headers, check rate limit, etc.
+  // Ensure authenticated can be used only after this rule.
+  router.use("*", function (req, res, next) {
+    // TODO: set all headers, check rate limit, etc.
 
-        // This header ensures that any failures with authentication won't redirect.
-        res.setHeader('X-WebGME-Media-Type', 'webgme.v1');
-        next();
-    });
+    // This header ensures that any failures with authentication won't redirect.
+    res.setHeader("X-WebGME-Media-Type", "webgme.v1");
+    next();
+  });
 
-    // Use ensureAuthenticated if the routes require authentication. (Can be set explicitly for each route.)
-    router.use('*', ensureAuthenticated);
+  // Use ensureAuthenticated if the routes require authentication. (Can be set explicitly for each route.)
+  router.use("*", ensureAuthenticated);
 
-    // TODO: add an endpoint for the static files
-    const staticPath = path.join(__dirname, "form");
-    router.use('/:projectId/branch/:branch/static/', express.static(staticPath));
+  // TODO: add an endpoint for the static files
+  const staticPath = path.join(__dirname, "form");
+  router.use("/:projectId/branch/:branch/static/", express.static(staticPath));
 
   router.use("/:projectId/branch/:branch/", async (req, res, next) => {
     try {
@@ -73,18 +78,21 @@ function initialize(middlewareOpts) {
     }
   });
 
-    // TODO: make the render data available
-    //   - formatter...
-    //     - make a client that wraps the REST endpoint
-    router.get('/:projectId/branch/:branch/schemas.json', async function (req, res) {
-        const { root, core } = req.webgmeContext;
-        const exporter = JSONSchemaExporter.from(core, root);
-        const node = await Utils.findTaxonomyNode(core, root);
-        const schemas = await exporter.getSchemas(node);
-        return res.json(schemas);
-    });
+  // TODO: make the render data available
+  //   - formatter...
+  //     - make a client that wraps the REST endpoint
+  router.get(
+    "/:projectId/branch/:branch/schemas.json",
+    async function (req, res) {
+      const { root, core } = req.webgmeContext;
+      const exporter = JSONSchemaExporter.from(core, root);
+      const node = await Utils.findTaxonomyNode(core, root);
+      const schemas = await exporter.getSchemas(node);
+      return res.json(schemas);
+    }
+  );
 
-    logger.debug('ready');
+  logger.debug("ready");
 }
 
 /**
@@ -92,7 +100,7 @@ function initialize(middlewareOpts) {
  * @param {function} callback
  */
 function start(callback) {
-    callback();
+  callback();
 }
 
 /**
@@ -100,13 +108,34 @@ function start(callback) {
  * @param {function} callback
  */
 function stop(callback) {
-    callback();
+  callback();
 }
 
+/**
+ * Generate the index.html file given the GME config (deployment specific settings).
+ */
+async function generateFormHtml(gmeConfig) {
+  const formTemplate = _.template(
+    fs.readFileSync(path.join(__dirname, "form", "index.html.ejs"), "utf8")
+  );
+  const { requirejsPaths } = gmeConfig;
+  const commonPath = requirejsPaths["webgme-taxonomy"].replace(
+    /^\./,
+    "/extlib"
+  );
+  const opts = {
+    commonPath,
+    widgetPath: commonPath.replace(/common$/, "visualizers/widgets/TagCreator"),
+  };
+  await fsp.writeFile(
+    path.join(__dirname, "form", "index.html"),
+    formTemplate(opts)
+  );
+}
 
 module.exports = {
-    initialize: initialize,
-    router: router,
-    start: start,
-    stop: stop
+  initialize: initialize,
+  router: router,
+  start: start,
+  stop: stop,
 };
