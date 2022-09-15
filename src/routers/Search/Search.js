@@ -118,23 +118,11 @@ function initialize(middlewareOpts) {
 
   router.post(
     "/:projectId/branch/:branch/artifacts/",
+    // TODO: re-enable tag conversion once the process is created automatically
+    //convertTaxonomyTags,
     async function (req, res) {
       const type = await getArtifactType(req);
-      const { root, core } = req.webgmeContext;
-      const node = await Utils.findTaxonomyNode(core, root);
-      const formatter = await TagFormatter.from(core, node);
       const { metadata } = req.body;
-      // TODO: re-enable tag conversion once the process is created automatically
-      //try {
-      //metadata.taxonomyTags = formatter.toGuidFormat(metadata.taxonomyTags);
-      //} catch (err) {
-      //if (err instanceof TagFormatter.FormatError) {
-      //res.status(400).send(err.message);
-      //} else {
-      //res.sendStatus(500);
-      //}
-      //}
-
       metadata.taxonomy = {
         projectId: req.params.projectId,
         branch: req.params.branch,
@@ -147,6 +135,7 @@ function initialize(middlewareOpts) {
 
   router.post(
     "/:projectId/branch/:branch/artifacts/:parentId/uploadUrl",
+    convertTaxonomyTags,
     async function (req, res) {
       const { parentId } = req.params;
       const { lastId } = req.query;
@@ -194,6 +183,24 @@ function initialize(middlewareOpts) {
   );
 
   logger.debug("ready");
+}
+
+async function convertTaxonomyTags(req, res, next) {
+  const { root, core } = req.webgmeContext;
+  const node = await Utils.findTaxonomyNode(core, root);
+  const formatter = await TagFormatter.from(core, node);
+  const { metadata } = req.body;
+  try {
+    metadata.taxonomyTags = formatter.toGuidFormat(metadata.taxonomyTags);
+  } catch (err) {
+    if (err instanceof TagFormatter.FormatError) {
+      res.status(400).send(err.message);
+    } else {
+      res.sendStatus(500);
+    }
+  }
+
+  next();
 }
 
 /**

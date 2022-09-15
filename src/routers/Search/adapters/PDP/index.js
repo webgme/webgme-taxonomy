@@ -432,7 +432,6 @@ class ObservationFilesArchive extends DownloadFile {
 }
 
 function parseArtifact(obs) {
-  console.log("parse", obs);
   const metadata = obs.data && obs.data[0];
   if (metadata && metadata.displayName) {
     return new Artifact(
