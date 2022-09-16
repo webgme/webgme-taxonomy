@@ -17,10 +17,10 @@ function factory() {
             type: "submit",
             className: "btn btn-secondary",
             onClick: async () => {
-              const downloadData = await this.formatData(
-                formatter,
-                data.formData
+              const formData = deepCopy(
+                this.setMissingDefaults(data.schema, data.formData)
               );
+              const downloadData = await this.formatData(formatter, formData);
               this.downloadJSON(downloadData);
             },
           },
@@ -37,6 +37,36 @@ function factory() {
         formData.taxonomyTags
       );
       return formData;
+    }
+
+    /**
+     * This is a workaround for a bug in the form editor.
+     * If the dropdown (selecting the "anyOf" item) is not changed,
+     * then the default values are not set. If the ID property is
+     * missing, we inherit the defaults for the first (default)
+     * item.
+     */
+    setMissingDefaults(schema, metadata) {
+      const defID = schema.properties.taxonomyTags.items.anyOf[0].$ref
+        .split("/")
+        .pop();
+      const defaultDef = schema.definitions[defID];
+      const defaults = Object.fromEntries(
+        Object.entries(defaultDef.properties)
+          .filter(([id, def]) => def.default)
+          .map(([id, def]) => [id, def.default])
+      );
+
+      metadata.taxonomyTags = metadata.taxonomyTags.map((tag) => {
+        if (!tag) {
+          tag = {};
+        }
+        if (!tag.ID) {
+          return Object.assign({}, defaults, tag);
+        }
+        return tag;
+      });
+      return metadata;
     }
 
     downloadJSON(object, name = "tags") {
@@ -94,6 +124,10 @@ function factory() {
         formData,
       };
     }
+  }
+
+  function deepCopy(obj) {
+    return JSON.parse(JSON.stringify(obj));
   }
 
   const DefaultFormatter = {
