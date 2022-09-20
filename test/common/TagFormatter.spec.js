@@ -30,7 +30,7 @@ describe("TagFormatter", function () {
     let humanTag;
 
     before(() => {
-      humanTag = formatter.toHumanFormat(tag);
+      humanTag = formatter.toHumanFormat([tag])[0];
     });
 
     it("should resolve ID", function () {
@@ -45,19 +45,23 @@ describe("TagFormatter", function () {
   describe("from human format", function () {
     it("should resolve Tag", function () {
       const tag = { Tag: "tag2", prop2: "world!" };
-      const guidTag = formatter.toGuidFormat(tag);
+      const [guidTag] = formatter.toGuidFormat([tag]);
       assert.equal(guidTag.ID, 1);
     });
 
     it("should resolve properties", function () {
       const tag = { Tag: "tag2", prop2: "world!" };
-      const guidTag = formatter.toGuidFormat(tag);
+      const [guidTag] = formatter.toGuidFormat([tag]);
       assert.equal(guidTag[5], tag.prop2);
+    });
+
+    it("should save enum values by UUID", function () {
+      // TODO
     });
 
     it.skip("should resolve duplicate tags using props", function () {
       const tag = { Tag: "dupTag", prop1: "world!" };
-      const guidTag = formatter.toGuidFormat(tag);
+      const [guidTag] = formatter.toGuidFormat([tag]);
       assert.equal(guidTag.ID, 3);
       assert.equal(guidTag[4], tag.prop1);
     });
