@@ -151,7 +151,9 @@ function factory() {
 			}
 			i = addChildCells(node, cells, i);
 
-			parentStack.splice(cells[i].depth, parentStack.length - cells[i].depth, node);
+			if (i < cells.length) {
+				parentStack.splice(cells[i].depth, parentStack.length - cells[i].depth, node);
+			}
 		}
 		return nodes;
 	};
@@ -193,15 +195,19 @@ function factory() {
 		const childOptDepth = cells[i].depth + 1;
 		let j;
 		for (j = i+1; j < cells.length; j++) {
-			if (cells[j].depth !== childOptDepth) {
+			if (cells[j].depth < childOptDepth) {
 				j--;
 				break;
 			}
-			// FIXME: don't flatten
 			// TODO: Recursively, call the parsing function
 			const child = cells[j].toWJI(cells[j + 1]);
-			child.pointers.base = '@meta:EnumOption';
 			node.children.push(child);
+			j = addChildCells(child, cells, j);
+			if (child.children.length) {
+				child.pointers.base = '@meta:CompoundField';
+			} else {
+				child.pointers.base = '@meta:TextField';
+			}
 		}
 		return j;
 	}

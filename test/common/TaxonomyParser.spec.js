@@ -8,7 +8,7 @@ describe('TaxonomyParser', function () {
         someTag,someDescription,
         `;
         const [taxonomy] = parser.fromCSV(text);
-        assert.equal(taxonomy.pointers.base, '@meta:Tag');
+        assert.equal(taxonomy.pointers.base, '@meta:Term');
         assert.equal(taxonomy.attributes.name, 'someTag');
         assert.equal(taxonomy.attributes.description, 'someDescription');
     });
@@ -18,7 +18,7 @@ describe('TaxonomyParser', function () {
         someTag,,
         `;
         const [taxonomy] = parser.fromCSV(text);
-        assert.equal(taxonomy.pointers.base, '@meta:Tag');
+        assert.equal(taxonomy.pointers.base, '@meta:Term');
         assert.equal(taxonomy.attributes.description, '');
     });
 
@@ -31,35 +31,32 @@ describe('TaxonomyParser', function () {
         ,,c
         `;
         const [taxonomy] = parser.fromCSV(text);
-        assert.equal(taxonomy.pointers.base, '@meta:Tag');
+        assert.equal(taxonomy.pointers.base, '@meta:Term');
         assert.equal(taxonomy.children.length, 1);
 
         const [enumNode] = taxonomy.children;
         assert.equal(enumNode.pointers.base, '@meta:EnumField');
 
         enumNode.children.forEach(
-            enumOpt => assert.equal(enumOpt.pointers.base, '@meta:EnumOption')
+            enumOpt => assert.equal(enumOpt.pointers.base, '@meta:TextField')
         );
     });
 
-    it('should convert all nested tags to compounds', function() {
+    it('should allow enum values to have properties', function() {
         const text = `
-        someTag (tag),,
+        someTag (enum),,
         ,compound,
-        ,,field1 (int)
-        ,,field2 (text)
-        ,,field3 (bool)
+        ,,propName (int)
+        ,stringValue,
         `;
         const [taxonomy] = parser.fromCSV(text);
-        assert.equal(taxonomy.pointers.base, '@meta:Tag');
-        assert.equal(taxonomy.children.length, 1);
+        assert.equal(taxonomy.pointers.base, '@meta:EnumField');
+        assert.equal(taxonomy.children.length, 2);
 
-        const [enumNode] = taxonomy.children;
-        assert.equal(enumNode.pointers.base, '@meta:CompoundField');
+        const [compoundOpt, stringOpt] = taxonomy.children;
+        assert.equal(compoundOpt.pointers.base, '@meta:CompoundField');
+        assert.equal(compoundOpt.children.length, 1);
 
-        const expectedFields = ['IntegerField', 'TextField', 'BooleanField'];
-        _.zip(enumNode.children, expectedFields).forEach(
-            ([node, type]) => assert.equal(node.pointers.base, `@meta:${type}`)
-        );
+        assert.equal(stringOpt.pointers.base, '@meta:TextField');
     });
 });
