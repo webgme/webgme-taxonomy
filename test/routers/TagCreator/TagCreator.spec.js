@@ -1,13 +1,14 @@
 
-describe.skip('Search', function() {
-    var testFixture = require('../../globals'),
+// TODO: Replace the auto-generated tests with actual tests
+describe.skip('TagCreator', function() {
+    var testFixture = require('../../globals'),  // TODO: May need to change this if not created from webgme-cli
         superagent = testFixture.superagent,
         expect = testFixture.expect,
         gmeConfig = testFixture.getGmeConfig(),
         server = testFixture.WebGME.standaloneServer(gmeConfig),
         // TODO: If not using webgme-cli, replace the mntPt w/ the desired mount point
         // If using the webgme-cli, this will look up the mount point for the given router
-        mntPt = require('../../../webgme-setup.json').components.routers['Search'].mount,
+        mntPt = require('../../../webgme-setup.json').components.routers['TagCreator'].mount,
         urlFor = function(action) {
             return [
                 server.getUrl(),
@@ -24,7 +25,6 @@ describe.skip('Search', function() {
         server.stop(done);
     });
 
-    // TODO: Replace the auto-generated tests with actual tests
     it('should post to /postExample', function(done) {
         superagent.post(urlFor('postExample'))
             .end(function(err, res) {
