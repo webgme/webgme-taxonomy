@@ -35,19 +35,21 @@ function factory() {
       };
 
       const hiddenProperties = this.getConstantProperties().map(([name]) => [
-          name,
-          {
-            "ui:widget": "hidden",
-          },
-        ]);
+        name,
+        {
+          "ui:widget": "hidden",
+        },
+      ]);
       const defHiddenProperties = Object.fromEntries(
-        Object.keys(definitions).map(name => [name, hiddenProperties])
+        Object.keys(definitions).map((name) => [name, hiddenProperties])
       );
       const uiSchema = {
         taxonomyTags: {
           items: Object.fromEntries(
-            termNodes.map(node => this.getUiSchemaEntry(node)).concat(hiddenProperties)
-          )
+            termNodes
+              .map((node) => this.getUiSchemaEntry(node))
+              .concat(hiddenProperties)
+          ),
         },
       };
       return { schema, uiSchema };
@@ -60,12 +62,12 @@ function factory() {
     }
 
     getUiSchemaEntry(node) {
-        const uiSchema = this.getConstantProperties().map(([name]) => [
-          name,
-          {
-            "ui:widget": "hidden",
-          },
-        ]);
+      const uiSchema = this.getConstantProperties().map(([name]) => [
+        name,
+        {
+          "ui:widget": "hidden",
+        },
+      ]);
 
       const parent = this.core.getParent(node);
       if (parent) {
@@ -74,16 +76,27 @@ function factory() {
       }
 
       const guid = this.core.getGuid(node);
-      return [guid, Object.fromEntries(uiSchema)]
+      return [guid, Object.fromEntries(uiSchema)];
+    }
+
+    async getDependentDefinitions(node) {
+      const baseNode = this.core.getMetaType(node);
+      const baseName = this.core.getAttribute(baseNode, "name");
+      const children = await this.core.loadChildren(node);
+      if (baseName === "EnumField") {
+        return children;
+      } else {
+        return children.filter(
+          (child) =>
+            this.core.isTypeOf(child, this.META.Term) ||
+            this.core.isTypeOf(child, this.META.CompoundField)
+        );
+      }
     }
 
     async getDefinitionEntries(node) {
       const children = await this.core.loadChildren(node);
-      const tagsAndCompounds = children.filter(
-        (child) =>
-          this.core.isTypeOf(child, this.META.Term) ||
-          this.core.isTypeOf(child, this.META.CompoundField)
-      );
+      const dependentDefs = await this.getDependentDefinitions(node);
 
       const childDefs = (
         await Promise.all(
@@ -91,7 +104,7 @@ function factory() {
         )
       ).flat();
       const myDefs = await Promise.all(
-        tagsAndCompounds.map(async (node) => [
+        dependentDefs.map(async (node) => [
           this.core.getGuid(node),
           await this.getDefinition(node),
         ])
@@ -99,18 +112,46 @@ function factory() {
       return myDefs.concat(childDefs);
     }
 
+    hasProperties(node) {
+      return (
+        this.core.isTypeOf(node, this.META.Term) ||
+        this.core.isTypeOf(node, this.META.CompoundField)
+      );
+    }
+
     async getDefinition(node) {
-      const properties = await this.getProperties(node);
-      return {
-        title: this.core.getAttribute(node, "name"),
-        properties,
-        required: Object.keys(properties),
-      };
+      const isEnumOpt = this.core.isTypeOf(
+        this.core.getParent(node),
+        this.META.EnumField
+      );
+
+      if (this.hasProperties(node)) {
+        const properties = await this.getProperties(node);
+        return {
+          title: this.core.getAttribute(node, "name"),
+          type: 'object',
+          properties,
+          required: Object.keys(properties),
+        };
+      } else if (isEnumOpt) {
+        const [guid, schema] = await this.getFieldSchema(node);
+        schema.default = guid;
+        schema.const = guid;
+        return schema;
+      } else {
+        throw new Error('Cannot get definition for ' + this.core.getPath(node));
+      }
     }
 
     async getProperties(node) {
       const isTerm = this.core.isTypeOf(node, this.META.Term);
-      const properties = isTerm ? this.getConstantPropertiesFor(node) : [];
+      const isEnumOpt = this.core.isTypeOf(
+        this.core.getParent(node),
+        this.META.EnumField
+      );
+
+      const properties =
+        isTerm || isEnumOpt ? this.getConstantPropertiesFor(node) : [];
       const fieldNodes = (await this.core.loadChildren(node)).filter((child) =>
         this.core.isTypeOf(child, this.META.Field)
       );
@@ -152,14 +193,13 @@ function factory() {
     }
 
     async getFieldSchema(node) {
-      const baseNode = this.core.getMetaType(node);
       const name = this.core.getAttribute(node, "name");
       const guid = this.core.getGuid(node);
+      const baseNode = this.core.getMetaType(node);
       const baseName = this.core.getAttribute(baseNode, "name");
 
       let fieldSchema = {
         title: name,
-        type: "string",
       };
       switch (baseName) {
         case "IntegerField":
@@ -171,9 +211,15 @@ function factory() {
         case "BooleanField":
           fieldSchema.type = "boolean";
           break;
+        case "TextField":
+          fieldSchema.type = "string";
+          break;
         case "EnumField":
-          fieldSchema.enum = (await this.core.loadChildren(node)).map((node) =>
-            this.core.getAttribute(node, "name")
+          fieldSchema.anyOf = (await this.core.loadChildren(node)).map(
+            (node) => {
+              const guid = this.core.getGuid(node);
+              return { $ref: `#/definitions/${guid}` };
+            }
           );
           break;
         case "CompoundField": // TODO: use guid?
@@ -186,7 +232,7 @@ function factory() {
     static from(core, node) {
       const metanodes = Object.values(core.getAllMetaNodes(node));
       const meta = Object.fromEntries(
-        metanodes.map(n => [core.getAttribute(n, 'name'), n])
+        metanodes.map((n) => [core.getAttribute(n, "name"), n])
       );
       return new JSONSchemaExporter(core, meta);
     }
@@ -195,9 +241,9 @@ function factory() {
   return JSONSchemaExporter;
 }
 
-if (typeof define !== 'undefined') {
+if (typeof define !== "undefined") {
   define([], factory);
-} else if (typeof module !== 'undefined') {
+} else if (typeof module !== "undefined") {
   module.exports = factory();
 } else {
   this.JSONSchemaExporter = factory();
