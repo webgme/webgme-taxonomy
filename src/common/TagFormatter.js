@@ -27,10 +27,22 @@ function factory() {
       // given a property (or parent name), resolve it to a GUID
       const guidTag = Object.fromEntries(
         entries.map(([name, data]) => {
-          const propertyGuid = this.nodeGuidLookup.getPropertyGuid(guid, name);
-          assert(propertyGuid, new PropertyNotFoundError(name));
+          const propertyGuid = this.nodeGuidLookup.getPropertyGuid(
+            guid,
+            name,
+            data
+          );
+          assert(propertyGuid, new PropertyNotFoundError(guid, name));
+          // If this is an enum, the values will be stored by ID (or converted to GUID format)
+          const valueGuid = this.nodeGuidLookup.getPropertyValueGuid(
+            guid,
+            name,
+            data
+          );
           if (isObject(data)) {
-            data = this._toGuidFormat(data, propertyGuid);
+            data = this._toGuidFormat(data, valueGuid || propertyGuid);
+          } else if (valueGuid) {
+            data = valueGuid;
           }
 
           return [propertyGuid, data];
@@ -93,18 +105,41 @@ function factory() {
           return [core.getGuid(node), propertyDict];
         })
       );
+      const enumItemEntries = await Promise.all(
+        nodes
+          .filter((node) => isTypeOf(core, node, "EnumField"))
+          .map(async (field) => {
+            const children = await core.loadChildren(field);
+            const parentGuid = core.getGuid(core.getParent(field));
+            const fieldName = core.getAttribute(field, "name");
+            return children.map((enumOpt) => [
+              parentGuid,
+              fieldName,
+              core.getAttribute(enumOpt, "name"),
+              core.getGuid(enumOpt),
+            ]);
+          })
+      );
+      const enumItems = {};
+      enumItemEntries.flat().forEach(([parentGuid, fieldName, enumName, enumGuid]) => {
+        enumItems[parentGuid]  = enumItems[parentGuid] || {};
+        enumItems[parentGuid][fieldName]  = enumItems[parentGuid][fieldName] || {};
+        enumItems[parentGuid][fieldName][enumName]  = enumGuid;
+      });
       const nodeGuidLookup = new NodeGuidLookupTable(
         namesAndGuids,
-        Object.fromEntries(propsForGuid)
+        Object.fromEntries(propsForGuid),
+        enumItems
       );
       return new TagFormatter(nodeNameDict, nodeGuidLookup);
     }
   }
 
   class NodeGuidLookupTable {
-    constructor(guidList, tagProperties) {
+    constructor(guidList, tagProperties, enumItems) {
       this.guidList = guidList;
       this.tagProperties = tagProperties;
+      this.enumItems = enumItems;
     }
 
     getGuid(tagName, data) {
@@ -126,18 +161,37 @@ function factory() {
       return guid;
     }
 
-    getPropertyGuid(guid, propertyName) {
+    getPropertyGuid(guid, propertyName, propertyValue) {
       return this.tagProperties[guid][propertyName];
+    }
+
+    getPropertyValueGuid(guid, propertyName, propertyValue) {
+      const enumValueDict = getNestedKey(this.enumItems, guid, propertyName);
+      const isEnumValue = !!enumValueDict ;
+      const enumOptName = isObject(propertyValue) ? propertyValue.Tag : propertyValue;
+      const valueGuid = getNestedKey(enumValueDict, enumOptName);
+
+      assert(!isEnumValue || valueGuid, new EnumNotFoundError(propertyName, propertyValue));
+      return valueGuid ;
     }
   }
 
+  function getNestedKey(dict, ...keys) {
+    const value = dict;
+    return keys.reduce((dict, k) => isObject(dict) ? dict[k] : undefined, dict);
+  }
   function isObject(thing) {
     return thing && typeof thing === "object" && !Array.isArray(thing);
   }
+
   function isTerm(core, node) {
+    return isTypeOf(core, node, "Term");
+  }
+
+  function isTypeOf(core, node, name) {
     let basenode = core.getMetaType(node);
     while (basenode) {
-      if (core.getAttribute(basenode, "name") === "Term") {
+      if (core.getAttribute(basenode, "name") === name) {
         return true;
       }
       basenode = core.getBase(basenode);
@@ -153,8 +207,13 @@ function factory() {
     }
   }
   class PropertyNotFoundError extends FormatError {
-    constructor(name) {
-      super(`Property not found: ${name}`);
+    constructor(guid, name) {
+      super(`Property "${name}" not found in ${guid}`);
+    }
+  }
+  class EnumNotFoundError extends FormatError {
+    constructor(guid, name) {
+      super(`Enum option "${name}" not found in ${guid}`);
     }
   }
 
