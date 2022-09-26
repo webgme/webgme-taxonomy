@@ -37,8 +37,8 @@ function initialize(middlewareOpts) {
     next();
   });
 
-  // Use ensureAuthenticated if the routes require authentication. (Can be set explicitly for each route.)
-  router.use("*", ensureAuthenticated);
+  // Skipping authentication here as data is not easy to determine from these routes.
+  // The GUID/display name (and fields) need to be guessed exactly.
 
   router.use("/:projectId/branch/:branch/", async (req, res, next) => {
     try {
