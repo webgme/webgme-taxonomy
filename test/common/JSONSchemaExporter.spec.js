@@ -1,4 +1,4 @@
-describe.only("JSONSchemaExporter", function () {
+describe("JSONSchemaExporter", function () {
   const testFixture = require("../globals");
   const _ = testFixture.requirejs("underscore");
   const Core = testFixture.requirejs("common/core/coreQ");
