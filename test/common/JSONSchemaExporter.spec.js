@@ -68,7 +68,6 @@ describe.only("JSONSchemaExporter", function () {
     const taxonomy = await createTaxonomyFromCsv(core, root, csv);
     const exporter = JSONSchemaExporter.from(core, root);
     const { schema, uiSchema } = await exporter.getSchemas(taxonomy);
-    console.log(JSON.stringify(schema, null, 2));
     const validate = ajv.compile(schema);
     const formatter = await TagFormatter.from(core, taxonomy);
 
@@ -78,7 +77,6 @@ describe.only("JSONSchemaExporter", function () {
     };
   }
 
-  // TODO: create an enum and test the format works
   describe("enum", function () {
     let root;
     beforeEach(async () => {
@@ -99,6 +97,31 @@ describe.only("JSONSchemaExporter", function () {
       };
       const validate = await getValidateFn(core, root, taxCsv);
       assert(await validate(tag));
+    });
+
+    it("should convert string to GUID (and back)", async function () {
+      // FIXME: this really belongs in the formatter tests
+      const taxCsv = `tax,,,
+        ,vocab,,,
+        ,,enumTerm,,
+        ,,,enumProp (enum),
+        ,,,,enumItem1 (text)
+        ,,,,enumItem2 (text)
+        ,,,,enumItem3 (text)`;
+      const humanTag = {
+        Tag: "enumTerm",
+        enumProp: "enumItem1",
+      };
+      const taxonomy = await createTaxonomyFromCsv(core, root, taxCsv);
+      const exporter = JSONSchemaExporter.from(core, root);
+      const { schema, uiSchema } = await exporter.getSchemas(taxonomy);
+      const validate = ajv.compile(schema);
+      const formatter = await TagFormatter.from(core, taxonomy);
+
+      const [guidTag] = await formatter.toGuidFormat([humanTag]);
+      assert(!Object.values(guidTag).includes(humanTag.enumProp));
+      const [humanTag2] = await formatter.toHumanFormat([guidTag]);
+      assert.deepEqual(humanTag, humanTag2);
     });
 
     it("should support compound enums", async function () {

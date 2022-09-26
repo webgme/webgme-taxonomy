@@ -3,8 +3,8 @@
  */
 function factory() {
   class TagFormatter {
-    constructor(nodeNameDict, nodeGuidLookup) {
-      this.nodeNameDict = nodeNameDict;
+    constructor(nodeNameLookup, nodeGuidLookup) {
+      this.nodeNameLookup = nodeNameLookup;
       this.nodeGuidLookup = nodeGuidLookup;
     }
 
@@ -59,15 +59,26 @@ function factory() {
 
     _toHumanFormat(tag) {
       const entries = Object.entries(tag).filter(([k]) => k !== "ID");
+      // TODO: for enums, look up the names
       const humanReadable = Object.fromEntries(
         entries.map(([guid, data]) => {
-          const name = this.nodeNameDict[guid];
+          const name = this.nodeNameLookup.getName(guid);
           assert(name, new TagNotFoundError(guid));
-          const newData = isObject(data) ? this._toHumanFormat(data) : data;
+          let newData;
+          if (isObject(data)) {
+            newData = this._toHumanFormat(data);
+          } else {
+            console.log("lookup", this.nodeNameLookup);
+            const valueName = this.nodeNameLookup.getPropertyValueName(
+              guid,
+              data
+            );
+            newData = valueName || data;
+          }
           return [name, newData];
         })
       );
-      humanReadable.Tag = this.nodeNameDict[tag.ID];
+      humanReadable.Tag = this.nodeNameLookup.getName(tag.ID);
       return humanReadable;
     }
 
@@ -112,8 +123,10 @@ function factory() {
             const children = await core.loadChildren(field);
             const parentGuid = core.getGuid(core.getParent(field));
             const fieldName = core.getAttribute(field, "name");
+            const fieldGuid = core.getGuid(field);
             return children.map((enumOpt) => [
               parentGuid,
+              fieldGuid,
               fieldName,
               core.getAttribute(enumOpt, "name"),
               core.getGuid(enumOpt),
@@ -121,17 +134,44 @@ function factory() {
           })
       );
       const enumItems = {};
-      enumItemEntries.flat().forEach(([parentGuid, fieldName, enumName, enumGuid]) => {
-        enumItems[parentGuid]  = enumItems[parentGuid] || {};
-        enumItems[parentGuid][fieldName]  = enumItems[parentGuid][fieldName] || {};
-        enumItems[parentGuid][fieldName][enumName]  = enumGuid;
-      });
+      const enumNameDict = {};
+      enumItemEntries
+        .flat()
+        .forEach(([parentGuid, fieldGuid, fieldName, enumName, enumGuid]) => {
+          enumItems[parentGuid] = enumItems[parentGuid] || {};
+          enumItems[parentGuid][fieldName] =
+            enumItems[parentGuid][fieldName] || {};
+          enumItems[parentGuid][fieldName][enumName] = enumGuid;
+
+          enumNameDict[fieldGuid] = enumNameDict[fieldGuid] || {};
+          enumNameDict[fieldGuid][enumGuid] = enumName;
+        });
+      const nodeNameLookup = new NodeNameLookupTable(
+        nodeNameDict,
+        enumNameDict
+      );
       const nodeGuidLookup = new NodeGuidLookupTable(
         namesAndGuids,
         Object.fromEntries(propsForGuid),
         enumItems
       );
-      return new TagFormatter(nodeNameDict, nodeGuidLookup);
+      return new TagFormatter(nodeNameLookup, nodeGuidLookup);
+    }
+  }
+
+  class NodeNameLookupTable {
+    constructor(nodeNameDict, propEnumNames) {
+      this.nodeNameDict = nodeNameDict;
+      this.propEnumNames = propEnumNames;
+    }
+
+    getName(nodeGuid) {
+      return this.nodeNameDict[nodeGuid];
+    }
+
+    getPropertyValueName(propertyGuid, propertyValue) {
+      const valueGuidDict = this.propEnumNames[propertyGuid] || {};
+      return valueGuidDict[propertyValue];
     }
   }
 
@@ -167,18 +207,26 @@ function factory() {
 
     getPropertyValueGuid(guid, propertyName, propertyValue) {
       const enumValueDict = getNestedKey(this.enumItems, guid, propertyName);
-      const isEnumValue = !!enumValueDict ;
-      const enumOptName = isObject(propertyValue) ? propertyValue.Tag : propertyValue;
+      const isEnumValue = !!enumValueDict;
+      const enumOptName = isObject(propertyValue)
+        ? propertyValue.Tag
+        : propertyValue;
       const valueGuid = getNestedKey(enumValueDict, enumOptName);
 
-      assert(!isEnumValue || valueGuid, new EnumNotFoundError(propertyName, propertyValue));
-      return valueGuid ;
+      assert(
+        !isEnumValue || valueGuid,
+        new EnumNotFoundError(propertyName, propertyValue)
+      );
+      return valueGuid;
     }
   }
 
   function getNestedKey(dict, ...keys) {
     const value = dict;
-    return keys.reduce((dict, k) => isObject(dict) ? dict[k] : undefined, dict);
+    return keys.reduce(
+      (dict, k) => (isObject(dict) ? dict[k] : undefined),
+      dict
+    );
   }
   function isObject(thing) {
     return thing && typeof thing === "object" && !Array.isArray(thing);
