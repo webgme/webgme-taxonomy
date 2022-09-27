@@ -56,6 +56,17 @@ export function assert(cond: boolean, err: Error) {
   }
 }
 
+export function collect(iter: Iterator) {
+  const result = [];
+  const item = iter.next();
+  while (!item.done) {
+    result.push(item.value);
+    item = iter.next();
+  }
+
+  return result;
+}
+
 // FIXME: we need to combine Artifact.js (in the router directory) w/ a TS
 // definition and share the generated code across the client and server. This
 // method should be available on the ArtifactSet class instead of here

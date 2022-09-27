@@ -1,6 +1,6 @@
 <script lang="ts">
   import TopAppBar, { Row, Section, Title } from "@smui/top-app-bar";
-  import { getLatestArtifact } from "./Utils.ts";
+  import { getLatestArtifact, collect } from "./Utils.ts";
   import Textfield from "@smui/textfield";
   import IconButton from "@smui/icon-button";
   /*import Chip from "@smui/chips";*/
@@ -63,6 +63,7 @@
         (filterTag) => !!taxonomyTags.find((tag) => isTypeOfTag(tag, filterTag))
       );
 
+      // TODO: set the querystring
       if (matchingTags) {
         return searchKeyword
           ? displayName.toLowerCase().includes(searchKeyword.toLowerCase())
@@ -77,6 +78,13 @@
   }
 
   $: onFilterUpdate(searchKeyword, filterTags);
+
+  let params = new QueryParams();
+  function setQueryStringParams(newParams: URLSearchParams) {
+    const params = new URLSearchParams(location.search);
+    collect(newParams.entries()).forEach(([key, value]) => params.set(key, value));
+    window.history.replaceState({}, '', `${location.pathname}?${params.toString()}`);
+  }
 
   function getTag(id) {
     const queue = vocabularies;
