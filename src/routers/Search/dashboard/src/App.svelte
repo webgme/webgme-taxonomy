@@ -1,4 +1,5 @@
 <script lang="ts">
+  type FilterTag = any;
   import TopAppBar, { Row, Section, Title } from "@smui/top-app-bar";
   import { getLatestArtifact, collect } from "./Utils.ts";
   import Textfield from "@smui/textfield";
@@ -52,10 +53,16 @@
     return tagHasAttribute;
   }
 
-  let searchKeyword: string = "";
-  let filterTags = [];
+  const params = new URLSearchParams(location.search);
+  let searchKeyword: string = params.get('searchKeyword') || "";
+  let filterTags: FilterTag[] = (function parseFilterTags(filterTagString: string | null): any[] {
+    if (filterTagString) { 
+      return JSON.parse(filterTagString);
+    }
+    return [];
+  })(params.get('filterTags'));
 
-  function onFilterUpdate(searchKeyword: string, filterTags) {
+  function onFilterUpdate(searchKeyword: string, filterTags: FilterTag[]) {
     const filter = (item) => {
       const { displayName, taxonomyTags } = item;
 
@@ -63,7 +70,11 @@
         (filterTag) => !!taxonomyTags.find((tag) => isTypeOfTag(tag, filterTag))
       );
 
-      // TODO: set the querystring
+      const params = new URLSearchParams();
+      params.set('searchKeyword', searchKeyword);
+      params.set('filterTags', JSON.stringify(filterTags));
+      setQueryStringParams(params);
+
       if (matchingTags) {
         return searchKeyword
           ? displayName.toLowerCase().includes(searchKeyword.toLowerCase())
@@ -79,7 +90,6 @@
 
   $: onFilterUpdate(searchKeyword, filterTags);
 
-  let params = new QueryParams();
   function setQueryStringParams(newParams: URLSearchParams) {
     const params = new URLSearchParams(location.search);
     collect(newParams.entries()).forEach(([key, value]) => params.set(key, value));
