@@ -56,15 +56,11 @@ export function assert(cond: boolean, err: Error) {
   }
 }
 
-export function collect(iter: Iterator) {
-  const result = [];
-  const item = iter.next();
-  while (!item.done) {
-    result.push(item.value);
-    item = iter.next();
-  }
-
-  return result;
+export function omit(obj: object, ...keys: string[]): object {
+  return Object.fromEntries(
+    Object.entries(obj)
+      .filter(([k, v]) => !keys.includes(k))
+  );
 }
 
 // FIXME: we need to combine Artifact.js (in the router directory) w/ a TS
