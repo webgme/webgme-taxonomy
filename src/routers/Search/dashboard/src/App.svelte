@@ -1,7 +1,7 @@
 <script lang="ts">
-  type FilterTag = any;
+  import {FilterTag, LeanTag} from './FilterTag';
   import TopAppBar, { Row, Section, Title } from "@smui/top-app-bar";
-  import { getLatestArtifact, omit } from "./Utils.ts";
+  import { getLatestArtifact, pick, allNodesInTree } from "./Utils.ts";
   import Textfield from "@smui/textfield";
   import IconButton from "@smui/icon-button";
   /*import Chip from "@smui/chips";*/
@@ -41,33 +41,27 @@
   let allItems = [];
   let items = [];
 
-  function isTypeOfTag(tag, typeTag) {
-    // TODO: check if tag is type of typeTag (add inheritance)
-    // TODO: handle inheritance
-    const isMatchingTag = tag.ID === typeTag.id && typeTag.value == tag.value;
-    if (isMatchingTag) {
-      return true;
-    }
-    const tagHasAttribute =
-      tag.hasOwnProperty(typeTag.id) && tag[typeTag.id] === typeTag.value;
-    return tagHasAttribute;
-  }
-
   const params = new URLSearchParams(location.search);
   let searchKeyword: string = params.get('searchKeyword') || "";
-  let filterTags: FilterTag[] = (function parseFilterTags(filterTagString: string | null): any[] {
+  let filterTags: FilterTag[] = [];
+  function parseTagParams(filterTagString: string | null): FilterTags[] {
     if (filterTagString) { 
-      return JSON.parse(filterTagString);
+      const leanTags: LeanTag[] = JSON.parse(filterTagString);
+      const tagDict = Object.fromEntries(
+                         vocabularies.flatMap(v => allNodesInTree(v))
+                         .map(tag => [tag.id, tag])
+      );
+      return leanTags.map(leanTag => FilterTag.fromLean(leanTag, tagDict));
     }
     return [];
-  })(params.get('filterTags'));
+  }
 
   function onFilterUpdate(searchKeyword: string, filterTags: FilterTag[]) {
     const filter = (item) => {
       const { displayName, taxonomyTags } = item;
 
       const matchingTags = filterTags.every(
-        (filterTag) => !!taxonomyTags.find((tag) => isTypeOfTag(tag, filterTag))
+        (filterTag) => !!taxonomyTags.find((tag) => filterTag.isMatch(tag))
       );
 
       if (matchingTags) {
@@ -79,12 +73,12 @@
       return false;
     };
 
-    console.log({ filterTags });
     items = allItems.filter((item) => filter(item));
 
     const params = new URLSearchParams();
     params.set('searchKeyword', searchKeyword);
-    params.set('filterTags', JSON.stringify(filterTags.map(tag => omit(tag, 'children'))));
+    const strippedTags = filterTags.map(tag => tag.lean());
+    params.set('filterTags', JSON.stringify(strippedTags));
     setQueryStringParams(params);
   }
 
@@ -116,7 +110,7 @@
     try {
       const response = await fetch(url);
       const config = await response.json();
-      const { taxonomy } = config;
+      const taxonomy = FilterTag.fromDict(config.taxonomy);
 
       let vocabs = [taxonomy];
       while (vocabs.length === 1) {
@@ -149,6 +143,8 @@
   let isLoading = false;
   async function initialize() {
     vocabularies = await fetchVocabularies();
+    filterTags = 
+  parseTagParams(params.get('filterTags'));
     fetchData();
   }
 
@@ -541,7 +537,7 @@
       <span class="filter-header">Advanced Filters</span>
       <TaxonomyFilter
         trees={vocabularies}
-        on:change={(event) => (filterTags = event.detail.filterTags)}
+        on:change={(event) => (filterTags = event.detail.filterTags.map(FilterTag.fromDict))}
       />
     </Content>
   </Drawer>
