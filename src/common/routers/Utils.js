@@ -69,5 +69,12 @@ class ProjectNotFoundError extends UserError {
   }
 }
 
+class ContentTypeNotFoundError extends UserError {
+  constructor(path) {
+    super(`Content type not found: ${path}`, 404);
+  }
+}
+
 Utils.UserError = UserError;
+Utils.ContentTypeNotFoundError = ContentTypeNotFoundError;
 module.exports = Utils;

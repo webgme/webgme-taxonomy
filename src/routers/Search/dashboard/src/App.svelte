@@ -31,7 +31,9 @@
   import TaxonomyFilter from "./TaxonomyFilter.svelte";
   import type TaxonomyData from "./TaxonomyData.ts";
 
-  export let title: string = "Data Dashboard ";
+  let title: string;
+  let contentType: string = "Data";
+  $: title = `${contentType} Dashboard`;
   let vocabularies: TaxonomyData[] = [];
 
   import TagFormatter, { FormatError } from "./Formatter.ts";
@@ -89,28 +91,29 @@
     }
   }
 
-  async function fetchVocabularies() {
+  async function fetchConfiguration() {
     const chunks = window.location.href.split("/");
     chunks.pop();
     chunks.pop();
     const url = chunks.join("/") + "/configuration.json";
     try {
       const response = await fetch(url);
-      const config = await response.json();
-      const { taxonomy } = config;
-
-      let vocabs = [taxonomy];
-      while (vocabs.length === 1) {
-        vocabs = vocabs[0].children;
-      }
-
-      return vocabs;
+      return await response.json();
     } catch (err) {
       displayError(
         "An error occurred. Please double check the URL and try again."
       );
       throw err;
     }
+  }
+
+  function trimTaxonomy(taxonomy) {
+    let vocabs = [taxonomy];
+    while (vocabs.length === 1) {
+      vocabs = vocabs[0].children;
+    }
+
+    return vocabs;
   }
 
   let snackbar: SnackbarComponentDev;
@@ -129,7 +132,9 @@
 
   let isLoading = false;
   async function initialize() {
-    vocabularies = await fetchVocabularies();
+    const configuration = await fetchConfiguration();
+    vocabularies = trimTaxonomy(configuration.taxonomy);
+    contentType = configuration.name;
     fetchData();
   }
 

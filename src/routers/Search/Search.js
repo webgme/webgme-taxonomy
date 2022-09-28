@@ -18,9 +18,10 @@ var express = require("express"),
   router = express.Router(),
   logger;
 
+const assert = require("assert");
 const RouterUtils = require("../../common/routers/Utils");
 const Utils = require("../../common/Utils");
-const SearchFilterDataExporter = require("../../common/SearchFilterDataExporter");
+const DashboardConfiguration = require("../../common/SearchFilterDataExporter");
 const TagFormatter = require("../../common/TagFormatter");
 const path = require("path");
 const staticPath = path.join(__dirname, "dashboard", "public");
@@ -60,46 +61,61 @@ function initialize(middlewareOpts) {
   // Use ensureAuthenticated if the routes require authentication. (Can be set explicitly for each route.)
   router.use("*", ensureAuthenticated);
 
-  router.use("/:projectId/branch/:branch/static/", express.static(staticPath));
+  router.use(
+    "/:projectId/branch/:branch/:contentTypePath/static/",
+    express.static(staticPath)
+  );
 
   // Perhaps the path should include the node ID, too...
-  router.use("/:projectId/branch/:branch/", async (req, res, next) => {
-    console.log("received request");
-    try {
-      const { projectId, branch } = req.params;
-      console.log("CTX:", projectId, branch);
-      req.webgmeContext = await RouterUtils.getWebGMEContext(
-        middlewareOpts,
-        req,
-        projectId,
-        branch
-      );
-      console.log("CTX received:", req.originalUrl);
-      next();
-    } catch (e) {
-      if (e instanceof RouterUtils.UserError) {
-        res.status(e.statusCode).send(e.message);
-      } else {
-        logger.error(e);
-        res.sendStatus(500);
+  router.use(
+    "/:projectId/branch/:branch/:contentTypePath/",
+    async (req, res, next) => {
+      console.log("received request");
+      try {
+        const { projectId, branch, contentTypePath } = req.params;
+        console.log("CTX:", projectId, branch);
+        req.webgmeContext = await RouterUtils.getWebGMEContext(
+          middlewareOpts,
+          req,
+          projectId,
+          branch
+        );
+        const { core, root } = req.webgmeContext;
+        const contentType = await core.loadByPath(root, contentTypePath);
+        assert(
+          contentType,
+          new RouterUtils.ContentTypeNotFoundError(contentTypePath)
+        );
+        req.webgmeContext.contentType = contentType;
+        console.log("CTX received:", req.originalUrl);
+        next();
+      } catch (e) {
+        if (e instanceof RouterUtils.UserError) {
+          res.status(e.statusCode).send(e.message);
+        } else {
+          logger.error(e);
+          res.sendStatus(500);
+        }
       }
     }
-  });
+  );
 
   router.get(
-    "/:projectId/branch/:branch/configuration.json",
+    "/:projectId/branch/:branch/:contentTypePath/configuration.json",
     async function (req, res) {
-      const { root, core } = req.webgmeContext;
-      const exporter = new SearchFilterDataExporter(core);
-      const node = await Utils.findTaxonomyNode(core, root);
-      const taxonomy = await exporter.toSchema(node);
-      res.json({ taxonomy });
+      const { core, contentType } = req.webgmeContext;
+      // TODO: get the content type node
+      const configuration = await DashboardConfiguration.from(
+        core,
+        contentType
+      );
+      res.json(configuration);
     }
   );
 
   // Accessing and updating data via the storage adapter
   router.get(
-    "/:projectId/branch/:branch/artifacts/",
+    "/:projectId/branch/:branch/:contentTypePath/artifacts/",
     // TODO: add the artifact ID...
     async function (req, res) {
       try {
@@ -117,7 +133,7 @@ function initialize(middlewareOpts) {
   );
 
   router.post(
-    "/:projectId/branch/:branch/artifacts/",
+    "/:projectId/branch/:branch/:contentTypePath/artifacts/",
     // TODO: re-enable tag conversion once the process is created automatically
     //convertTaxonomyTags,
     async function (req, res) {
@@ -134,7 +150,7 @@ function initialize(middlewareOpts) {
   );
 
   router.post(
-    "/:projectId/branch/:branch/artifacts/:parentId/uploadUrl",
+    "/:projectId/branch/:branch/:contentTypePath/artifacts/:parentId/uploadUrl",
     convertTaxonomyTags,
     async function (req, res) {
       const { parentId } = req.params;
@@ -153,7 +169,7 @@ function initialize(middlewareOpts) {
   );
 
   router.get(
-    "/:projectId/branch/:branch/artifacts/:parentId/download",
+    "/:projectId/branch/:branch/:contentTypePath/artifacts/:parentId/download",
     async function (req, res) {
       const { parentId } = req.params;
       // TODO: get the IDs for the specific observations to get

@@ -413,6 +413,7 @@ class PDP {
   }
 
   static from(req, gmeConfig) {
+    // TODO: create the storage adapter from the content type
     // const token = require("./token");
     const token =
       req.cookies[gmeConfig.authentication.azureActiveDirectory.cookieId];
