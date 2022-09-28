@@ -104,7 +104,6 @@ function initialize(middlewareOpts) {
     "/:projectId/branch/:branch/:contentTypePath/configuration.json",
     async function (req, res) {
       const { core, contentType } = req.webgmeContext;
-      // TODO: get the content type node
       const configuration = await DashboardConfiguration.from(
         core,
         contentType
@@ -119,7 +118,6 @@ function initialize(middlewareOpts) {
     // TODO: add the artifact ID...
     async function (req, res) {
       try {
-        // TODO: make the collection/db part of the config
         const { core, contentType } = req.webgmeContext;
         const storage = await StorageAdapter.from(
           core,
