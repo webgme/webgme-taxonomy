@@ -18,14 +18,15 @@ var express = require("express"),
   router = express.Router(),
   logger;
 
+const assert = require("assert");
 const RouterUtils = require("../../common/routers/Utils");
 const Utils = require("../../common/Utils");
-const SearchFilterDataExporter = require("../../common/SearchFilterDataExporter");
+const DashboardConfiguration = require("../../common/SearchFilterDataExporter");
 const TagFormatter = require("../../common/TagFormatter");
 const path = require("path");
 const staticPath = path.join(__dirname, "dashboard", "public");
 
-const PDP = require("./adapters/PDP");
+const StorageAdapter = require("./adapters");
 let mainConfig = null;
 
 /* N.B. gmeAuth, safeStorage and workerManager are not ready to use until the start function is called.
@@ -60,53 +61,71 @@ function initialize(middlewareOpts) {
   // Use ensureAuthenticated if the routes require authentication. (Can be set explicitly for each route.)
   router.use("*", ensureAuthenticated);
 
-  router.use("/:projectId/branch/:branch/static/", express.static(staticPath));
+  router.use(
+    "/:projectId/branch/:branch/:contentTypePath/static/",
+    express.static(staticPath)
+  );
 
   // Perhaps the path should include the node ID, too...
-  router.use("/:projectId/branch/:branch/", async (req, res, next) => {
-    console.log("received request");
-    try {
-      const { projectId, branch } = req.params;
-      console.log("CTX:", projectId, branch);
-      req.webgmeContext = await RouterUtils.getWebGMEContext(
-        middlewareOpts,
-        req,
-        projectId,
-        branch
-      );
-      console.log("CTX received:", req.originalUrl);
-      next();
-    } catch (e) {
-      if (e instanceof RouterUtils.UserError) {
-        res.status(e.statusCode).send(e.message);
-      } else {
-        logger.error(e);
-        res.sendStatus(500);
+  router.use(
+    "/:projectId/branch/:branch/:contentTypePath/",
+    async (req, res, next) => {
+      console.log("received request");
+      try {
+        const { projectId, branch, contentTypePath } = req.params;
+        console.log("CTX:", projectId, branch);
+        req.webgmeContext = await RouterUtils.getWebGMEContext(
+          middlewareOpts,
+          req,
+          projectId,
+          branch
+        );
+        const { core, root } = req.webgmeContext;
+        const contentType = await core.loadByPath(root, contentTypePath);
+        assert(
+          contentType,
+          new RouterUtils.ContentTypeNotFoundError(contentTypePath)
+        );
+        req.webgmeContext.contentType = contentType;
+        console.log("CTX received:", req.originalUrl);
+        next();
+      } catch (e) {
+        if (e instanceof RouterUtils.UserError) {
+          res.status(e.statusCode).send(e.message);
+        } else {
+          logger.error(e);
+          res.sendStatus(500);
+        }
       }
     }
-  });
+  );
 
   router.get(
-    "/:projectId/branch/:branch/configuration.json",
+    "/:projectId/branch/:branch/:contentTypePath/configuration.json",
     async function (req, res) {
-      const { root, core } = req.webgmeContext;
-      const exporter = new SearchFilterDataExporter(core);
-      const node = await Utils.findTaxonomyNode(core, root);
-      const taxonomy = await exporter.toSchema(node);
-      res.json({ taxonomy });
+      const { core, contentType } = req.webgmeContext;
+      const configuration = await DashboardConfiguration.from(
+        core,
+        contentType
+      );
+      res.json(configuration);
     }
   );
 
   // Accessing and updating data via the storage adapter
   router.get(
-    "/:projectId/branch/:branch/artifacts/",
+    "/:projectId/branch/:branch/:contentTypePath/artifacts/",
     // TODO: add the artifact ID...
     async function (req, res) {
       try {
-        // TODO: make the collection/db part of the config
-        const type = await getArtifactType(req);
-        const storage = PDP.from(req, mainConfig);
-        const artifacts = await storage.listArtifacts(type);
+        const { core, contentType } = req.webgmeContext;
+        const storage = await StorageAdapter.from(
+          core,
+          contentType,
+          mainConfig,
+          req
+        );
+        const artifacts = await storage.listArtifacts();
         console.log({ artifacts });
         res.status(200).json(artifacts).end();
       } catch (e) {
@@ -117,32 +136,29 @@ function initialize(middlewareOpts) {
   );
 
   router.post(
-    "/:projectId/branch/:branch/artifacts/",
+    "/:projectId/branch/:branch/:contentTypePath/artifacts/",
     // TODO: re-enable tag conversion once the process is created automatically
     //convertTaxonomyTags,
     async function (req, res) {
-      const type = await getArtifactType(req);
       const { metadata } = req.body;
       metadata.taxonomy = {
         projectId: req.params.projectId,
         branch: req.params.branch,
       };
       const storage = PDP.from(req, mainConfig);
-      const result = await storage.createArtifact(type, metadata);
+      await storage.createArtifact(metadata);
       res.json("Submitted create request!");
     }
   );
 
   router.post(
-    "/:projectId/branch/:branch/artifacts/:parentId/uploadUrl",
+    "/:projectId/branch/:branch/:contentTypePath/artifacts/:parentId/uploadUrl",
     convertTaxonomyTags,
     async function (req, res) {
       const { parentId } = req.params;
       const { lastId } = req.query;
-      const type = await getArtifactType(req);
       const storage = PDP.from(req, mainConfig);
       const fileUploadInfo = await storage.getUploadUrls(
-        type,
         parentId,
         lastId,
         req.body.metadata,
@@ -153,7 +169,7 @@ function initialize(middlewareOpts) {
   );
 
   router.get(
-    "/:projectId/branch/:branch/artifacts/:parentId/download",
+    "/:projectId/branch/:branch/:contentTypePath/artifacts/:parentId/download",
     async function (req, res) {
       const { parentId } = req.params;
       // TODO: get the IDs for the specific observations to get
@@ -217,13 +233,6 @@ function start(callback) {
  */
 function stop(callback) {
   callback();
-}
-
-//TODO: probably we should remove this for the a1 release - noone cares about workflows...
-async function getArtifactType(req) {
-  // const type = req.params.projectId.indexOf("WFTax") !== -1 ? "workflow" : "testdata";
-  // return type;
-  return "testdata";
 }
 
 module.exports = {
