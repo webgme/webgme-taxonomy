@@ -5,7 +5,6 @@
  *    Process -> ArtifactSet
  *    Observation -> Artifact
  */
-const pdpBase = "https://leappremonitiondev.azurewebsites.net/";
 const fetch = require("node-fetch");
 const { zip, COMPRESSION_LEVEL } = require("zip-a-folder");
 const fs = require("fs");
@@ -25,16 +24,18 @@ const logFilePath = process.env.CREATE_LOG_PATH || "./CreateProcesses.jsonl";
 const reqLogger = new CreateRequestLogger(logFilePath);
 
 class PDP {
-  constructor(token) {
-    this.token = token;
+  constructor(baseUrl, token, processType) {
+    this._baseUrl = baseUrl;
+    this._token = token;
+    this.processType = processType;
   }
 
-  async listArtifacts(type) {
+  async listArtifacts() {
     const allProcesses = await this._fetchJson(
       "v2/Process/ListProcesses?permission=read"
     );
     const processList = allProcesses.filter(
-      (element) => element.processType === type
+      (element) => element.processType === this.processType
     );
 
     const processObservations = await Promise.all(
@@ -140,8 +141,8 @@ class PDP {
     return observations;
   }
 
-  async createArtifact(type, metadata) {
-    const observerId = RouterUtils.getObserverIdFromToken(this.token);
+  async createArtifact(metadata) {
+    const observerId = RouterUtils.getObserverIdFromToken(this._token);
     reqLogger.log(observerId, metadata);
 
     // TODO: update this to actually create the processes
@@ -274,7 +275,7 @@ class PDP {
     );
   }
 
-  async getUploadUrls(type, processId, lastId, metadata, files) {
+  async getUploadUrls(processId, lastId, metadata, files) {
     const procInfo = await this._getProcessState(processId);
     const index = procInfo.numObservations;
     const version = 0;
@@ -282,7 +283,7 @@ class PDP {
       processId,
       index,
       version,
-      type,
+      this.processType,
       metadata,
       files
     );
@@ -327,7 +328,7 @@ class PDP {
       isFunction: false,
       processType: type,
       processId,
-      observerId: RouterUtils.getObserverIdFromToken(this.token),
+      observerId: RouterUtils.getObserverIdFromToken(this._token),
       isMeasure: true,
       index: 0,
       version: 0,
@@ -398,9 +399,9 @@ class PDP {
   }
 
   async _fetch(url, opts = {}) {
-    url = pdpBase + url;
+    url = this._baseUrl + url;
     opts.headers = opts.headers || {};
-    opts.headers.Authorization = "Bearer " + this.token;
+    opts.headers.Authorization = "Bearer " + this._token;
     opts.headers.accept = opts.headers.accept || "application/json";
     // TODO: Check response status code
     return await fetch(url, opts);
@@ -412,12 +413,15 @@ class PDP {
     return await response.json();
   }
 
-  static from(req, gmeConfig) {
+  static from(core, storageNode, req, gmeConfig) {
     // TODO: create the storage adapter from the content type
     // const token = require("./token");
     const token =
       req.cookies[gmeConfig.authentication.azureActiveDirectory.cookieId];
-    return new PDP(token);
+
+    const baseUrl = core.getAttribute(storageNode, "URL");
+    const processType = core.getAttribute(storageNode, "processType");
+    return new PDP(baseUrl, token, processType);
   }
 }
 

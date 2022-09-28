@@ -26,7 +26,7 @@ const TagFormatter = require("../../common/TagFormatter");
 const path = require("path");
 const staticPath = path.join(__dirname, "dashboard", "public");
 
-const PDP = require("./adapters/PDP");
+const StorageAdapter = require("./adapters");
 let mainConfig = null;
 
 /* N.B. gmeAuth, safeStorage and workerManager are not ready to use until the start function is called.
@@ -120,9 +120,14 @@ function initialize(middlewareOpts) {
     async function (req, res) {
       try {
         // TODO: make the collection/db part of the config
-        const type = await getArtifactType(req);
-        const storage = PDP.from(req, mainConfig);
-        const artifacts = await storage.listArtifacts(type);
+        const { core, contentType } = req.webgmeContext;
+        const storage = await StorageAdapter.from(
+          core,
+          contentType,
+          mainConfig,
+          req
+        );
+        const artifacts = await storage.listArtifacts();
         console.log({ artifacts });
         res.status(200).json(artifacts).end();
       } catch (e) {
@@ -137,14 +142,13 @@ function initialize(middlewareOpts) {
     // TODO: re-enable tag conversion once the process is created automatically
     //convertTaxonomyTags,
     async function (req, res) {
-      const type = await getArtifactType(req);
       const { metadata } = req.body;
       metadata.taxonomy = {
         projectId: req.params.projectId,
         branch: req.params.branch,
       };
       const storage = PDP.from(req, mainConfig);
-      const result = await storage.createArtifact(type, metadata);
+      await storage.createArtifact(metadata);
       res.json("Submitted create request!");
     }
   );
@@ -155,10 +159,8 @@ function initialize(middlewareOpts) {
     async function (req, res) {
       const { parentId } = req.params;
       const { lastId } = req.query;
-      const type = await getArtifactType(req);
       const storage = PDP.from(req, mainConfig);
       const fileUploadInfo = await storage.getUploadUrls(
-        type,
         parentId,
         lastId,
         req.body.metadata,
@@ -233,13 +235,6 @@ function start(callback) {
  */
 function stop(callback) {
   callback();
-}
-
-//TODO: probably we should remove this for the a1 release - noone cares about workflows...
-async function getArtifactType(req) {
-  // const type = req.params.projectId.indexOf("WFTax") !== -1 ? "workflow" : "testdata";
-  // return type;
-  return "testdata";
 }
 
 module.exports = {
