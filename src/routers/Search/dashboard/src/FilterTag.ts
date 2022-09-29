@@ -72,11 +72,6 @@ export class FilterTag {
     return new LeanTag(this.id, this.value);
   }
 
-  static fromLean(tag: LeanTag, tagDict): FilterTag{
-    const tagDef = tagDict[tag.id];
-    return new FilterTag(tag.id, tagDef.name, tagDef.type, tag.value, tagDef.children);
-  }
-
   static fromDict(infoDict: Required<FilterTag>): FilterTag {
     const children = infoDict.children.map(FilterTag.fromDict);
     return new FilterTag(infoDict.id, infoDict.name, infoDict.type, infoDict.value, children);
