@@ -44,7 +44,7 @@
   let items = [];
 
   const params = new URLSearchParams(location.search);
-  let searchKeyword: string = params.get("searchKeyword") || "";
+  let searchQuery: string = params.get("searchQuery") || "";
   let filterTags: FilterTag[] = [];
   function parseTagParams(filterTagString: string | null): FilterTags[] {
     if (filterTagString) {
@@ -73,7 +73,7 @@
     return [];
   }
 
-  function onFilterUpdate(searchKeyword: string, filterTags: FilterTag[]) {
+  function onFilterUpdate(searchQuery: string, filterTags: FilterTag[]) {
     const filter = (item) => {
       const { displayName, taxonomyTags } = item;
 
@@ -82,8 +82,8 @@
       );
 
       if (matchingTags) {
-        return searchKeyword
-          ? displayName.toLowerCase().includes(searchKeyword.toLowerCase())
+        return searchQuery
+          ? displayName.toLowerCase().includes(searchQuery.toLowerCase())
           : true;
       }
 
@@ -93,18 +93,17 @@
     items = allItems.filter((item) => filter(item));
 
     const params = new URLSearchParams();
-    params.set("searchKeyword", searchKeyword);
+    params.set("searchQuery", searchQuery);
     const strippedTags = filterTags.map((tag) => tag.lean());
     params.set("filterTags", JSON.stringify(strippedTags));
     setQueryStringParams(params);
   }
 
-  $: onFilterUpdate(searchKeyword, filterTags);
+  $: onFilterUpdate(searchQuery, filterTags);
 
   function setQueryStringParams(newParams: URLSearchParams) {
     const params = new URLSearchParams(location.search);
     [...newParams.entries()].forEach(([key, value]) => params.set(key, value));
-    console.log("setting query string to", params.toString());
     window.history.replaceState(
       {},
       "",
@@ -189,7 +188,7 @@
     }
     isLoading = false;
     console.log({ allItems });
-    onFilterUpdate(searchKeyword, filterTags);
+    onFilterUpdate(searchQuery, filterTags);
   }
 
   class EmbeddedEvent {
@@ -557,7 +556,7 @@
 <div class="drawer-container">
   <Drawer style="width: 360px">
     <Content>
-      <Textfield label="Search..." bind:value={searchKeyword} />
+      <Textfield label="Search..." bind:value={searchQuery} />
       <span class="filter-header">Advanced Filters</span>
       <TaxonomyFilter
         trees={vocabularies}
