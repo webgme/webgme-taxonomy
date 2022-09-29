@@ -4,8 +4,23 @@ const jwt = require("jsonwebtoken");
 
 const Utils = {
   async getWebGMEContext(middlewareOpts, req, projectId, branch = "master") {
-    const { safeStorage, getUserId, gmeConfig, logger } = middlewareOpts;
+    const { getUserId } = middlewareOpts;
     const userId = getUserId(req);
+    return await Utils.getWebGMEContextUnsafe(
+      middlewareOpts,
+      userId,
+      projectId,
+      branch
+    );
+  },
+  // This is unsafe since it bypasses permissions
+  async getWebGMEContextUnsafe(
+    middlewareOpts,
+    userId,
+    projectId,
+    branch = "master"
+  ) {
+    const { safeStorage, gmeConfig, logger } = middlewareOpts;
 
     console.log("CTX-user:", userId);
     console.log("CTX-project:", projectId);
