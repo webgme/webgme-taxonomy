@@ -273,7 +273,7 @@
 
   async function onAppendClicked() {
     if (!appendFiles) {
-      return displayError("Dataset file required.");
+      return displayError(`${contentType} file required.`);
     }
 
     const metadata = appendMetadata;
@@ -284,7 +284,7 @@
     fetchData();
   }
 
-  ////// Dataset Upload //////
+  ////// Artifact Upload //////
   const queryDict = parseQueryString(window.location.href);
   let creatingArtifact = queryDict.action === "create";
   let artifactFiles = [];
@@ -447,7 +447,7 @@
   >
   <DialogContent id="content">
     <Textfield label="Name" bind:value={appendName} />
-    <p>Dataset files:</p>
+    <p>{contentType} file(s):</p>
     <ul>
       {#each appendFiles as file}
         <li>{file.name}</li>
@@ -492,7 +492,7 @@
     <Textfield label="Name" bind:value={artifactName} />
     <!-- TODO: create process -->
     <!-- TODO: re-enable this when we can automatically create processes
-    <p>Dataset files:</p>
+    <p>{contentType} file(s):</p>
     <ul>
       {#each artifactFiles as file}
         <li>{file.name}</li>

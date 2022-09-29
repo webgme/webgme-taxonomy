@@ -19983,7 +19983,7 @@ var app = (function () {
   function Ic(e) {
     let t,
       n,
-      i = (e[16] && e[16].displayName) + "";
+      i = (e[17] && e[17].displayName) + "";
     return {
       c() {
         (t = C("Download ")), (n = C(i));
@@ -19992,8 +19992,8 @@ var app = (function () {
         v(e, t, i), v(e, n, i);
       },
       p(e, t) {
-        65536 & t[0] &&
-          i !== (i = (e[16] && e[16].displayName) + "") &&
+        131072 & t[0] &&
+          i !== (i = (e[17] && e[17].displayName) + "") &&
           L(n, i);
       },
       d(e) {
@@ -20008,7 +20008,7 @@ var app = (function () {
     }
     let s = { value: "all" };
     return (
-      void 0 !== e[17] && (s.group = e[17]),
+      void 0 !== e[18] && (s.group = e[18]),
       (t = new Ao({ props: s })),
       z.push(() => pe(t, "group", a)),
       {
@@ -20021,8 +20021,8 @@ var app = (function () {
         p(e, i) {
           const a = {};
           !n &&
-            131072 & i[0] &&
-            ((n = !0), (a.group = e[17]), Q(() => (n = !1))),
+            262144 & i[0] &&
+            ((n = !0), (a.group = e[18]), Q(() => (n = !1))),
             t.$set(a);
         },
         i(e) {
@@ -20069,7 +20069,7 @@ var app = (function () {
         },
         p(e, n) {
           const a = {};
-          (131072 & n[0]) | (8192 & n[2]) && (a.$$scope = { dirty: n, ctx: e }),
+          (262144 & n[0]) | (8192 & n[2]) && (a.$$scope = { dirty: n, ctx: e }),
             t.$set(a);
           const s = {};
           8192 & n[2] && (s.$$scope = { dirty: n, ctx: e }), i.$set(s);
@@ -20093,7 +20093,7 @@ var app = (function () {
     }
     let s = { value: "latest" };
     return (
-      void 0 !== e[17] && (s.group = e[17]),
+      void 0 !== e[18] && (s.group = e[18]),
       (t = new Ao({ props: s })),
       z.push(() => pe(t, "group", a)),
       {
@@ -20106,8 +20106,8 @@ var app = (function () {
         p(e, i) {
           const a = {};
           !n &&
-            131072 & i[0] &&
-            ((n = !0), (a.group = e[17]), Q(() => (n = !1))),
+            262144 & i[0] &&
+            ((n = !0), (a.group = e[18]), Q(() => (n = !1))),
             t.$set(a);
         },
         i(e) {
@@ -20154,7 +20154,7 @@ var app = (function () {
         },
         p(e, n) {
           const a = {};
-          (131072 & n[0]) | (8192 & n[2]) && (a.$$scope = { dirty: n, ctx: e }),
+          (262144 & n[0]) | (8192 & n[2]) && (a.$$scope = { dirty: n, ctx: e }),
             t.$set(a);
           const s = {};
           8192 & n[2] && (s.$$scope = { dirty: n, ctx: e }), i.$set(s);
@@ -20189,10 +20189,10 @@ var app = (function () {
         },
         p(e, n) {
           const a = {};
-          (131072 & n[0]) | (8192 & n[2]) && (a.$$scope = { dirty: n, ctx: e }),
+          (262144 & n[0]) | (8192 & n[2]) && (a.$$scope = { dirty: n, ctx: e }),
             t.$set(a);
           const s = {};
-          (131072 & n[0]) | (8192 & n[2]) && (s.$$scope = { dirty: n, ctx: e }),
+          (262144 & n[0]) | (8192 & n[2]) && (s.$$scope = { dirty: n, ctx: e }),
             i.$set(s);
         },
         i(e) {
@@ -20230,7 +20230,7 @@ var app = (function () {
         },
         p(e, t) {
           const n = {};
-          (131072 & t[0]) | (8192 & t[2]) && (n.$$scope = { dirty: t, ctx: e }),
+          (262144 & t[0]) | (8192 & t[2]) && (n.$$scope = { dirty: t, ctx: e }),
             i.$set(n);
         },
         i(e) {
@@ -20400,10 +20400,10 @@ var app = (function () {
         },
         p(e, n) {
           const a = {};
-          (65536 & n[0]) | (8192 & n[2]) && (a.$$scope = { dirty: n, ctx: e }),
+          (131072 & n[0]) | (8192 & n[2]) && (a.$$scope = { dirty: n, ctx: e }),
             t.$set(a);
           const r = {};
-          (131072 & n[0]) | (8192 & n[2]) && (r.$$scope = { dirty: n, ctx: e }),
+          (262144 & n[0]) | (8192 & n[2]) && (r.$$scope = { dirty: n, ctx: e }),
             i.$set(r);
           const o = {};
           8192 & n[2] && (o.$$scope = { dirty: n, ctx: e }), s.$set(o);
@@ -20430,7 +20430,7 @@ var app = (function () {
   function Nc(e) {
     let t,
       n,
-      i = (e[10] && e[10].displayName) + "";
+      i = (e[11] && e[11].displayName) + "";
     return {
       c() {
         (t = C("Append data to ")), (n = C(i));
@@ -20439,7 +20439,7 @@ var app = (function () {
         v(e, t, i), v(e, n, i);
       },
       p(e, t) {
-        1024 & t[0] && i !== (i = (e[10] && e[10].displayName) + "") && L(n, i);
+        2048 & t[0] && i !== (i = (e[11] && e[11].displayName) + "") && L(n, i);
       },
       d(e) {
         e && b(t), e && b(n);
@@ -20458,7 +20458,7 @@ var app = (function () {
         v(e, t, i), I(t, n);
       },
       p(e, t) {
-        512 & t[0] && i !== (i = e[72].name + "") && L(n, i);
+        1024 & t[0] && i !== (i = e[72].name + "") && L(n, i);
       },
       d(e) {
         e && b(t);
@@ -20522,149 +20522,159 @@ var app = (function () {
       S,
       O,
       w,
-      N = (e[11] ? e[11].taxonomyTags.map(Iu).join(", ") : "") + "";
-    function M(t) {
+      N,
+      M,
+      R = (e[12] ? e[12].taxonomyTags.map(Iu).join(", ") : "") + "";
+    function F(t) {
       e[31](t);
     }
-    let R = { label: "Name" };
-    void 0 !== e[12] && (R.value = e[12]),
-      (t = new wa({ props: R })),
-      z.push(() => pe(t, "value", M));
-    let F = e[9],
-      k = [];
-    for (let t = 0; t < F.length; t += 1) k[t] = Mc($c(e, F, t));
+    let k = { label: "Name" };
+    void 0 !== e[13] && (k.value = e[13]),
+      (t = new wa({ props: k })),
+      z.push(() => pe(t, "value", F));
+    let U = e[10],
+      P = [];
+    for (let t = 0; t < U.length; t += 1) P[t] = Mc($c(e, U, t));
     return (
-      (l = new $l({
+      (u = new $l({
         props: {
           multiple: !0,
           $$slots: { default: [Rc] },
           $$scope: { ctx: e },
         },
       })),
-      l.$on("drop", e[20]),
-      (A = new $l({
+      u.$on("drop", e[21]),
+      (S = new $l({
         props: {
           accept: ".json",
           $$slots: { default: [Fc] },
           $$scope: { ctx: e },
         },
       })),
-      A.$on("drop", e[21]),
+      S.$on("drop", e[22]),
       {
         c() {
           fe(t.$$.fragment),
             (i = _()),
             (a = E("p")),
-            (a.textContent = "Dataset files:"),
-            (s = _()),
-            (r = E("ul"));
-          for (let e = 0; e < k.length; e += 1) k[e].c();
-          (o = _()),
-            fe(l.$$.fragment),
-            (c = _()),
-            (u = E("p")),
-            (d = C("Taxonomy Terms ")),
-            (p = E("span")),
-            (p.textContent = "(optional)"),
-            (f = C(":")),
-            (m = E("br")),
-            (h = _()),
-            (g = C(N)),
+            (s = C(e[0])),
+            (r = C(" file(s):")),
+            (o = _()),
+            (l = E("ul"));
+          for (let e = 0; e < P.length; e += 1) P[e].c();
+          (c = _()),
+            fe(u.$$.fragment),
+            (d = _()),
+            (p = E("p")),
+            (f = C("Taxonomy Terms ")),
+            (m = E("span")),
+            (m.textContent = "(optional)"),
+            (h = C(":")),
+            (g = E("br")),
             ($ = _()),
-            fe(A.$$.fragment),
+            (A = C(R)),
             (x = _()),
-            (S = E("a")),
-            (O = C("Click to select tags for your dataset.")),
+            fe(S.$$.fragment),
+            (O = _()),
+            (w = E("a")),
+            (N = C("Click to select tags for your dataset.")),
             T(a, "class", "svelte-1l4jzu8"),
-            T(r, "class", "svelte-1l4jzu8"),
-            D(p, "font-style", "italic"),
-            T(p, "class", "svelte-1l4jzu8"),
+            T(l, "class", "svelte-1l4jzu8"),
+            D(m, "font-style", "italic"),
             T(m, "class", "svelte-1l4jzu8"),
-            T(u, "class", "svelte-1l4jzu8"),
-            T(S, "target", "_blank"),
+            T(g, "class", "svelte-1l4jzu8"),
+            T(p, "class", "svelte-1l4jzu8"),
+            T(w, "target", "_blank"),
             T(
-              S,
+              w,
               "href",
               window.location.href.replace("/Search/", "/TagCreator/")
             ),
-            T(S, "class", "svelte-1l4jzu8");
+            T(w, "class", "svelte-1l4jzu8");
         },
         m(e, n) {
-          me(t, e, n), v(e, i, n), v(e, a, n), v(e, s, n), v(e, r, n);
-          for (let e = 0; e < k.length; e += 1) k[e].m(r, null);
-          v(e, o, n),
-            me(l, e, n),
-            v(e, c, n),
-            v(e, u, n),
-            I(u, d),
-            I(u, p),
-            I(u, f),
-            I(u, m),
-            I(u, h),
-            I(u, g),
-            v(e, $, n),
-            me(A, e, n),
+          me(t, e, n),
+            v(e, i, n),
+            v(e, a, n),
+            I(a, s),
+            I(a, r),
+            v(e, o, n),
+            v(e, l, n);
+          for (let e = 0; e < P.length; e += 1) P[e].m(l, null);
+          v(e, c, n),
+            me(u, e, n),
+            v(e, d, n),
+            v(e, p, n),
+            I(p, f),
+            I(p, m),
+            I(p, h),
+            I(p, g),
+            I(p, $),
+            I(p, A),
             v(e, x, n),
-            v(e, S, n),
-            I(S, O),
-            (w = !0);
+            me(S, e, n),
+            v(e, O, n),
+            v(e, w, n),
+            I(w, N),
+            (M = !0);
         },
         p(e, i) {
           const a = {};
           if (
             (!n &&
-              4096 & i[0] &&
-              ((n = !0), (a.value = e[12]), Q(() => (n = !1))),
+              8192 & i[0] &&
+              ((n = !0), (a.value = e[13]), Q(() => (n = !1))),
             t.$set(a),
-            512 & i[0])
+            (!M || 1 & i[0]) && L(s, e[0]),
+            1024 & i[0])
           ) {
             let t;
-            for (F = e[9], t = 0; t < F.length; t += 1) {
-              const n = $c(e, F, t);
-              k[t] ? k[t].p(n, i) : ((k[t] = Mc(n)), k[t].c(), k[t].m(r, null));
+            for (U = e[10], t = 0; t < U.length; t += 1) {
+              const n = $c(e, U, t);
+              P[t] ? P[t].p(n, i) : ((P[t] = Mc(n)), P[t].c(), P[t].m(l, null));
             }
-            for (; t < k.length; t += 1) k[t].d(1);
-            k.length = F.length;
+            for (; t < P.length; t += 1) P[t].d(1);
+            P.length = U.length;
           }
-          const s = {};
-          8192 & i[2] && (s.$$scope = { dirty: i, ctx: e }),
-            l.$set(s),
-            (!w || 2048 & i[0]) &&
-              N !==
-                (N =
-                  (e[11] ? e[11].taxonomyTags.map(Iu).join(", ") : "") + "") &&
-              L(g, N);
+          const r = {};
+          8192 & i[2] && (r.$$scope = { dirty: i, ctx: e }),
+            u.$set(r),
+            (!M || 4096 & i[0]) &&
+              R !==
+                (R =
+                  (e[12] ? e[12].taxonomyTags.map(Iu).join(", ") : "") + "") &&
+              L(A, R);
           const o = {};
-          8192 & i[2] && (o.$$scope = { dirty: i, ctx: e }), A.$set(o);
+          8192 & i[2] && (o.$$scope = { dirty: i, ctx: e }), S.$set(o);
         },
         i(e) {
-          w ||
+          M ||
             (re(t.$$.fragment, e),
-            re(l.$$.fragment, e),
-            re(A.$$.fragment, e),
-            (w = !0));
+            re(u.$$.fragment, e),
+            re(S.$$.fragment, e),
+            (M = !0));
         },
         o(e) {
           oe(t.$$.fragment, e),
-            oe(l.$$.fragment, e),
-            oe(A.$$.fragment, e),
-            (w = !1);
+            oe(u.$$.fragment, e),
+            oe(S.$$.fragment, e),
+            (M = !1);
         },
         d(e) {
           he(t, e),
             e && b(i),
             e && b(a),
-            e && b(s),
-            e && b(r),
-            y(k, e),
             e && b(o),
-            he(l, e),
+            e && b(l),
+            y(P, e),
             e && b(c),
-            e && b(u),
-            e && b($),
-            he(A, e),
+            he(u, e),
+            e && b(d),
+            e && b(p),
             e && b(x),
-            e && b(S);
+            he(S, e),
+            e && b(O),
+            e && b(w);
         },
       }
     );
@@ -20824,10 +20834,10 @@ var app = (function () {
         },
         p(e, n) {
           const a = {};
-          (1024 & n[0]) | (8192 & n[2]) && (a.$$scope = { dirty: n, ctx: e }),
+          (2048 & n[0]) | (8192 & n[2]) && (a.$$scope = { dirty: n, ctx: e }),
             t.$set(a);
           const r = {};
-          (6656 & n[0]) | (8192 & n[2]) && (r.$$scope = { dirty: n, ctx: e }),
+          (13313 & n[0]) | (8192 & n[2]) && (r.$$scope = { dirty: n, ctx: e }),
             i.$set(r);
           const o = {};
           8192 & n[2] && (o.$$scope = { dirty: n, ctx: e }), s.$set(o);
@@ -20872,7 +20882,7 @@ var app = (function () {
     }
     let s = { label: "Name" };
     return (
-      void 0 !== e[14] && (s.value = e[14]),
+      void 0 !== e[15] && (s.value = e[15]),
       (t = new wa({ props: s })),
       z.push(() => pe(t, "value", a)),
       {
@@ -20885,8 +20895,8 @@ var app = (function () {
         p(e, i) {
           const a = {};
           !n &&
-            16384 & i[0] &&
-            ((n = !0), (a.value = e[14]), Q(() => (n = !1))),
+            32768 & i[0] &&
+            ((n = !0), (a.value = e[15]), Q(() => (n = !1))),
             t.$set(a);
         },
         i(e) {
@@ -21058,7 +21068,7 @@ var app = (function () {
           const a = {};
           8192 & n[2] && (a.$$scope = { dirty: n, ctx: e }), t.$set(a);
           const r = {};
-          (16384 & n[0]) | (8192 & n[2]) && (r.$$scope = { dirty: n, ctx: e }),
+          (32768 & n[0]) | (8192 & n[2]) && (r.$$scope = { dirty: n, ctx: e }),
             i.$set(r);
           const o = {};
           8192 & n[2] && (o.$$scope = { dirty: n, ctx: e }), s.$set(o);
@@ -21086,13 +21096,13 @@ var app = (function () {
     let t;
     return {
       c() {
-        t = C(e[5]);
+        t = C(e[6]);
       },
       m(e, n) {
         v(e, t, n);
       },
       p(e, n) {
-        32 & n[0] && L(t, e[5]);
+        64 & n[0] && L(t, e[6]);
       },
       d(e) {
         e && b(t);
@@ -21114,7 +21124,7 @@ var app = (function () {
         },
         p(e, n) {
           const i = {};
-          (32 & n[0]) | (8192 & n[2]) && (i.$$scope = { dirty: n, ctx: e }),
+          (64 & n[0]) | (8192 & n[2]) && (i.$$scope = { dirty: n, ctx: e }),
             t.$set(i);
         },
         i(e) {
@@ -21202,10 +21212,10 @@ var app = (function () {
         },
         p(e, n) {
           const a = {};
-          (32 & n[0]) | (8192 & n[2]) && (a.$$scope = { dirty: n, ctx: e }),
+          (64 & n[0]) | (8192 & n[2]) && (a.$$scope = { dirty: n, ctx: e }),
             t.$set(a);
           const s = {};
-          (8192 & n[0]) | (8192 & n[2]) && (s.$$scope = { dirty: n, ctx: e }),
+          (16384 & n[0]) | (8192 & n[2]) && (s.$$scope = { dirty: n, ctx: e }),
             i.$set(s);
         },
         i(e) {
@@ -21235,7 +21245,7 @@ var app = (function () {
         },
         p(e, n) {
           const i = {};
-          (8224 & n[0]) | (8192 & n[2]) && (i.$$scope = { dirty: n, ctx: e }),
+          (16448 & n[0]) | (8192 & n[2]) && (i.$$scope = { dirty: n, ctx: e }),
             t.$set(i);
         },
         i(e) {
@@ -21358,10 +21368,10 @@ var app = (function () {
     }
     let c = { label: "Search..." };
     return (
-      void 0 !== e[1] && (c.value = e[1]),
+      void 0 !== e[2] && (c.value = e[2]),
       (t = new wa({ props: c })),
       z.push(() => pe(t, "value", l)),
-      (r = new rc({ props: { trees: e[6] } })),
+      (r = new rc({ props: { trees: e[7] } })),
       r.$on("change", e[40]),
       {
         c() {
@@ -21383,10 +21393,10 @@ var app = (function () {
         },
         p(e, i) {
           const a = {};
-          !n && 2 & i[0] && ((n = !0), (a.value = e[1]), Q(() => (n = !1))),
+          !n && 4 & i[0] && ((n = !0), (a.value = e[2]), Q(() => (n = !1))),
             t.$set(a);
           const s = {};
-          64 & i[0] && (s.trees = e[6]), r.$set(s);
+          128 & i[0] && (s.trees = e[7]), r.$set(s);
         },
         i(e) {
           o || (re(t.$$.fragment, e), re(r.$$.fragment, e), (o = !0));
@@ -21415,7 +21425,7 @@ var app = (function () {
         },
         p(e, n) {
           const i = {};
-          (70 & n[0]) | (8192 & n[2]) && (i.$$scope = { dirty: n, ctx: e }),
+          (140 & n[0]) | (8192 & n[2]) && (i.$$scope = { dirty: n, ctx: e }),
             t.$set(i);
         },
         i(e) {
@@ -21441,7 +21451,7 @@ var app = (function () {
         v(e, t, n);
       },
       p(e, i) {
-        1 & i[0] && n !== (n = e[66].displayName + "") && L(t, n);
+        2 & i[0] && n !== (n = e[66].displayName + "") && L(t, n);
       },
       d(e) {
         e && b(t);
@@ -21469,10 +21479,10 @@ var app = (function () {
           r ||
             ((o = [
               S(t, "click", function () {
-                s(e[25](e[66])) && e[25](e[66]).apply(this, arguments);
+                s(e[26](e[66])) && e[26](e[66]).apply(this, arguments);
               }),
               S(i, "click", function () {
-                s(e[19](e[66])) && e[19](e[66]).apply(this, arguments);
+                s(e[20](e[66])) && e[20](e[66]).apply(this, arguments);
               }),
             ]),
             (r = !0));
@@ -21503,10 +21513,10 @@ var app = (function () {
         },
         p(e, n) {
           const a = {};
-          (1 & n[0]) | (8192 & n[2]) && (a.$$scope = { dirty: n, ctx: e }),
+          (2 & n[0]) | (8192 & n[2]) && (a.$$scope = { dirty: n, ctx: e }),
             t.$set(a);
           const s = {};
-          (1 & n[0]) | (8192 & n[2]) && (s.$$scope = { dirty: n, ctx: e }),
+          (2 & n[0]) | (8192 & n[2]) && (s.$$scope = { dirty: n, ctx: e }),
             i.$set(s);
         },
         i(e) {
@@ -21536,7 +21546,7 @@ var app = (function () {
         },
         p(e, n) {
           const i = {};
-          (1 & n[0]) | (8192 & n[2]) && (i.$$scope = { dirty: n, ctx: e }),
+          (2 & n[0]) | (8192 & n[2]) && (i.$$scope = { dirty: n, ctx: e }),
             t.$set(i);
         },
         i(e) {
@@ -21572,7 +21582,7 @@ var app = (function () {
         p(e, n) {
           t = e;
           const a = {};
-          (1 & n[0]) | (8192 & n[2]) && (a.$$scope = { dirty: n, ctx: t }),
+          (2 & n[0]) | (8192 & n[2]) && (a.$$scope = { dirty: n, ctx: t }),
             i.$set(a);
         },
         i(e) {
@@ -21592,7 +21602,7 @@ var app = (function () {
       n,
       i = [],
       a = new Map(),
-      s = e[0];
+      s = e[1];
     const r = (e) => e[66].hash;
     for (let t = 0; t < s.length; t += 1) {
       let n = gc(e, s, t),
@@ -21609,8 +21619,8 @@ var app = (function () {
         v(e, t, a), (n = !0);
       },
       p(e, n) {
-        34340865 & n[0] &&
-          ((s = e[0]),
+        68681730 & n[0] &&
+          ((s = e[1]),
           ae(),
           (i = (function (e, t, n, i, a, s, r, o, l, c, u, d) {
             let p = e.length,
@@ -21696,7 +21706,7 @@ var app = (function () {
         },
         p(e, t) {
           const i = {};
-          (1 & t[0]) | (8192 & t[2]) && (i.$$scope = { dirty: t, ctx: e }),
+          (2 & t[0]) | (8192 & t[2]) && (i.$$scope = { dirty: t, ctx: e }),
             n.$set(i);
         },
         i(e) {
@@ -21744,7 +21754,7 @@ var app = (function () {
     function F(t) {
       e[30](t);
     }
-    hc.title = t = e[5];
+    hc.title = t = e[6];
     let k = {
       "aria-labelledby": "title",
       "aria-describedby": "content",
@@ -21754,7 +21764,7 @@ var app = (function () {
     function U(t) {
       e[33](t);
     }
-    void 0 !== e[15] && (k.open = e[15]),
+    void 0 !== e[16] && (k.open = e[16]),
       (i = new po({ props: k })),
       z.push(() => pe(i, "open", F));
     let P = {
@@ -21766,7 +21776,7 @@ var app = (function () {
     function H(t) {
       e[36](t);
     }
-    void 0 !== e[8] && (P.open = e[8]),
+    void 0 !== e[9] && (P.open = e[9]),
       (r = new po({ props: P })),
       z.push(() => pe(r, "open", U));
     let B = {
@@ -21775,7 +21785,7 @@ var app = (function () {
       $$slots: { default: [Qc] },
       $$scope: { ctx: e },
     };
-    void 0 !== e[13] && (B.open = e[13]),
+    void 0 !== e[14] && (B.open = e[14]),
       (c = new po({ props: B })),
       z.push(() => pe(c, "open", H)),
       (p = new rt({
@@ -21785,9 +21795,9 @@ var app = (function () {
           $$scope: { ctx: e },
         },
       }));
-    let V = e[7] && au(),
+    let V = e[8] && au(),
       j = {
-        labelText: e[4],
+        labelText: e[5],
         timeoutMs: -1,
         $$slots: { default: [ou] },
         $$scope: { ctx: e },
@@ -21883,29 +21893,29 @@ var app = (function () {
             (R = !0);
         },
         p(e, n) {
-          (!R || 32 & n[0]) && t !== (t = e[5]) && (hc.title = t);
+          (!R || 64 & n[0]) && t !== (t = e[6]) && (hc.title = t);
           const s = {};
-          (196608 & n[0]) | (8192 & n[2]) && (s.$$scope = { dirty: n, ctx: e }),
+          (393216 & n[0]) | (8192 & n[2]) && (s.$$scope = { dirty: n, ctx: e }),
             !a &&
-              32768 & n[0] &&
-              ((a = !0), (s.open = e[15]), Q(() => (a = !1))),
+              65536 & n[0] &&
+              ((a = !0), (s.open = e[16]), Q(() => (a = !1))),
             i.$set(s);
           const l = {};
-          (7680 & n[0]) | (8192 & n[2]) && (l.$$scope = { dirty: n, ctx: e }),
-            !o && 256 & n[0] && ((o = !0), (l.open = e[8]), Q(() => (o = !1))),
+          (15361 & n[0]) | (8192 & n[2]) && (l.$$scope = { dirty: n, ctx: e }),
+            !o && 512 & n[0] && ((o = !0), (l.open = e[9]), Q(() => (o = !1))),
             r.$set(l);
           const d = {};
-          (16384 & n[0]) | (8192 & n[2]) && (d.$$scope = { dirty: n, ctx: e }),
+          (32768 & n[0]) | (8192 & n[2]) && (d.$$scope = { dirty: n, ctx: e }),
             !u &&
-              8192 & n[0] &&
-              ((u = !0), (d.open = e[13]), Q(() => (u = !1))),
+              16384 & n[0] &&
+              ((u = !0), (d.open = e[14]), Q(() => (u = !1))),
             c.$set(d);
           const f = {};
-          (8224 & n[0]) | (8192 & n[2]) && (f.$$scope = { dirty: n, ctx: e }),
+          (16448 & n[0]) | (8192 & n[2]) && (f.$$scope = { dirty: n, ctx: e }),
             p.$set(f),
-            e[7]
+            e[8]
               ? V
-                ? 128 & n[0] && re(V, 1)
+                ? 256 & n[0] && re(V, 1)
                 : ((V = au()), V.c(), re(V, 1), V.m(m.parentNode, m))
               : V &&
                 (ae(),
@@ -21914,14 +21924,14 @@ var app = (function () {
                 }),
                 se());
           const g = {};
-          16 & n[0] && (g.labelText = e[4]),
+          32 & n[0] && (g.labelText = e[5]),
             8192 & n[2] && (g.$$scope = { dirty: n, ctx: e }),
             h.$set(g);
           const $ = {};
-          (70 & n[0]) | (8192 & n[2]) && ($.$$scope = { dirty: n, ctx: e }),
+          (140 & n[0]) | (8192 & n[2]) && ($.$$scope = { dirty: n, ctx: e }),
             y.$set($);
           const I = {};
-          (1 & n[0]) | (8192 & n[2]) && (I.$$scope = { dirty: n, ctx: e }),
+          (2 & n[0]) | (8192 & n[2]) && (I.$$scope = { dirty: n, ctx: e }),
             C.$set(I);
         },
         i(e) {
@@ -21992,7 +22002,7 @@ var app = (function () {
       f = [];
     function m(e, t) {
       n(
-        0,
+        1,
         (l = o.filter((n) =>
           ((n) => {
             const { displayName: i, taxonomyTags: a } = n;
@@ -22018,14 +22028,14 @@ var app = (function () {
         })(i);
     }
     function h(e) {
-      n(4, (d = e));
+      n(5, (d = e));
     }
     function g(e) {
-      n(4, (d = e));
+      n(5, (d = e));
     }
     let $ = !1;
     async function I() {
-      n(7, ($ = !0));
+      n(8, ($ = !0));
       try {
         o = await r.listArtifacts();
       } catch (e) {
@@ -22039,7 +22049,7 @@ var app = (function () {
         )
           throw e;
       }
-      n(7, ($ = !1)), console.log({ allItems: o }), m(p, f);
+      n(8, ($ = !1)), console.log({ allItems: o }), m(p, f);
     }
     class v extends class {
       constructor(e, t) {
@@ -22084,7 +22094,7 @@ var app = (function () {
           })(),
           t = ve.fromDict(e.taxonomy);
         n(
-          6,
+          7,
           (s = (function (e) {
             let t = [e];
             for (; 1 === t.length; ) t = t[0].children;
@@ -22092,7 +22102,7 @@ var app = (function () {
           })(t))
         ),
           n(
-            2,
+            3,
             (f = (function (e) {
               if (e)
                 return Jt(JSON.parse(e), (e) => {
@@ -22109,7 +22119,7 @@ var app = (function () {
               return [];
             })(c.get("filterTags")))
           ),
-          n(26, (a = e.name)),
+          n(0, (a = e.name)),
           I();
       })();
     let A,
@@ -22119,7 +22129,7 @@ var app = (function () {
       S = "",
       T = new oc();
     async function O() {
-      if (!x) return h("Dataset file required.");
+      if (!x) return h(`${a} file required.`);
       const e = C;
       (e.displayName = S),
         g("Upload in progress"),
@@ -22166,12 +22176,13 @@ var app = (function () {
     }
     return (
       (e.$$.update = () => {
-        67108864 & e.$$.dirty[0] && n(5, (i = `${a} Dashboard`)),
-          6 & e.$$.dirty[0] && m(p, f),
-          24 & e.$$.dirty[0] && d && u.open(),
+        1 & e.$$.dirty[0] && n(6, (i = `${a} Dashboard`)),
+          12 & e.$$.dirty[0] && m(p, f),
+          48 & e.$$.dirty[0] && d && u.open(),
           e.$$.dirty[0];
       }),
       [
+        a,
         l,
         p,
         f,
@@ -22192,10 +22203,10 @@ var app = (function () {
         k,
         E,
         async function (e) {
-          n(10, (A = e)), n(12, (S = A.displayName));
+          n(11, (A = e)), n(13, (S = A.displayName));
           try {
             n(
-              11,
+              12,
               (C = { taxonomyTags: await T.toHumanFormat(A.taxonomyTags) })
             );
           } catch (e) {
@@ -22209,17 +22220,17 @@ var app = (function () {
                   e.stack
                 );
           }
-          n(8, (_ = !0));
+          n(9, (_ = !0));
         },
         function (e) {
           const { acceptedFiles: t } = e.detail;
-          t.length && n(9, (x = t));
+          t.length && n(10, (x = t));
         },
         async function (e) {
           const [t] = e.detail.acceptedFiles;
           t &&
             n(
-              11,
+              12,
               (C = JSON.parse(
                 await (async function (e) {
                   return new Promise((t, n) => {
@@ -22238,43 +22249,42 @@ var app = (function () {
         N,
         U,
         function (e) {
-          n(16, (M = e)), n(15, (F = !0));
-        },
-        a,
-        function (e) {
-          (k = e), n(17, k);
+          n(17, (M = e)), n(16, (F = !0));
         },
         function (e) {
-          (k = e), n(17, k);
+          (k = e), n(18, k);
+        },
+        function (e) {
+          (k = e), n(18, k);
         },
         () => U(),
         function (e) {
-          (F = e), n(15, F);
+          (F = e), n(16, F);
         },
         function (e) {
-          (S = e), n(12, S);
+          (S = e), n(13, S);
         },
         () => O(),
         function (e) {
-          (_ = e), n(8, _);
+          (_ = e), n(9, _);
         },
         function (e) {
-          (R = e), n(14, R);
+          (R = e), n(15, R);
         },
         () => N(),
         function (e) {
-          (w = e), n(13, w);
+          (w = e), n(14, w);
         },
-        () => n(13, (w = !0)),
+        () => n(14, (w = !0)),
         function (e) {
           z[e ? "unshift" : "push"](() => {
-            (u = e), n(3, u);
+            (u = e), n(4, u);
           });
         },
         function (e) {
-          (p = e), n(1, p);
+          (p = e), n(2, p);
         },
-        (e) => n(2, (f = e.detail.filterTags.map(ve.fromDict))),
+        (e) => n(3, (f = e.detail.filterTags.map(ve.fromDict))),
         (e) => E(e),
       ]
     );
