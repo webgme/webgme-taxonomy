@@ -1,7 +1,7 @@
 <script lang="ts">
   import {FilterTag, LeanTag} from './FilterTag';
   import TopAppBar, { Row, Section, Title } from "@smui/top-app-bar";
-  import { getLatestArtifact, pick, allNodesInTree } from "./Utils.ts";
+  import { getLatestArtifact, filterMap, allNodesInTree } from "./Utils.ts";
   import Textfield from "@smui/textfield";
   import IconButton from "@smui/icon-button";
   /*import Chip from "@smui/chips";*/
@@ -47,11 +47,26 @@
   function parseTagParams(filterTagString: string | null): FilterTags[] {
     if (filterTagString) { 
       const leanTags: LeanTag[] = JSON.parse(filterTagString);
-      const tagDict = Object.fromEntries(
-                         vocabularies.flatMap(v => allNodesInTree(v))
-                         .map(tag => [tag.id, tag])
-      );
-      return leanTags.map(leanTag => FilterTag.fromLean(leanTag, tagDict));
+      return filterMap(leanTags, leanTag => {
+        const filterTagPath = vocabularies.reduce((path, vocab) => {
+          if (path) {
+            return path;
+          } else {
+            return vocab.findPath(leanTag.id);
+          }
+        }, null);
+
+        if (!filterTagPath) {
+          console.warn('Could not find tag for', leanTag);
+          return;
+        }
+
+        const filterTag = filterTagPath.pop();
+        filterTag.value = leanTag.value;
+        filterTag.select();
+        filterTagPath.forEach(parentTag => parentTag.expand());
+        return filterTag;
+      });
     }
     return [];
   }
@@ -143,8 +158,7 @@
   let isLoading = false;
   async function initialize() {
     vocabularies = await fetchVocabularies();
-    filterTags = 
-  parseTagParams(params.get('filterTags'));
+    filterTags = parseTagParams(params.get('filterTags'));
     fetchData();
   }
 

@@ -26,7 +26,9 @@ export class FilterTag {
   name: string;
   type: string;
   children: FilterTag[];
-  value: any | null;
+  value: any | null = null;
+  selected: boolean = false;
+  expanded: boolean = false;
 
   constructor(id: string, name: string, type: string, value: any | null, children: FilterTag[]) {
     this.id = id;
@@ -34,6 +36,30 @@ export class FilterTag {
     this.type = type;
     this.value = value;
     this.children = children;
+  }
+
+  select() {
+    this.selected = true;
+  }
+
+  expand() {
+    this.expanded = true;
+  }
+
+  findWithID(tagId: string) {
+    const path = this.findPath(tagId);
+    return path && path.pop();
+  }
+
+  findPath(tagId: string) {
+    const path = this.id === tagId ? [] :
+        this.children.reduce((path, child) => path || child.findPath(tagId), null);
+
+    if (path) {
+      path.unshift(this);
+    }
+
+    return path;
   }
 
   isMatch(itemTag: Required<ItemTag>) {
