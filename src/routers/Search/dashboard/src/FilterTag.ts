@@ -46,11 +46,6 @@ export class FilterTag {
     this.expanded = true;
   }
 
-  findWithID(tagId: string) {
-    const path = this.findPath(tagId);
-    return path && path.pop();
-  }
-
   findPath(tagId: string) {
     const path = this.id === tagId ? [] :
         this.children.reduce((path, child) => path || child.findPath(tagId), null);
