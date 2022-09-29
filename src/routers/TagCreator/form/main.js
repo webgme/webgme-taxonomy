@@ -38,7 +38,7 @@ class RESTTagFormatter {
   async toHumanFormat(tags) {
     const encodedTags = encodeURIComponent(JSON.stringify(tags));
     const url = `${this.baseUrl}?tags=${encodedTags}`;
-    const response = await fetch(url, { credentials: "include" });
+    const response = await fetch(url);
     return await response.json();
   }
 }
