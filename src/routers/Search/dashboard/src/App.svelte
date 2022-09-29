@@ -1,5 +1,5 @@
 <script lang="ts">
-  import {FilterTag, LeanTag} from './FilterTag';
+  import { FilterTag, LeanTag } from "./FilterTag";
   import TopAppBar, { Row, Section, Title } from "@smui/top-app-bar";
   import { getLatestArtifact, filterMap, allNodesInTree } from "./Utils.ts";
   import Textfield from "@smui/textfield";
@@ -32,7 +32,9 @@
   import TaxonomyFilter from "./TaxonomyFilter.svelte";
   import type TaxonomyData from "./TaxonomyData.ts";
 
-  export let title: string = "Data Dashboard ";
+  let title: string;
+  let contentType: string = "Data";
+  $: title = `${contentType} Dashboard`;
   let vocabularies: TaxonomyData[] = [];
 
   import TagFormatter, { FormatError } from "./Formatter.ts";
@@ -42,12 +44,12 @@
   let items = [];
 
   const params = new URLSearchParams(location.search);
-  let searchKeyword: string = params.get('searchKeyword') || "";
+  let searchKeyword: string = params.get("searchKeyword") || "";
   let filterTags: FilterTag[] = [];
   function parseTagParams(filterTagString: string | null): FilterTags[] {
-    if (filterTagString) { 
+    if (filterTagString) {
       const leanTags: LeanTag[] = JSON.parse(filterTagString);
-      return filterMap(leanTags, leanTag => {
+      return filterMap(leanTags, (leanTag) => {
         const filterTagPath = vocabularies.reduce((path, vocab) => {
           if (path) {
             return path;
@@ -57,14 +59,14 @@
         }, null);
 
         if (!filterTagPath) {
-          console.warn('Could not find tag for', leanTag);
+          console.warn("Could not find tag for", leanTag);
           return;
         }
 
         const filterTag = filterTagPath.pop();
         filterTag.value = leanTag.value;
         filterTag.select();
-        filterTagPath.forEach(parentTag => parentTag.expand());
+        filterTagPath.forEach((parentTag) => parentTag.expand());
         return filterTag;
       });
     }
@@ -91,9 +93,9 @@
     items = allItems.filter((item) => filter(item));
 
     const params = new URLSearchParams();
-    params.set('searchKeyword', searchKeyword);
-    const strippedTags = filterTags.map(tag => tag.lean());
-    params.set('filterTags', JSON.stringify(strippedTags));
+    params.set("searchKeyword", searchKeyword);
+    const strippedTags = filterTags.map((tag) => tag.lean());
+    params.set("filterTags", JSON.stringify(strippedTags));
     setQueryStringParams(params);
   }
 
@@ -102,8 +104,12 @@
   function setQueryStringParams(newParams: URLSearchParams) {
     const params = new URLSearchParams(location.search);
     [...newParams.entries()].forEach(([key, value]) => params.set(key, value));
-    console.log('setting query string to', params.toString());
-    window.history.replaceState({}, '', `${location.pathname}?${params.toString()}`);
+    console.log("setting query string to", params.toString());
+    window.history.replaceState(
+      {},
+      "",
+      `${location.pathname}?${params.toString()}`
+    );
   }
 
   function getTag(id) {
@@ -117,28 +123,29 @@
     }
   }
 
-  async function fetchVocabularies() {
+  async function fetchConfiguration() {
     const chunks = window.location.href.split("/");
     chunks.pop();
     chunks.pop();
     const url = chunks.join("/") + "/configuration.json";
     try {
       const response = await fetch(url);
-      const config = await response.json();
-      const taxonomy = FilterTag.fromDict(config.taxonomy);
-
-      let vocabs = [taxonomy];
-      while (vocabs.length === 1) {
-        vocabs = vocabs[0].children;
-      }
-
-      return vocabs;
+      return await response.json();
     } catch (err) {
       displayError(
         "An error occurred. Please double check the URL and try again."
       );
       throw err;
     }
+  }
+
+  function trimTaxonomy(taxonomy) {
+    let vocabs = [taxonomy];
+    while (vocabs.length === 1) {
+      vocabs = vocabs[0].children;
+    }
+
+    return vocabs;
   }
 
   let snackbar: SnackbarComponentDev;
@@ -157,8 +164,11 @@
 
   let isLoading = false;
   async function initialize() {
-    vocabularies = await fetchVocabularies();
-    filterTags = parseTagParams(params.get('filterTags'));
+    const configuration = await fetchConfiguration();
+    const taxonomy = FilterTag.fromDict(configuration.taxonomy);
+    vocabularies = trimTaxonomy(taxonomy);
+    filterTags = parseTagParams(params.get("filterTags"));
+    contentType = configuration.name;
     fetchData();
   }
 
@@ -551,7 +561,8 @@
       <span class="filter-header">Advanced Filters</span>
       <TaxonomyFilter
         trees={vocabularies}
-        on:change={(event) => (filterTags = event.detail.filterTags.map(FilterTag.fromDict))}
+        on:change={(event) =>
+          (filterTags = event.detail.filterTags.map(FilterTag.fromDict))}
       />
     </Content>
   </Drawer>
