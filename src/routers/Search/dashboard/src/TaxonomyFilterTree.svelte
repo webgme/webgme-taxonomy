@@ -1,10 +1,3 @@
-<script context="module">
-  // retain module scoped expansion state for each tree node
-  const _expansionState = {
-    /* treeNodeId: expanded <boolean> */
-  };
-</script>
-
 <script lang="ts">
   import Checkbox from "@smui/checkbox";
   import Textfield from "@smui/textfield";
@@ -13,14 +6,13 @@
   export let tree;
   const { name, children } = tree;
 
-  let expanded = _expansionState[name] || false;
   const toggleExpansion = () => {
-    expanded = _expansionState[name] = !expanded;
+    tree.expanded = !tree.expanded;
   };
-  $: arrowDown = expanded;
+  $: arrowDown = tree.expanded;
 
   let checked = tree.selected === undefined ? false : tree.selected;
-  let value = null;
+  let value = tree.value || null;
 
   // TODO: select checkbox -> select all children; partial select all parents (if false)
   // TODO: unselect checkbox -> unselect all children
@@ -76,7 +68,7 @@
       <div class="arrow" class:arrowDown on:click={toggleExpansion}>
         &#x25b6
       </div>
-      {#if expanded}
+      {#if tree.expanded}
         {#each children as child}
           <svelte:self on:change tree={child} />
         {/each}

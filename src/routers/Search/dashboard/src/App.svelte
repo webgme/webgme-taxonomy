@@ -1,6 +1,7 @@
 <script lang="ts">
+  import { FilterTag, LeanTag } from "./FilterTag";
   import TopAppBar, { Row, Section, Title } from "@smui/top-app-bar";
-  import { getLatestArtifact } from "./Utils.ts";
+  import { getLatestArtifact, filterMap } from "./Utils.ts";
   import Textfield from "@smui/textfield";
   import IconButton from "@smui/icon-button";
   /*import Chip from "@smui/chips";*/
@@ -42,27 +43,42 @@
   let allItems = [];
   let items = [];
 
-  function isTypeOfTag(tag, typeTag) {
-    // TODO: check if tag is type of typeTag (add inheritance)
-    // TODO: handle inheritance
-    const isMatchingTag = tag.ID === typeTag.id && typeTag.value == tag.value;
-    if (isMatchingTag) {
-      return true;
+  const params = new URLSearchParams(location.search);
+  let searchKeyword: string = params.get("searchKeyword") || "";
+  let filterTags: FilterTag[] = [];
+  function parseTagParams(filterTagString: string | null): FilterTags[] {
+    if (filterTagString) {
+      const leanTags: LeanTag[] = JSON.parse(filterTagString);
+      return filterMap(leanTags, (leanTag) => {
+        const filterTagPath = vocabularies.reduce((path, vocab) => {
+          if (path) {
+            return path;
+          } else {
+            return vocab.findPath(leanTag.id);
+          }
+        }, null);
+
+        if (!filterTagPath) {
+          console.warn("Could not find tag for", leanTag);
+          return;
+        }
+
+        const filterTag = filterTagPath.pop();
+        filterTag.value = leanTag.value;
+        filterTag.select();
+        filterTagPath.forEach((parentTag) => parentTag.expand());
+        return filterTag;
+      });
     }
-    const tagHasAttribute =
-      tag.hasOwnProperty(typeTag.id) && tag[typeTag.id] === typeTag.value;
-    return tagHasAttribute;
+    return [];
   }
 
-  let searchKeyword: string = "";
-  let filterTags = [];
-
-  function onFilterUpdate(searchKeyword: string, filterTags) {
+  function onFilterUpdate(searchKeyword: string, filterTags: FilterTag[]) {
     const filter = (item) => {
       const { displayName, taxonomyTags } = item;
 
       const matchingTags = filterTags.every(
-        (filterTag) => !!taxonomyTags.find((tag) => isTypeOfTag(tag, filterTag))
+        (filterTag) => !!taxonomyTags.find((tag) => filterTag.isMatch(tag))
       );
 
       if (matchingTags) {
@@ -74,11 +90,27 @@
       return false;
     };
 
-    console.log({ filterTags, item: items[0] });
     items = allItems.filter((item) => filter(item));
+
+    const params = new URLSearchParams();
+    params.set("searchKeyword", searchKeyword);
+    const strippedTags = filterTags.map((tag) => tag.lean());
+    params.set("filterTags", JSON.stringify(strippedTags));
+    setQueryStringParams(params);
   }
 
   $: onFilterUpdate(searchKeyword, filterTags);
+
+  function setQueryStringParams(newParams: URLSearchParams) {
+    const params = new URLSearchParams(location.search);
+    [...newParams.entries()].forEach(([key, value]) => params.set(key, value));
+    console.log("setting query string to", params.toString());
+    window.history.replaceState(
+      {},
+      "",
+      `${location.pathname}?${params.toString()}`
+    );
+  }
 
   function getTag(id) {
     const queue = vocabularies;
@@ -133,7 +165,9 @@
   let isLoading = false;
   async function initialize() {
     const configuration = await fetchConfiguration();
-    vocabularies = trimTaxonomy(configuration.taxonomy);
+    const taxonomy = FilterTag.fromDict(configuration.taxonomy);
+    vocabularies = trimTaxonomy(taxonomy);
+    filterTags = parseTagParams(params.get("filterTags"));
     contentType = configuration.name;
     fetchData();
   }
@@ -527,7 +561,8 @@
       <span class="filter-header">Advanced Filters</span>
       <TaxonomyFilter
         trees={vocabularies}
-        on:change={(event) => (filterTags = event.detail.filterTags)}
+        on:change={(event) =>
+          (filterTags = event.detail.filterTags.map(FilterTag.fromDict))}
       />
     </Content>
   </Drawer>
