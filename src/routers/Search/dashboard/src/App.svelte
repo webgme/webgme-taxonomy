@@ -1,7 +1,7 @@
 <script lang="ts">
   import { FilterTag, LeanTag } from "./FilterTag";
   import TopAppBar, { Row, Section, Title } from "@smui/top-app-bar";
-  import { getLatestArtifact, filterMap, allNodesInTree } from "./Utils.ts";
+  import { getLatestArtifact, filterMap } from "./Utils.ts";
   import Textfield from "@smui/textfield";
   import IconButton from "@smui/icon-button";
   /*import Chip from "@smui/chips";*/

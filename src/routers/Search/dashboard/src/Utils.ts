@@ -56,18 +56,6 @@ export function assert(cond: boolean, err: Error) {
   }
 }
 
-export function pick(obj: object, ...keys: string[]): object {
-  return Object.fromEntries(
-    Object.entries(obj)
-      .filter(([k, v]) => keys.includes(k))
-  );
-}
-
-export function allNodesInTree(node: object): object {
-  const descendents = node.children.flatMap(allNodesInTree);
-  return [node].concat(descendents);
-}
-
 // FIXME: we need to combine Artifact.js (in the router directory) w/ a TS
 // definition and share the generated code across the client and server. This
 // method should be available on the ArtifactSet class instead of here
