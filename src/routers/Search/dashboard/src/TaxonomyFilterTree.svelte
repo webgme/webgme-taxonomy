@@ -1,10 +1,3 @@
-<script context="module">
-  // retain module scoped expansion state for each tree node
-  const _expansionState = {
-    /* treeNodeId: expanded <boolean> */
-  };
-</script>
-
 <script lang="ts">
   import Checkbox from "@smui/checkbox";
   import Textfield from "@smui/textfield";
