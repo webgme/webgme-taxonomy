@@ -32,7 +32,7 @@ class RESTTagFormatter {
   constructor() {
     this.baseUrl = window.location.href
       .replace("TagCreator", "TagFormat")
-      .replace(/static.*$/, "human");
+      .replace(/[^/]*\/static.*$/, "human");
   }
 
   async toHumanFormat(tags) {

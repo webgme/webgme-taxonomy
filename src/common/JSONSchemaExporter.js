@@ -8,11 +8,19 @@ function factory() {
       this.META = META;
     }
 
-    async getSchemas(node) {
-      const defEntries = await this.getDefinitionEntries(node);
+    async getSchemas(taxonomyNode) {
+      const taxonomyName = this.core.getAttribute(taxonomyNode, "name");
+      return this.getVocabSchemas(vocabs, taxonomyName);
+    }
+
+    async getVocabSchemas(vocabs, taxonomyName) {
+      const defEntries = (
+        await Promise.all(vocabs.map((node) => this.getDefinitionEntries(node)))
+      ).flat();
       const definitions = Object.fromEntries(defEntries);
-      const taxonomyName = this.core.getAttribute(node, "name");
-      const termNodes = await this.getTermNodes(node);
+      const termNodes = (
+        await Promise.all(vocabs.map((node) => this.getTermNodes(node)))
+      ).flat();
       const properties = {
         taxonomyTags: {
           title: taxonomyName,
@@ -129,7 +137,7 @@ function factory() {
         const properties = await this.getProperties(node);
         return {
           title: this.core.getAttribute(node, "name"),
-          type: 'object',
+          type: "object",
           properties,
           required: Object.keys(properties),
         };
@@ -139,7 +147,7 @@ function factory() {
         schema.const = guid;
         return schema;
       } else {
-        throw new Error('Cannot get definition for ' + this.core.getPath(node));
+        throw new Error("Cannot get definition for " + this.core.getPath(node));
       }
     }
 

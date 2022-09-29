@@ -43,9 +43,10 @@ function initialize(middlewareOpts) {
   router.use("/:projectId/branch/:branch/", async (req, res, next) => {
     try {
       const { projectId, branch } = req.params;
-      req.webgmeContext = await RouterUtils.getWebGMEContext(
+      const userId = projectId.split("+").shift();
+      req.webgmeContext = await RouterUtils.getWebGMEContextUnsafe(
         middlewareOpts,
-        req,
+        userId,
         projectId,
         branch
       );

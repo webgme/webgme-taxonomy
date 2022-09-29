@@ -67,6 +67,8 @@ function factory() {
     }
   }
 
+  DashboardConfiguration.ContentTypeExporter = ContentTypeExporter;
+
   return DashboardConfiguration;
 }
 

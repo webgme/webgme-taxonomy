@@ -15,6 +15,7 @@
 
 // http://expressjs.com/en/guide/routing.html
 const express = require("express");
+const assert = require("assert");
 const router = express.Router();
 const path = require("path");
 const fs = require("fs");
@@ -22,7 +23,6 @@ const fsp = fs.promises;
 const _ = require("underscore");
 const JSONSchemaExporter = require("../../common/JSONSchemaExporter");
 const RouterUtils = require("../../common/routers/Utils");
-const Utils = require("../../common/Utils");
 
 /**
  * Called when the server is created but before it starts to listening to incoming requests.
@@ -40,8 +40,7 @@ const Utils = require("../../common/Utils");
  */
 function initialize(middlewareOpts) {
   var logger = middlewareOpts.logger.fork("TagCreator"),
-    ensureAuthenticated = middlewareOpts.ensureAuthenticated,
-    getUserId = middlewareOpts.getUserId;
+    ensureAuthenticated = middlewareOpts.ensureAuthenticated;
 
   generateFormHtml(middlewareOpts.gmeConfig);
   logger.debug("initializing ...");
@@ -60,34 +59,53 @@ function initialize(middlewareOpts) {
 
   // TODO: add an endpoint for the static files
   const staticPath = path.join(__dirname, "form");
-  router.use("/:projectId/branch/:branch/static/", express.static(staticPath));
+  router.use(
+    "/:projectId/branch/:branch/:contentTypePath/static/",
+    express.static(staticPath)
+  );
 
-  router.use("/:projectId/branch/:branch/", async (req, res, next) => {
-    try {
-      const { projectId, branch } = req.params;
-      req.webgmeContext = await RouterUtils.getWebGMEContext(
-        middlewareOpts,
-        req,
-        projectId,
-        branch
-      );
-      next();
-    } catch (e) {
-      logger.error(e);
-      res.sendStatus(500);
+  router.use(
+    "/:projectId/branch/:branch/:contentTypePath/",
+    async (req, res, next) => {
+      try {
+        const { projectId, branch, contentTypePath } = req.params;
+        req.webgmeContext = await RouterUtils.getWebGMEContext(
+          middlewareOpts,
+          req,
+          projectId,
+          branch
+        );
+        const { core, root } = req.webgmeContext;
+        const contentType = await core.loadByPath(root, contentTypePath);
+        assert(
+          contentType,
+          new RouterUtils.ContentTypeNotFoundError(contentTypePath)
+        );
+        req.webgmeContext.contentType = contentType;
+        console.log("CTX received:", req.originalUrl);
+        next();
+      } catch (e) {
+        if (e instanceof RouterUtils.UserError) {
+          res.status(e.statusCode).send(e.message);
+        } else {
+          logger.error(e);
+          res.sendStatus(500);
+        }
+      }
     }
-  });
+  );
 
-  // TODO: make the render data available
-  //   - formatter...
-  //     - make a client that wraps the REST endpoint
   router.get(
-    "/:projectId/branch/:branch/schemas.json",
+    "/:projectId/branch/:branch/:contentTypePath/schemas.json",
     async function (req, res) {
-      const { root, core } = req.webgmeContext;
+      const { root, core, contentType } = req.webgmeContext;
       const exporter = JSONSchemaExporter.from(core, root);
-      const node = await Utils.findTaxonomyNode(core, root);
-      const schemas = await exporter.getSchemas(node);
+      const vocabularies = await Promise.all(
+        core
+          .getMemberPaths(contentType, "vocabularies")
+          .map((path) => core.loadByPath(root, path))
+      );
+      const schemas = await exporter.getVocabSchemas(vocabularies);
       return res.json(schemas);
     }
   );
