@@ -12,7 +12,6 @@ window.onload = function () {
   renderForm();
 };
 
-// TODO: add the taxonomyVersion...
 async function renderForm() {
   const { schema, uiSchema, taxonomyVersion } = await fetchConfig();
   const formatter = new RESTTagFormatter();
