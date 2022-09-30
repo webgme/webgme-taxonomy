@@ -158,8 +158,8 @@ function initialize(middlewareOpts) {
         const storage = await StorageAdapter.from(
           core,
           contentType,
-          mainConfig,
-          req
+          req,
+          mainConfig
         );
         const artifacts = await storage.listArtifacts();
         console.log({ artifacts });

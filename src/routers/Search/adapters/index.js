@@ -11,7 +11,7 @@ const SUPPORTED_ADAPTERS = Object.fromEntries(
 const assert = require("assert");
 
 class Adapters {
-  static async from(core, contentTypeNode, config, req) {
+  static async from(core, contentTypeNode, req, config) {
     const storageNode = (await core.loadChildren(contentTypeNode)).find(
       (child) => isTypeOf(core, child, "Storage")
     );
@@ -28,7 +28,7 @@ class Adapters {
         400
       )
     );
-    return await Adapter.from(core, storageNode, config, req);
+    return await Adapter.from(core, storageNode, req, config);
   }
 }
 
