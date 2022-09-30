@@ -77,8 +77,41 @@ function initialize(middlewareOpts) {
         req.webgmeContext = await RouterUtils.getWebGMEContext(
           middlewareOpts,
           req,
-          projectId,
-          branch
+          {projectId,
+          branch}
+        );
+        const { core, root } = req.webgmeContext;
+        const contentType = await core.loadByPath(root, contentTypePath);
+        assert(
+          contentType,
+          new RouterUtils.ContentTypeNotFoundError(contentTypePath)
+        );
+        req.webgmeContext.contentType = contentType;
+        console.log("CTX received:", req.originalUrl);
+        next();
+      } catch (e) {
+        if (e instanceof RouterUtils.UserError) {
+          res.status(e.statusCode).send(e.message);
+        } else {
+          logger.error(e);
+          res.sendStatus(500);
+        }
+      }
+    }
+  );
+
+  router.use(
+    "/:projectId/tag/:tag/:contentTypePath/",
+    async (req, res, next) => {
+      console.log("received request with tag");
+      try {
+        const { projectId, tag, contentTypePath } = req.params;
+        console.log("CTX:", projectId, tag);
+        req.webgmeContext = await RouterUtils.getWebGMEContext(
+          middlewareOpts,
+          req,
+          {projectId,
+          tag}
         );
         const { core, root } = req.webgmeContext;
         const contentType = await core.loadByPath(root, contentTypePath);
@@ -101,7 +134,9 @@ function initialize(middlewareOpts) {
   );
 
   router.get(
-    "/:projectId/branch/:branch/:contentTypePath/configuration.json",
+    ["/:projectId/branch/:branch/:contentTypePath/configuration.json",
+    "/:projectId/tag/:tag/:contentTypePath/configuration.json"
+  ],
     async function (req, res) {
       const { core, contentType } = req.webgmeContext;
       const configuration = await DashboardConfiguration.from(
@@ -114,7 +149,8 @@ function initialize(middlewareOpts) {
 
   // Accessing and updating data via the storage adapter
   router.get(
-    "/:projectId/branch/:branch/:contentTypePath/artifacts/",
+    ["/:projectId/branch/:branch/:contentTypePath/artifacts/",
+    "/:projectId/tag/:tag/:contentTypePath/artifacts/"],
     // TODO: add the artifact ID...
     async function (req, res) {
       try {

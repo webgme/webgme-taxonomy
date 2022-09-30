@@ -3,24 +3,23 @@ const Core = webgme.requirejs("common/core/coreQ");
 const jwt = require("jsonwebtoken");
 
 const Utils = {
-  async getWebGMEContext(middlewareOpts, req, projectId, branch = "master") {
+  async getWebGMEContext(middlewareOpts, req, projectContext) {
     const { getUserId } = middlewareOpts;
     const userId = getUserId(req);
     return await Utils.getWebGMEContextUnsafe(
       middlewareOpts,
       userId,
-      projectId,
-      branch
+      projectContext
     );
   },
   // This is unsafe since it bypasses permissions
   async getWebGMEContextUnsafe(
     middlewareOpts,
     userId,
-    projectId,
-    branch = "master"
+    projectContext
   ) {
     const { safeStorage, gmeConfig, logger } = middlewareOpts;
+    const {projectId, branch, tag, commitHash} = projectContext;
 
     console.log("CTX-user:", userId);
     console.log("CTX-project:", projectId);
@@ -57,10 +56,29 @@ const Utils = {
       globConf: gmeConfig,
       logger: logger.fork("core"),
     });
-    context.branchName = branch;
-    context.commitObject = await context.project.getCommitObject(
-      context.branchName
-    );
+
+    // The priority is the following commitHash > tag > branch.
+    // If nothing is given, we try to open the master branch
+    console.log('CTX:',branch,tag,commitHash);
+    if (commitHash) {
+      context.commitHash = commitHash;
+      context.commitObject = await context.project.getCommitObject(commitHash);
+    } else if (tag) {
+      context.tag = tag;
+      const tags = await context.project.getTags();
+      console.log('CTX-tags:', tags);
+      if (tags.hasOwnProperty(tag)) {
+        context.commitObject = await context.project.getCommitObject(tags[tag]);
+      } else {
+        throw new Error('No tag ['+ tag + '] exists!');
+      }
+    } else {
+      context.branchName = branch || 'master';
+      context.commitObject = await context.project.getCommitObject(
+        context.branchName
+      );  
+    }
+    
     context.root = await context.core.loadRoot(context.commitObject.root);
 
     console.log("got context!!!");

@@ -47,8 +47,8 @@ function initialize(middlewareOpts) {
       req.webgmeContext = await RouterUtils.getWebGMEContextUnsafe(
         middlewareOpts,
         userId,
-        projectId,
-        branch
+        {projectId,
+        branch}
       );
       next();
     } catch (e) {
