@@ -10,6 +10,7 @@ function factory() {
 
     async getSchemas(taxonomyNode) {
       const taxonomyName = this.core.getAttribute(taxonomyNode, "name");
+      const vocabs = await this.core.loadChildren(taxonomyNode);
       return this.getVocabSchemas(vocabs, taxonomyName);
     }
 
