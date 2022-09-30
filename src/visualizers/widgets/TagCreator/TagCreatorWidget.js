@@ -4,10 +4,9 @@ define([
   "./lib/react-jsonschema-form",
   "./lib/react-dom.production.min",
   "react",
-  "q",
   "webgme-taxonomy/TagCreatorForm",
   "css!./styles/TagCreatorWidget.css",
-], function (JSONSchemaForm, ReactDOM, React, Q, TagCreatorForm) {
+], function (JSONSchemaForm, ReactDOM, React, TagCreatorForm) {
   "use strict";
 
   const WIDGET_CLASS = "tag-creator";
@@ -28,7 +27,6 @@ define([
     }
 
     render(schema, uiSchema, formData, downloadData, taxonomyPath, formatter) {
-      console.log({ downloadData });
       const renderData = new FormRenderData(
         schema,
         uiSchema,
