@@ -12,15 +12,22 @@ window.onload = function () {
   renderForm();
 };
 
+// TODO: add the taxonomyVersion...
 async function renderForm() {
-  const { schema, uiSchema } = await fetchSchemas();
+  const { schema, uiSchema, taxonomyVersion } = await fetchConfig();
   const formatter = new RESTTagFormatter();
-  const formData = new FormRenderData(schema, uiSchema, {}, formatter);
+  const formData = new FormRenderData(
+    schema,
+    uiSchema,
+    {},
+    { taxonomyVersion },
+    formatter
+  );
   form.render(formData);
 }
 
-async function fetchSchemas() {
-  const url = "../schemas.json";
+async function fetchConfig() {
+  const url = "../configuration.json";
   const response = await fetch(url);
   return await response.json();
 }

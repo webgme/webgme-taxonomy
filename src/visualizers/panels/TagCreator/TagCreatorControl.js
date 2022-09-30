@@ -145,14 +145,16 @@ define([
               Promise.all([
                 this._getJSONSchemas(nodeId),
                 this._getCurrentFormData(nodeId),
+                this._getDownloadData(),
                 this._getFormatter(nodeId),
               ]),
-            ([schemas, formData, formatter]) => {
+            ([schemas, formData, downloadData, formatter]) => {
               const { taxonomyPath, schema, uiSchema } = schemas;
               this._widget.render(
                 schema,
                 uiSchema,
                 formData,
+                downloadData,
                 taxonomyPath,
                 formatter
               );
@@ -167,6 +169,34 @@ define([
       self._selfPatterns[nodeId] = { children: 1 };
       self._client.updateTerritory(self._territoryId, self._selfPatterns);
     }
+  };
+
+  TagCreatorControl.prototype._getDownloadData = async function () {
+    return { taxonomyVersion: await this._getTaxonomyVersion() };
+  };
+
+  TagCreatorControl.prototype._getTaxonomyVersion = async function () {
+    const taxonomyVersion = {
+      id: this._client.getActiveProjectId(),
+    };
+    const tagDict = await Q.ninvoke(
+      this._client,
+      "getTags",
+      taxonomyVersion.id
+    );
+    const commitHash = this._client.getActiveCommitHash();
+    const [tag] =
+      Object.entries(tagDict).find(([_tag, hash]) => hash === commitHash) || [];
+    const branch = this._client.getActiveBranchName();
+
+    if (tag) {
+      taxonomyVersion.tag = tag;
+    } else if (branch) {
+      taxonomyVersion.branch = branch;
+    } else {
+      taxonomyVersion.commit = commitHash;
+    }
+    return taxonomyVersion;
   };
 
   async function whileChain(cond, chain) {

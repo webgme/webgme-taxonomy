@@ -72,8 +72,7 @@ function initialize(middlewareOpts) {
         req.webgmeContext = await RouterUtils.getWebGMEContext(
           middlewareOpts,
           req,
-          {projectId,
-          branch}
+          { projectId, branch }
         );
         const { core, root } = req.webgmeContext;
         const contentType = await core.loadByPath(root, contentTypePath);
@@ -82,6 +81,10 @@ function initialize(middlewareOpts) {
           new RouterUtils.ContentTypeNotFoundError(contentTypePath)
         );
         req.webgmeContext.contentType = contentType;
+        req.taxonomyVersion = {
+          id: projectId,
+          branch,
+        };
         console.log("CTX received:", req.originalUrl);
         next();
       } catch (e) {
@@ -96,7 +99,7 @@ function initialize(middlewareOpts) {
   );
 
   router.get(
-    "/:projectId/branch/:branch/:contentTypePath/schemas.json",
+    "/:projectId/branch/:branch/:contentTypePath/configuration.json",
     async function (req, res) {
       const { root, core, contentType } = req.webgmeContext;
       const exporter = JSONSchemaExporter.from(core, root);
@@ -105,8 +108,9 @@ function initialize(middlewareOpts) {
           .getMemberPaths(contentType, "vocabularies")
           .map((path) => core.loadByPath(root, path))
       );
-      const schemas = await exporter.getVocabSchemas(vocabularies);
-      return res.json(schemas);
+      const config = await exporter.getVocabSchemas(vocabularies);
+      config.taxonomyVersion = req.taxonomyVersion;
+      return res.json(config);
     }
   );
 

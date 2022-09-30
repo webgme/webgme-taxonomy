@@ -21,7 +21,9 @@ function factory() {
                 this.setMissingDefaults(data.schema, data.formData)
               );
               const downloadData = await this.formatData(formatter, formData);
-              this.downloadJSON(downloadData);
+              this.downloadJSON(
+                Object.assign({}, data.downloadData, downloadData)
+              );
             },
           },
           "Download"
@@ -90,8 +92,15 @@ function factory() {
   }
 
   class FormRenderData {
-    constructor(schema, uiSchema, formData, formatter = DefaultFormatter) {
+    constructor(
+      schema,
+      uiSchema,
+      formData = {},
+      downloadData = {},
+      formatter = DefaultFormatter
+    ) {
       this.schema = schema;
+      this.downloadData = downloadData;
       this.uiSchema = uiSchema;
       this.formData = formData || { taxonomyTags: [] };
       this.formatter = formatter;
