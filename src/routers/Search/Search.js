@@ -181,7 +181,14 @@ function initialize(middlewareOpts) {
         projectId: req.params.projectId,
         branch: req.params.branch,
       };
-      const storage = PDP.from(req, mainConfig);
+      const { core, contentType } = req.webgmeContext;
+      const storage = await StorageAdapter.from(
+        core,
+        contentType,
+        req,
+        mainConfig
+      );
+
       await storage.createArtifact(metadata);
       res.json("Submitted create request!");
     }
@@ -193,7 +200,13 @@ function initialize(middlewareOpts) {
     async function (req, res) {
       const { parentId } = req.params;
       const { lastId } = req.query;
-      const storage = PDP.from(req, mainConfig);
+      const { core, contentType } = req.webgmeContext;
+      const storage = await StorageAdapter.from(
+        core,
+        contentType,
+        req,
+        mainConfig
+      );
       const fileUploadInfo = await storage.getUploadUrls(
         parentId,
         lastId,
@@ -217,11 +230,15 @@ function initialize(middlewareOpts) {
       }
 
       console.log("getting download URL", parentId, ids);
-      const { root, core } = req.webgmeContext;
+      const { root, core, contentType } = req.webgmeContext;
       const node = await Utils.findTaxonomyNode(core, root);
       const formatter = await TagFormatter.from(core, node);
-
-      const storage = PDP.from(req, mainConfig);
+      const storage = await StorageAdapter.from(
+        core,
+        contentType,
+        req,
+        mainConfig
+      );
       const zipFile = await storage.getDownloadPath(parentId, ids, formatter);
       if (zipFile) {
         await res.download(zipFile.path, path.basename(zipFile.name), () =>
