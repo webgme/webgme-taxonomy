@@ -43,6 +43,7 @@
   const storage = new Storage();
   let allItems = [];
   let items = [];
+  $: itemTags = items.flatMap(item => item.taxonomyTags);
 
   const params = new URLSearchParams(location.search);
   let searchQuery: string = params.get("searchQuery") || "";
@@ -574,6 +575,7 @@
       <span class="filter-header">Advanced Filters</span>
       <TaxonomyFilter
         trees={vocabularies}
+        tags={itemTags}
         on:change={(event) =>
           (filterTags = event.detail.filterTags.map(FilterTag.fromDict))}
       />
