@@ -59,14 +59,14 @@ function initialize(middlewareOpts) {
 
   const staticPath = path.join(__dirname, "form");
   router.use(
-    RouterUtils.getProjectScopedRoutes("static/"),
+    RouterUtils.getContentTypeRoutes("static/"),
     express.static(staticPath)
   );
 
-  RouterUtils.addProjectScopeMiddleware(middlewareOpts, router);
+  RouterUtils.addContentTypeMiddleware(middlewareOpts, router);
 
   router.get(
-    RouterUtils.getProjectScopedRoutes("configuration.json"),
+    RouterUtils.getContentTypeRoutes("configuration.json"),
     async function (req, res) {
       const { root, core, contentType } = req.webgmeContext;
       const exporter = JSONSchemaExporter.from(core, root);
@@ -76,7 +76,7 @@ function initialize(middlewareOpts) {
           .map((path) => core.loadByPath(root, path))
       );
       const config = await exporter.getVocabSchemas(vocabularies);
-      config.taxonomyVersion = req.projectVersion;
+      config.taxonomyVersion = req.webgmeContext.projectVersion;
       return res.json(config);
     }
   );

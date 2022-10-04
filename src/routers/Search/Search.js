@@ -61,15 +61,15 @@ function initialize(middlewareOpts) {
   router.use("*", ensureAuthenticated);
 
   router.use(
-    RouterUtils.getProjectScopedRoutes("static/"),
+    RouterUtils.getContentTypeRoutes("static/"),
     express.static(staticPath)
   );
 
   // Perhaps the path should include the node ID, too...
-  RouterUtils.addProjectScopeMiddleware(middlewareOpts, router);
+  RouterUtils.addContentTypeMiddleware(middlewareOpts, router);
 
   router.get(
-    RouterUtils.getProjectScopedRoutes("configuration.json"),
+    RouterUtils.getContentTypeRoutes("configuration.json"),
     async (req, res) => {
       const { core, contentType } = req.webgmeContext;
       const configuration = await DashboardConfiguration.from(
@@ -82,7 +82,7 @@ function initialize(middlewareOpts) {
 
   // Accessing and updating data via the storage adapter
   router.get(
-    RouterUtils.getProjectScopedRoutes("artifacts/"),
+    RouterUtils.getContentTypeRoutes("artifacts/"),
     // TODO: add the artifact ID...
     async function (req, res) {
       try {
@@ -104,7 +104,7 @@ function initialize(middlewareOpts) {
   );
 
   router.post(
-    RouterUtils.getProjectScopedRoutes("artifacts/"),
+    RouterUtils.getContentTypeRoutes("artifacts/"),
     // TODO: re-enable tag conversion once the process is created automatically
     //convertTaxonomyTags,
     async function (req, res) {
@@ -127,7 +127,7 @@ function initialize(middlewareOpts) {
   );
 
   router.post(
-    RouterUtils.getProjectScopedRoutes("artifacts/:parentId/uploadUrl"),
+    RouterUtils.getContentTypeRoutes("artifacts/:parentId/uploadUrl"),
     convertTaxonomyTags,
     async function (req, res) {
       const { parentId } = req.params;
@@ -150,7 +150,7 @@ function initialize(middlewareOpts) {
   );
 
   router.get(
-    RouterUtils.getProjectScopedRoutes("artifacts/:parentId/download"),
+    RouterUtils.getContentTypeRoutes("artifacts/:parentId/download"),
     async function (req, res) {
       const { parentId } = req.params;
       // TODO: get the IDs for the specific observations to get

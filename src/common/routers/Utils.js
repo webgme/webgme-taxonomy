@@ -94,38 +94,68 @@ const Utils = {
 
   // Helpers for endpoints to a router that is prefixed with a variety of ways to specify
   // a webgme project context (branch, tag, commit)
+  getContentTypeRoutes(route = "") {
+    const contentTypeRoute = `:contentTypePath/${route}`;
+    return Utils.getProjectScopedRoutes(contentTypeRoute);
+  },
+
   getProjectScopedRoutes(route = "") {
     return [
-      `/:projectId/branch/:branch/:contentTypePath/${route}`,
-      `/:projectId/tag/:tag/:contentTypePath/${route}`,
-      `/:projectId/commit/:commitHash/:contentTypePath/${route}`,
+      `/:projectId/branch/:branch/${route}`,
+      `/:projectId/tag/:tag/${route}`,
+      `/:projectId/commit/:commitHash/${route}`,
     ];
   },
 
-  addProjectScopeMiddleware(middlewareOpts, router) {
+  addContentTypeMiddleware(middlewareOpts, router) {
+    Utils.addProjectScopeMiddleware(middlewareOpts, router);
     const { logger } = middlewareOpts;
-    router.use(Utils.getProjectScopedRoutes(), async (req, res, next) => {
-      console.log("received request with tag");
-      try {
+    return router.use(
+      Utils.getContentTypeRoutes(),
+      handleUserErrors(logger, async (req) => {
         const { contentTypePath } = req.params;
-        req.webgmeContext = await Utils.getWebGMEContext(middlewareOpts, req);
         const { core, root } = req.webgmeContext;
         const contentType = await core.loadByPath(root, contentTypePath);
         assert(contentType, new ContentTypeNotFoundError(contentTypePath));
         req.webgmeContext.contentType = contentType;
         console.log("CTX received:", req.originalUrl);
-        next();
-      } catch (e) {
-        if (e instanceof UserError) {
-          res.status(e.statusCode).send(e.message);
-        } else {
-          logger.error(e);
-          res.sendStatus(500);
-        }
-      }
-    });
+      })
+    );
+  },
+
+  addProjectScopeMiddleware(middlewareOpts, router) {
+    const { logger } = middlewareOpts;
+    return router.use(
+      Utils.getProjectScopedRoutes(),
+      handleUserErrors(
+        logger,
+        async (req) =>
+          (req.webgmeContext = await Utils.getWebGMEContext(
+            middlewareOpts,
+            req
+          ))
+      )
+    );
   },
 };
+
+function handleUserErrors(logger, fn) {
+  return async function (req, res, next) {
+    try {
+      await fn(req, res, next);
+      if (!res.headersSent) {
+        next();
+      }
+    } catch (e) {
+      if (e instanceof UserError) {
+        res.status(e.statusCode).send(e.message);
+      } else {
+        logger.error(e);
+        res.sendStatus(500);
+      }
+    }
+  };
+}
 
 class UserError extends Error {
   constructor(msg, code = 400) {
@@ -147,4 +177,5 @@ class ContentTypeNotFoundError extends UserError {
 }
 
 Utils.UserError = UserError;
+Utils.handleUserErrors = handleUserErrors;
 module.exports = Utils;
