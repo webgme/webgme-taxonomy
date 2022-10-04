@@ -57,6 +57,14 @@ export class FilterTag {
     return path;
   }
 
+  canMatch(itemTag: ItemTag) {
+    return (itemTag.ID === this.id) || itemTag.hasOwnProperty(this.id);
+  }
+
+  matchable(itemTags: ItemTag[]) {
+    return itemTags.filter(it => this.canMatch(it));
+  }
+
   isMatch(itemTag: Required<ItemTag>) {
     const isMatchingTag = itemTag.ID === this.id && itemTag.value == this.value;
     if (isMatchingTag) {
