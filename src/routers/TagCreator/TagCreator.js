@@ -57,48 +57,16 @@ function initialize(middlewareOpts) {
   // Use ensureAuthenticated if the routes require authentication. (Can be set explicitly for each route.)
   router.use("*", ensureAuthenticated);
 
-  // TODO: add an endpoint for the static files
   const staticPath = path.join(__dirname, "form");
   router.use(
-    "/:projectId/branch/:branch/:contentTypePath/static/",
+    RouterUtils.getProjectScopedRoutes("static/"),
     express.static(staticPath)
   );
 
-  router.use(
-    "/:projectId/branch/:branch/:contentTypePath/",
-    async (req, res, next) => {
-      try {
-        const { projectId, branch, contentTypePath } = req.params;
-        req.webgmeContext = await RouterUtils.getWebGMEContext(
-          middlewareOpts,
-          req
-        );
-        const { core, root } = req.webgmeContext;
-        const contentType = await core.loadByPath(root, contentTypePath);
-        assert(
-          contentType,
-          new RouterUtils.ContentTypeNotFoundError(contentTypePath)
-        );
-        req.webgmeContext.contentType = contentType;
-        req.taxonomyVersion = {
-          id: projectId,
-          branch,
-        };
-        console.log("CTX received:", req.originalUrl);
-        next();
-      } catch (e) {
-        if (e instanceof RouterUtils.UserError) {
-          res.status(e.statusCode).send(e.message);
-        } else {
-          logger.error(e);
-          res.sendStatus(500);
-        }
-      }
-    }
-  );
+  RouterUtils.addProjectScopeMiddleware(middlewareOpts, router);
 
   router.get(
-    "/:projectId/branch/:branch/:contentTypePath/configuration.json",
+    RouterUtils.getProjectScopedRoutes("configuration.json"),
     async function (req, res) {
       const { root, core, contentType } = req.webgmeContext;
       const exporter = JSONSchemaExporter.from(core, root);
@@ -108,7 +76,7 @@ function initialize(middlewareOpts) {
           .map((path) => core.loadByPath(root, path))
       );
       const config = await exporter.getVocabSchemas(vocabularies);
-      config.taxonomyVersion = req.taxonomyVersion;
+      config.taxonomyVersion = req.projectVersion;
       return res.json(config);
     }
   );

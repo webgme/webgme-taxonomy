@@ -94,41 +94,36 @@ const Utils = {
 
   // Helpers for endpoints to a router that is prefixed with a variety of ways to specify
   // a webgme project context (branch, tag, commit)
-  getProjectScopedRoutes(route) {
+  getProjectScopedRoutes(route = "") {
     return [
       `/:projectId/branch/:branch/:contentTypePath/${route}`,
-      `/:projectId/tag/:tag/:contentTypePath/artifacts/${route}`,
+      `/:projectId/tag/:tag/:contentTypePath/${route}`,
+      `/:projectId/commit/:commitHash/:contentTypePath/${route}`,
     ];
   },
 
   addProjectScopeMiddleware(middlewareOpts, router) {
     const { logger } = middlewareOpts;
-    router.use(
-      [
-        "/:projectId/tag/:tag/:contentTypePath/",
-        "/:projectId/branch/:branch/:contentTypePath/",
-      ],
-      async (req, res, next) => {
-        console.log("received request with tag");
-        try {
-          const { contentTypePath } = req.params;
-          req.webgmeContext = await Utils.getWebGMEContext(middlewareOpts, req);
-          const { core, root } = req.webgmeContext;
-          const contentType = await core.loadByPath(root, contentTypePath);
-          assert(contentType, new ContentTypeNotFoundError(contentTypePath));
-          req.webgmeContext.contentType = contentType;
-          console.log("CTX received:", req.originalUrl);
-          next();
-        } catch (e) {
-          if (e instanceof UserError) {
-            res.status(e.statusCode).send(e.message);
-          } else {
-            logger.error(e);
-            res.sendStatus(500);
-          }
+    router.use(Utils.getProjectScopedRoutes(), async (req, res, next) => {
+      console.log("received request with tag");
+      try {
+        const { contentTypePath } = req.params;
+        req.webgmeContext = await Utils.getWebGMEContext(middlewareOpts, req);
+        const { core, root } = req.webgmeContext;
+        const contentType = await core.loadByPath(root, contentTypePath);
+        assert(contentType, new ContentTypeNotFoundError(contentTypePath));
+        req.webgmeContext.contentType = contentType;
+        console.log("CTX received:", req.originalUrl);
+        next();
+      } catch (e) {
+        if (e instanceof UserError) {
+          res.status(e.statusCode).send(e.message);
+        } else {
+          logger.error(e);
+          res.sendStatus(500);
         }
       }
-    );
+    });
   },
 };
 
