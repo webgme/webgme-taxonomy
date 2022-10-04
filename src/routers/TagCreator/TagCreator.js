@@ -71,8 +71,7 @@ function initialize(middlewareOpts) {
         const { projectId, branch, contentTypePath } = req.params;
         req.webgmeContext = await RouterUtils.getWebGMEContext(
           middlewareOpts,
-          req,
-          { projectId, branch }
+          req
         );
         const { core, root } = req.webgmeContext;
         const contentType = await core.loadByPath(root, contentTypePath);
