@@ -40,25 +40,21 @@ function initialize(middlewareOpts) {
   // Skipping authentication here as data is not easy to determine from these routes.
   // The GUID/display name (and fields) need to be guessed exactly.
 
-  router.use("/:projectId/branch/:branch/", async (req, res, next) => {
-    try {
+  router.use(
+    RouterUtils.getProjectScopedRoutes(),
+    RouterUtils.handleUserErrors(middlewareOpts.logger, async (req) => {
       const { projectId, branch } = req.params;
       const userId = projectId.split("+").shift();
       req.webgmeContext = await RouterUtils.getWebGMEContextUnsafe(
         middlewareOpts,
         userId,
-        {projectId,
-        branch}
+        { projectId, branch }
       );
-      next();
-    } catch (e) {
-      logger.error(e);
-      res.sendStatus(500);
-    }
-  });
+    })
+  );
 
   router.get(
-    "/:projectId/branch/:branch/:format(guid|human)",
+    RouterUtils.getProjectScopedRoutes(":format(guid|human)"),
     async function (req, res) {
       const { format } = req.params;
       let { tags } = req.query;

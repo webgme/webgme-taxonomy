@@ -18,7 +18,6 @@ var express = require("express"),
   router = express.Router(),
   logger;
 
-const assert = require("assert");
 const RouterUtils = require("../../common/routers/Utils");
 const Utils = require("../../common/Utils");
 const DashboardConfiguration = require("../../common/SearchFilterDataExporter");
@@ -62,82 +61,16 @@ function initialize(middlewareOpts) {
   router.use("*", ensureAuthenticated);
 
   router.use(
-    "/:projectId/branch/:branch/:contentTypePath/static/",
+    RouterUtils.getContentTypeRoutes("static/"),
     express.static(staticPath)
   );
 
   // Perhaps the path should include the node ID, too...
-  router.use(
-    "/:projectId/branch/:branch/:contentTypePath/",
-    async (req, res, next) => {
-      console.log("received request");
-      try {
-        const { projectId, branch, contentTypePath } = req.params;
-        console.log("CTX:", projectId, branch);
-        req.webgmeContext = await RouterUtils.getWebGMEContext(
-          middlewareOpts,
-          req,
-          {projectId,
-          branch}
-        );
-        const { core, root } = req.webgmeContext;
-        const contentType = await core.loadByPath(root, contentTypePath);
-        assert(
-          contentType,
-          new RouterUtils.ContentTypeNotFoundError(contentTypePath)
-        );
-        req.webgmeContext.contentType = contentType;
-        console.log("CTX received:", req.originalUrl);
-        next();
-      } catch (e) {
-        if (e instanceof RouterUtils.UserError) {
-          res.status(e.statusCode).send(e.message);
-        } else {
-          logger.error(e);
-          res.sendStatus(500);
-        }
-      }
-    }
-  );
-
-  router.use(
-    "/:projectId/tag/:tag/:contentTypePath/",
-    async (req, res, next) => {
-      console.log("received request with tag");
-      try {
-        const { projectId, tag, contentTypePath } = req.params;
-        console.log("CTX:", projectId, tag);
-        req.webgmeContext = await RouterUtils.getWebGMEContext(
-          middlewareOpts,
-          req,
-          {projectId,
-          tag}
-        );
-        const { core, root } = req.webgmeContext;
-        const contentType = await core.loadByPath(root, contentTypePath);
-        assert(
-          contentType,
-          new RouterUtils.ContentTypeNotFoundError(contentTypePath)
-        );
-        req.webgmeContext.contentType = contentType;
-        console.log("CTX received:", req.originalUrl);
-        next();
-      } catch (e) {
-        if (e instanceof RouterUtils.UserError) {
-          res.status(e.statusCode).send(e.message);
-        } else {
-          logger.error(e);
-          res.sendStatus(500);
-        }
-      }
-    }
-  );
+  RouterUtils.addContentTypeMiddleware(middlewareOpts, router);
 
   router.get(
-    ["/:projectId/branch/:branch/:contentTypePath/configuration.json",
-    "/:projectId/tag/:tag/:contentTypePath/configuration.json"
-  ],
-    async function (req, res) {
+    RouterUtils.getContentTypeRoutes("configuration.json"),
+    async (req, res) => {
       const { core, contentType } = req.webgmeContext;
       const configuration = await DashboardConfiguration.from(
         core,
@@ -149,8 +82,7 @@ function initialize(middlewareOpts) {
 
   // Accessing and updating data via the storage adapter
   router.get(
-    ["/:projectId/branch/:branch/:contentTypePath/artifacts/",
-    "/:projectId/tag/:tag/:contentTypePath/artifacts/"],
+    RouterUtils.getContentTypeRoutes("artifacts/"),
     // TODO: add the artifact ID...
     async function (req, res) {
       try {
@@ -172,7 +104,7 @@ function initialize(middlewareOpts) {
   );
 
   router.post(
-    "/:projectId/branch/:branch/:contentTypePath/artifacts/",
+    RouterUtils.getContentTypeRoutes("artifacts/"),
     // TODO: re-enable tag conversion once the process is created automatically
     //convertTaxonomyTags,
     async function (req, res) {
@@ -195,7 +127,7 @@ function initialize(middlewareOpts) {
   );
 
   router.post(
-    "/:projectId/branch/:branch/:contentTypePath/artifacts/:parentId/uploadUrl",
+    RouterUtils.getContentTypeRoutes("artifacts/:parentId/uploadUrl"),
     convertTaxonomyTags,
     async function (req, res) {
       const { parentId } = req.params;
@@ -218,7 +150,7 @@ function initialize(middlewareOpts) {
   );
 
   router.get(
-    "/:projectId/branch/:branch/:contentTypePath/artifacts/:parentId/download",
+    RouterUtils.getContentTypeRoutes("artifacts/:parentId/download"),
     async function (req, res) {
       const { parentId } = req.params;
       // TODO: get the IDs for the specific observations to get
@@ -241,7 +173,7 @@ function initialize(middlewareOpts) {
       );
       const zipFile = await storage.getDownloadPath(parentId, ids, formatter);
       if (zipFile) {
-        await res.download(zipFile.path, path.basename(zipFile.name), () =>
+        return res.download(zipFile.path, path.basename(zipFile.name), () =>
           zipFile.cleanUp()
         );
       } else {
