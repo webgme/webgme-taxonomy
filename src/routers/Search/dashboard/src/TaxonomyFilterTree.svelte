@@ -3,7 +3,10 @@
   import Textfield from "@smui/textfield";
   import FormField from "@smui/form-field";
   import Select, { Option } from "@smui/select";
+  import Autocomplete from "@smui-extra/autocomplete"
+
   export let tree;
+  export let options = [];
   const { name, children } = tree;
 
   const toggleExpansion = () => {
@@ -39,7 +42,7 @@
     {#if tree.type === "TextField"}
       <FormField>
         <Checkbox bind:checked indeterminate={checked === null} />
-        <Textfield label={name} bind:value />
+        <Autocomplete {options} label={name} bind:value />
       </FormField>
     {:else if tree.type === "IntegerField"}
       <FormField>
