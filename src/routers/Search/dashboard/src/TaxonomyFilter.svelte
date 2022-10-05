@@ -20,7 +20,9 @@
   }
 
   function treeOptions(tree: FilterTag) {
-    return tree.matchable(tags).map(({ value }) => value);
+    return tags
+      .filter(tag => tree.canMatch(tag))
+      .map(({ value }) => value);
   }
 
 </script>
