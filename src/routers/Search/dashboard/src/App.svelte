@@ -4,6 +4,7 @@
   import { getLatestArtifact, filterMap } from "./Utils.ts";
   import Textfield from "@smui/textfield";
   import IconButton from "@smui/icon-button";
+  import { SvelteToast, toast } from '@zerodevx/svelte-toast'
   /*import Chip from "@smui/chips";*/
   import List, {
     Item,
@@ -22,11 +23,11 @@
     Actions,
   } from "@smui/dialog";
   import Radio from "@smui/radio";
-  import type { SnackbarComponentDev } from "@smui/snackbar";
-  import Snackbar, {
-    Actions as SnackbarActions,
-    Label as SnackbarLabel,
-  } from "@smui/snackbar";
+  // import type { SnackbarComponentDev } from "@smui/snackbar";
+  // import Snackbar, {
+    // Actions as SnackbarActions,
+    // Label as SnackbarLabel,
+  // } from "@smui/snackbar";
   import Button, { Label } from "@smui/button";
   import Dropzone from "svelte-file-dropzone";
   import TaxonomyFilter from "./TaxonomyFilter.svelte";
@@ -147,18 +148,25 @@
     return vocabs;
   }
 
-  let snackbar: SnackbarComponentDev;
-  let errorMessage: string;
-  $: errorMessage && snackbar.open();
+  // let snackbar: SnackbarComponentDev;
+  // let errorMessage: string;
+  // $: errorMessage && snackbar.open();
+  
 
   // TODO: format the error with red
   function displayError(msg: string) {
-    errorMessage = msg;
+    toast.push(msg, { classes: ['warn'] }) // background red
   }
 
-  // TODO: use a different color (& variable)
   function displayMessage(msg: string) {
-    errorMessage = msg;
+    toast.push(msg, { classes: ['info'] }) // background green
+  }
+
+  function displayProgressMessage(msg: string, duration: number = 60000) {
+    return toast.push(msg,{classes:['info'], dismissable: false, duration: duration});
+  }
+  function clearProgressMessage(id: number) {
+    toast.pop(id);
   }
 
   let isLoading = false;
@@ -278,8 +286,9 @@
 
     const metadata = appendMetadata;
     metadata.displayName = appendName;
-    displayMessage("Upload in progress");
+    const updMsgId = displayProgressMessage("Upload in progress");
     await storage.appendArtifact(appendItem, metadata, appendFiles);
+    clearProgressMessage(updMsgId);
     displayMessage("Upload complete!");
     fetchData();
   }
@@ -349,6 +358,8 @@
   let downloadArtifactSet;
   let downloadSetting = "all";
   async function onDownloadClicked() {
+    
+    displayMessage("StartDownload...");
     try {
       // TODO: get the artifact IDs
       const ids =
@@ -360,6 +371,7 @@
         return displayError("Nothing to download: No data found.");
       }
       const url = await storage.getDownloadUrl(downloadArtifactSet.id, ...ids);
+      displayMessage('starting actual download...');
       const anchor = document.createElement("a");
       anchor.setAttribute("href", url);
       anchor.setAttribute("target", "_blank");
@@ -545,13 +557,15 @@
 {#if isLoading}
   <LinearProgress indeterminate />
 {/if}
-<Snackbar bind:this={snackbar} labelText={errorMessage} timeoutMs={-1}>
+<!--
+<Snackbar bind:this={snackbar} labelText={errorMessage} timeoutMs={-1} variant="stacked">
   <SnackbarLabel />
   <SnackbarActions>
     <IconButton class="material-icons" title="Dismiss">close</IconButton>
   </SnackbarActions>
 </Snackbar>
-
+-->
+<SvelteToast options={{ classes: ['log'] }}  />
 <!-- TODO: make the drawer collapsible? -->
 <div class="drawer-container">
   <Drawer style="width: 360px">
@@ -649,5 +663,12 @@
     overflow: auto;
     position: relative;
     flex-grow: 1;
+  }
+
+  :global(.log.info) {
+    --toastBackground: green;
+  }
+  :global(.log.warn) {
+    --toastBackground: red;
   }
 </style>
