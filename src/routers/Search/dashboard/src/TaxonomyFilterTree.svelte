@@ -52,7 +52,7 @@
     {#if tree.type === "TextField"}
       <FormField>
         <Checkbox bind:checked indeterminate={checked === null} />
-        <Autocomplete label={name} bind:value {options} bind:this={autocomplete} />
+        <Autocomplete label={name} bind:value {options} />
       </FormField>
     {:else if tree.type === "IntegerField"}
       <FormField>
