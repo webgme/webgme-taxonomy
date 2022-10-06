@@ -1,10 +1,15 @@
 <script lang="ts">
   import type { FilterTag } from "./FilterTag";
   import TaxonomyFilterTree from "./TaxonomyFilterTree.svelte";
-  export let trees: FilterTag[];
+  export let trees: FilterTag[] = [];
   export let tags = [];
   import { createEventDispatcher } from "svelte";
   const dispatch = createEventDispatcher();
+
+  $: filterTreeProps = trees.map(tree => ({
+    tree,
+    tags: tags.filter(tag => tree.canMatch(tag))
+  }))
 
   function getSelectedTags(node) {
     const tags = node.children.flatMap(getSelectedTags);
@@ -19,16 +24,10 @@
     dispatch("change", { filterTags });
   }
 
-  function treeOptions(tree: FilterTag) {
-    return tags
-      .filter(tag => tree.canMatch(tag))
-      .map(({ value }) => value);
-  }
-
 </script>
 
 <main>
-  {#each trees as tree}
-    <TaxonomyFilterTree {tree} options={treeOptions(tree)} on:change={onChange} />
+  {#each filterTreeProps as props}
+    <TaxonomyFilterTree {...props} on:change={onChange} />
   {/each}
 </main>
