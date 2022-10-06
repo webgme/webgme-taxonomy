@@ -3,6 +3,14 @@ interface ItemTag {
   value: any;
 }
 
+namespace ItemTag {
+  export function valueForId(itemTag: ItemTag, id: string) {
+    return (itemTag.ID === id) ? itemTag.value : itemTag[id];
+  }
+}
+
+export { ItemTag }
+
 /*
  * A stripped down version of FilterTag that contains the minimal required information
  * (assuming that the corresponding FilterTag can be found). Used for saving the current
