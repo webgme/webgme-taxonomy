@@ -10,7 +10,9 @@
   const { name, children } = tree;
 
   export let tags = [];
-  $: options = tags.map(tag => ItemTag.valueForId(tag, tree.id));
+  $: options = tags
+    .map(tag => ItemTag.valueForId(tag, tree.id))
+    .filter(val => val != null);
 
   const toggleExpansion = () => {
     tree.expanded = !tree.expanded;
