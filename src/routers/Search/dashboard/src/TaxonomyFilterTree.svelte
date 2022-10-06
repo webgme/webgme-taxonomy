@@ -31,9 +31,13 @@
     tree.selected = checked;
     tree.value = value;
     //tree.children.forEach(child => child.selected = checked);
-    dispatch("change", { tree });
+    onChange();
     //}
     // TODO: for any parents, set to indeterminate if single child is selected
+  }
+
+  function onChange() {
+    dispatch("change", { tree });
   }
 </script>
 

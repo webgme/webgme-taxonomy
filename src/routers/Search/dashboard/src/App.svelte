@@ -43,7 +43,6 @@
   const storage = new Storage();
   let allItems = [];
   let items = [];
-  $: itemTags = items.flatMap(item => item.taxonomyTags);
 
   const params = new URLSearchParams(location.search);
   let searchQuery: string = params.get("searchQuery") || "";
@@ -407,6 +406,8 @@
   function getArtifactSets(items) {
     return [];
   }
+
+  $: itemTags = items.flatMap(item => item.taxonomyTags);
 </script>
 
 <svelte:head>
