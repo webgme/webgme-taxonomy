@@ -4,10 +4,13 @@
   import FormField from "@smui/form-field";
   import Select, { Option } from "@smui/select";
   import Autocomplete from "@smui-extra/autocomplete"
+  import { ItemTag } from "./FilterTag";
 
   export let tree;
-  export let options = [];
   const { name, children } = tree;
+
+  export let tags = [];
+  $: options = tags.map(tag => ItemTag.valueForId(tag, tree.id));
 
   const toggleExpansion = () => {
     tree.expanded = !tree.expanded;
@@ -24,6 +27,7 @@
   // mutate the existing data
   import { createEventDispatcher } from "svelte";
   const dispatch = createEventDispatcher();
+
   $: {
     //if (checked !== tree.selected) {
 
@@ -77,7 +81,7 @@
       </div>
       {#if tree.expanded}
         {#each children as child}
-          <svelte:self on:change tree={child} />
+          <svelte:self on:change tree={child} {tags} />
         {/each}
       {/if}
     {/if}
