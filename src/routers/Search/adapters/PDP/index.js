@@ -50,6 +50,7 @@ class PDP {
     ).map(([parentId, artifacts]) => {
       const latestArtifact = artifacts
         .sort((a1, a2) => (a1.time < a2.time ? -1 : 1))
+        .slice()
         .pop();
       const { displayName, taxonomyTags } = latestArtifact;
       return new ArtifactSet(parentId, displayName, taxonomyTags, artifacts);
@@ -130,14 +131,13 @@ class PDP {
     }
 
     const observations = await Promise.all(
-      range(1, obsInfo.numObservations).map((i) =>
+      range(0, obsInfo.numObservations).map((i) =>
         this._fetchJson(
           "v2/Process/GetObservation?processId=" + pid + "&obsIndex=" + i
         )
       )
     );
 
-    console.log(observations[0]);
     return observations;
   }
 
