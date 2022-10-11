@@ -12,7 +12,8 @@
   export let tags = [];
   $: options = tags
     .map(tag => ItemTag.valueForId(tag, tree.id))
-    .filter(val => val != null);
+    .sort()
+    .filter((val, index, sorted) => (val != null) && (val !== sorted[index - 1]));
 
   const toggleExpansion = () => {
     tree.expanded = !tree.expanded;
