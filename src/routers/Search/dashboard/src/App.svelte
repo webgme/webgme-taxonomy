@@ -79,7 +79,7 @@
       const { displayName, taxonomyTags } = item;
 
       const matchingTags = filterTags.every(
-        (filterTag) => !!taxonomyTags.find((tag) => filterTag.isMatch(tag))
+        (filterTag) => !!taxonomyTags?.find((tag) => filterTag.isMatch(tag))
       );
 
       if (matchingTags) {
@@ -407,7 +407,7 @@
     return [];
   }
 
-  $: itemTags = items.flatMap(item => item.taxonomyTags);
+  $: itemTags = items.flatMap(item => item.taxonomyTags ?? []);
 </script>
 
 <svelte:head>
