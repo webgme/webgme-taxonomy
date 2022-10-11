@@ -27,7 +27,7 @@
 </script>
 
 <main>
-  {#each filterTreeProps as props}
+  {#each filterTreeProps as props (props.tree.id)}
     <TaxonomyFilterTree {...props} on:change={onChange} />
   {/each}
 </main>
