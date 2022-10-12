@@ -76,10 +76,10 @@
 
   function onFilterUpdate(searchQuery: string, filterTags: FilterTag[]) {
     const filter = (item) => {
-      const { displayName, taxonomyTags } = item;
+      const { displayName, taxonomyTags = [] } = item;
 
       const matchingTags = filterTags.every(
-        (filterTag) => !!taxonomyTags?.find((tag) => filterTag.isMatch(tag))
+        (filterTag) => !!taxonomyTags.find((tag) => filterTag.isMatch(tag))
       );
 
       if (matchingTags) {
