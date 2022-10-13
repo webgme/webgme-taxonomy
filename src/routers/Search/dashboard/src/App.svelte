@@ -4,7 +4,7 @@
   import { getLatestArtifact, filterMap } from "./Utils.ts";
   import Textfield from "@smui/textfield";
   import IconButton from "@smui/icon-button";
-  import { SvelteToast, toast } from '@zerodevx/svelte-toast'
+  import { SvelteToast, toast } from "@zerodevx/svelte-toast";
   /*import Chip from "@smui/chips";*/
   import List, {
     Item,
@@ -25,12 +25,13 @@
   import Radio from "@smui/radio";
   // import type { SnackbarComponentDev } from "@smui/snackbar";
   // import Snackbar, {
-    // Actions as SnackbarActions,
-    // Label as SnackbarLabel,
+  // Actions as SnackbarActions,
+  // Label as SnackbarLabel,
   // } from "@smui/snackbar";
   import Button, { Label } from "@smui/button";
   import Dropzone from "svelte-file-dropzone";
   import TaxonomyFilter from "./TaxonomyFilter.svelte";
+  import ArtifactSetViewer from "./ArtifactSetViewer.svelte";
   import type TaxonomyData from "./TaxonomyData.ts";
 
   let title: string;
@@ -151,19 +152,22 @@
   // let snackbar: SnackbarComponentDev;
   // let errorMessage: string;
   // $: errorMessage && snackbar.open();
-  
 
   // TODO: format the error with red
   function displayError(msg: string) {
-    toast.push(msg, { classes: ['warn'] }) // background red
+    toast.push(msg, { classes: ["warn"] }); // background red
   }
 
   function displayMessage(msg: string) {
-    toast.push(msg, { classes: ['info'] }) // background green
+    toast.push(msg, { classes: ["info"] }); // background green
   }
 
   function displayProgressMessage(msg: string, duration: number = 60000) {
-    return toast.push(msg,{classes:['info'], dismissable: false, duration: duration});
+    return toast.push(msg, {
+      classes: ["info"],
+      dismissable: false,
+      duration: duration,
+    });
   }
   function clearProgressMessage(id: number) {
     toast.pop(id);
@@ -233,6 +237,7 @@
     listeners.forEach(([listener, origin]) =>
       listener.postMessage(new SelectEvent(item), origin)
     );
+    selectedArtifactSet = item;
   }
 
   initialize();
@@ -354,54 +359,29 @@
   }
 
   //////// Download ////////
-  let downloadArtifacts = false;
-  let downloadArtifactSet;
-  let downloadSetting = "all";
-  async function onDownloadClicked() {
-    
-    displayMessage("StartDownload...");
+  async function onDownload(event) {
+    const { artifactSet, artifactIds } = event;
     try {
-      // TODO: get the artifact IDs
-      const ids =
-        downloadSetting === "all"
-          ? getAllArtifactIds(downloadArtifactSet)
-          : getLatestArtifactId(downloadArtifactSet);
-
-      if (ids.length === 0) {
+      if (artifactIds.length === 0) {
         return displayError("Nothing to download: No data found.");
       }
-      const url = await storage.getDownloadUrl(downloadArtifactSet.id, ...ids);
-      displayMessage('starting actual download...');
+      displayMessage(
+        `Downloading ${artifactIds.length} from ${artifactSet.displayName}...`
+      );
+      const url = await storage.getDownloadUrl(artifactSet.id, ...artifactIds);
       const anchor = document.createElement("a");
       anchor.setAttribute("href", url);
-      anchor.setAttribute("target", "_blank");
+      //anchor.setAttribute("target", "_blank");
       anchor.click();
     } catch (err) {
       return displayError(err.message);
     }
   }
 
-  function getAllArtifactIds(artifactSet) {
-    return artifactSet.children.map((item) => item.id);
-  }
-
-  function getLatestArtifactId(artifactSet) {
-    const latest = getLatestArtifact(artifactSet);
-    const ids = [];
-    if (latest) {
-      ids.push(latest.id);
-    }
-    return ids;
-  }
-
-  function onOpenDownloadDialog(item) {
-    downloadArtifactSet = item;
-    downloadArtifacts = true;
-  }
-
   //////// Artifact Sets ////////
   let artifactSets = [];
   $: artifactSets = getArtifactSets(items);
+  let selectedArtifactSet;
 
   function getArtifactSets(items) {
     return [];
@@ -411,43 +391,6 @@
 <svelte:head>
   <title>{title}</title>
 </svelte:head>
-<!-- Download Dialog -->
-<Dialog
-  bind:open={downloadArtifacts}
-  aria-labelledby="title"
-  aria-describedby="content"
->
-  <DialogTitle id="title"
-    >Download {downloadArtifactSet &&
-      downloadArtifactSet.displayName}</DialogTitle
-  >
-  <DialogContent id="content">
-    <p>What would you like to download?</p>
-    <List radioList>
-      <Item>
-        <Graphic>
-          <Radio bind:group={downloadSetting} value="all" />
-        </Graphic>
-        <Text>All Data</Text>
-      </Item>
-      <Item use={[InitialFocus]}>
-        <Graphic>
-          <Radio bind:group={downloadSetting} value="latest" />
-        </Graphic>
-        <Text>Latest Data</Text>
-      </Item>
-    </List>
-  </DialogContent>
-  <Actions>
-    <Button>
-      <Label>Cancel</Label>
-    </Button>
-    <Button on:click={() => onDownloadClicked()}>
-      <Label>Download</Label>
-    </Button>
-  </Actions>
-</Dialog>
-
 <!-- Artifact append dialog -->
 <Dialog
   bind:open={appendArtifact}
@@ -565,7 +508,7 @@
   </SnackbarActions>
 </Snackbar>
 -->
-<SvelteToast options={{ classes: ['log'] }}  />
+<SvelteToast options={{ classes: ["log"] }} />
 <!-- TODO: make the drawer collapsible? -->
 <div class="drawer-container">
   <Drawer style="width: 360px">
@@ -580,28 +523,15 @@
     </Content>
   </Drawer>
   <AppContent>
-    <main>
+    <main style="display: inline-block; vertical-align: top">
       <!-- Artifact list -->
       <List twoLine avatarList>
         {#each items as item (item.hash)}
           <Item on:SMUI:action={() => onItemClicked(item)}>
             <Text>
               <PrimaryText>{item.displayName}</PrimaryText>
-              <SecondaryText>
-                <a
-                  style="margin-right: 15px"
-                  on:click={onOpenDownloadDialog(item)}>Download</a
-                >
-                <!-- TODO: check if they have permissions to append to it -->
-                <a style="margin-right: 15px" on:click={onAppendItem(item)}
-                  >Append Data</a
-                >
-              </SecondaryText>
+              <SecondaryText />
             </Text>
-            <!--
-            <IconButton class="material-icons" on:click={() => onDownloadItem(item)}>file_download</IconButton>
-            <IconButton class="material-icons" on:click={() => onAppendItem(item)}>file_upload</IconButton>
-            -->
             {#each item.taxonomyTags as tag}
               <!--
                                                         <Chip chip={tag.id}>
@@ -619,6 +549,14 @@
         {/each}
       </List>
     </main>
+    {#if selectedArtifactSet}
+      <ArtifactSetViewer
+        bind:artifactSet={selectedArtifactSet}
+        bind:contentType
+        on:download={(event) => onDownload(event.detail)}
+        on:upload={(event) => onAppendItem(event.detail.artifactSet)}
+      />
+    {/if}
   </AppContent>
 </div>
 
