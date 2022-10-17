@@ -1,10 +1,15 @@
 <script lang="ts">
   import { FilterTag, LeanTag } from "./FilterTag";
   import TopAppBar, { Row, Section, Title } from "@smui/top-app-bar";
-  import { getLatestArtifact, filterMap } from "./Utils.ts";
+  import {
+    getLatestArtifact,
+    filterMap,
+    openUrl,
+    encodeQueryParams,
+  } from "./Utils.ts";
   import Textfield from "@smui/textfield";
   import IconButton from "@smui/icon-button";
-  import { SvelteToast, toast } from '@zerodevx/svelte-toast'
+  import { SvelteToast, toast } from "@zerodevx/svelte-toast";
   /*import Chip from "@smui/chips";*/
   import List, {
     Item,
@@ -25,8 +30,8 @@
   import Radio from "@smui/radio";
   // import type { SnackbarComponentDev } from "@smui/snackbar";
   // import Snackbar, {
-    // Actions as SnackbarActions,
-    // Label as SnackbarLabel,
+  // Actions as SnackbarActions,
+  // Label as SnackbarLabel,
   // } from "@smui/snackbar";
   import Button, { Label } from "@smui/button";
   import Dropzone from "svelte-file-dropzone";
@@ -151,27 +156,31 @@
   // let snackbar: SnackbarComponentDev;
   // let errorMessage: string;
   // $: errorMessage && snackbar.open();
-  
 
   // TODO: format the error with red
   function displayError(msg: string) {
-    toast.push(msg, { classes: ['warn'] }) // background red
+    toast.push(msg, { classes: ["warn"] }); // background red
   }
 
   function displayMessage(msg: string) {
-    toast.push(msg, { classes: ['info'] }) // background green
+    toast.push(msg, { classes: ["info"] }); // background green
   }
 
   function displayProgressMessage(msg: string, duration: number = 60000) {
-    return toast.push(msg,{classes:['info'], dismissable: false, duration: duration});
+    return toast.push(msg, {
+      classes: ["info"],
+      dismissable: false,
+      duration: duration,
+    });
   }
   function clearProgressMessage(id: number) {
     toast.pop(id);
   }
 
   let isLoading = false;
+  let configuration;
   async function initialize() {
-    const configuration = await fetchConfiguration();
+    configuration = await fetchConfiguration();
     const taxonomy = FilterTag.fromDict(configuration.taxonomy);
     vocabularies = trimTaxonomy(taxonomy);
     filterTags = parseTagParams(params.get("filterTags"));
@@ -358,7 +367,6 @@
   let downloadArtifactSet;
   let downloadSetting = "all";
   async function onDownloadClicked() {
-    
     displayMessage("StartDownload...");
     try {
       // TODO: get the artifact IDs
@@ -371,11 +379,8 @@
         return displayError("Nothing to download: No data found.");
       }
       const url = await storage.getDownloadUrl(downloadArtifactSet.id, ...ids);
-      displayMessage('starting actual download...');
-      const anchor = document.createElement("a");
-      anchor.setAttribute("href", url);
-      anchor.setAttribute("target", "_blank");
-      anchor.click();
+      displayMessage("starting actual download...");
+      openUrl(url);
     } catch (err) {
       return displayError(err.message);
     }
@@ -405,6 +410,20 @@
 
   function getArtifactSets(items) {
     return [];
+  }
+
+  //////// Edit taxonomy ////////
+  function onOpenInEditor() {
+    const baseUrl = window.location.href.replace(/routers\/Search.*/, "");
+    const url =
+      baseUrl +
+      "?" +
+      encodeQueryParams({
+        project: configuration.project.id,
+        commit: configuration.project.commit,
+        node: configuration.contentTypePath,
+      });
+    openUrl(url);
   }
 </script>
 
@@ -551,6 +570,12 @@
         ripple={false}
         on:click={() => (creatingArtifact = true)}>file_upload</IconButton
       >
+      <IconButton
+        class="material-icons"
+        aria-label="Edit taxonomy"
+        ripple={false}
+        on:click={onOpenInEditor}>open_in_new</IconButton
+      >
     </Section>
   </Row>
 </TopAppBar>
@@ -565,7 +590,7 @@
   </SnackbarActions>
 </Snackbar>
 -->
-<SvelteToast options={{ classes: ['log'] }}  />
+<SvelteToast options={{ classes: ["log"] }} />
 <!-- TODO: make the drawer collapsible? -->
 <div class="drawer-container">
   <Drawer style="width: 360px">
