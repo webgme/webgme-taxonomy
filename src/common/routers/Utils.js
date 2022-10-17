@@ -84,6 +84,7 @@ const Utils = {
     }
 
     context.root = await context.core.loadRoot(context.commitObject.root);
+    context.projectVersion.commit = context.commitObject._id;
 
     console.log("got context!!!");
     return context;
