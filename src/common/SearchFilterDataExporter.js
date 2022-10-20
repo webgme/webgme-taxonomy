@@ -50,7 +50,6 @@ function factory() {
     }
   }
 
-  // TODO: make this available via REST or in common/?
   class DashboardConfiguration {
     static async from(core, contentTypeNode) {
       const config = await ContentTypeExporter.from(core, contentTypeNode);

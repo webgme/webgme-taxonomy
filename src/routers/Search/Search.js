@@ -76,6 +76,8 @@ function initialize(middlewareOpts) {
         core,
         contentType
       );
+      configuration.project = req.webgmeContext.projectVersion;
+      configuration.contentTypePath = core.getPath(contentType);
       res.json(configuration);
     }
   );

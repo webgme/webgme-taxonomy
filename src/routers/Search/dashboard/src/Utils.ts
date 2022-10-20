@@ -69,3 +69,16 @@ export function getLatestArtifact(artifactSet: any): any {
 
   return artifactSet.children[artifactSet.children.length - 1];
 }
+
+export function openUrl(url: string) {
+    const anchor = document.createElement("a");
+    anchor.setAttribute("href", url);
+    anchor.setAttribute("target", "_blank");
+    anchor.click();
+}
+
+export function encodeQueryParams(dict: {[key: string]: string}) {
+  return Object.entries(dict)
+    .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
+    .join('&');
+}
