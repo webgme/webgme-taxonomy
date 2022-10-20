@@ -1,5 +1,5 @@
 diff --git a/node_modules/@smui-extra/autocomplete/dist/Autocomplete.svelte b/node_modules/@smui-extra/autocomplete/dist/Autocomplete.svelte
-index 1e5ea22..40b752b 100644
+index 1e5ea22..95cbf3c 100644
 --- a/node_modules/@smui-extra/autocomplete/dist/Autocomplete.svelte
 +++ b/node_modules/@smui-extra/autocomplete/dist/Autocomplete.svelte
 @@ -155,28 +155,10 @@ $: if (previousText !== text) {
@@ -29,7 +29,7 @@ index 1e5ea22..40b752b 100644
 +    refreshOptions();
      previousText = text;
  }
-+$: refreshOptions(options);
++$: (options, search, refreshOptions());
  let previousValue = value;
  $: if (!combobox && previousValue !== value) {
      // If the value changes from outside, update the text.
