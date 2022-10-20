@@ -4,24 +4,16 @@
   import FormField from "@smui/form-field";
   import Select, { Option } from "@smui/select";
   import Autocomplete from "@smui-extra/autocomplete"
-  import { ItemTag } from "./FilterTag";
-  import Fuse from 'fuse.js'
+  import TagMatcher from "./TagMatcher";
 
   export let tree;
   const { name, children } = tree;
 
   export let tags = [];
 
-  // if it's a text field, setup our custom fuzzy-matching autocomplete options
   let search: ((input: string) => Promise<any[] | false>) | undefined
   $: if (tree.type === "TextField") {
-    const options = tags
-      .map(tag => ItemTag.valueForId(tag, tree.id))
-      .sort()
-      .filter((val, index, sorted) => (val != null) && (val !== sorted[index - 1]));
-    const fuse = new Fuse(options, { ignoreLocation: true });
-    search = async (input: string) =>
-      !input ? options : fuse.search(input).map(({ item }) => item);
+    search = TagMatcher(tree.id, tags)
   }
 
   const toggleExpansion = () => {
