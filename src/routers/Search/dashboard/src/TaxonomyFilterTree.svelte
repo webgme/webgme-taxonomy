@@ -5,15 +5,24 @@
   import Select, { Option } from "@smui/select";
   import Autocomplete from "@smui-extra/autocomplete"
   import { ItemTag } from "./FilterTag";
+  import Fuse from 'fuse.js'
 
   export let tree;
   const { name, children } = tree;
 
   export let tags = [];
-  $: options = tags
-    .map(tag => ItemTag.valueForId(tag, tree.id))
-    .sort()
-    .filter((val, index, sorted) => (val != null) && (val !== sorted[index - 1]));
+
+  // if it's a text field, setup our custom fuzzy-matching autocomplete options
+  let search: ((input: string) => Promise<any[] | false>) | undefined
+  $: if (tree.type === "TextField") {
+    const options = tags
+      .map(tag => ItemTag.valueForId(tag, tree.id))
+      .sort()
+      .filter((val, index, sorted) => (val != null) && (val !== sorted[index - 1]));
+    const fuse = new Fuse(options, { ignoreLocation: true });
+    search = async (input: string) =>
+      !input ? options : fuse.search(input).map(({ item }) => item);
+  }
 
   const toggleExpansion = () => {
     tree.expanded = !tree.expanded;
@@ -53,7 +62,7 @@
     {#if tree.type === "TextField"}
       <FormField>
         <Checkbox bind:checked indeterminate={checked === null} />
-        <Autocomplete label={name} bind:value {options} />
+        <Autocomplete combobox label={name} bind:value {search} />
       </FormField>
     {:else if tree.type === "IntegerField"}
       <FormField>
