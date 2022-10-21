@@ -15,11 +15,11 @@ export default class TaxonomyReference {
   static from(taxonomyVersion: object): TaxonomyReference {
     let version;
     if (taxonomyVersion.tag) {
-      version = new Tag(taxonomyVersion.tag);
+      version = new Tag(taxonomyVersion.commit, taxonomyVersion.tag);
     } else if (taxonomyVersion.branch) {
-      version = new Branch(taxonomyVersion.branch);
+      version = new Branch(taxonomyVersion.commit, taxonomyVersion.branch);
     } else if (taxonomyVersion.commit) {
-      version = new Branch(taxonomyVersion.commit);
+      version = new Commit(taxonomyVersion.commit);
     } else {
       const taxVersion = JSON.stringify(taxonomyVersion);
       throw new Error(`Could not find tag, branch, or commit in ${taxVersion}`);
@@ -30,49 +30,10 @@ export default class TaxonomyReference {
 }
 
 interface Version {
-  hash: string;
-
   supports(otherVersion: Version): boolean;
 }
 
-export class Tag {
-  hash: string;
-  version: SemanticVersion;
-
-  constructor(hash: string, versionString: string) {
-    this.hash = hash;
-    this.version = SemanticVersion.parse(versionString);
-  }
-
-  supports(otherTag: Version): boolean {
-    if (otherTag instanceof Tag) {
-      return this.version.major === otherTag.version.major &&
-        this.version.isGreaterThan(otherTag.version);
-    } else {
-      return this.hash === otherTag.hash;
-    }
-  }
-}
-
-export class Branch {
-  name: string;
-  hash: string;
-
-  constructor(hash: string, name: string) {
-    this.name = name;
-    this.hash = hash;
-  }
-
-  supports(otherVersion: Version): boolean {
-    if (otherVersion instanceof Branch) {
-      return otherVersion.name === this.name;
-    } else {
-      return otherVersion.hash === this.hash;
-    }
-  }
-}
-
-export class Commit {
+export class Commit implements Version {
   hash: string;
 
   constructor(hash: string) {
@@ -81,6 +42,41 @@ export class Commit {
 
   supports(otherVersion: Version): boolean {
     return otherVersion.hash === this.hash;
+  }
+}
+
+export class Tag extends Commit {
+  version: SemanticVersion;
+
+  constructor(hash: string, versionString: string) {
+    super(hash);
+    this.version = SemanticVersion.parse(versionString);
+  }
+
+  supports(otherTag: Version): boolean {
+    if (otherTag instanceof Tag) {
+      return this.version.major === otherTag.version.major &&
+        this.version.isGreaterThan(otherTag.version);
+    } else {
+      return super.supports(otherTag);
+    }
+  }
+}
+
+export class Branch extends Commit {
+  name: string;
+
+  constructor(hash: string, name: string) {
+    super(hash);
+    this.name = name;
+  }
+
+  supports(otherVersion: Version): boolean {
+    if (otherVersion instanceof Branch) {
+      return otherVersion.name === this.name;
+    } else {
+      return super.supports(otherVersion);
+    }
   }
 }
 

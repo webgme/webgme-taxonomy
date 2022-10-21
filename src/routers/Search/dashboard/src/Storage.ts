@@ -167,13 +167,18 @@ class AppendDataError extends StorageError {
 
 class ArtifactSet {
   static tryFrom(item: any) {
-    if (!item.displayName || !item.taxonomy) {
+    if (!item.displayName) {
       console.log("Found malformed data. Filtering out. Data:", item);
     } else {
       const hash =
           [ item.id, ...item.children.map(child => child.id).sort() ].join('/');
       item.hash = hash;
-      item.taxonomy = TaxonomyReference.from(item.taxonomy);
+      item.children = item.children.map(child => {
+        if (child.taxonomy) {
+          child.taxonomy = TaxonomyReference.from(child.taxonomy);
+        }
+        return child;
+      });
       return item;
     }
   }

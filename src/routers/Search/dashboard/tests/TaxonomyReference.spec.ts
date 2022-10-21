@@ -99,5 +99,11 @@ describe('TaxonomyReference', function() {
 			const branch2 = new Branch('otherHash', 'someBranch');
 			assert(branch.supports(branch2));
 		});
+
+		it('should fall back on hash comparison for non-Branch comparison', function() {
+			const branch = new Branch('someHash', 'someBranch');
+			const tag = new Tag('someHash', 'v1.0');
+			assert(branch.supports(tag));
+		});
 	});
 });

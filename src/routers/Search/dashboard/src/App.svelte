@@ -185,9 +185,13 @@
   async function fetchData() {
     isLoading = true;
     try {
-      allItems = (await storage.listArtifacts()).filter((item) =>
-        currentTaxonomy.supports(item.taxonomy)
-      );
+      allItems = await storage.listArtifacts();
+      allItems.forEach((set) => {
+        const validArtifacts = set.children.filter(
+          (item) => item.taxonomy && currentTaxonomy.supports(item.taxonomy)
+        );
+        set.children = validArtifacts;
+      });
     } catch (err) {
       const errMessage =
         err instanceof RequestError
