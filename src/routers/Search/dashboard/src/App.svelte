@@ -28,15 +28,11 @@
     Actions,
   } from "@smui/dialog";
   import Radio from "@smui/radio";
-  // import type { SnackbarComponentDev } from "@smui/snackbar";
-  // import Snackbar, {
-  // Actions as SnackbarActions,
-  // Label as SnackbarLabel,
-  // } from "@smui/snackbar";
   import Button, { Label } from "@smui/button";
   import Dropzone from "svelte-file-dropzone";
   import TaxonomyFilter from "./TaxonomyFilter.svelte";
   import type TaxonomyData from "./TaxonomyData.ts";
+  import TaxonomyReference from "./TaxonomyReference.ts";
 
   let title: string;
   let contentType: string = "Data";
@@ -153,11 +149,6 @@
     return vocabs;
   }
 
-  // let snackbar: SnackbarComponentDev;
-  // let errorMessage: string;
-  // $: errorMessage && snackbar.open();
-
-  // TODO: format the error with red
   function displayError(msg: string) {
     toast.push(msg, { classes: ["warn"] }); // background red
   }
@@ -179,19 +170,24 @@
 
   let isLoading = false;
   let configuration;
+  let currentTaxonomy;
   async function initialize() {
     configuration = await fetchConfiguration();
+    currentTaxonomy = TaxonomyReference.from(configuration.project);
     const taxonomy = FilterTag.fromDict(configuration.taxonomy);
     vocabularies = trimTaxonomy(taxonomy);
     filterTags = parseTagParams(params.get("filterTags"));
     contentType = configuration.name;
     fetchData();
   }
+  // TODO: set the current taxonomy based on configuration
 
   async function fetchData() {
     isLoading = true;
     try {
-      allItems = await storage.listArtifacts();
+      allItems = (await storage.listArtifacts()).filter((item) =>
+        currentTaxonomy.supports(item.taxonomy)
+      );
     } catch (err) {
       const errMessage =
         err instanceof RequestError
@@ -582,14 +578,6 @@
 {#if isLoading}
   <LinearProgress indeterminate />
 {/if}
-<!--
-<Snackbar bind:this={snackbar} labelText={errorMessage} timeoutMs={-1} variant="stacked">
-  <SnackbarLabel />
-  <SnackbarActions>
-    <IconButton class="material-icons" title="Dismiss">close</IconButton>
-  </SnackbarActions>
-</Snackbar>
--->
 <SvelteToast options={{ classes: ["log"] }} />
 <!-- TODO: make the drawer collapsible? -->
 <div class="drawer-container">

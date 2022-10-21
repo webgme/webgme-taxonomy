@@ -52,8 +52,14 @@ class PDP {
         .sort((a1, a2) => (a1.time < a2.time ? -1 : 1))
         .slice()
         .pop();
-      const { displayName, taxonomyTags } = latestArtifact;
-      return new ArtifactSet(parentId, displayName, taxonomyTags, artifacts);
+      const { displayName, taxonomyTags, taxonomyVersion } = latestArtifact;
+      return new ArtifactSet(
+        parentId,
+        displayName,
+        taxonomyTags,
+        taxonomyVersion,
+        artifacts
+      );
     });
     return artifactSets;
   }
@@ -444,6 +450,7 @@ function parseArtifact(obs) {
       obs.index + "_" + obs.version,
       metadata.displayName,
       metadata.taxonomyTags,
+      metadata.taxonomyVersion,
       obs.startTime
     );
   }
