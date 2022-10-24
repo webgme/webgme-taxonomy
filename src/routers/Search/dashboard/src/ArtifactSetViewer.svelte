@@ -19,8 +19,8 @@
   export let artifactSet;
   export let contentType = "artifact";
   let numArtifacts = 10;
-  let artifacts = artifactSet ? artifactSet.children : [];
-  let selected = [];
+  let artifacts = [];
+  let selected = new Set();
   let menu: MenuComponentDev;
 
   import { createEventDispatcher } from "svelte";
@@ -29,7 +29,7 @@
   async function onDownloadClicked() {
     dispatch("download", {
       artifactSet: artifactSet,
-      artifactIds: selected.slice(),
+      artifactIds: [...selected],
     });
   }
 
@@ -40,14 +40,16 @@
   }
 
   $: onArtifactSetChange(artifactSet);
-  $: console.log({ selected });
 
-  let prevSetHash = artifactSet && artifactSet.hash;
+  let prevSetHash = null;
+
+  onArtifactSetChange();
   function onArtifactSetChange() {
-    console.log("onArtifactSetChange");
-    if (prevSetHash !== artifactSet.hash) {
-      artifacts = artifactSet.children;
-      if (selected.length) selected = [];
+    if (artifactSet && prevSetHash !== artifactSet.hash) {
+      const start = artifactSet.children.length - numArtifacts;
+      artifacts = artifactSet.children.slice(start, start + numArtifacts);
+      console.log({ artifacts });
+      selected = new Set();
       numArtifacts = Math.min(artifacts.length, 10);
       prevSetHash = artifactSet.hash;
     }
@@ -61,6 +63,18 @@
       day: "numeric",
     };
     return date.toLocaleDateString("en-us", formatOpts);
+  }
+
+  function onSelectChanged(event) {
+    const isChecked = event.target.checked;
+    const id = event.target.defaultValue;
+    if (isChecked) {
+      selected.add(id);
+    } else {
+      selected.delete(id);
+    }
+    console.log("selected:", selected);
+    selected = selected;
   }
 </script>
 
@@ -100,9 +114,7 @@
       <!-- add show more button, select all -->
       <List checkList>
         <!-- TODO: check if they have permissions to append to it -->
-        {#each artifacts
-          .reverse()
-          .slice(0, numArtifacts) as artifact (artifact.id)}
+        {#each artifacts as artifact (artifact.id)}
           <Item>
             <Text>
               <PrimaryText>{artifact.displayName}</PrimaryText>
@@ -113,7 +125,11 @@
               </SecondaryText>
             </Text>
             <Meta>
-              <Checkbox value={artifact.id} />
+              <Checkbox
+                checked={selected.has(artifact.id)}
+                on:change={onSelectChanged}
+                value={artifact.id}
+              />
             </Meta>
           </Item>
         {/each}
@@ -123,7 +139,7 @@
       <Button on:click={onUploadClicked}>
         <Label>Upload</Label>
       </Button>
-      <Button on:click={onDownloadClicked} disabled={selected.length == 0}>
+      <Button on:click={onDownloadClicked} disabled={selected.size == 0}>
         <Label>Download</Label>
       </Button>
     </Actions>
