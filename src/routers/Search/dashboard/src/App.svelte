@@ -297,10 +297,15 @@
     const metadata = appendMetadata;
     metadata.displayName = appendName;
     const updMsgId = displayProgressMessage("Upload in progress");
-    await storage.appendArtifact(appendItem, metadata, appendFiles);
+    try {
+      await storage.appendArtifact(appendItem, metadata, appendFiles);
+      displayMessage("Upload complete!");
+      fetchData();
+    } catch (err) {
+      console.log(err);
+      displayError(`Unable to upload: ${err.message}`);
+    }
     clearProgressMessage(updMsgId);
-    displayMessage("Upload complete!");
-    fetchData();
   }
 
   ////// Artifact Upload //////

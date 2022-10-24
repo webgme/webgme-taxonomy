@@ -20352,13 +20352,16 @@ var app = (function () {
       v,
       I,
       y,
-      b = An(e[1]) + "",
-      E = e[0].displayName + "",
-      A = e[0].children.length + "";
-    function x(t) {
+      b,
+      E,
+      A = An(e[1]) + "",
+      x = e[0].displayName + "",
+      C = Math.min(1, e[4]) + "",
+      S = e[0].children.length + "";
+    function T(t) {
       e[15](t);
     }
-    (h = new ds({
+    (g = new ds({
       props: {
         class: "material-icons",
         style: "vertical-align: middle; margin: 0; padding: 0;",
@@ -20367,20 +20370,20 @@ var app = (function () {
         $$scope: { ctx: e },
       },
     })),
-      e[10](h),
-      h.$on("click", e[11]);
-    let C = {
+      e[10](g),
+      g.$on("click", e[11]);
+    let w = {
       anchor: !1,
       anchorCorner: "BOTTOM_RIGHT",
       $$slots: { default: [Pc] },
       $$scope: { ctx: e },
     };
     return (
-      void 0 !== e[3] && (C.anchorElement = e[3]),
-      (g = new so({ props: C })),
-      e[14](g),
-      oe.push(() => Me(g, "anchorElement", x)),
-      (I = new qs({
+      void 0 !== e[3] && (w.anchorElement = e[3]),
+      (v = new so({ props: w })),
+      e[14](v),
+      oe.push(() => Me(v, "anchorElement", T)),
+      (b = new qs({
         props: {
           checkList: !0,
           $$slots: { default: [Kc] },
@@ -20390,81 +20393,86 @@ var app = (function () {
       {
         c() {
           (t = D("h2")),
-            (n = R(b)),
+            (n = R(A)),
             (i = R("s in ")),
-            (r = R(E)),
+            (r = R(x)),
             (s = M()),
             (a = D("h4")),
-            (o = R("Showing 1-")),
-            (l = R(e[4])),
-            (c = R(" of ")),
-            (d = R(A)),
-            (u = M()),
-            (p = D("div")),
+            (o = R("Showing ")),
+            (l = R(C)),
+            (c = R("-")),
+            (d = R(e[4])),
+            (u = R(" of ")),
+            (p = R(S)),
             (f = M()),
-            Fe(h.$$.fragment),
+            (h = D("div")),
             (m = M()),
             Fe(g.$$.fragment),
-            (v = M()),
-            Fe(I.$$.fragment),
+            ($ = M()),
+            Fe(v.$$.fragment),
+            (y = M()),
+            Fe(b.$$.fragment),
             U(t, "class", "mdc-typography--headline6"),
             V(t, "margin", "0"),
-            V(p, "display", "inline-block"),
+            V(h, "display", "inline-block"),
             U(a, "class", "mdc-typography--subtitle3"),
             V(a, "margin", "0"),
             V(a, "color", "#888"),
             V(a, "text-align", "right");
         },
-        m($, b) {
-          O($, t, b),
+        m(I, A) {
+          O(I, t, A),
             _(t, n),
             _(t, i),
             _(t, r),
-            O($, s, b),
-            O($, a, b),
+            O(I, s, A),
+            O(I, a, A),
             _(a, o),
             _(a, l),
             _(a, c),
             _(a, d),
             _(a, u),
             _(a, p),
-            e[9](p),
             _(a, f),
-            ke(h, a, null),
+            _(a, h),
+            e[9](h),
             _(a, m),
             ke(g, a, null),
-            O($, v, b),
-            ke(I, $, b),
-            (y = !0);
+            _(a, $),
+            ke(v, a, null),
+            O(I, y, A),
+            ke(b, I, A),
+            (E = !0);
         },
         p(e, t) {
-          (!y || 2 & t) && b !== (b = An(e[1]) + "") && P(n, b),
-            (!y || 1 & t) && E !== (E = e[0].displayName + "") && P(r, E),
-            (!y || 16 & t) && P(l, e[4]),
-            (!y || 1 & t) && A !== (A = e[0].children.length + "") && P(d, A);
+          (!E || 2 & t) && A !== (A = An(e[1]) + "") && P(n, A),
+            (!E || 1 & t) && x !== (x = e[0].displayName + "") && P(r, x),
+            (!E || 16 & t) && C !== (C = Math.min(1, e[4]) + "") && P(l, C),
+            (!E || 16 & t) && P(d, e[4]),
+            (!E || 1 & t) && S !== (S = e[0].children.length + "") && P(p, S);
           const i = {};
-          4194304 & t && (i.$$scope = { dirty: t, ctx: e }), h.$set(i);
+          4194304 & t && (i.$$scope = { dirty: t, ctx: e }), g.$set(i);
           const s = {};
           4194321 & t && (s.$$scope = { dirty: t, ctx: e }),
-            !$ &&
+            !I &&
               8 & t &&
-              (($ = !0), (s.anchorElement = e[3]), he(() => ($ = !1))),
-            g.$set(s);
+              ((I = !0), (s.anchorElement = e[3]), he(() => (I = !1))),
+            v.$set(s);
           const a = {};
-          4194353 & t && (a.$$scope = { dirty: t, ctx: e }), I.$set(a);
+          4194353 & t && (a.$$scope = { dirty: t, ctx: e }), b.$set(a);
         },
         i(e) {
-          y ||
-            (_e(h.$$.fragment, e),
-            _e(g.$$.fragment, e),
-            _e(I.$$.fragment, e),
-            (y = !0));
+          E ||
+            (_e(g.$$.fragment, e),
+            _e(v.$$.fragment, e),
+            _e(b.$$.fragment, e),
+            (E = !0));
         },
         o(e) {
-          Se(h.$$.fragment, e),
-            Se(g.$$.fragment, e),
-            Se(I.$$.fragment, e),
-            (y = !1);
+          Se(g.$$.fragment, e),
+            Se(v.$$.fragment, e),
+            Se(b.$$.fragment, e),
+            (E = !1);
         },
         d(n) {
           n && L(t),
@@ -20472,11 +20480,11 @@ var app = (function () {
             n && L(a),
             e[9](null),
             e[10](null),
-            Ue(h),
-            e[14](null),
             Ue(g),
-            n && L(v),
-            Ue(I, n);
+            e[14](null),
+            Ue(v),
+            n && L(y),
+            Ue(b, n);
         },
       }
     );
@@ -20699,7 +20707,9 @@ var app = (function () {
       (e.$$.update = () => {
         4 & e.$$.dirty && console.log("anchor is", r),
           8 & e.$$.dirty && console.log("anchorElement is", s),
-          1 & e.$$.dirty && a && (n(5, (c = [])), n(4, (l = 10)));
+          1 & e.$$.dirty &&
+            a &&
+            (n(5, (c = [])), n(4, (l = Math.min(a.children.length, 10))));
       }),
       [
         a,
@@ -22482,12 +22492,18 @@ var app = (function () {
     async function v() {
       n(6, ($ = !0));
       try {
-        (o = await a.listArtifacts()),
+        console.log({ currentTaxonomy: g }),
+          (o = await a.listArtifacts()),
           o.forEach((e) => {
             const t = e.children.filter(
               (e) => e.taxonomy && g.supports(e.taxonomy)
             );
-            e.children = t;
+            console.log(
+              e.id,
+              ":",
+              e.children.map((e) => e.taxonomy)
+            ),
+              (e.children = t);
           });
       } catch (e) {
         if (
@@ -22606,12 +22622,13 @@ var app = (function () {
       const t = (function (e, t = 6e4) {
         return gs.push(e, { classes: ["info"], dismissable: !1, duration: t });
       })("Upload in progress");
+      try {
+        await a.appendArtifact(A, e, _), h("Upload complete!"), v();
+      } catch (e) {
+        console.log(e), f(`Unable to upload: ${e.message}`);
+      }
       var n;
-      await a.appendArtifact(A, e, _),
-        (n = t),
-        gs.pop(n),
-        h("Upload complete!"),
-        v();
+      (n = t), gs.pop(n);
     }
     var w;
     let D =
