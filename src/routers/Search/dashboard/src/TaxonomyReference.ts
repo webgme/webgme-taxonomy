@@ -1,3 +1,9 @@
+// Taxonomy version information received from the server
+interface TaxonomyVersionData {
+  tag: string;
+  commit: string;
+  branch: string;
+}
 
 export default class TaxonomyReference {
   id: string;
@@ -12,7 +18,7 @@ export default class TaxonomyReference {
     return this.id === otherVersion.id && this.supports(otherVersion.version);
   }
 
-  static from(taxonomyVersion: object): TaxonomyReference {
+  static from(taxonomyVersion: TaxonomyVersionData): TaxonomyReference {
     let version;
     if (taxonomyVersion.tag) {
       version = new Tag(taxonomyVersion.commit, taxonomyVersion.tag);
