@@ -1,5 +1,6 @@
 // Taxonomy version information received from the server
 interface TaxonomyVersionData {
+  id: string;
   tag: string;
   commit: string;
   branch: string;
