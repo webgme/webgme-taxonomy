@@ -19,12 +19,9 @@
   export let artifactSet;
   export let contentType = "artifact";
   let numArtifacts = 10;
+  let artifacts = artifactSet ? artifactSet.children : [];
   let selected = [];
   let menu: MenuComponentDev;
-  let anchor: ButtonComponentDev;
-  let anchorElement: HTMLElement;
-  $: console.log("anchor is", anchor);
-  $: console.log("anchorElement is", anchorElement);
 
   import { createEventDispatcher } from "svelte";
   const dispatch = createEventDispatcher();
@@ -32,7 +29,7 @@
   async function onDownloadClicked() {
     dispatch("download", {
       artifactSet: artifactSet,
-      artifactIds: selected,
+      artifactIds: selected.slice(),
     });
   }
 
@@ -42,11 +39,18 @@
     });
   }
 
-  $: artifactSet && onArtifactSetChange();
+  $: onArtifactSetChange(artifactSet);
+  $: console.log({ selected });
 
+  let prevSetHash = artifactSet && artifactSet.hash;
   function onArtifactSetChange() {
-    selected = [];
-    numArtifacts = Math.min(artifactSet.children.length, 10);
+    console.log("onArtifactSetChange");
+    if (prevSetHash !== artifactSet.hash) {
+      artifacts = artifactSet.children;
+      if (selected.length) selected = [];
+      numArtifacts = Math.min(artifacts.length, 10);
+      prevSetHash = artifactSet.hash;
+    }
   }
 
   function formatTime(timeString) {
@@ -75,33 +79,28 @@
       >
         Showing {Math.min(1, numArtifacts)}-{numArtifacts} of {artifactSet
           .children.length}
-        <div bind:this={anchorElement} style="display:inline-block" />
         <IconButton
           class="material-icons"
           style="vertical-align: middle; margin: 0; padding: 0;"
           on:click={() => menu.setOpen(true)}
-          bind:this={anchor}
           title="Options">more_vert</IconButton
         >
-        <Menu
-          bind:this={menu}
-          anchor={false}
-          anchorCorner="BOTTOM_RIGHT"
-          bind:anchorElement
-        >
-          <Item on:SMUI:action={() => (numArtifacts += 10)}>
+        <Menu bind:this={menu} anchorCorner="BOTTOM_RIGHT">
+          <Item
+            on:SMUI:action={() =>
+              (numArtifacts = Math.min(artifacts.length, numArtifacts + 10))}
+          >
             <Text>Show more...</Text>
           </Item>
-          <Item
-            on:SMUI:action={() => (numArtifacts = artifactSet.children.length)}
-          >
+          <Item on:SMUI:action={() => (numArtifacts = artifacts.length)}>
             <Text>Show all...</Text>
           </Item>
         </Menu>
       </h4>
       <!-- add show more button, select all -->
       <List checkList>
-        {#each artifactSet.children
+        <!-- TODO: check if they have permissions to append to it -->
+        {#each artifacts
           .reverse()
           .slice(0, numArtifacts) as artifact (artifact.id)}
           <Item>
@@ -111,11 +110,10 @@
                 {artifact.time
                   ? "Uploaded on " + formatTime(artifact.time)
                   : ""}
-                <!-- TODO: check if they have permissions to append to it -->
               </SecondaryText>
             </Text>
             <Meta>
-              <Checkbox bind:group={selected} value={artifact.id} />
+              <Checkbox value={artifact.id} />
             </Meta>
           </Item>
         {/each}
