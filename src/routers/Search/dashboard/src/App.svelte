@@ -1,7 +1,12 @@
 <script lang="ts">
   import { FilterTag, LeanTag } from "./FilterTag";
   import TopAppBar, { Row, Section, Title } from "@smui/top-app-bar";
-  import { getLatestArtifact, filterMap } from "./Utils.ts";
+  import {
+    getLatestArtifact,
+    filterMap,
+    openUrl,
+    encodeQueryParams,
+  } from "./Utils.ts";
   import Textfield from "@smui/textfield";
   import IconButton from "@smui/icon-button";
   import { SvelteToast, toast } from "@zerodevx/svelte-toast";
@@ -23,16 +28,12 @@
     Actions,
   } from "@smui/dialog";
   import Radio from "@smui/radio";
-  // import type { SnackbarComponentDev } from "@smui/snackbar";
-  // import Snackbar, {
-  // Actions as SnackbarActions,
-  // Label as SnackbarLabel,
-  // } from "@smui/snackbar";
   import Button, { Label } from "@smui/button";
   import Dropzone from "svelte-file-dropzone";
   import TaxonomyFilter from "./TaxonomyFilter.svelte";
   import ArtifactSetViewer from "./ArtifactSetViewer.svelte";
   import type TaxonomyData from "./TaxonomyData.ts";
+  import TaxonomyReference from "./TaxonomyReference.ts";
 
   let title: string;
   let contentType: string = "Data";
@@ -149,11 +150,6 @@
     return vocabs;
   }
 
-  // let snackbar: SnackbarComponentDev;
-  // let errorMessage: string;
-  // $: errorMessage && snackbar.open();
-
-  // TODO: format the error with red
   function displayError(msg: string) {
     toast.push(msg, { classes: ["warn"] }); // background red
   }
@@ -174,8 +170,11 @@
   }
 
   let isLoading = false;
+  let configuration;
+  let currentTaxonomy;
   async function initialize() {
-    const configuration = await fetchConfiguration();
+    configuration = await fetchConfiguration();
+    currentTaxonomy = TaxonomyReference.from(configuration.project);
     const taxonomy = FilterTag.fromDict(configuration.taxonomy);
     vocabularies = trimTaxonomy(taxonomy);
     filterTags = parseTagParams(params.get("filterTags"));
@@ -187,6 +186,12 @@
     isLoading = true;
     try {
       allItems = await storage.listArtifacts();
+      allItems.forEach((set) => {
+        const validArtifacts = set.children.filter(
+          (item) => item.taxonomy && currentTaxonomy.supports(item.taxonomy)
+        );
+        set.children = validArtifacts;
+      });
     } catch (err) {
       const errMessage =
         err instanceof RequestError
@@ -369,10 +374,7 @@
         `Downloading ${artifactIds.length} from ${artifactSet.displayName}...`
       );
       const url = await storage.getDownloadUrl(artifactSet.id, ...artifactIds);
-      const anchor = document.createElement("a");
-      anchor.setAttribute("href", url);
-      //anchor.setAttribute("target", "_blank");
-      anchor.click();
+      openUrl(url);
     } catch (err) {
       return displayError(err.message);
     }
@@ -385,6 +387,20 @@
 
   function getArtifactSets(items) {
     return [];
+  }
+
+  //////// Edit taxonomy ////////
+  function onOpenInEditor() {
+    const baseUrl = window.location.href.replace(/routers\/Search.*/, "");
+    const url =
+      baseUrl +
+      "?" +
+      encodeQueryParams({
+        project: configuration.project.id,
+        commit: configuration.project.commit,
+        node: configuration.contentTypePath,
+      });
+    openUrl(url);
   }
 </script>
 
@@ -494,20 +510,18 @@
         ripple={false}
         on:click={() => (creatingArtifact = true)}>file_upload</IconButton
       >
+      <IconButton
+        class="material-icons"
+        aria-label="Edit taxonomy"
+        ripple={false}
+        on:click={onOpenInEditor}>open_in_new</IconButton
+      >
     </Section>
   </Row>
 </TopAppBar>
 {#if isLoading}
   <LinearProgress indeterminate />
 {/if}
-<!--
-<Snackbar bind:this={snackbar} labelText={errorMessage} timeoutMs={-1} variant="stacked">
-  <SnackbarLabel />
-  <SnackbarActions>
-    <IconButton class="material-icons" title="Dismiss">close</IconButton>
-  </SnackbarActions>
-</Snackbar>
--->
 <SvelteToast options={{ classes: ["log"] }} />
 <!-- TODO: make the drawer collapsible? -->
 <div class="drawer-container">

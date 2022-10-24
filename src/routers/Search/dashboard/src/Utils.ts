@@ -73,3 +73,16 @@ export function getLatestArtifact(artifactSet: any): any {
 export function capitalize(word: string): string {
   return word[0].toUpperCase() + word.substring(1);
 }
+
+export function openUrl(url: string) {
+    const anchor = document.createElement("a");
+    anchor.setAttribute("href", url);
+    anchor.setAttribute("target", "_blank");
+    anchor.click();
+}
+
+export function encodeQueryParams(dict: {[key: string]: string}) {
+  return Object.entries(dict)
+    .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
+    .join('&');
+}
