@@ -20,7 +20,7 @@
   export let contentType = "artifact";
   let numArtifacts = 10;
   let artifacts = [];
-  let selected = new Set();
+  let selected = [];
   let menu: MenuComponentDev;
 
   import { createEventDispatcher } from "svelte";
@@ -48,8 +48,7 @@
     if (artifactSet && prevSetHash !== artifactSet.hash) {
       const start = artifactSet.children.length - numArtifacts;
       artifacts = artifactSet.children.slice(start, start + numArtifacts);
-      console.log({ artifacts });
-      selected = new Set();
+      selected = [];
       numArtifacts = Math.min(artifacts.length, 10);
       prevSetHash = artifactSet.hash;
     }
@@ -63,18 +62,6 @@
       day: "numeric",
     };
     return date.toLocaleDateString("en-us", formatOpts);
-  }
-
-  function onSelectChanged(event) {
-    const isChecked = event.target.checked;
-    const id = event.target.defaultValue;
-    if (isChecked) {
-      selected.add(id);
-    } else {
-      selected.delete(id);
-    }
-    console.log("selected:", selected);
-    selected = selected;
   }
 </script>
 
@@ -125,11 +112,7 @@
               </SecondaryText>
             </Text>
             <Meta>
-              <Checkbox
-                checked={selected.has(artifact.id)}
-                on:change={onSelectChanged}
-                value={artifact.id}
-              />
+              <Checkbox bind:group={selected} value={artifact.id} />
             </Meta>
           </Item>
         {/each}
@@ -139,7 +122,7 @@
       <Button on:click={onUploadClicked}>
         <Label>Upload</Label>
       </Button>
-      <Button on:click={onDownloadClicked} disabled={selected.size == 0}>
+      <Button on:click={onDownloadClicked} disabled={selected.length == 0}>
         <Label>Download</Label>
       </Button>
     </Actions>
