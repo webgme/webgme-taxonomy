@@ -6,10 +6,10 @@
   import { createEventDispatcher } from "svelte";
   const dispatch = createEventDispatcher();
 
-  $: filterTreeProps = trees.map(tree => ({
+  $: filterTreeProps = trees.map((tree) => ({
     tree,
-    tags: tags.filter(tag => tree.canMatch(tag))
-  }))
+    tags: tags.filter((tag) => tree.canMatch(tag)),
+  }));
 
   function getSelectedTags(node) {
     const tags = node.children.flatMap(getSelectedTags);
@@ -23,7 +23,6 @@
     const filterTags = trees.flatMap(getSelectedTags);
     dispatch("change", { filterTags });
   }
-
 </script>
 
 <main>
