@@ -180,7 +180,6 @@
     contentType = configuration.name;
     fetchData();
   }
-  // TODO: set the current taxonomy based on configuration
 
   async function fetchData() {
     isLoading = true;
