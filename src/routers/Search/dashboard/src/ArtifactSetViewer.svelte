@@ -46,7 +46,7 @@
 
   function onArtifactSetChange() {
     selected = [];
-    numArtifacts = 10;
+    numArtifacts = Math.min(artifactSet.children.length, 10);
   }
 
   function formatTime(timeString) {
@@ -73,7 +73,8 @@
         class="mdc-typography--subtitle3"
         style="margin: 0; color: #888;text-align:right"
       >
-        Showing 1-{numArtifacts} of {artifactSet.children.length}
+        Showing {Math.min(1, numArtifacts)}-{numArtifacts} of {artifactSet
+          .children.length}
         <div bind:this={anchorElement} style="display:inline-block" />
         <IconButton
           class="material-icons"
