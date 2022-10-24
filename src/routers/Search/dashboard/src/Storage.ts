@@ -1,4 +1,5 @@
-import {filterMap, Result, assert, getLatestArtifact} from './Utils';
+import TaxonomyReference from "./TaxonomyReference.ts";
+import {assert, filterMap, getLatestArtifact, Result} from './Utils';
 
 class Storage {
   baseUrl: string;
@@ -9,7 +10,7 @@ class Storage {
     this.baseUrl = chunks.join('/') + '/artifacts/';
   }
 
-  async listArtifacts() {
+  async listArtifacts(): Promise<ArtifactSet[]> {
     const result = (await this._fetchJson(this.baseUrl))
                        .mapError((err: Error) => new ListError(err.message));
     const items: any[] = await result.unwrap();
@@ -69,8 +70,7 @@ class Storage {
     console.log({action : 'append', metadata, files});
     const last = getLatestArtifact(artifactSet);
     const lastId = last && last.id;
-    const qs = lastId ? '?lastId=' + 
-      encodeURIComponent(lastId) : '';
+    const qs = lastId ? '?lastId=' + encodeURIComponent(lastId) : '';
     const url = this.baseUrl + artifactSet.id + '/uploadUrl' + qs;
     const filenames = files.map((file: File) => file.name);
 
@@ -95,7 +95,8 @@ class Storage {
     const uploadTasks = uploadInfo.map(async (element) => {
       const filename = element.name.substring(4);
       const targetFile = files.find(a => a.name == filename);
-      assert(!!targetFile, new AppendDataError('Could not find upload URL for ' + filename));
+      assert(!!targetFile,
+             new AppendDataError('Could not find upload URL for ' + filename));
       await this.pushArtifact(targetFile, element.sasUrl)
     });
 
@@ -169,11 +170,15 @@ class ArtifactSet {
     if (!item.displayName) {
       console.log("Found malformed data. Filtering out. Data:", item);
     } else {
-      const hash = [
-        item.id,
-        ...item.children.map(child => child.id).sort()
-      ].join('/');
+      const hash =
+          [ item.id, ...item.children.map(child => child.id).sort() ].join('/');
       item.hash = hash;
+      item.children = item.children.map(child => {
+        if (child.taxonomy) {
+          child.taxonomy = TaxonomyReference.from(child.taxonomy);
+        }
+        return child;
+      });
       return item;
     }
   }
