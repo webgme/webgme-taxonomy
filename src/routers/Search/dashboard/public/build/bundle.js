@@ -22491,22 +22491,11 @@ var app = (function () {
     async function I() {
       n(6, ($ = !0));
       try {
-        console.log({ currentTaxonomy: g }),
-          (o = await a.listArtifacts()),
+        (o = await a.listArtifacts()),
           o.forEach((e) => {
-            const t = e.children.filter((e) => {
-              if (e.taxonomy)
-                return (
-                  console.log(
-                    g,
-                    ".supports(",
-                    e.taxonomy,
-                    ")",
-                    g.supports(e.taxonomy)
-                  ),
-                  g.supports(e.taxonomy)
-                );
-            });
+            const t = e.children.filter(
+              (e) => e.taxonomy && g.supports(e.taxonomy)
+            );
             console.log(
               e.id,
               ":",
@@ -22539,8 +22528,7 @@ var app = (function () {
     const y = [];
     let b;
     function E(e) {
-      console.log("onItemClicked", e),
-        (b = e),
+      (b = e),
         y.forEach(([t, n]) => t.postMessage(new v(e), n)),
         n(14, (M = e));
     }
