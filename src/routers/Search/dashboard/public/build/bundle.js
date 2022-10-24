@@ -20762,7 +20762,7 @@ var app = (function () {
       (this.id = e), (this.version = t);
     }
     supports(e) {
-      return this.id === e.id && this.supports(e.version);
+      return this.id === e.id && this.version.supports(e.version);
     }
     static from(e) {
       let t;
@@ -20792,8 +20792,7 @@ var app = (function () {
     }
     supports(e) {
       return e instanceof od
-        ? this.version.major === e.version.major &&
-            this.version.isGreaterThan(e.version)
+        ? this.version.major === e.version.major && this.version.gte(e.version)
         : super.supports(e);
     }
   }
@@ -20814,7 +20813,7 @@ var app = (function () {
     constructor(e, t = 0, n = 0) {
       (this.major = e), (this.minor = t), (this.patch = n);
     }
-    isGreaterThan(e) {
+    gte(e) {
       return (
         !(this.major < e.major) &&
         !(this.minor < e.minor) &&
@@ -22495,9 +22494,19 @@ var app = (function () {
         console.log({ currentTaxonomy: g }),
           (o = await a.listArtifacts()),
           o.forEach((e) => {
-            const t = e.children.filter(
-              (e) => e.taxonomy && g.supports(e.taxonomy)
-            );
+            const t = e.children.filter((e) => {
+              if (e.taxonomy)
+                return (
+                  console.log(
+                    g,
+                    ".supports(",
+                    e.taxonomy,
+                    ")",
+                    g.supports(e.taxonomy)
+                  ),
+                  g.supports(e.taxonomy)
+                );
+            });
             console.log(
               e.id,
               ":",
