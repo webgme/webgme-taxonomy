@@ -78,7 +78,7 @@
 
   function onFilterUpdate(searchQuery: string, filterTags: FilterTag[]) {
     const filter = (item) => {
-      const { displayName, taxonomyTags } = item;
+      const { displayName, taxonomyTags = [] } = item;
 
       const matchingTags = filterTags.every(
         (filterTag) => !!taxonomyTags.find((tag) => filterTag.isMatch(tag))
@@ -103,6 +103,8 @@
   }
 
   $: onFilterUpdate(searchQuery, filterTags);
+
+  $: itemTags = items.flatMap((item) => item.taxonomyTags ?? []);
 
   function setQueryStringParams(newParams: URLSearchParams) {
     const params = new URLSearchParams(location.search);
@@ -536,6 +538,7 @@
       <span class="filter-header">Advanced Filters</span>
       <TaxonomyFilter
         trees={vocabularies}
+        tags={itemTags}
         on:change={(event) =>
           (filterTags = event.detail.filterTags.map(FilterTag.fromDict))}
       />

@@ -3,8 +3,18 @@
   import Textfield from "@smui/textfield";
   import FormField from "@smui/form-field";
   import Select, { Option } from "@smui/select";
+  import Autocomplete from "@smui-extra/autocomplete";
+  import TagMatcher from "./TagMatcher";
+
   export let tree;
   const { name, children } = tree;
+
+  export let tags = [];
+
+  let search: ((input: string) => Promise<any[] | false>) | undefined;
+  $: if (tree.type === "TextField") {
+    search = TagMatcher(tree.id, tags);
+  }
 
   const toggleExpansion = () => {
     tree.expanded = !tree.expanded;
@@ -21,6 +31,7 @@
   // mutate the existing data
   import { createEventDispatcher } from "svelte";
   const dispatch = createEventDispatcher();
+
   $: {
     //if (checked !== tree.selected) {
 
@@ -28,9 +39,13 @@
     tree.selected = checked;
     tree.value = value;
     //tree.children.forEach(child => child.selected = checked);
-    dispatch("change", { tree });
+    onChange();
     //}
     // TODO: for any parents, set to indeterminate if single child is selected
+  }
+
+  function onChange() {
+    dispatch("change", { tree });
   }
 </script>
 
@@ -39,7 +54,7 @@
     {#if tree.type === "TextField"}
       <FormField>
         <Checkbox bind:checked indeterminate={checked === null} />
-        <Textfield label={name} bind:value />
+        <Autocomplete combobox label={name} bind:value {search} />
       </FormField>
     {:else if tree.type === "IntegerField"}
       <FormField>
@@ -70,7 +85,7 @@
       </div>
       {#if tree.expanded}
         {#each children as child}
-          <svelte:self on:change tree={child} />
+          <svelte:self on:change tree={child} {tags} />
         {/each}
       {/if}
     {/if}
