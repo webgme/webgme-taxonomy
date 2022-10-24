@@ -87,15 +87,17 @@
           title="Options">more_vert</IconButton
         >
         <Menu bind:this={menu} anchorCorner="BOTTOM_RIGHT">
-          <Item
-            on:SMUI:action={() =>
-              (numArtifacts = Math.min(artifacts.length, numArtifacts + 10))}
-          >
-            <Text>Show more...</Text>
-          </Item>
-          <Item on:SMUI:action={() => (numArtifacts = artifacts.length)}>
-            <Text>Show all...</Text>
-          </Item>
+          <List>
+            <Item
+              on:SMUI:action={() =>
+                (numArtifacts = Math.min(artifacts.length, numArtifacts + 10))}
+            >
+              <Text>Show more...</Text>
+            </Item>
+            <Item on:SMUI:action={() => (numArtifacts = artifacts.length)}>
+              <Text>Show all...</Text>
+            </Item>
+          </List>
         </Menu>
       </h4>
       <!-- add show more button, select all -->

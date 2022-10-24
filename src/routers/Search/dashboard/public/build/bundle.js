@@ -19976,7 +19976,7 @@ var app = (function () {
   };
   function Rc(e, t, n) {
     const i = e.slice();
-    return (i[17] = t[n]), i;
+    return (i[16] = t[n]), i;
   }
   function Mc(e) {
     let t;
@@ -20021,7 +20021,7 @@ var app = (function () {
         },
         p(e, n) {
           const i = {};
-          1048576 & n && (i.$$scope = { dirty: n, ctx: e }), t.$set(i);
+          524288 & n && (i.$$scope = { dirty: n, ctx: e }), t.$set(i);
         },
         i(e) {
           n || (_e(t.$$.fragment, e), (n = !0));
@@ -20064,7 +20064,7 @@ var app = (function () {
         },
         p(e, n) {
           const i = {};
-          1048576 & n && (i.$$scope = { dirty: n, ctx: e }), t.$set(i);
+          524288 & n && (i.$$scope = { dirty: n, ctx: e }), t.$set(i);
         },
         i(e) {
           n || (_e(t.$$.fragment, e), (n = !0));
@@ -20098,9 +20098,9 @@ var app = (function () {
         },
         p(e, n) {
           const r = {};
-          1048576 & n && (r.$$scope = { dirty: n, ctx: e }), t.$set(r);
+          524288 & n && (r.$$scope = { dirty: n, ctx: e }), t.$set(r);
           const s = {};
-          1048576 & n && (s.$$scope = { dirty: n, ctx: e }), i.$set(s);
+          524288 & n && (s.$$scope = { dirty: n, ctx: e }), i.$set(s);
         },
         i(e) {
           r || (_e(t.$$.fragment, e), _e(i.$$.fragment, e), (r = !0));
@@ -20115,8 +20115,37 @@ var app = (function () {
     );
   }
   function Bc(e) {
+    let t, n;
+    return (
+      (t = new qs({
+        props: { $$slots: { default: [Pc] }, $$scope: { ctx: e } },
+      })),
+      {
+        c() {
+          Fe(t.$$.fragment);
+        },
+        m(e, i) {
+          ke(t, e, i), (n = !0);
+        },
+        p(e, n) {
+          const i = {};
+          524300 & n && (i.$$scope = { dirty: n, ctx: e }), t.$set(i);
+        },
+        i(e) {
+          n || (_e(t.$$.fragment, e), (n = !0));
+        },
+        o(e) {
+          Se(t.$$.fragment, e), (n = !1);
+        },
+        d(e) {
+          Ue(t, e);
+        },
+      }
+    );
+  }
+  function Vc(e) {
     let t,
-      n = e[17].displayName + "";
+      n = e[16].displayName + "";
     return {
       c() {
         t = R(n);
@@ -20125,16 +20154,16 @@ var app = (function () {
         O(e, t, n);
       },
       p(e, i) {
-        8 & i && n !== (n = e[17].displayName + "") && P(t, n);
+        8 & i && n !== (n = e[16].displayName + "") && P(t, n);
       },
       d(e) {
         e && L(t);
       },
     };
   }
-  function Vc(e) {
+  function jc(e) {
     let t,
-      n = e[17].time ? "Uploaded on " + nd(e[17].time) : "";
+      n = e[16].time ? "Uploaded on " + id(e[16].time) : "";
     return {
       c() {
         t = R(n);
@@ -20144,7 +20173,7 @@ var app = (function () {
       },
       p(e, i) {
         8 & i &&
-          n !== (n = e[17].time ? "Uploaded on " + nd(e[17].time) : "") &&
+          n !== (n = e[16].time ? "Uploaded on " + id(e[16].time) : "") &&
           P(t, n);
       },
       d(e) {
@@ -20152,14 +20181,14 @@ var app = (function () {
       },
     };
   }
-  function jc(e) {
+  function zc(e) {
     let t, n, i, r;
     return (
       (t = new ea({
-        props: { $$slots: { default: [Bc] }, $$scope: { ctx: e } },
+        props: { $$slots: { default: [Vc] }, $$scope: { ctx: e } },
       })),
       (i = new ta({
-        props: { $$slots: { default: [Vc] }, $$scope: { ctx: e } },
+        props: { $$slots: { default: [jc] }, $$scope: { ctx: e } },
       })),
       {
         c() {
@@ -20170,9 +20199,9 @@ var app = (function () {
         },
         p(e, n) {
           const r = {};
-          1048584 & n && (r.$$scope = { dirty: n, ctx: e }), t.$set(r);
+          524296 & n && (r.$$scope = { dirty: n, ctx: e }), t.$set(r);
           const s = {};
-          1048584 & n && (s.$$scope = { dirty: n, ctx: e }), i.$set(s);
+          524296 & n && (s.$$scope = { dirty: n, ctx: e }), i.$set(s);
         },
         i(e) {
           r || (_e(t.$$.fragment, e), _e(i.$$.fragment, e), (r = !0));
@@ -20186,12 +20215,12 @@ var app = (function () {
       }
     );
   }
-  function zc(e) {
+  function Gc(e) {
     let t, n, i;
     function r(t) {
       e[12](t);
     }
-    let s = { value: e[17].id };
+    let s = { value: e[16].id };
     return (
       void 0 !== e[4] && (s.group = e[4]),
       (t = new Gl({ props: s })),
@@ -20205,7 +20234,7 @@ var app = (function () {
         },
         p(e, i) {
           const r = {};
-          8 & i && (r.value = e[17].id),
+          8 & i && (r.value = e[16].id),
             !n && 16 & i && ((n = !0), (r.group = e[4]), me(() => (n = !1))),
             t.$set(r);
         },
@@ -20221,14 +20250,14 @@ var app = (function () {
       }
     );
   }
-  function Gc(e) {
+  function qc(e) {
     let t, n, i, r, s;
     return (
       (t = new Zs({
-        props: { $$slots: { default: [jc] }, $$scope: { ctx: e } },
+        props: { $$slots: { default: [zc] }, $$scope: { ctx: e } },
       })),
       (i = new ra({
-        props: { $$slots: { default: [zc] }, $$scope: { ctx: e } },
+        props: { $$slots: { default: [Gc] }, $$scope: { ctx: e } },
       })),
       {
         c() {
@@ -20239,9 +20268,9 @@ var app = (function () {
         },
         p(e, n) {
           const r = {};
-          1048584 & n && (r.$$scope = { dirty: n, ctx: e }), t.$set(r);
+          524296 & n && (r.$$scope = { dirty: n, ctx: e }), t.$set(r);
           const s = {};
-          1048600 & n && (s.$$scope = { dirty: n, ctx: e }), i.$set(s);
+          524312 & n && (s.$$scope = { dirty: n, ctx: e }), i.$set(s);
         },
         i(e) {
           s || (_e(t.$$.fragment, e), _e(i.$$.fragment, e), (s = !0));
@@ -20255,11 +20284,11 @@ var app = (function () {
       }
     );
   }
-  function qc(e, t) {
+  function Kc(e, t) {
     let n, i, r;
     return (
       (i = new sa({
-        props: { $$slots: { default: [Gc] }, $$scope: { ctx: t } },
+        props: { $$slots: { default: [qc] }, $$scope: { ctx: t } },
       })),
       {
         key: e,
@@ -20273,7 +20302,7 @@ var app = (function () {
         p(e, n) {
           t = e;
           const r = {};
-          1048600 & n && (r.$$scope = { dirty: n, ctx: t }), i.$set(r);
+          524312 & n && (r.$$scope = { dirty: n, ctx: t }), i.$set(r);
         },
         i(e) {
           r || (_e(i.$$.fragment, e), (r = !0));
@@ -20287,17 +20316,17 @@ var app = (function () {
       }
     );
   }
-  function Kc(e) {
+  function Wc(e) {
     let t,
       n,
       i = [],
       r = new Map(),
       s = e[3];
-    const a = (e) => e[17].id;
+    const a = (e) => e[16].id;
     for (let t = 0; t < s.length; t += 1) {
       let n = Rc(e, s, t),
         o = a(n);
-      r.set(o, (i[t] = qc(o, n)));
+      r.set(o, (i[t] = Kc(o, n)));
     }
     return {
       c() {
@@ -20312,7 +20341,7 @@ var app = (function () {
         24 & n &&
           ((s = e[3]),
           xe(),
-          (i = De(i, n, a, 1, e, s, r, t.parentNode, Le, qc, t, Rc)),
+          (i = De(i, n, a, 1, e, s, r, t.parentNode, Le, Kc, t, Rc)),
           Ce());
       },
       i(e) {
@@ -20331,7 +20360,7 @@ var app = (function () {
       },
     };
   }
-  function Wc(e) {
+  function Xc(e) {
     let t,
       n,
       i,
@@ -20369,7 +20398,7 @@ var app = (function () {
       (g = new so({
         props: {
           anchorCorner: "BOTTOM_RIGHT",
-          $$slots: { default: [Pc] },
+          $$slots: { default: [Bc] },
           $$scope: { ctx: e },
         },
       })),
@@ -20377,7 +20406,7 @@ var app = (function () {
       (I = new qs({
         props: {
           checkList: !0,
-          $$slots: { default: [Kc] },
+          $$slots: { default: [Wc] },
           $$scope: { ctx: e },
         },
       })),
@@ -20436,11 +20465,11 @@ var app = (function () {
             (!v || 4 & t) && P(d, e[2]),
             (!v || 1 & t) && A !== (A = e[0].children.length + "") && P(p, A);
           const i = {};
-          1048576 & t && (i.$$scope = { dirty: t, ctx: e }), m.$set(i);
+          524288 & t && (i.$$scope = { dirty: t, ctx: e }), m.$set(i);
           const s = {};
-          1048588 & t && (s.$$scope = { dirty: t, ctx: e }), g.$set(s);
+          524300 & t && (s.$$scope = { dirty: t, ctx: e }), g.$set(s);
           const a = {};
-          1048600 & t && (a.$$scope = { dirty: t, ctx: e }), I.$set(a);
+          524312 & t && (a.$$scope = { dirty: t, ctx: e }), I.$set(a);
         },
         i(e) {
           v ||
@@ -20468,7 +20497,7 @@ var app = (function () {
       }
     );
   }
-  function Xc(e) {
+  function Yc(e) {
     let t;
     return {
       c() {
@@ -20482,11 +20511,11 @@ var app = (function () {
       },
     };
   }
-  function Yc(e) {
+  function Qc(e) {
     let t, n;
     return (
       (t = new Oi({
-        props: { $$slots: { default: [Xc] }, $$scope: { ctx: e } },
+        props: { $$slots: { default: [Yc] }, $$scope: { ctx: e } },
       })),
       {
         c() {
@@ -20497,7 +20526,7 @@ var app = (function () {
         },
         p(e, n) {
           const i = {};
-          1048576 & n && (i.$$scope = { dirty: n, ctx: e }), t.$set(i);
+          524288 & n && (i.$$scope = { dirty: n, ctx: e }), t.$set(i);
         },
         i(e) {
           n || (_e(t.$$.fragment, e), (n = !0));
@@ -20511,7 +20540,7 @@ var app = (function () {
       }
     );
   }
-  function Qc(e) {
+  function Jc(e) {
     let t;
     return {
       c() {
@@ -20525,11 +20554,11 @@ var app = (function () {
       },
     };
   }
-  function Jc(e) {
+  function Zc(e) {
     let t, n;
     return (
       (t = new Oi({
-        props: { $$slots: { default: [Qc] }, $$scope: { ctx: e } },
+        props: { $$slots: { default: [Jc] }, $$scope: { ctx: e } },
       })),
       {
         c() {
@@ -20540,7 +20569,7 @@ var app = (function () {
         },
         p(e, n) {
           const i = {};
-          1048576 & n && (i.$$scope = { dirty: n, ctx: e }), t.$set(i);
+          524288 & n && (i.$$scope = { dirty: n, ctx: e }), t.$set(i);
         },
         i(e) {
           n || (_e(t.$$.fragment, e), (n = !0));
@@ -20554,17 +20583,17 @@ var app = (function () {
       }
     );
   }
-  function Zc(e) {
+  function ed(e) {
     let t, n, i, r;
     return (
       (t = new ul({
-        props: { $$slots: { default: [Yc] }, $$scope: { ctx: e } },
+        props: { $$slots: { default: [Qc] }, $$scope: { ctx: e } },
       })),
       t.$on("click", e[7]),
       (i = new ul({
         props: {
           disabled: 0 == e[4].length,
-          $$slots: { default: [Jc] },
+          $$slots: { default: [Zc] },
           $$scope: { ctx: e },
         },
       })),
@@ -20578,10 +20607,10 @@ var app = (function () {
         },
         p(e, n) {
           const r = {};
-          1048576 & n && (r.$$scope = { dirty: n, ctx: e }), t.$set(r);
+          524288 & n && (r.$$scope = { dirty: n, ctx: e }), t.$set(r);
           const s = {};
           16 & n && (s.disabled = 0 == e[4].length),
-            1048576 & n && (s.$$scope = { dirty: n, ctx: e }),
+            524288 & n && (s.$$scope = { dirty: n, ctx: e }),
             i.$set(s);
         },
         i(e) {
@@ -20596,14 +20625,14 @@ var app = (function () {
       }
     );
   }
-  function ed(e) {
+  function td(e) {
     let t, n, i, r;
     return (
       (t = new Lc({
-        props: { $$slots: { default: [Wc] }, $$scope: { ctx: e } },
+        props: { $$slots: { default: [Xc] }, $$scope: { ctx: e } },
       })),
       (i = new Nc({
-        props: { $$slots: { default: [Zc] }, $$scope: { ctx: e } },
+        props: { $$slots: { default: [ed] }, $$scope: { ctx: e } },
       })),
       {
         c() {
@@ -20614,9 +20643,9 @@ var app = (function () {
         },
         p(e, n) {
           const r = {};
-          1048639 & n && (r.$$scope = { dirty: n, ctx: e }), t.$set(r);
+          524351 & n && (r.$$scope = { dirty: n, ctx: e }), t.$set(r);
           const s = {};
-          1048592 & n && (s.$$scope = { dirty: n, ctx: e }), i.$set(s);
+          524304 & n && (s.$$scope = { dirty: n, ctx: e }), i.$set(s);
         },
         i(e) {
           r || (_e(t.$$.fragment, e), _e(i.$$.fragment, e), (r = !0));
@@ -20630,11 +20659,11 @@ var app = (function () {
       }
     );
   }
-  function td(e) {
+  function nd(e) {
     let t, n, i;
     return (
       (n = new Oc({
-        props: { $$slots: { default: [ed] }, $$scope: { ctx: e } },
+        props: { $$slots: { default: [td] }, $$scope: { ctx: e } },
       })),
       {
         c() {
@@ -20648,7 +20677,7 @@ var app = (function () {
         },
         p(e, [t]) {
           const i = {};
-          1048639 & t && (i.$$scope = { dirty: t, ctx: e }), n.$set(i);
+          524351 & t && (i.$$scope = { dirty: t, ctx: e }), n.$set(i);
         },
         i(e) {
           i || (_e(n.$$.fragment, e), (i = !0));
@@ -20662,14 +20691,14 @@ var app = (function () {
       }
     );
   }
-  function nd(e) {
+  function id(e) {
     return new Date(e).toLocaleDateString("en-us", {
       year: "numeric",
       month: "numeric",
       day: "numeric",
     });
   }
-  function id(e, t, n) {
+  function rd(e, t, n) {
     let i,
       { artifactSet: r } = t,
       { contentType: s = "artifact" } = t,
@@ -20723,12 +20752,12 @@ var app = (function () {
       ]
     );
   }
-  class rd extends Pe {
+  class sd extends Pe {
     constructor(e) {
-      super(), He(this, e, id, td, o, { artifactSet: 0, contentType: 1 });
+      super(), He(this, e, rd, nd, o, { artifactSet: 0, contentType: 1 });
     }
   }
-  class sd {
+  class ad {
     constructor(e, t) {
       (this.id = e), (this.version = t);
     }
@@ -20737,19 +20766,19 @@ var app = (function () {
     }
     static from(e) {
       let t;
-      if (e.tag) t = new od(e.commit, e.tag);
-      else if (e.branch) t = new ld(e.commit, e.branch);
+      if (e.tag) t = new ld(e.commit, e.tag);
+      else if (e.branch) t = new cd(e.commit, e.branch);
       else {
         if (!e.commit) {
           const t = JSON.stringify(e);
           throw new Error(`Could not find tag, branch, or commit in ${t}`);
         }
-        t = new ad(e.commit);
+        t = new od(e.commit);
       }
-      return new sd(e.id, t);
+      return new ad(e.id, t);
     }
   }
-  class ad {
+  class od {
     constructor(e) {
       this.hash = e;
     }
@@ -20757,30 +20786,30 @@ var app = (function () {
       return e.hash === this.hash;
     }
   }
-  class od extends ad {
+  class ld extends od {
     constructor(e, t) {
-      super(e), (this.version = dd.parse(t));
+      super(e), (this.version = ud.parse(t));
     }
     supports(e) {
-      return e instanceof od
+      return e instanceof ld
         ? this.version.major === e.version.major && this.version.gte(e.version)
         : super.supports(e);
     }
   }
-  class ld extends ad {
+  class cd extends od {
     constructor(e, t) {
       super(e), (this.name = t);
     }
     supports(e) {
-      return e instanceof ld ? e.name === this.name : super.supports(e);
+      return e instanceof cd ? e.name === this.name : super.supports(e);
     }
   }
-  class cd extends Error {
+  class dd extends Error {
     constructor(e) {
       super(`Unable to parse: ${e}`);
     }
   }
-  class dd {
+  class ud {
     constructor(e, t = 0, n = 0) {
       (this.major = e), (this.minor = t), (this.patch = n);
     }
@@ -20794,13 +20823,13 @@ var app = (function () {
     static parse(e) {
       e = e.replace(/^v?/, "");
       const [t, n = 0, i = 0] = e.split(".").map((t) => {
-        if (!/\d+/.test(t)) throw new cd(e);
+        if (!/\d+/.test(t)) throw new dd(e);
         return parseInt(t);
       });
-      return new dd(t, n, i);
+      return new ud(t, n, i);
     }
   }
-  class ud {
+  class pd {
     constructor() {
       this.baseUrl = window.location.href
         .replace("Search", "TagFormat")
@@ -20810,19 +20839,19 @@ var app = (function () {
       const t = encodeURIComponent(JSON.stringify(e)),
         n = `${this.baseUrl}?tags=${t}`,
         i = await fetch(n);
-      if (i.status > 399) throw new pd(await i.text());
+      if (i.status > 399) throw new fd(await i.text());
       return await i.json();
     }
   }
-  class pd extends Error {}
-  class fd {
+  class fd extends Error {}
+  class md {
     constructor() {
       const e = window.location.href.split("/");
       e.pop(), e.pop(), (this.baseUrl = e.join("/") + "/artifacts/");
     }
     async listArtifacts() {
       const e = (await this._fetchJson(this.baseUrl)).mapError(
-        (e) => new gd(e.message)
+        (e) => new $d(e.message)
       );
       return En(await e.unwrap(), (e) =>
         class {
@@ -20832,7 +20861,7 @@ var app = (function () {
               return (
                 (e.hash = t),
                 (e.children = e.children.map(
-                  (e) => (e.taxonomy && (e.taxonomy = sd.from(e.taxonomy)), e)
+                  (e) => (e.taxonomy && (e.taxonomy = ad.from(e.taxonomy)), e)
                 )),
                 e
               );
@@ -20867,7 +20896,7 @@ var app = (function () {
         body: await this.readFile(e),
       };
       return (await this._fetch(t, n))
-        .mapError((e) => new Id(e.message))
+        .mapError((e) => new vd(e.message))
         .unwrap();
     }
     async appendArtifact(e, t, n) {
@@ -20897,14 +20926,14 @@ var app = (function () {
         },
         c = (
           await (await this._fetchJson(a, l))
-            .mapError((e) => new Id(e.message))
+            .mapError((e) => new vd(e.message))
             .unwrap()
         ).map(async (e) => {
           const t = e.name.substring(4),
             i = n.find((e) => e.name == t);
           !(function (e, t) {
             if (!e) throw t;
-          })(!!i, new Id("Could not find upload URL for " + t)),
+          })(!!i, new vd("Could not find upload URL for " + t)),
             await this.pushArtifact(i, e.sasUrl);
         });
       await Promise.all(c), console.log("Append artifact:", t, n);
@@ -20920,52 +20949,52 @@ var app = (function () {
         body: JSON.stringify({ metadata: e }),
       };
       return (await this._fetchJson(this.baseUrl, n))
-        .mapError((e) => new $d(e.message))
+        .mapError((e) => new Id(e.message))
         .unwrap();
     }
     async _fetch(e, t = null) {
       const n = await fetch(e, t);
       let i = null;
-      return n.status > 399 && (i = new md(await n.text())), new bn(n, i);
+      return n.status > 399 && (i = new hd(await n.text())), new bn(n, i);
     }
     async _fetchJson(e, t = null) {
       return (await this._fetch(e, t)).map((e) => e.json());
     }
   }
-  class md extends Error {
+  class hd extends Error {
     constructor(e) {
       super(e);
     }
   }
-  class hd extends md {
+  class gd extends hd {
     constructor(e, t) {
       super(`Unable to ${e}: ${t}`);
     }
   }
-  class gd extends hd {
+  class $d extends gd {
     constructor(e) {
       super("list artifacts", e);
     }
   }
-  class $d extends hd {
+  class Id extends gd {
     constructor(e) {
       super("create", e);
     }
   }
-  class Id extends hd {
+  class vd extends gd {
     constructor(e) {
       super("append", e);
     }
   }
-  function vd(e, t, n) {
+  function yd(e, t, n) {
     const i = e.slice();
     return (i[64] = t[n]), i;
   }
-  function yd(e, t, n) {
+  function bd(e, t, n) {
     const i = e.slice();
     return (i[70] = t[n]), i;
   }
-  function bd(e) {
+  function Ed(e) {
     let t,
       n,
       i = (e[9] && e[9].displayName) + "";
@@ -20984,7 +21013,7 @@ var app = (function () {
       },
     };
   }
-  function Ed(e) {
+  function Ad(e) {
     let t,
       n,
       i = e[70].name + "";
@@ -21003,7 +21032,7 @@ var app = (function () {
       },
     };
   }
-  function Ad(t) {
+  function xd(t) {
     let n;
     return {
       c() {
@@ -21020,7 +21049,7 @@ var app = (function () {
       },
     };
   }
-  function xd(t) {
+  function Cd(t) {
     let n;
     return {
       c() {
@@ -21037,7 +21066,7 @@ var app = (function () {
       },
     };
   }
-  function Cd(e) {
+  function _d(e) {
     let t,
       n,
       i,
@@ -21062,7 +21091,7 @@ var app = (function () {
       E,
       A,
       x,
-      C = (e[10] ? e[10].taxonomyTags.map(ru).join(", ") : "") + "";
+      C = (e[10] ? e[10].taxonomyTags.map(su).join(", ") : "") + "";
     function S(t) {
       e[23](t);
     }
@@ -21072,12 +21101,12 @@ var app = (function () {
       oe.push(() => Me(t, "value", S));
     let N = e[8],
       F = [];
-    for (let t = 0; t < N.length; t += 1) F[t] = Ed(yd(e, N, t));
+    for (let t = 0; t < N.length; t += 1) F[t] = Ad(bd(e, N, t));
     return (
       (d = new kl({
         props: {
           multiple: !0,
-          $$slots: { default: [Ad] },
+          $$slots: { default: [xd] },
           $$scope: { ctx: e },
         },
       })),
@@ -21085,7 +21114,7 @@ var app = (function () {
       (y = new kl({
         props: {
           accept: ".json",
-          $$slots: { default: [xd] },
+          $$slots: { default: [Cd] },
           $$scope: { ctx: e },
         },
       })),
@@ -21168,8 +21197,8 @@ var app = (function () {
           ) {
             let t;
             for (N = e[8], t = 0; t < N.length; t += 1) {
-              const n = yd(e, N, t);
-              F[t] ? F[t].p(n, i) : ((F[t] = Ed(n)), F[t].c(), F[t].m(l, null));
+              const n = bd(e, N, t);
+              F[t] ? F[t].p(n, i) : ((F[t] = Ad(n)), F[t].c(), F[t].m(l, null));
             }
             for (; t < F.length; t += 1) F[t].d(1);
             F.length = N.length;
@@ -21180,7 +21209,7 @@ var app = (function () {
             (!x || 1024 & i[0]) &&
               C !==
                 (C =
-                  (e[10] ? e[10].taxonomyTags.map(ru).join(", ") : "") + "") &&
+                  (e[10] ? e[10].taxonomyTags.map(su).join(", ") : "") + "") &&
               P(I, C);
           const o = {};
           2048 & i[2] && (o.$$scope = { dirty: i, ctx: e }), y.$set(o);
@@ -21217,7 +21246,7 @@ var app = (function () {
       }
     );
   }
-  function _d(e) {
+  function Sd(e) {
     let t;
     return {
       c() {
@@ -21231,11 +21260,11 @@ var app = (function () {
       },
     };
   }
-  function Sd(e) {
+  function Td(e) {
     let t, n;
     return (
       (t = new Oi({
-        props: { $$slots: { default: [_d] }, $$scope: { ctx: e } },
+        props: { $$slots: { default: [Sd] }, $$scope: { ctx: e } },
       })),
       {
         c() {
@@ -21260,7 +21289,7 @@ var app = (function () {
       }
     );
   }
-  function Td(e) {
+  function Od(e) {
     let t;
     return {
       c() {
@@ -21274,11 +21303,11 @@ var app = (function () {
       },
     };
   }
-  function Od(e) {
+  function Ld(e) {
     let t, n;
     return (
       (t = new Oi({
-        props: { $$slots: { default: [Td] }, $$scope: { ctx: e } },
+        props: { $$slots: { default: [Od] }, $$scope: { ctx: e } },
       })),
       {
         c() {
@@ -21303,14 +21332,14 @@ var app = (function () {
       }
     );
   }
-  function Ld(e) {
+  function wd(e) {
     let t, n, i, r;
     return (
       (t = new ul({
-        props: { $$slots: { default: [Sd] }, $$scope: { ctx: e } },
+        props: { $$slots: { default: [Td] }, $$scope: { ctx: e } },
       })),
       (i = new ul({
-        props: { $$slots: { default: [Od] }, $$scope: { ctx: e } },
+        props: { $$slots: { default: [Ld] }, $$scope: { ctx: e } },
       })),
       i.$on("click", e[24]),
       {
@@ -21338,21 +21367,21 @@ var app = (function () {
       }
     );
   }
-  function wd(e) {
+  function Dd(e) {
     let t, n, i, r, s, a;
     return (
       (t = new il({
-        props: { id: "title", $$slots: { default: [bd] }, $$scope: { ctx: e } },
+        props: { id: "title", $$slots: { default: [Ed] }, $$scope: { ctx: e } },
       })),
       (i = new rl({
         props: {
           id: "content",
-          $$slots: { default: [Cd] },
+          $$slots: { default: [_d] },
           $$scope: { ctx: e },
         },
       })),
       (s = new sl({
-        props: { $$slots: { default: [Ld] }, $$scope: { ctx: e } },
+        props: { $$slots: { default: [wd] }, $$scope: { ctx: e } },
       })),
       {
         c() {
@@ -21399,7 +21428,7 @@ var app = (function () {
       }
     );
   }
-  function Dd(e) {
+  function Nd(e) {
     let t;
     return {
       c() {
@@ -21413,7 +21442,7 @@ var app = (function () {
       },
     };
   }
-  function Nd(e) {
+  function Rd(e) {
     let t, n, i;
     function r(t) {
       e[26](t);
@@ -21449,7 +21478,7 @@ var app = (function () {
       }
     );
   }
-  function Rd(e) {
+  function Md(e) {
     let t;
     return {
       c() {
@@ -21463,11 +21492,11 @@ var app = (function () {
       },
     };
   }
-  function Md(e) {
+  function Fd(e) {
     let t, n;
     return (
       (t = new Oi({
-        props: { $$slots: { default: [Rd] }, $$scope: { ctx: e } },
+        props: { $$slots: { default: [Md] }, $$scope: { ctx: e } },
       })),
       {
         c() {
@@ -21492,7 +21521,7 @@ var app = (function () {
       }
     );
   }
-  function Fd(e) {
+  function kd(e) {
     let t;
     return {
       c() {
@@ -21506,11 +21535,11 @@ var app = (function () {
       },
     };
   }
-  function kd(e) {
+  function Ud(e) {
     let t, n;
     return (
       (t = new Oi({
-        props: { $$slots: { default: [Fd] }, $$scope: { ctx: e } },
+        props: { $$slots: { default: [kd] }, $$scope: { ctx: e } },
       })),
       {
         c() {
@@ -21535,14 +21564,14 @@ var app = (function () {
       }
     );
   }
-  function Ud(e) {
+  function Hd(e) {
     let t, n, i, r;
     return (
       (t = new ul({
-        props: { $$slots: { default: [Md] }, $$scope: { ctx: e } },
+        props: { $$slots: { default: [Fd] }, $$scope: { ctx: e } },
       })),
       (i = new ul({
-        props: { $$slots: { default: [kd] }, $$scope: { ctx: e } },
+        props: { $$slots: { default: [Ud] }, $$scope: { ctx: e } },
       })),
       i.$on("click", e[27]),
       {
@@ -21570,21 +21599,21 @@ var app = (function () {
       }
     );
   }
-  function Hd(e) {
+  function Pd(e) {
     let t, n, i, r, s, a;
     return (
       (t = new il({
-        props: { id: "title", $$slots: { default: [Dd] }, $$scope: { ctx: e } },
+        props: { id: "title", $$slots: { default: [Nd] }, $$scope: { ctx: e } },
       })),
       (i = new rl({
         props: {
           id: "content",
-          $$slots: { default: [Nd] },
+          $$slots: { default: [Rd] },
           $$scope: { ctx: e },
         },
       })),
       (s = new sl({
-        props: { $$slots: { default: [Ud] }, $$scope: { ctx: e } },
+        props: { $$slots: { default: [Hd] }, $$scope: { ctx: e } },
       })),
       {
         c() {
@@ -21630,7 +21659,7 @@ var app = (function () {
       }
     );
   }
-  function Pd(e) {
+  function Bd(e) {
     let t;
     return {
       c() {
@@ -21647,11 +21676,11 @@ var app = (function () {
       },
     };
   }
-  function Bd(e) {
+  function Vd(e) {
     let t, n;
     return (
       (t = new vn({
-        props: { $$slots: { default: [Pd] }, $$scope: { ctx: e } },
+        props: { $$slots: { default: [Bd] }, $$scope: { ctx: e } },
       })),
       {
         c() {
@@ -21677,7 +21706,7 @@ var app = (function () {
       }
     );
   }
-  function Vd(e) {
+  function jd(e) {
     let t;
     return {
       c() {
@@ -21691,7 +21720,7 @@ var app = (function () {
       },
     };
   }
-  function jd(e) {
+  function zd(e) {
     let t;
     return {
       c() {
@@ -21705,7 +21734,7 @@ var app = (function () {
       },
     };
   }
-  function zd(e) {
+  function Gd(e) {
     let t, n, i, r;
     return (
       (t = new ds({
@@ -21713,7 +21742,7 @@ var app = (function () {
           class: "material-icons",
           "aria-label": "Upload dataset",
           ripple: !1,
-          $$slots: { default: [Vd] },
+          $$slots: { default: [jd] },
           $$scope: { ctx: e },
         },
       })),
@@ -21723,7 +21752,7 @@ var app = (function () {
           class: "material-icons",
           "aria-label": "Edit taxonomy",
           ripple: !1,
-          $$slots: { default: [jd] },
+          $$slots: { default: [zd] },
           $$scope: { ctx: e },
         },
       })),
@@ -21753,17 +21782,17 @@ var app = (function () {
       }
     );
   }
-  function Gd(e) {
+  function qd(e) {
     let t, n, i, r;
     return (
       (t = new yn({
-        props: { $$slots: { default: [Bd] }, $$scope: { ctx: e } },
+        props: { $$slots: { default: [Vd] }, $$scope: { ctx: e } },
       })),
       (i = new yn({
         props: {
           align: "end",
           toolbar: !0,
-          $$slots: { default: [zd] },
+          $$slots: { default: [Gd] },
           $$scope: { ctx: e },
         },
       })),
@@ -21794,11 +21823,11 @@ var app = (function () {
       }
     );
   }
-  function qd(e) {
+  function Kd(e) {
     let t, n;
     return (
       (t = new gn({
-        props: { $$slots: { default: [Gd] }, $$scope: { ctx: e } },
+        props: { $$slots: { default: [qd] }, $$scope: { ctx: e } },
       })),
       {
         c() {
@@ -21824,7 +21853,7 @@ var app = (function () {
       }
     );
   }
-  function Kd(e) {
+  function Wd(e) {
     let t, n;
     return (
       (t = new wa({ props: { indeterminate: !0 } })),
@@ -21847,7 +21876,7 @@ var app = (function () {
       }
     );
   }
-  function Wd(e) {
+  function Xd(e) {
     let t, n, i, r, s, a, o;
     function l(t) {
       e[30](t);
@@ -21896,11 +21925,11 @@ var app = (function () {
       }
     );
   }
-  function Xd(e) {
+  function Yd(e) {
     let t, n;
     return (
       (t = new ha({
-        props: { $$slots: { default: [Wd] }, $$scope: { ctx: e } },
+        props: { $$slots: { default: [Xd] }, $$scope: { ctx: e } },
       })),
       {
         c() {
@@ -21926,7 +21955,7 @@ var app = (function () {
       }
     );
   }
-  function Yd(e) {
+  function Qd(e) {
     let t,
       n = e[64].displayName + "";
     return {
@@ -21944,11 +21973,11 @@ var app = (function () {
       },
     };
   }
-  function Qd(e) {
+  function Jd(e) {
     let t, n, i, r;
     return (
       (t = new ea({
-        props: { $$slots: { default: [Yd] }, $$scope: { ctx: e } },
+        props: { $$slots: { default: [Qd] }, $$scope: { ctx: e } },
       })),
       (i = new ta({})),
       {
@@ -21975,11 +22004,11 @@ var app = (function () {
       }
     );
   }
-  function Jd(e) {
+  function Zd(e) {
     let t, n, i, r;
     return (
       (t = new Zs({
-        props: { $$slots: { default: [Qd] }, $$scope: { ctx: e } },
+        props: { $$slots: { default: [Jd] }, $$scope: { ctx: e } },
       })),
       {
         c() {
@@ -22005,11 +22034,11 @@ var app = (function () {
       }
     );
   }
-  function Zd(e, t) {
+  function eu(e, t) {
     let n, i, r;
     return (
       (i = new sa({
-        props: { $$slots: { default: [Jd] }, $$scope: { ctx: t } },
+        props: { $$slots: { default: [Zd] }, $$scope: { ctx: t } },
       })),
       i.$on("SMUI:action", function () {
         return t[32](t[64]);
@@ -22041,7 +22070,7 @@ var app = (function () {
       }
     );
   }
-  function eu(e) {
+  function tu(e) {
     let t,
       n,
       i = [],
@@ -22049,9 +22078,9 @@ var app = (function () {
       s = e[1];
     const a = (e) => e[64].hash;
     for (let t = 0; t < s.length; t += 1) {
-      let n = vd(e, s, t),
+      let n = yd(e, s, t),
         o = a(n);
-      r.set(o, (i[t] = Zd(o, n)));
+      r.set(o, (i[t] = eu(o, n)));
     }
     return {
       c() {
@@ -22066,7 +22095,7 @@ var app = (function () {
         32770 & n[0] &&
           ((s = e[1]),
           xe(),
-          (i = De(i, n, a, 1, e, s, r, t.parentNode, Le, Zd, t, vd)),
+          (i = De(i, n, a, 1, e, s, r, t.parentNode, Le, eu, t, yd)),
           Ce());
       },
       i(e) {
@@ -22085,7 +22114,7 @@ var app = (function () {
       },
     };
   }
-  function tu(e) {
+  function nu(e) {
     let t, n, i, r;
     function s(t) {
       e[33](t);
@@ -22097,7 +22126,7 @@ var app = (function () {
     return (
       void 0 !== e[14] && (o.artifactSet = e[14]),
       void 0 !== e[0] && (o.contentType = e[0]),
-      (t = new rd({ props: o })),
+      (t = new sd({ props: o })),
       oe.push(() => Me(t, "artifactSet", s)),
       oe.push(() => Me(t, "contentType", a)),
       t.$on("download", e[35]),
@@ -22131,17 +22160,17 @@ var app = (function () {
       }
     );
   }
-  function nu(e) {
+  function iu(e) {
     let t, n, i, r, s;
     n = new qs({
       props: {
         twoLine: !0,
         avatarList: !0,
-        $$slots: { default: [eu] },
+        $$slots: { default: [tu] },
         $$scope: { ctx: e },
       },
     });
-    let a = e[14] && tu(e);
+    let a = e[14] && nu(e);
     return {
       c() {
         (t = D("main")),
@@ -22168,7 +22197,7 @@ var app = (function () {
           e[14]
             ? a
               ? (a.p(e, t), 16384 & t[0] && _e(a, 1))
-              : ((a = tu(e)), a.c(), _e(a, 1), a.m(r.parentNode, r))
+              : ((a = nu(e)), a.c(), _e(a, 1), a.m(r.parentNode, r))
             : a &&
               (xe(),
               Se(a, 1, 1, () => {
@@ -22187,7 +22216,7 @@ var app = (function () {
       },
     };
   }
-  function iu(e) {
+  function ru(e) {
     let t,
       n,
       i,
@@ -22221,7 +22250,7 @@ var app = (function () {
     let w = {
       "aria-labelledby": "title",
       "aria-describedby": "content",
-      $$slots: { default: [wd] },
+      $$slots: { default: [Dd] },
       $$scope: { ctx: e },
     };
     function N(t) {
@@ -22233,7 +22262,7 @@ var app = (function () {
     let R = {
       "aria-labelledby": "title",
       "aria-describedby": "content",
-      $$slots: { default: [Hd] },
+      $$slots: { default: [Pd] },
       $$scope: { ctx: e },
     };
     void 0 !== e[12] && (R.open = e[12]),
@@ -22242,22 +22271,22 @@ var app = (function () {
       (c = new Ot({
         props: {
           variant: "static",
-          $$slots: { default: [qd] },
+          $$slots: { default: [Kd] },
           $$scope: { ctx: e },
         },
       }));
-    let F = e[6] && Kd();
+    let F = e[6] && Wd();
     return (
       (p = new Os({ props: { options: { classes: ["log"] } } })),
       (h = new fa({
         props: {
           style: "width: 360px",
-          $$slots: { default: [Xd] },
+          $$slots: { default: [Yd] },
           $$scope: { ctx: e },
         },
       })),
       ($ = new ma({
-        props: { $$slots: { default: [nu] }, $$scope: { ctx: e } },
+        props: { $$slots: { default: [iu] }, $$scope: { ctx: e } },
       })),
       {
         c() {
@@ -22350,7 +22379,7 @@ var app = (function () {
             e[6]
               ? F
                 ? 64 & n[0] && _e(F, 1)
-                : ((F = Kd()), F.c(), _e(F, 1), F.m(u.parentNode, u))
+                : ((F = Wd()), F.c(), _e(F, 1), F.m(u.parentNode, u))
               : F &&
                 (xe(),
                 Se(F, 1, 1, () => {
@@ -22412,12 +22441,12 @@ var app = (function () {
       }
     );
   }
-  const ru = (e) => e.Tag;
-  function su(e, t, n) {
+  const su = (e) => e.Tag;
+  function au(e, t, n) {
     let i,
       r = "Data",
       s = [];
-    const a = new fd();
+    const a = new md();
     let o = [],
       l = [];
     const c = new URLSearchParams(location.search);
@@ -22488,11 +22517,11 @@ var app = (function () {
       } catch (e) {
         if (
           (f(
-            e instanceof md
+            e instanceof hd
               ? e.message
               : "An error occurred. Please try again later"
           ),
-          !(e instanceof md))
+          !(e instanceof hd))
         )
           throw e;
       }
@@ -22542,7 +22571,7 @@ var app = (function () {
             );
           }
         })()),
-          (g = sd.from(h.project));
+          (g = ad.from(h.project));
         const e = Ve.fromDict(h.taxonomy);
         n(
           5,
@@ -22578,13 +22607,13 @@ var app = (function () {
       C = !1,
       _ = [],
       S = "",
-      T = new ud();
+      T = new pd();
     async function O(e) {
       n(9, (A = e)), n(11, (S = A.displayName));
       try {
         n(10, (x = { taxonomyTags: await T.toHumanFormat(A.taxonomyTags) }));
       } catch (e) {
-        e instanceof pd
+        e instanceof fd
           ? console.warn(
               "Latest artifact has invalid taxonomy tags:",
               e.message
@@ -22733,7 +22762,7 @@ var app = (function () {
   }
   return new (class extends Pe {
     constructor(e) {
-      super(), He(this, e, su, iu, o, {}, null, [-1, -1, -1]);
+      super(), He(this, e, au, ru, o, {}, null, [-1, -1, -1]);
     }
   })({ target: document.body, props: { name: "world" } });
 })();
