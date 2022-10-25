@@ -39,19 +39,7 @@ function initialize(middlewareOpts) {
 
   // Skipping authentication here as data is not easy to determine from these routes.
   // The GUID/display name (and fields) need to be guessed exactly.
-
-  router.use(
-    RouterUtils.getProjectScopedRoutes(),
-    RouterUtils.handleUserErrors(middlewareOpts.logger, async (req) => {
-      const { projectId, branch } = req.params;
-      const userId = projectId.split("+").shift();
-      req.webgmeContext = await RouterUtils.getWebGMEContextUnsafe(
-        middlewareOpts,
-        userId,
-        { projectId, branch }
-      );
-    })
-  );
+  RouterUtils.addProjectScopeMiddleware(middlewareOpts, router, { unsafe: true })
 
   router.get(
     RouterUtils.getProjectScopedRoutes(":format(guid|human)"),
