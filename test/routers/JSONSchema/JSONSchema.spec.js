@@ -24,59 +24,11 @@ describe('JSONSchema', function() {
         server.stop(done);
     });
 
-    it('should post to /postExample', function(done) {
-        superagent.post(urlFor('postExample'))
-            .end(function(err, res) {
-                try {
-                    expect(res.statusCode).to.equal(201);
-                    done();
-                } catch (e) {
-                    done(e);
-                }
-            });
-    });
-
-    it('should delete to /deleteExample', function(done) {
-        superagent.delete(urlFor('deleteExample'))
-            .end(function(err, res) {
-                try {
-                    expect(res.statusCode).to.equal(204);
-                    done();
-                } catch (e) {
-                    done(e);
-                }
-            });
-    });
-
-    it('should patch to /patchExample', function(done) {
-        superagent.patch(urlFor('patchExample'))
+    xit('should get to /schema.json', function(done) {
+        superagent.get(urlFor('schema.json'))
             .end(function(err, res) {
                 try {
                     expect(res.statusCode).to.equal(200);
-                    done();
-                } catch (e) {
-                    done(e);
-                }
-            });
-    });
-
-    it('should get to /getExample', function(done) {
-        superagent.get(urlFor('getExample'))
-            .end(function(err, res) {
-                try {
-                    expect(res.statusCode).to.equal(200);
-                    done();
-                } catch (e) {
-                    done(e);
-                }
-            });
-    });
-
-    it('should get to /error', function(done) {
-        superagent.get(urlFor('error'))
-            .end(function(err, res) {
-                try {
-                    expect(res.statusCode).to.equal(500);
                     done();
                 } catch (e) {
                     done(e);
