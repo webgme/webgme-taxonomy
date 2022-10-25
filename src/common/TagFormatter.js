@@ -68,7 +68,6 @@ function factory() {
           if (isObject(data)) {
             newData = this._toHumanFormat(data);
           } else {
-            console.log("lookup", this.nodeNameLookup);
             const valueName = this.nodeNameLookup.getPropertyValueName(
               guid,
               data
@@ -277,6 +276,7 @@ function factory() {
   }
 
   TagFormatter.GuidLookupTable = NodeGuidLookupTable;
+  TagFormatter.NodeNameLookupTable = NodeNameLookupTable;
   return TagFormatter;
 }
 
