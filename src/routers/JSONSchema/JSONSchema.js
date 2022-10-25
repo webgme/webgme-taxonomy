@@ -49,21 +49,11 @@ function initialize(middlewareOpts) {
     next();
   });
 
-  // Authentication not needed since actual data isn't shared, just taxonomy used to label data (as JSON schema).
+
   // Use ensureAuthenticated if the routes require authentication. (Can be set explicitly for each route.)
   // router.use('*', ensureAuthenticated);
-  router.use(
-    RouterUtils.getProjectScopedRoutes(),
-    RouterUtils.handleUserErrors(middlewareOpts.logger, async (request) => {
-      const { projectId, branch } = request.params;
-      const userId = projectId.split("+").shift();
-      request.webgmeContext = await RouterUtils.getWebGMEContextUnsafe(
-        middlewareOpts,
-        userId,
-        { projectId, branch }
-      );
-    })
-  );
+  // Authentication not needed since actual data isn't shared, just taxonomy used to label data (as JSON schema).
+  RouterUtils.addContentTypeMiddleware(middlewareOpts, router, { unsafe: true });
 
   router.get(
     RouterUtils.getContentTypeRoutes("schema.json"),
@@ -76,7 +66,6 @@ function initialize(middlewareOpts) {
           .map((path) => core.loadByPath(root, path))
       );
       const { schema } = await exporter.getVocabSchemas(vocabularies);
-      schema._meta = request.webgmeContext.projectVersion;
       return response.json(schema);
     }
   );
