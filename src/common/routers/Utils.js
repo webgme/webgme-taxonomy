@@ -19,6 +19,7 @@ const Utils = {
     const { safeStorage, gmeConfig, logger } = middlewareOpts;
     const { projectId, branch, tag, commitHash } = projectContext;
 
+    console.log("calling from getWebGMEContextUnsafe");
     console.log("CTX-user:", userId);
     console.log("CTX-project:", projectId);
     console.log("CTX-branch:", branch);
@@ -108,8 +109,8 @@ const Utils = {
     ];
   },
 
-  addContentTypeMiddleware(middlewareOpts, router) {
-    Utils.addProjectScopeMiddleware(middlewareOpts, router);
+  addContentTypeMiddleware(middlewareOpts, router, options) {
+    Utils.addProjectScopeMiddleware(middlewareOpts, router, options);
     const { logger } = middlewareOpts;
     return router.use(
       Utils.getContentTypeRoutes(),
@@ -124,17 +125,21 @@ const Utils = {
     );
   },
 
-  addProjectScopeMiddleware(middlewareOpts, router) {
+  addProjectScopeMiddleware(middlewareOpts, router, options = {}) {
     const { logger } = middlewareOpts;
+    const { unsafe } = options;
+    const contextFn = !unsafe ?
+      (request) => Utils.getWebGMEContext(middlewareOpts, request) :
+      (request) => {
+        const { projectId, branch } = request.params;
+        const userId = projectId.split("+").shift();
+        return Utils.getWebGMEContextUnsafe(middlewareOpts, userId, { projectId, branch });
+      };
     return router.use(
       Utils.getProjectScopedRoutes(),
       handleUserErrors(
         logger,
-        async (req) =>
-          (req.webgmeContext = await Utils.getWebGMEContext(
-            middlewareOpts,
-            req
-          ))
+        async (req) => req.webgmeContext = await contextFn(req)
       )
     );
   },
