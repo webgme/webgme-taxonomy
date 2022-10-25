@@ -16,7 +16,15 @@ describe('TaxonomyReference', function() {
     const version = new Commit('someHash');
     const one = new TaxonomyReference('tax1', version);
     const another = new TaxonomyReference('tax1', version);
-    assert(!one.supports(another));
+    assert(one.supports(another));
+  });
+
+  it('should consider projects with matching tags supported', function() {
+    const tag = new Tag('someHash', 'v1.0.0');
+    const one = new TaxonomyReference('tax1', tag);
+    const another = new TaxonomyReference('tax1', tag);
+    const otherTag = new Tag(undefined, 'v1.0.0');
+    assert(one.supports(another));
   });
 
   describe('SemanticVersion', function() {
@@ -54,6 +62,7 @@ describe('TaxonomyReference', function() {
         'v1.2.0',
         'v1.0.1',
         'v1.2.1',
+        'v1.2.5',
       ];
       const incompatVersions = [
         'v0.1.0',
@@ -76,6 +85,12 @@ describe('TaxonomyReference', function() {
           `v1.2.5 should NOT support ${vString}`
         );
       });
+    });
+
+    it('should only use tag if semver compatible', function() {
+      const tag = new Tag('someHash', 'v1.2.5');
+      const tag2 = new Tag(undefined, 'v1.2.5');
+      assert(tag.supports(tag2));
     });
   });
 

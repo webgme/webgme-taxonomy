@@ -52,13 +52,16 @@ function factory() {
       const defHiddenProperties = Object.fromEntries(
         Object.keys(definitions).map((name) => [name, hiddenProperties])
       );
+      const termsUiSchemas = (
+        await Promise.all(termNodes.map((node) => this.getUiSchemaEntry(node)))
+      ).map(([id, value]) => value);
+      const itemsUiSchema = Object.assign(
+        ...termsUiSchemas,
+        Object.fromEntries(hiddenProperties)
+      );
       const uiSchema = {
         taxonomyTags: {
-          items: Object.fromEntries(
-            termNodes
-              .map((node) => this.getUiSchemaEntry(node))
-              .concat(hiddenProperties)
-          ),
+          items: itemsUiSchema,
         },
       };
       return { schema, uiSchema };
@@ -70,29 +73,63 @@ function factory() {
       );
     }
 
-    getUiSchemaEntry(node) {
-      const uiSchema = this.getConstantProperties().map(([name]) => [
+    async getUiSchemaEntry(node) {
+      const entries = this.getConstantProperties().map(([name]) => [
         name,
         {
           "ui:widget": "hidden",
         },
       ]);
 
-      const parent = this.core.getParent(node);
-      if (parent) {
-        const parentEntry = this.getUiSchemaEntry(parent);
-        uiSchema.push(parentEntry);
+      const fields = (await this.core.loadChildren(node)).filter((child) =>
+        this.isTypeOf(child, "Field")
+      );
+      const childEntries = await Promise.all(
+        fields.map((child) => this.getUiSchemaEntry(child))
+      );
+
+      if (this.isEnum(node)) {
+        // if we are an enum, our children ui schemas should be merged into ours
+        const childSchemas = childEntries.map(([id, schema]) => schema);
+        const mergedChildren = Object.assign(...childSchemas);
+        entries.push(...Object.entries(mergedChildren));
+      } else {
+        entries.push(...childEntries);
+      }
+
+      const isTerm = !this.isTypeOf(node, "Field");
+      if (isTerm) {
+        const parent = this.core.getParent(node);
+        if (parent) {
+          const parentEntry = await this.getUiSchemaEntry(parent);
+          entries.push(parentEntry);
+        }
       }
 
       const guid = this.core.getGuid(node);
-      return [guid, Object.fromEntries(uiSchema)];
+      return [guid, Object.fromEntries(entries)];
+    }
+
+    isTypeOf(node, name) {
+      let iternode = this.core.getMetaType(node);
+      while (iternode) {
+        const baseName = this.core.getAttribute(iternode, "name");
+        if (baseName === name) {
+          return true;
+        }
+        iternode = this.core.getBase(iternode);
+      }
+
+      return false;
+    }
+
+    isEnum(node) {
+      return this.isTypeOf(node, "EnumField");
     }
 
     async getDependentDefinitions(node) {
-      const baseNode = this.core.getMetaType(node);
-      const baseName = this.core.getAttribute(baseNode, "name");
       const children = await this.core.loadChildren(node);
-      if (baseName === "EnumField") {
+      if (this.isEnum(node)) {
         return children;
       } else {
         return children.filter(

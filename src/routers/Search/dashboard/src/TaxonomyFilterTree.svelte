@@ -3,7 +3,7 @@
   import Textfield from "@smui/textfield";
   import FormField from "@smui/form-field";
   import Select, { Option } from "@smui/select";
-  import Autocomplete from "@smui-extra/autocomplete"
+  import Autocomplete from "@smui-extra/autocomplete";
   import TagMatcher from "./TagMatcher";
 
   export let tree;
@@ -11,9 +11,9 @@
 
   export let tags = [];
 
-  let search: ((input: string) => Promise<any[] | false>) | undefined
+  let search: ((input: string) => Promise<any[] | false>) | undefined;
   $: if (tree.type === "TextField") {
-    search = TagMatcher(tree.id, tags)
+    search = TagMatcher(tree.id, tags);
   }
 
   const toggleExpansion = () => {

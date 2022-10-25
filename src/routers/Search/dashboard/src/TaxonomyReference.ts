@@ -1,3 +1,10 @@
+// Taxonomy version information received from the server
+interface TaxonomyVersionData {
+  id: string;
+  tag: string;
+  commit: string;
+  branch: string;
+}
 
 export default class TaxonomyReference {
   id: string;
@@ -9,10 +16,10 @@ export default class TaxonomyReference {
   }
 
   supports(otherVersion: TaxonomyReference): boolean {
-    return this.id === otherVersion.id && this.supports(otherVersion.version);
+    return this.id === otherVersion.id && this.version.supports(otherVersion.version);
   }
 
-  static from(taxonomyVersion: object): TaxonomyReference {
+  static from(taxonomyVersion: TaxonomyVersionData): TaxonomyReference {
     let version;
     if (taxonomyVersion.tag) {
       version = new Tag(taxonomyVersion.commit, taxonomyVersion.tag);
@@ -56,7 +63,7 @@ export class Tag extends Commit {
   supports(otherTag: Version): boolean {
     if (otherTag instanceof Tag) {
       return this.version.major === otherTag.version.major &&
-        this.version.isGreaterThan(otherTag.version);
+        this.version.gte(otherTag.version);
     } else {
       return super.supports(otherTag);
     }
@@ -97,7 +104,7 @@ export class SemanticVersion {
     this.patch = patch;
   }
 
-  isGreaterThan(other: SemanticVersion) {
+  gte(other: SemanticVersion) {
     if (this.major < other.major) return false;
     if (this.minor < other.minor) return false;
     if (this.patch < other.patch) return false;
