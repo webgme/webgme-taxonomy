@@ -2,34 +2,32 @@
 /*eslint-env node, browser*/
 
 define([
-    'webgme-taxonomy/SearchFilterDataExporter',
-    'text!./metadata.json',
-    'plugin/PluginBase'
-], function (
-    Exporter,
-    pluginMetadata,
-    PluginBase
-) {
-    'use strict';
+  "webgme-taxonomy/SearchFilterDataExporter",
+  "text!./metadata.json",
+  "plugin/PluginBase",
+], function (DashboardConfiguration, pluginMetadata, PluginBase) {
+  "use strict";
 
-    pluginMetadata = JSON.parse(pluginMetadata);
+  pluginMetadata = JSON.parse(pluginMetadata);
 
-    class ExportSearchFilterData extends PluginBase {
-        constructor() {
-            super();
-            this.pluginMetadata = pluginMetadata;
-        }
-
-        async main() {
-            const exporter = new Exporter(this.core);
-            const schema = await exporter.toSchema(this.activeNode);
-            const name = this.core.getAttribute(this.activeNode, 'name');
-            this.addFile(`${name}.json`, JSON.stringify(schema));
-            this.result.setSuccess(true);
-        }
+  class ExportSearchFilterData extends PluginBase {
+    constructor() {
+      super();
+      this.pluginMetadata = pluginMetadata;
     }
 
-    ExportSearchFilterData.metadata = pluginMetadata;
+    async main() {
+      const config = await DashboardConfiguration.from(
+        this.core,
+        this.activeNode
+      );
+      const name = this.core.getAttribute(this.activeNode, "name");
+      this.addFile(`${name}.json`, JSON.stringify(config));
+      this.result.setSuccess(true);
+    }
+  }
 
-    return ExportSearchFilterData;
+  ExportSearchFilterData.metadata = pluginMetadata;
+
+  return ExportSearchFilterData;
 });

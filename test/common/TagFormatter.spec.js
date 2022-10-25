@@ -21,8 +21,9 @@ describe("TagFormatter", function () {
       2: { prop2: 6 },
       3: { prop1: 4 },
     };
-    guidLookup = new TagFormatter.GuidLookupTable(guidList, propsForTagGuid);
-    formatter = new TagFormatter(nodeNameDict, guidLookup);
+    const guidLookup = new TagFormatter.GuidLookupTable(guidList, propsForTagGuid);
+    const nameLookup = new TagFormatter.NodeNameLookupTable(nodeNameDict, {});
+    formatter = new TagFormatter(nameLookup, guidLookup);
   });
 
   describe("from guid format", function () {
