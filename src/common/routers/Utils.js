@@ -19,7 +19,6 @@ const Utils = {
     const { safeStorage, gmeConfig, logger } = middlewareOpts;
     const { projectId, branch, tag, commitHash } = projectContext;
 
-    console.log("calling from getWebGMEContextUnsafe");
     console.log("CTX-user:", userId);
     console.log("CTX-project:", projectId);
     console.log("CTX-branch:", branch);
