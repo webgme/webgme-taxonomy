@@ -43,6 +43,11 @@
         "src": "src/routers/TagCreator",
         "test": "test/routers/TagCreator",
         "mount": "routers/TagCreator"
+      },
+      "JSONSchema": {
+        "src": "src/routers/JSONSchema",
+        "test": "test/routers/JSONSchema",
+        "mount": "routers/JSONSchema"
       }
     }
   },

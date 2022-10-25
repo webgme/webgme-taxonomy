@@ -31,6 +31,11 @@ config.rest.components['TagCreator'] = {
   mount: 'routers/TagCreator',
   options: {}
 };
+config.rest.components['JSONSchema'] = {
+  src: __dirname + '/../src/routers/JSONSchema/JSONSchema.js',
+  mount: 'routers/JSONSchema',
+  options: {}
+};
 
 // Visualizer descriptors
 config.visualization.visualizerDescriptors.push(__dirname + '/../src/visualizers/Visualizers.json');
