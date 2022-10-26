@@ -91,7 +91,7 @@ function factory() {
       if (this.isEnum(node)) {
         // if we are an enum, our children ui schemas should be merged into ours
         const childSchemas = childEntries.map(([id, schema]) => schema);
-        const mergedChildren = Object.assign(...childSchemas);
+        const mergedChildren = Object.assign({}, ...childSchemas);
         entries.push(...Object.entries(mergedChildren));
       } else {
         entries.push(...childEntries);

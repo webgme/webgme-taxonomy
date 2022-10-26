@@ -34,21 +34,6 @@ class Storage {
     //.unwrap();
   }
 
-  async readFile(file: File) {
-    return new Promise((res, rej) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        if (reader.error) {
-          console.log("error:", reader.error);
-          return rej(reader.error);
-        } else {
-          return res(reader.result);
-        }
-      };
-      reader.readAsArrayBuffer(file);
-    });
-  }
-
   async pushArtifact(file: File, sasUrl: string) {
     console.log('Uploading to', sasUrl, file.name);
     const opts = {
@@ -59,7 +44,7 @@ class Storage {
         'x-ms-blob-type' : 'BlockBlob',
         'x-ms-encryption-algorithm' : 'AES256',
       },
-      body : await this.readFile(file),
+      body: file
     };
     return (await this._fetch(sasUrl, opts))
         .mapError(err => new AppendDataError(err.message))
