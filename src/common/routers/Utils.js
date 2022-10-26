@@ -130,9 +130,8 @@ const Utils = {
     const contextFn = !unsafe ?
       (request) => Utils.getWebGMEContext(middlewareOpts, request) :
       (request) => {
-        const { projectId, branch } = request.params;
-        const userId = projectId.split("+").shift();
-        return Utils.getWebGMEContextUnsafe(middlewareOpts, userId, { projectId, branch });
+        const userId = request.params.projectId.split("+").shift();
+        return Utils.getWebGMEContextUnsafe(middlewareOpts, userId, request.params);
       };
     return router.use(
       Utils.getProjectScopedRoutes(),
