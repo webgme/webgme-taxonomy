@@ -77,11 +77,17 @@ function initialize(middlewareOpts) {
       );
       const config = await exporter.getVocabSchemas(vocabularies);
       config.taxonomyVersion = req.webgmeContext.projectVersion;
+      config.taxonomyVersion.url = getHostUrl(req);
       return res.json(config);
     }
   );
 
   logger.debug("ready");
+}
+
+function getHostUrl(req) {
+  // TODO: this could be improved to include path
+  return req.host;
 }
 
 /**

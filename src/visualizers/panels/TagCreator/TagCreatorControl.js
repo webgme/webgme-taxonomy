@@ -196,6 +196,7 @@ define([
     } else {
       taxonomyVersion.commit = commitHash;
     }
+    taxonomyVersion.url = window.location.host;
     return taxonomyVersion;
   };
 
