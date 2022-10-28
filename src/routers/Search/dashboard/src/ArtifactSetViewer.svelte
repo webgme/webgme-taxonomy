@@ -19,7 +19,7 @@
   export let artifactSet;
   export let contentType = "artifact";
   let numArtifacts = 10;
-  let artifacts = [];
+  let shownArtifacts = [];
   let selected = [];
   let menu: MenuComponentDev;
 
@@ -46,11 +46,19 @@
   onArtifactSetChange();
   function onArtifactSetChange() {
     if (artifactSet && prevSetHash !== artifactSet.hash) {
-      const start = artifactSet.children.length - numArtifacts;
-      artifacts = artifactSet.children.slice(start, start + numArtifacts);
       selected = [];
-      numArtifacts = Math.min(artifacts.length, 10);
       prevSetHash = artifactSet.hash;
+      numArtifacts = Math.min(artifactSet.children.length, 10);
+      setShownArtifacts(numArtifacts);
+    }
+  }
+
+  $: setShownArtifacts(numArtifacts);
+
+  function setShownArtifacts(numArtifacts) {
+    if (artifactSet) {
+      const start = artifactSet.children.length - numArtifacts;
+      shownArtifacts = artifactSet.children.slice(start, start + numArtifacts);
     }
   }
 
@@ -90,11 +98,17 @@
           <List>
             <Item
               on:SMUI:action={() =>
-                (numArtifacts = Math.min(artifacts.length, numArtifacts + 10))}
+                (numArtifacts = Math.min(
+                  artifactSet.children.length,
+                  numArtifacts + 10
+                ))}
             >
               <Text>Show more...</Text>
             </Item>
-            <Item on:SMUI:action={() => (numArtifacts = artifacts.length)}>
+            <Item
+              on:SMUI:action={() =>
+                (numArtifacts = artifactSet.children.length)}
+            >
               <Text>Show all...</Text>
             </Item>
           </List>
@@ -103,7 +117,7 @@
       <!-- add show more button, select all -->
       <List checkList>
         <!-- TODO: check if they have permissions to append to it -->
-        {#each artifacts as artifact (artifact.id)}
+        {#each shownArtifacts as artifact (artifact.id)}
           <Item>
             <Text>
               <PrimaryText>{artifact.displayName}</PrimaryText>
