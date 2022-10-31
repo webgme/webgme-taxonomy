@@ -34,25 +34,20 @@ class PDP {
     const allProcesses = await this._fetchJson(
       "v2/Process/ListProcesses?permission=read"
     );
-    const processList = allProcesses.filter(
-      (element) => element.processType === this.processType
-    );
 
     const processObservations = await Promise.all(
-      processList.map(
-        async (process) => await this.getProcessObservations(process.processId)
-      )
+      allProcesses
+        .filter(({ processType }) => processType === this.processType)
+        .map(({ processId }) => this.getProcessObservations(processId))
     );
 
     const artifacts = filterMap(processObservations.flat(), parseArtifact);
     const artifactSets = Object.entries(
       _.groupBy(artifacts, (artifact) => artifact.parentId)
     ).map(([parentId, artifacts]) => {
-      const latestArtifact = artifacts
-        .sort((a1, a2) => (a1.time < a2.time ? -1 : 1))
-        .slice()
-        .pop();
-      const { displayName, taxonomyTags, taxonomyVersion } = latestArtifact;
+      artifacts.sort((a1, a2) => (a1.time < a2.time ? -1 : 1));
+      const { displayName } = _.first(artifacts);
+      const { taxonomyTags, taxonomyVersion } = _.last(artifacts);
       return new ArtifactSet(
         parentId,
         displayName,
