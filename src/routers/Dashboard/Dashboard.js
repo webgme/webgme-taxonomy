@@ -55,6 +55,11 @@ function initialize(middlewareOpts) {
   // Use ensureAuthenticated if the routes require authentication. (Can be set explicitly for each route.)
   router.use('*', ensureAuthenticated);
 
+  router.use(
+    RouterUtils.getProjectScopedRoutes("static/"),
+    express.static(staticPath)
+  );
+
   RouterUtils.addProjectScopeMiddleware(middlewareOpts, router);
 
   router.get(
