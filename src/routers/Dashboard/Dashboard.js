@@ -57,6 +57,15 @@ function initialize(middlewareOpts) {
 
   RouterUtils.addProjectScopeMiddleware(middlewareOpts, router);
 
+  router.get(
+    RouterUtils.getProjectScopedRoutes("info"),
+    async (req, res) => {
+      const context = new ContextFacade(req.webgmeContext);
+      const body = await context.getProjectInfo()
+      res.json(body);
+    }
+  );
+
   logger.debug('ready');
 }
 
