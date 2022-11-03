@@ -1,9 +1,7 @@
 <script lang="ts">
   import { getProjectInfo } from "./data"
-
-  import AppHeader from "./components/AppHeader.svelte"
+  import { AppHeader, ContentTypeCard } from "./components"
   import LayoutGrid, { Cell } from "@smui/layout-grid"
-  import ContentTypeCard from "./components/ContentTypeCard.svelte"
 
   let apiBaseUrl = window.location.href.split("/").slice(0, -2).join("/")
 
