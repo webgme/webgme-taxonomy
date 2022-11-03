@@ -36,6 +36,11 @@ config.rest.components['JSONSchema'] = {
   mount: 'routers/JSONSchema',
   options: {}
 };
+config.rest.components['Dashboard'] = {
+  src: __dirname + '/../src/routers/Dashboard/Dashboard.js',
+  mount: 'routers/Dashboard',
+  options: {}
+};
 
 // Visualizer descriptors
 config.visualization.visualizerDescriptors.push(__dirname + '/../src/visualizers/Visualizers.json');
