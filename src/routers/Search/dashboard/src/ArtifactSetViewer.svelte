@@ -71,9 +71,25 @@
     };
     return date.toLocaleDateString("en-us", formatOpts);
   }
+
+  // Ensure the window always stays at the top of the screen
+  let scrollY;
+  let panel;
+  let panelOffset = 0;
+  $: {
+    if (panel) {
+      const parentRect = panel.offsetParent.getBoundingClientRect();
+      panelOffset = parentRect.top + panel.offsetTop;
+    }
+  }
 </script>
 
-<div style="display: inline-block; vertical-align: top">
+<svelte:window bind:scrollY />
+<div
+  bind:this={panel}
+  class="card-container"
+  class:sticky={scrollY > panelOffset}
+>
   <!-- TODO: add a header for the observation -->
   <!-- TODO: upload times -->
   <!-- Artifact list -->
@@ -144,3 +160,15 @@
     </Actions>
   </Card>
 </div>
+
+<style>
+  .card-container {
+    display: inline-block;
+    vertical-align: top;
+  }
+
+  .sticky {
+    position: fixed;
+    top: 0;
+  }
+</style>
