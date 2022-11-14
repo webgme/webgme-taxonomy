@@ -572,7 +572,7 @@
             </Item>
           {/each}
         </List>
-      {:else if filterTags.length}
+      {:else if !isLoading}
         <Paper variant="unelevated">
           <PaperContent>No results found</PaperContent>
         </Paper>
