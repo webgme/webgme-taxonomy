@@ -573,8 +573,10 @@
           {/each}
         </List>
       {:else if !isLoading}
-        <Paper variant="unelevated">
-          <PaperContent>No results found</PaperContent>
+        <Paper variant="unelevated" class="empty">
+          <PaperContent>
+            <p>No results found</p>
+          </PaperContent>
         </Paper>
       {/if}
     </main>
@@ -637,5 +639,10 @@
   }
   :global(.log.warn) {
     --toastBackground: red;
+  }
+
+  :global(.empty) {
+    opacity: 50%;
+    font-style: italic;
   }
 </style>
