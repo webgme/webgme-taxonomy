@@ -1,22 +1,22 @@
 <script lang="ts">
   import { getProjectInfo } from "./data"
-
-  import AppHeader from "./components/AppHeader.svelte"
+  import { AppHeader, ContentTypeCard } from "./components"
   import LayoutGrid, { Cell } from "@smui/layout-grid"
-  import ContentTypeCard from "./components/ContentTypeCard.svelte"
 
   let apiBaseUrl = window.location.href.split("/").slice(0, -2).join("/")
+  let projectInfo = getProjectInfo(apiBaseUrl)
+  let title = ""
 
-  let contentTypes = getProjectInfo(apiBaseUrl)
+  $: projectInfo.then(({ name }) => title = name)
 </script>
 
 <main>
-  <AppHeader></AppHeader>
+  <AppHeader {title}></AppHeader>
   <LayoutGrid>
-    {#await contentTypes}
-      <div>Loading content types...</div>
-    {:then project}
-      {#each project.contentTypes as {name, url, path} (path)}
+    {#await projectInfo}
+      <div class="loading">Loading content types...</div>
+    {:then info}
+      {#each info.contentTypes as {name, url, path} (path)}
         <Cell>
           <ContentTypeCard {name} {url}></ContentTypeCard>
         </Cell>
