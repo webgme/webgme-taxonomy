@@ -392,6 +392,9 @@
   let artifactSets = [];
   $: artifactSets = getArtifactSets(items);
   let selectedArtifactSet;
+  $: if (!items.includes(selectedArtifactSet)) {
+    selectedArtifactSet = null;
+  }
 
   function getArtifactSets(items) {
     return [];
