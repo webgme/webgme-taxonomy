@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { capitalize } from "./Utils.ts";
+  import { capitalize } from "../Utils";
   import Card, { Content, Actions } from "@smui/card";
   import Button, { Label } from "@smui/button";
   import type { ButtonComponentDev } from "@smui/button";
@@ -14,7 +14,7 @@
     Meta,
   } from "@smui/list";
   import Checkbox from "@smui/checkbox";
-  import type Storage from "./Storage.ts";
+  import type Storage from "../Storage";
 
   export let artifactSet;
   export let contentType = "artifact";

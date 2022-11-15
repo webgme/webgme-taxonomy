@@ -4,7 +4,7 @@
   import FormField from "@smui/form-field";
   import Select, { Option } from "@smui/select";
   import Autocomplete from "@smui-extra/autocomplete";
-  import TagMatcher from "./TagMatcher";
+  import TagMatcher from "../TagMatcher";
 
   export let tree;
   const { name, children } = tree;

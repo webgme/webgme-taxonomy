@@ -31,8 +31,7 @@
   import Button, { Label } from "@smui/button";
   import Paper, { Content as PaperContent } from "@smui/paper";
   import Dropzone from "svelte-file-dropzone";
-  import TaxonomyFilter from "./TaxonomyFilter.svelte";
-  import ArtifactSetViewer from "./ArtifactSetViewer.svelte";
+  import { ArtifactSetViewer, TaxonomyFilter } from "./components";
   import type TaxonomyData from "./TaxonomyData.ts";
   import TaxonomyReference from "./TaxonomyReference.ts";
 
