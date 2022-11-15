@@ -39,7 +39,7 @@
     });
   }
 
-  $: onArtifactSetChange(artifactSet);
+  $: (artifactSet, onArtifactSetChange());
 
   let prevSetHash = null;
 
@@ -68,7 +68,7 @@
       year: "numeric",
       month: "numeric",
       day: "numeric",
-    };
+    } as const;
     return date.toLocaleDateString("en-us", formatOpts);
   }
 
