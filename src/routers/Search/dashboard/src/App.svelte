@@ -6,7 +6,7 @@
     filterMap,
     openUrl,
     encodeQueryParams,
-  } from "./Utils.ts";
+  } from "./Utils";
   import Textfield from "@smui/textfield";
   import IconButton from "@smui/icon-button";
   import { SvelteToast, toast } from "@zerodevx/svelte-toast";
@@ -32,16 +32,16 @@
   import Paper, { Content as PaperContent } from "@smui/paper";
   import Dropzone from "svelte-file-dropzone";
   import { ArtifactSetViewer, TaxonomyFilter } from "./components";
-  import type TaxonomyData from "./TaxonomyData.ts";
-  import TaxonomyReference from "./TaxonomyReference.ts";
+  import type TaxonomyData from "./TaxonomyData";
+  import TaxonomyReference from "./TaxonomyReference";
 
   let title: string;
   let contentType: string = "Data";
   $: title = `${contentType} Dashboard`;
   let vocabularies: TaxonomyData[] = [];
 
-  import TagFormatter, { FormatError } from "./Formatter.ts";
-  import Storage, { RequestError } from "./Storage.ts";
+  import TagFormatter, { FormatError } from "./Formatter";
+  import Storage, { RequestError } from "./Storage";
   const storage = new Storage();
   let allItems = [];
   let items = [];
