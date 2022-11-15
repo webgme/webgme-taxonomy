@@ -29,6 +29,7 @@
   } from "@smui/dialog";
   import Radio from "@smui/radio";
   import Button, { Label } from "@smui/button";
+  import Paper, { Content as PaperContent } from "@smui/paper";
   import Dropzone from "svelte-file-dropzone";
   import TaxonomyFilter from "./TaxonomyFilter.svelte";
   import ArtifactSetViewer from "./ArtifactSetViewer.svelte";
@@ -391,6 +392,9 @@
   let artifactSets = [];
   $: artifactSets = getArtifactSets(items);
   let selectedArtifactSet;
+  $: if (!items.includes(selectedArtifactSet)) {
+    selectedArtifactSet = null;
+  }
 
   function getArtifactSets(items) {
     return [];
@@ -547,29 +551,37 @@
   <AppContent>
     <main style="display: inline-block; vertical-align: top">
       <!-- Artifact list -->
-      <List twoLine avatarList>
-        {#each items as item (item.hash)}
-          <Item on:SMUI:action={() => onItemClicked(item)}>
-            <Text>
-              <PrimaryText>{item.displayName}</PrimaryText>
-              <SecondaryText />
-            </Text>
-            {#each item.taxonomyTags as tag}
-              <!--
-                                                        <Chip chip={tag.id}>
-								{#if tag.type === 'EnumField'}
-						<Text>{tag.name}</Text>
-                                        {:else if tag.value}
-						<Text>{tag.name}: {tag.value}</Text>
-								{:else}
-						<Text>{tag.name}</Text>
-								{/if}
-                                                        </Chip>
-							-->
-            {/each}
-          </Item>
-        {/each}
-      </List>
+      {#if items.length}
+        <List twoLine avatarList>
+          {#each items as item (item.hash)}
+            <Item on:SMUI:action={() => onItemClicked(item)}>
+              <Text>
+                <PrimaryText>{item.displayName}</PrimaryText>
+                <SecondaryText />
+              </Text>
+              {#each item.taxonomyTags as tag}
+                <!--
+                                                          <Chip chip={tag.id}>
+                  {#if tag.type === 'EnumField'}
+              <Text>{tag.name}</Text>
+                                          {:else if tag.value}
+              <Text>{tag.name}: {tag.value}</Text>
+                  {:else}
+              <Text>{tag.name}</Text>
+                  {/if}
+                                                          </Chip>
+                -->
+              {/each}
+            </Item>
+          {/each}
+        </List>
+      {:else if !isLoading}
+        <Paper variant="unelevated" class="empty">
+          <PaperContent>
+            <p>No results found</p>
+          </PaperContent>
+        </Paper>
+      {/if}
     </main>
     {#if selectedArtifactSet}
       <ArtifactSetViewer
@@ -630,5 +642,10 @@
   }
   :global(.log.warn) {
     --toastBackground: red;
+  }
+
+  :global(.empty) {
+    opacity: 50%;
+    font-style: italic;
   }
 </style>
