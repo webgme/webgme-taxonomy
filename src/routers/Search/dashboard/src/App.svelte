@@ -32,7 +32,7 @@
   import Paper, { Content as PaperContent } from "@smui/paper";
   import Dropzone from "svelte-file-dropzone";
   import { ArtifactSetViewer, TaxonomyFilter } from "./components";
-  import type TaxonomyData from "./TaxonomyData";
+  import TaxonomyData from "./TaxonomyData";
   import TaxonomyReference from "./TaxonomyReference";
 
   let title: string;
@@ -49,7 +49,7 @@
   const params = new URLSearchParams(location.search);
   let searchQuery: string = params.get("searchQuery") || "";
   let filterTags: FilterTag[] = [];
-  function parseTagParams(filterTagString: string | null): FilterTags[] {
+  function parseTagParams(filterTagString: string | null): FilterTag[] {
     if (filterTagString) {
       const leanTags: LeanTag[] = JSON.parse(filterTagString);
       return filterMap(leanTags, (leanTag) => {
@@ -143,7 +143,7 @@
     }
   }
 
-  function trimTaxonomy(taxonomy) {
+  function trimTaxonomy(taxonomy: TaxonomyData) {
     let vocabs = [taxonomy];
     while (vocabs.length === 1) {
       vocabs = vocabs[0].children;
@@ -177,7 +177,7 @@
   async function initialize() {
     configuration = await fetchConfiguration();
     currentTaxonomy = TaxonomyReference.from(configuration.project);
-    const taxonomy = FilterTag.fromDict(configuration.taxonomy);
+    const taxonomy = TaxonomyData.fromDict(configuration.taxonomy);
     vocabularies = trimTaxonomy(taxonomy);
     filterTags = parseTagParams(params.get("filterTags"));
     contentType = configuration.name;
@@ -332,14 +332,14 @@
   }
 
   async function readFile(file: File) {
-    return new Promise((res, rej) => {
+    return new Promise<string>((res, rej) => {
       const reader = new FileReader();
       reader.onload = () => {
         if (reader.error) {
           console.log("error:", reader.error);
           return rej(reader.error);
         } else {
-          return res(reader.result);
+          return res(reader.result as string);
         }
       };
       reader.readAsText(file);
@@ -543,7 +543,7 @@
         trees={vocabularies}
         tags={itemTags}
         on:change={(event) =>
-          (filterTags = event.detail.filterTags.map(FilterTag.fromDict))}
+          (filterTags = FilterTag.fromDicts(event.detail.filterTags))}
       />
     </Content>
   </Drawer>

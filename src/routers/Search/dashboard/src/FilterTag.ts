@@ -84,8 +84,12 @@ export class FilterTag {
     return new LeanTag(this.id, this.value);
   }
 
-  static fromDict(infoDict: Required<FilterTag>): FilterTag {
-    const children = infoDict.children.map(FilterTag.fromDict);
-    return new FilterTag(infoDict.id, infoDict.name, infoDict.type, infoDict.value, children);
+  static fromDict<T extends typeof FilterTag>(this: T, infoDict: Required<FilterTag>): InstanceType<T> {
+    const children = this.fromDicts(infoDict.children);
+    return new this(infoDict.id, infoDict.name, infoDict.type, infoDict.value, children) as InstanceType<T>;
+  }
+
+  static fromDicts<T extends typeof FilterTag>(this: T, infoDicts: Required<FilterTag>[]): InstanceType<T>[] {
+    return infoDicts.map<InstanceType<T>>(this.fromDict, this);
   }
 }
