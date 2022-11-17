@@ -17,8 +17,8 @@ const { FormatError } = require("../../../../common/TagFormatter");
 const { pipeline } = require("stream");
 const { promisify } = require("util");
 const streamPipeline = promisify(pipeline);
-const DownloadFile = require("../../DownloadFile");
-const { Artifact, ArtifactSet } = require("../../Artifact");
+const DownloadFile = require("../common/DownloadFile");
+const { Artifact, ArtifactSet } = require("../common/Artifact");
 const CreateRequestLogger = require("./CreateRequestLogger");
 const logFilePath = process.env.CREATE_LOG_PATH || "./CreateProcesses.jsonl";
 const reqLogger = new CreateRequestLogger(logFilePath);
@@ -152,6 +152,7 @@ class PDP {
 
     //return newProc;
     // TODO: upload the data file
+    return "Submitted create request!";
   }
 
   // TODO: update method signature to be more generic

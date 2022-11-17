@@ -22000,7 +22000,7 @@ var app = (function () {
         L(e, t, n);
       },
       p(e, i) {
-        32 & i && n !== (n = e[22].displayName + "") && P(t, n);
+        16 & i && n !== (n = e[22].displayName + "") && P(t, n);
       },
       d(e) {
         e && O(t);
@@ -22018,7 +22018,7 @@ var app = (function () {
         L(e, t, n);
       },
       p(e, i) {
-        32 & i &&
+        16 & i &&
           n !== (n = e[22].time ? "Uploaded on " + dd(e[22].time) : "") &&
           P(t, n);
       },
@@ -22045,9 +22045,9 @@ var app = (function () {
         },
         p(e, n) {
           const r = {};
-          33554464 & n && (r.$$scope = { dirty: n, ctx: e }), t.$set(r);
+          33554448 & n && (r.$$scope = { dirty: n, ctx: e }), t.$set(r);
           const s = {};
-          33554464 & n && (s.$$scope = { dirty: n, ctx: e }), i.$set(s);
+          33554448 & n && (s.$$scope = { dirty: n, ctx: e }), i.$set(s);
         },
         i(e) {
           r || (_e(t.$$.fragment, e), _e(i.$$.fragment, e), (r = !0));
@@ -22068,7 +22068,7 @@ var app = (function () {
     }
     let s = { value: e[22].id };
     return (
-      void 0 !== e[6] && (s.group = e[6]),
+      void 0 !== e[5] && (s.group = e[5]),
       (t = new Wl({ props: s })),
       ae.push(() => Re(t, "group", r)),
       {
@@ -22080,8 +22080,8 @@ var app = (function () {
         },
         p(e, i) {
           const r = {};
-          32 & i && (r.value = e[22].id),
-            !n && 64 & i && ((n = !0), (r.group = e[6]), he(() => (n = !1))),
+          16 & i && (r.value = e[22].id),
+            !n && 32 & i && ((n = !0), (r.group = e[5]), he(() => (n = !1))),
             t.$set(r);
         },
         i(e) {
@@ -22114,9 +22114,9 @@ var app = (function () {
         },
         p(e, n) {
           const r = {};
-          33554464 & n && (r.$$scope = { dirty: n, ctx: e }), t.$set(r);
+          33554448 & n && (r.$$scope = { dirty: n, ctx: e }), t.$set(r);
           const s = {};
-          33554528 & n && (s.$$scope = { dirty: n, ctx: e }), i.$set(s);
+          33554480 & n && (s.$$scope = { dirty: n, ctx: e }), i.$set(s);
         },
         i(e) {
           s || (_e(t.$$.fragment, e), _e(i.$$.fragment, e), (s = !0));
@@ -22148,7 +22148,7 @@ var app = (function () {
         p(e, n) {
           t = e;
           const r = {};
-          33554528 & n && (r.$$scope = { dirty: n, ctx: t }), i.$set(r);
+          33554480 & n && (r.$$scope = { dirty: n, ctx: t }), i.$set(r);
         },
         i(e) {
           r || (_e(i.$$.fragment, e), (r = !0));
@@ -22167,7 +22167,7 @@ var app = (function () {
       n,
       i = [],
       r = new Map(),
-      s = e[5];
+      s = e[4];
     const o = (e) => e[22].id;
     for (let t = 0; t < s.length; t += 1) {
       let n = Vu(e, s, t),
@@ -22184,8 +22184,8 @@ var app = (function () {
         L(e, t, r), (n = !0);
       },
       p(e, n) {
-        96 & n &&
-          ((s = e[5]),
+        48 & n &&
+          ((s = e[4]),
           Ae(),
           (i = Me(i, n, o, 1, e, s, r, t.parentNode, Oe, td, t, Vu)),
           Ce());
@@ -22315,7 +22315,7 @@ var app = (function () {
           const s = {};
           33554437 & t && (s.$$scope = { dirty: t, ctx: e }), g.$set(s);
           const o = {};
-          33554528 & t && (o.$$scope = { dirty: t, ctx: e }), y.$set(o);
+          33554480 & t && (o.$$scope = { dirty: t, ctx: e }), y.$set(o);
         },
         i(e) {
           v ||
@@ -22438,7 +22438,7 @@ var app = (function () {
       t.$on("click", e[10]),
       (i = new pl({
         props: {
-          disabled: 0 == e[6].length,
+          disabled: 0 == e[5].length,
           $$slots: { default: [ad] },
           $$scope: { ctx: e },
         },
@@ -22455,7 +22455,7 @@ var app = (function () {
           const r = {};
           33554432 & n && (r.$$scope = { dirty: n, ctx: e }), t.$set(r);
           const s = {};
-          64 & n && (s.disabled = 0 == e[6].length),
+          32 & n && (s.disabled = 0 == e[5].length),
             33554432 & n && (s.$$scope = { dirty: n, ctx: e }),
             i.$set(s);
         },
@@ -22489,9 +22489,9 @@ var app = (function () {
         },
         p(e, n) {
           const r = {};
-          33554663 & n && (r.$$scope = { dirty: n, ctx: e }), t.$set(r);
+          33554551 & n && (r.$$scope = { dirty: n, ctx: e }), t.$set(r);
           const s = {};
-          33554496 & n && (s.$$scope = { dirty: n, ctx: e }), i.$set(s);
+          33554464 & n && (s.$$scope = { dirty: n, ctx: e }), i.$set(s);
         },
         i(e) {
           r || (_e(t.$$.fragment, e), _e(i.$$.fragment, e), (r = !0));
@@ -22526,7 +22526,7 @@ var app = (function () {
           (n = M("div")),
             Fe(i.$$.fragment),
             U(n, "class", "card-container svelte-11g709w"),
-            j(n, "sticky", e[8] > e[4]);
+            j(n, "sticky", e[7] > e[8]);
         },
         m(c, u) {
           L(c, n, u),
@@ -22540,16 +22540,16 @@ var app = (function () {
               (s = !0));
         },
         p(e, [r]) {
-          256 & r &&
+          128 & r &&
             !a &&
             ((a = !0),
             clearTimeout(t),
-            scrollTo(window.pageXOffset, e[8]),
+            scrollTo(window.pageXOffset, e[7]),
             (t = setTimeout(l, 100)));
           const s = {};
-          33554663 & r && (s.$$scope = { dirty: r, ctx: e }),
+          33554551 & r && (s.$$scope = { dirty: r, ctx: e }),
             i.$set(s),
-            272 & r && j(n, "sticky", e[8] > e[4]);
+            384 & r && j(n, "sticky", e[7] > e[8]);
         },
         i(e) {
           r || (_e(i.$$.fragment, e), (r = !0));
@@ -22584,7 +22584,7 @@ var app = (function () {
     function f() {
       r &&
         p !== r.hash &&
-        (n(6, (l = [])),
+        (n(5, (l = [])),
         (p = r.hash),
         n(2, (o = Math.min(r.children.length, 10))),
         h(o));
@@ -22592,7 +22592,7 @@ var app = (function () {
     function h(e) {
       if (r) {
         const t = r.children.length - e;
-        n(5, (a = r.children.slice(t, t + e)));
+        n(4, (a = r.children.slice(t, t + e)));
       }
     }
     f();
@@ -22604,10 +22604,10 @@ var app = (function () {
       }),
       (e.$$.update = () => {
         if (
-          (1 & e.$$.dirty && f(), 4 & e.$$.dirty && h(o), 24 & e.$$.dirty && d)
+          (1 & e.$$.dirty && f(), 4 & e.$$.dirty && h(o), 8 & e.$$.dirty && d)
         ) {
           const e = d.offsetParent.getBoundingClientRect();
-          n(4, (m = e.top + d.offsetTop)), console.log(m);
+          n(8, (m = e.top + d.offsetTop));
         }
       }),
       [
@@ -22615,11 +22615,11 @@ var app = (function () {
         s,
         o,
         d,
-        m,
         a,
         l,
         i,
         u,
+        m,
         async function () {
           c("download", { artifactSet: r, artifactIds: [...l] });
         },
@@ -22627,18 +22627,18 @@ var app = (function () {
           c("upload", { artifactSet: r });
         },
         function () {
-          n(8, (u = window.pageYOffset));
+          n(7, (u = window.pageYOffset));
         },
         () => i.setOpen(!0),
         () => n(2, (o = Math.min(r.children.length, o + 10))),
         () => n(2, (o = r.children.length)),
         function (e) {
           ae[e ? "unshift" : "push"](() => {
-            (i = e), n(7, i);
+            (i = e), n(6, i);
           });
         },
         function (e) {
-          (l = e), n(6, l);
+          (l = e), n(5, l);
         },
         function (e) {
           ae[e ? "unshift" : "push"](() => {
@@ -22830,7 +22830,8 @@ var app = (function () {
       console.log("Updating artifact:", e, t);
     }
     async createArtifact(e, t) {
-      console.log("Creating artifact:", e, t);
+      console.log("Creating artifact:", e, t),
+        (e.taxonomyTags = e.taxonomyTags || []);
       const n = {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -24523,8 +24524,8 @@ var app = (function () {
         )).action,
       D = [];
     async function R() {
-      await a.createArtifact({ displayName: k }, D),
-        h("Submitted creation request.");
+      const e = await a.createArtifact({ displayName: k }, D);
+      m(e), "Created!" === e && v();
     }
     let F,
       k = "";

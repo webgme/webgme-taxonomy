@@ -107,10 +107,10 @@ function initialize(middlewareOpts) {
 
   router.post(
     RouterUtils.getContentTypeRoutes("artifacts/"),
-    // TODO: re-enable tag conversion once the process is created automatically
-    //convertTaxonomyTags,
+    convertTaxonomyTags,
     async function (req, res) {
       const { metadata } = req.body;
+      // FIXME: what if it isn't using the branch in the URL?
       metadata.taxonomy = {
         projectId: req.params.projectId,
         branch: req.params.branch,
@@ -123,8 +123,9 @@ function initialize(middlewareOpts) {
         mainConfig
       );
 
-      await storage.createArtifact(metadata);
-      res.json("Submitted create request!");
+      const status = await storage.createArtifact(metadata);
+      console.log(`about to send ${status} to client`);
+      res.json(status);
     }
   );
 
@@ -195,6 +196,7 @@ async function convertTaxonomyTags(req, res, next) {
   const { metadata } = req.body;
   try {
     metadata.taxonomyTags = formatter.toGuidFormat(metadata.taxonomyTags);
+    next();
   } catch (err) {
     if (err instanceof TagFormatter.FormatError) {
       res.status(400).send(err.message);
@@ -202,8 +204,6 @@ async function convertTaxonomyTags(req, res, next) {
       res.sendStatus(500);
     }
   }
-
-  next();
 }
 
 /**

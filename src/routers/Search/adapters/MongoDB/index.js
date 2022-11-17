@@ -17,8 +17,8 @@ const { FormatError } = require("../../../../common/TagFormatter");
 const { pipeline } = require("stream");
 const { promisify } = require("util");
 const streamPipeline = promisify(pipeline);
-const DownloadFile = require("../../DownloadFile");
-const { Artifact, ArtifactSet } = require("../../Artifact");
+const DownloadFile = require("../common/DownloadFile");
+const { Artifact, ArtifactSet } = require("../common/Artifact");
 
 const mongoUri = require("../../../../../config").mongo.uri;
 const { MongoClient } = require("mongodb");
@@ -58,15 +58,15 @@ class MongoAdapter {
   }
 
   async createArtifact(metadata) {
-    const observerId = RouterUtils.getObserverIdFromToken(this._token);
-    reqLogger.log(observerId, metadata);
+    const artifactSet = {
+      displayName: metadata.displayName,
+      taxonomyVersion: metadata.taxonomy,
+      taxonomyTags: [],
+      artifacts: [],
+    };
+    const result = await this._collection.insertOne(artifactSet);
 
-    // TODO: update this to actually create the processes
-    //const newProc = await this._createProcess(type);
-    //await this._appendObservation(newProc.processId, type, metadata);
-
-    //return newProc;
-    // TODO: upload the data file
+    return "Created!";
   }
 
   // TODO: update method signature to be more generic
@@ -97,7 +97,7 @@ class MongoAdapter {
     return new ObservationFilesArchive(zipPath, tmpDir);
   }
 
-  async getUploadUrls(processId, lastId, metadata, files) {
+  async getUploadUrls(artifactId, lastId, metadata, files) {
     const procInfo = await this._getProcessState(processId);
     const index = procInfo.numObservations;
     const version = 0;
@@ -115,7 +115,7 @@ class MongoAdapter {
   static from(core, storageNode) {
     const baseUrl = core.getAttribute(storageNode, "URI");
     const collection = core.getAttribute(storageNode, "collection");
-    return new MongoStorage(collection);
+    return new MongoAdapter(baseUrl, collection);
   }
 }
 

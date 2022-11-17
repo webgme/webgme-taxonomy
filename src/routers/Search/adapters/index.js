@@ -5,7 +5,7 @@ const fs = require("fs");
 const SUPPORTED_ADAPTERS = Object.fromEntries(
   fs
     .readdirSync(__dirname)
-    .filter((name) => !name.endsWith(".js"))
+    .filter((name) => !name.endsWith(".js") && name !== "common")
     .map((name) => [name.toLowerCase(), require(`./${name}`)])
 );
 const assert = require("assert");
