@@ -1,4 +1,4 @@
-import TaxonomyReference from "./TaxonomyReference.ts";
+import TaxonomyReference from "./TaxonomyReference";
 import {assert, filterMap, getLatestArtifact, Result} from './Utils';
 
 class Storage {
