@@ -36,7 +36,9 @@
   async function onCopyIdClicked() {
     const id = selected.length === 1 ? artifactSet.id + '_' + selected[0] : artifactSet.id;
     await navigator.clipboard.writeText(id);
-    postMessage(JSON.stringify({type:'selectArtifact', value:id}), window.location.origin);
+    if(parent) {
+      parent.window.postMessage(JSON.stringify({type:'selectArtifact', value:id}), window.location.origin);
+    }
   }
 
   async function onUploadClicked() {
