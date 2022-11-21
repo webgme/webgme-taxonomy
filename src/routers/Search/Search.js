@@ -195,6 +195,7 @@ async function convertTaxonomyTags(req, res, next) {
   const { metadata } = req.body;
   try {
     metadata.taxonomyTags = formatter.toGuidFormat(metadata.taxonomyTags);
+    next();
   } catch (err) {
     if (err instanceof TagFormatter.FormatError) {
       res.status(400).send(err.message);
@@ -202,8 +203,6 @@ async function convertTaxonomyTags(req, res, next) {
       res.sendStatus(500);
     }
   }
-
-  next();
 }
 
 /**
