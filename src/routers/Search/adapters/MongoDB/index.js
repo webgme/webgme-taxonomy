@@ -1,9 +1,6 @@
 /**
- * This is a storage adapter for PDP which maps concepts from PDP to concepts
- * used by the taxonomy & data dashboard. Here is the basic mapping:
- *
- *    Process -> ArtifactSet
- *    Observation -> Artifact
+ * This is a storage adapter for MongoDB which stores artifact sets
+ * in documents along with any contained artifacts.
  */
 const fetch = require("node-fetch");
 const { zip, COMPRESSION_LEVEL } = require("zip-a-folder");
