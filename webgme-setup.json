@@ -17,6 +17,10 @@
       "ExportSearchFilterData": {
         "src": "src/plugins/ExportSearchFilterData",
         "test": "test/plugins/ExportSearchFilterData"
+      },
+      "OpenContentTypeDashboard": {
+        "src": "src/plugins/OpenContentTypeDashboard",
+        "test": "test/plugins/OpenContentTypeDashboard"
       }
     },
     "visualizers": {
