@@ -1,0 +1,15 @@
+{
+  "id": "OpenContentTypeDashboard",
+  "name": "Open Content Type Dashboard",
+  "version": "0.1.0",
+  "description": "",
+  "icon": {
+    "class": "glyphicon glyphicon-new-window",
+    "src": ""
+  },
+  "disableServerSideExecution": true,
+  "disableBrowserSideExecution": false,
+  "dependencies": [],
+  "writeAccessRequired": false,
+  "configStructure": []
+}
