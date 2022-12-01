@@ -37,7 +37,7 @@ define(["text!./metadata.json", "plugin/PluginBase"], function (
         "/" +
         versionString +
         "/static/index.html";
-      openUrl(url);
+      window.open(url, "ContentTypeDashboard");
       this.result.setSuccess(true);
     }
 
@@ -64,13 +64,6 @@ define(["text!./metadata.json", "plugin/PluginBase"], function (
 
       return versionInfo;
     }
-  }
-
-  function openUrl(url) {
-    const anchor = document.createElement("a");
-    anchor.setAttribute("href", url);
-    anchor.setAttribute("target", "_blank");
-    anchor.click();
   }
 
   OpenContentTypeDashboard.metadata = pluginMetadata;
