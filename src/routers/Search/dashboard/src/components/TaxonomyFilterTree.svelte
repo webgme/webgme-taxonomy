@@ -4,6 +4,7 @@
   import FormField from "@smui/form-field";
   import Select, { Option } from "@smui/select";
   import Autocomplete from "@smui-extra/autocomplete";
+  import Multiselect from "./Multiselect.svelte";
   import TagMatcher from "../TagMatcher";
 
   export let tree;
@@ -20,6 +21,7 @@
     tree.expanded = !tree.expanded;
   };
   $: arrowDown = tree.expanded;
+  $: showChildren = children.length && !["EnumField", "SetField"].includes(tree.type);
 
   let checked = tree.selected === undefined ? false : tree.selected;
   let value = tree.value || null;
@@ -70,6 +72,11 @@
           {/each}
         </Select>
       </FormField>
+    {:else if tree.type === "SetField"}
+      <FormField>
+        <Checkbox bind:checked indeterminate={checked === null} />
+        <Multiselect label={name} items={children.map(({ name }) => name)} bind:value />
+      </FormField>
     {:else}
       <FormField>
         <Checkbox bind:checked indeterminate={checked === null} />
@@ -79,7 +86,7 @@
       </FormField>
     {/if}
 
-    {#if children.length > 0 && tree.type !== "EnumField"}
+    {#if showChildren}
       <div class="arrow" class:arrowDown on:click={toggleExpansion}>
         &#x25b6
       </div>
