@@ -10,7 +10,7 @@ Then, run `webgme start` from the project root to start . Finally, navigate to `
 
 ## Creating a Taxonomy
 The easiest way to create a taxonomy is to simply import a CSV file. Here are the steps:
-- First, create a taxonomy in a spreadsheet where properties have `(text)`, `(int)`, `(bool)`, `(enum)`, etc, appended to the given property name. Each child term/property should be on a line below the parent and indented by 1 cell. Next, export the page as a CSV. An example as a CSV is shown below:
+- First, create a taxonomy in a spreadsheet where properties have `(text)`, `(int)`, `(bool)`, `(enum)`, `(set)`, etc, appended to the given property name. Each child term/property should be on a line below the parent and indented by 1 cell. Next, export the page as a CSV. An example as a CSV is shown below:
 	```
 		parentTerm,,,
 		,childTerm,,,
