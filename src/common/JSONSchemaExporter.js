@@ -3,6 +3,8 @@
 // @ts-check
 
 function factory() {
+  const optionTypes = ["EnumField", "SetField"];
+
   class JSONSchemaExporter {
 
     /** @param {GmeClasses.Core} core */
@@ -99,8 +101,8 @@ function factory() {
         fields.map((child) => this.getUiSchemaEntry(child))
       );
 
-      if (this.isEnum(node)) {
-        // if we are an enum, our children ui schemas should be merged into ours
+      if (this.isOptionType(node)) {
+        // if we are an enum or set, our children ui schemas should be merged into ours
         const childSchemas = childEntries.map(([id, schema]) => schema);
         const mergedChildren = Object.assign({}, ...childSchemas);
         entries.push(...Object.entries(mergedChildren));
@@ -138,9 +140,26 @@ function factory() {
       return this.isTypeOf(node, "EnumField");
     }
 
+    isSet(node) {
+      return this.isTypeOf(node, "SetField");
+    }
+
+    isOptionType(node) {
+      return optionTypes.some(
+        optType => this.isTypeOf(node, optType)
+      ); 
+    }
+
+    isFieldOption(node) {
+      const parent = this.core.getParent(node);
+      return optionTypes.some(
+        optType => this.core.isTypeOf(parent, this.META[optType])
+      );
+    }
+
     async getDependentDefinitions(node) {
       const children = await this.core.loadChildren(node);
-      if (this.isEnum(node)) {
+      if (this.isOptionType(node)) {
         return children;
       } else {
         return children.filter(
@@ -177,10 +196,7 @@ function factory() {
     }
 
     async getDefinition(node) {
-      const isEnumOpt = this.core.isTypeOf(
-        this.core.getParent(node),
-        this.META.EnumField
-      );
+      const isFieldOpt = this.isFieldOption(node);
 
       if (this.hasProperties(node)) {
         const properties = await this.getProperties(node);
@@ -190,7 +206,7 @@ function factory() {
           properties,
           required: Object.keys(properties),
         };
-      } else if (isEnumOpt) {
+      } else if (isFieldOpt) {
         const [guid, schema] = await this.getFieldSchema(node);
         schema.default = guid;
         schema.const = guid;
@@ -202,13 +218,9 @@ function factory() {
 
     async getProperties(node) {
       const isTerm = this.core.isTypeOf(node, this.META.Term);
-      const isEnumOpt = this.core.isTypeOf(
-        this.core.getParent(node),
-        this.META.EnumField
-      );
-
+      const isFieldOpt = this.isFieldOption(node);
       const properties =
-        isTerm || isEnumOpt ? this.getConstantPropertiesFor(node) : [];
+        isTerm || isFieldOpt ? this.getConstantPropertiesFor(node) : [];
       const fieldNodes = (await this.core.loadChildren(node)).filter((child) =>
         this.core.isTypeOf(child, this.META.Field)
       );
