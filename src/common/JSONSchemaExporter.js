@@ -7,12 +7,9 @@ function factory() {
 
   class JSONSchemaExporter {
 
-    /** @param {GmeClasses.Core} core */
-    core;
-
     /**
      * Creates an instance of JSONSchemaExporter.
-     * @param {GmeClasses.Core} core
+     * @param {GmeClasses.Core & { getMetaType(node: Core.Node): Core.Node }} core
      * @param {any} META
      * @memberof JSONSchemaExporter
      */
@@ -69,7 +66,7 @@ function factory() {
         await Promise.all(termNodes.map((node) => this.getUiSchemaEntry(node)))
       ).map(([id, value]) => value);
       const itemsUiSchema = Object.assign(
-        ...termsUiSchemas,
+        {}, ...termsUiSchemas,
         Object.fromEntries(hiddenProperties)
       );
       const uiSchema = {
@@ -127,6 +124,7 @@ function factory() {
     }
 
     isTypeOf(node, name) {
+      /** @type {Core.Node | null} */
       let iternode = this.core.getMetaType(node);
       while (iternode) {
         const baseName = this.core.getAttribute(iternode, "name");
@@ -178,9 +176,21 @@ function factory() {
      */
     isFieldOption(node) {
       const parent = this.core.getParent(node);
-      return optionTypes.some(
+      return (parent != null) && optionTypes.some(
         optType => this.core.isTypeOf(parent, this.META[optType])
       );
+    }
+
+    /**
+     * Gets whether the given node is a taxonomy term.
+     *
+     * @param {Core.Node | null} node The node to check the type of
+     * @return {boolean} Whether or not the `node` is a taconomy term
+     * @memberof JSONSchemaExporter
+     */
+    isTerm(node) {
+      return (node != null) &&
+        this.core.isTypeOf(node, this.META.Term)
     }
 
     async getDependentDefinitions(node) {
@@ -243,7 +253,7 @@ function factory() {
     }
 
     async getProperties(node) {
-      const isTerm = this.core.isTypeOf(node, this.META.Term);
+      const isTerm = this.isTerm(node);
       const isFieldOpt = this.isFieldOption(node);
       const properties =
         isTerm || isFieldOpt ? this.getConstantPropertiesFor(node) : [];
@@ -253,7 +263,7 @@ function factory() {
 
       // if parent is a term, add it as a property
       const parent = this.core.getParent(node);
-      if (this.core.isTypeOf(parent, this.META.Term)) {
+      if (this.isTerm(parent)) {
         const guid = this.core.getGuid(parent);
         properties.push([guid, this.getGuidRef(guid)]);
       }
@@ -266,6 +276,12 @@ function factory() {
       ]);
     }
 
+    /**
+     * Gets an array of tuples for evaluating a node's constant properties.
+     *
+     * @return {[string, (node: Core.Node) => string][]} An array of property name/value function tuples
+     * @memberof JSONSchemaExporter
+     */
     getConstantProperties() {
       return [["ID", (node) => this.core.getGuid(node)]];
     }
@@ -287,12 +303,20 @@ function factory() {
       ];
     }
 
+    /**
+     * Get the JSON Schema for field node.
+     *
+     * @param {Core.Node} node A field node to get JSON schema for
+     * @return {Promise<[string, { [key:string]: any }]>} A promise for guid/schema tuple
+     * @memberof JSONSchemaExporter
+     */
     async getFieldSchema(node) {
       const name = this.core.getAttribute(node, "name");
       const guid = this.core.getGuid(node);
       const baseNode = this.core.getMetaType(node);
       const baseName = this.core.getAttribute(baseNode, "name");
 
+      /** @type {{ [key:string]: any }} */
       let fieldSchema = {
         title: name,
       };
@@ -320,7 +344,6 @@ function factory() {
             type: "array",
             uniqueItems: true,
             items: {
-              title: name,
               default: { ID:
                 await (async () => {
                   const firstChild = (await this.core.loadChildren(node))[0];
