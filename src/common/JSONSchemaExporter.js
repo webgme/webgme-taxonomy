@@ -272,18 +272,44 @@ function factory() {
           fieldSchema.type = "string";
           break;
         case "EnumField":
-          fieldSchema.anyOf = (await this.core.loadChildren(node)).map(
-            (node) => {
-              const guid = this.core.getGuid(node);
-              return this.getGuidRef(guid);
-            }
-          );
+          fieldSchema.anyOf = await this.getChildrenRefs(node);
           break;
         case "CompoundField": // TODO: use guid?
           fieldSchema = this.getGuidRef(guid);
           break;
+        case "SetField":
+          Object.assign(fieldSchema, {
+            type: "array",
+            uniqueItems: true,
+            items: {
+              title: name,
+              default: { ID:
+                await (async () => {
+                  const firstChild = (await this.core.loadChildren(node))[0];
+                  return (firstChild != null) ? this.core.getGuid(firstChild) : undefined;
+                })()
+              },
+              anyOf: await this.getChildrenRefs(node)
+            }
+          });
       }
       return [guid, fieldSchema];
+    }
+
+    /**
+     * Get JSON references to the node's children.
+     *
+     * @param {Core.Node} node The GME node to get child references for
+     * @return {Promise<{ $ref: string }[]>}  JSON references to the `node`'s children
+     * @memberof JSONSchemaExporter
+     */
+    async getChildrenRefs(node) {
+      return (await this.core.loadChildren(node)).map(
+        (child) => {
+          const guid = this.core.getGuid(child);
+          return this.getGuidRef(guid);
+        }
+      )
     }
 
     /**
