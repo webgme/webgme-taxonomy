@@ -79,7 +79,7 @@ function factory() {
 
     async getTermNodes(node) {
       return (await this.core.loadSubTree(node)).filter((node) =>
-        this.core.isTypeOf(node, this.META.Term)
+        this.isTerm(node)
       );
     }
 
