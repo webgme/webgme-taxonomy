@@ -43,7 +43,7 @@ function factory() {
             type: "object",
             anyOf: termNodes.map((node) => {
               const guid = this.core.getGuid(node);
-              return { $ref: `#/definitions/${guid}` };
+              return this.getGuidRef(guid);
             }),
           },
         },
@@ -217,7 +217,7 @@ function factory() {
       const parent = this.core.getParent(node);
       if (this.core.isTypeOf(parent, this.META.Term)) {
         const guid = this.core.getGuid(parent);
-        properties.push([guid, { $ref: `#/definitions/${guid}` }]);
+        properties.push([guid, this.getGuidRef(guid)]);
       }
 
       return Object.fromEntries([
@@ -275,15 +275,26 @@ function factory() {
           fieldSchema.anyOf = (await this.core.loadChildren(node)).map(
             (node) => {
               const guid = this.core.getGuid(node);
-              return { $ref: `#/definitions/${guid}` };
+              return this.getGuidRef(guid);
             }
           );
           break;
         case "CompoundField": // TODO: use guid?
-          fieldSchema = { $ref: `#/definitions/${guid}` };
+          fieldSchema = this.getGuidRef(guid);
           break;
       }
       return [guid, fieldSchema];
+    }
+
+    /**
+     * Gets a JSON ref to the given GUID definition.
+     *
+     * @param {string} guid The GUID to get a ref for
+     * @return {{ $ref: string }} A JSON ref to the GUID definition
+     * @memberof JSONSchemaExporter
+     */
+    getGuidRef(guid) {
+      return { $ref: `#/definitions/${guid}` }
     }
 
     static from(core, node) {
