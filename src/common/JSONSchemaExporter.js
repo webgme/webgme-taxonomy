@@ -143,16 +143,39 @@ function factory() {
       return this.isTypeOf(node, "EnumField");
     }
 
+    /**
+     * Gets whether the given node is a Set field.
+     *
+     * @param {Core.Node} node The node to check the type of
+     * @return {boolean} Whether or not the `node` is a `SetField` type
+     * @memberof JSONSchemaExporter
+     */
     isSet(node) {
       return this.isTypeOf(node, "SetField");
     }
 
+    /**
+     * Gets whether the given node is a type that has child "option" fields
+     * (i.e. `EnumField` or `SetField`).
+     *
+     * @param {Core.Node} node The node to check the type of
+     * @return {boolean} Whether or not the `node` is a type with "option" fields
+     * @memberof JSONSchemaExporter
+     */
     isOptionType(node) {
       return optionTypes.some(
         optType => this.isTypeOf(node, optType)
       ); 
     }
 
+    /**
+     * Gets whether the given node is an option field for another field
+     * (i.e. child of `EnumField` or `SetField`).
+     *
+     * @param {Core.Node} node The node to check the type of
+     * @return {boolean} Whether or not the `node` is an "option" field
+     * @memberof JSONSchemaExporter
+     */
     isFieldOption(node) {
       const parent = this.core.getParent(node);
       return optionTypes.some(
