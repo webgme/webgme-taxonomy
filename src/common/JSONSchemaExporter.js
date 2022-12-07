@@ -1,6 +1,7 @@
 /*globals define*/
 /*eslint-env node, browser*/
 // @ts-check
+/// <reference path="define.d.ts" />
 
 function factory() {
   const optionTypes = ["EnumField", "SetField"];
