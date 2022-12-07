@@ -1,8 +1,19 @@
 /*globals define*/
 /*eslint-env node, browser*/
+// @ts-check
 
 function factory() {
   class JSONSchemaExporter {
+
+    /** @param {GmeClasses.Core} core */
+    core;
+
+    /**
+     * Creates an instance of JSONSchemaExporter.
+     * @param {GmeClasses.Core} core
+     * @param {any} META
+     * @memberof JSONSchemaExporter
+     */
     constructor(core, META) {
       this.core = core;
       this.META = META;
