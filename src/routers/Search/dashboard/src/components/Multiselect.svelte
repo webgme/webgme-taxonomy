@@ -1,27 +1,26 @@
 <script lang="ts">
-  import { createEventDispatcher, setContext } from 'svelte';
-  import Chip, { Set, Text as ChipText, TrailingAction } from "@smui/chips";
-  import IconButton from '@smui/icon-button'
-  import Menu, { SelectionGroup, SelectionGroupIcon } from '@smui/menu';
-  import List, { Item, Text as ListText } from '@smui/list';
-
-  // forces the smui List component to use "ul" element (instead of "nav")
-  setContext<boolean | undefined>('SMUI:list:nav', false);
-  // forces the smui List's Item component to use "li" element (instead of "span")
-  setContext<boolean | undefined>('SMUI:list:item:nav', false)
+  import { createEventDispatcher } from 'svelte';
+  import Chip, { Text as ChipText } from "@smui/chips";
+  import { Graphic, Text as ListText } from '@smui/list';
+  import Textfield from '@smui/textfield';
+  import Autocomplete from "@smui-extra/autocomplete";
 
   export let label: string | null = null
-  export let items: string[] = [];
-  export let value: string[] | null = [];
-
+  export let options: string[] = [];
+  export let value: string[];
+  export let singleSelect = false;
+  
   const dispatch = createEventDispatcher();
-  let menu: InstanceType<typeof Menu>;
+  let autocomplete: InstanceType<typeof Autocomplete>;
+  let text: string = "";
 
-  $: isSelected = items.reduce((selection, item) => {
+  $: isSelected = options.reduce((selection, item) => {
     const selected = value?.includes(item) ?? false;
     selection[item] = selected;
     return selection
   }, {} as { [item: string]: boolean });
+
+  $: hasValues = !!value?.length;
 
   function toggleSelection(item: string) {
     const selected = isSelected[item] = !isSelected[item];
@@ -29,34 +28,59 @@
     dispatch("selectionChange", { item, selected });
   }
 
+  function handleSelection(event) {
+    toggleSelection(event.detail);
+    text = "";
+    autocomplete.focus();
+    if (singleSelect) {
+      autocomplete.blur();
+    }
+  }
+
 </script>
 
 
 <div class="multiselect">
-  <Set chips={value ?? []} let:chip input>
-    <Chip {chip}>
-      <ChipText>{chip}</ChipText>
-      <TrailingAction icon$class="material-icons" on:SMUIChipTrailingAction:interaction={() => toggleSelection(chip)}>cancel</TrailingAction>
-    </Chip>
-  </Set>
+  <Autocomplete 
+    bind:this={autocomplete}
+    {options}
+    {label}
+    bind:value={text}
+    selectOnExactMatch={false}
+    on:SMUIAutocomplete:selected={handleSelection}
+  >
+    <Textfield {label} bind:value={text} class={hasValues ? "has-values" : ""}>
+      {#each (value || []) as chip}
+        <Chip {chip}>
+          <ChipText>{chip}</ChipText>
+          <!--
+            This "button" copied from Chip's "TrailingAction" component. Couldn't use
+            TrailingAction component because its root is a "button" element, and when
+            placed inside a label (like w/ TextField), a click anywhere on the label
+            clicks the button (so clicking anywhere on the textfield removes all the
+            chips).
+          -->
+          <div
+            class="mdc-deprecated-chip-trailing-action mdc-ripple-upgraded"
+            on:click|stopPropagation={() => toggleSelection(chip)}
+          >
+            <span class="mdc-deprecated-chip-trailing-action__ripple"></span>
+            <span class="material-icons mdc-deprecated-chip-trailing-action__icon">cancel</span>
+          </div>
+        </Chip>
+      {/each}
+    </Textfield>
 
-  <IconButton class="edit-button material-icons" aria-label="Edit {label ?? 'Items'}" on:click={() => menu.setOpen(true)}>add</IconButton>
-
-  <Menu bind:this={menu}>
-    <List tag="ul">
-      <SelectionGroup>
-        {#each items as item}
-          <Item tag="li" selected={isSelected[item]} on:SMUI:action={() => toggleSelection(item)}>
-            <SelectionGroupIcon>
-              <i class="material-icons">check</i>
-            </SelectionGroupIcon>
-            <ListText>{item}</ListText>
-          </Item>
-        {/each}
-      </SelectionGroup>
-    </List>
-  </Menu>
-
+    <span 
+      slot="match"
+      let:match
+      class="multiselect-menu-item-wrapper"
+      class:selected={isSelected[match]}
+    >
+      <Graphic class="material-icons">check</Graphic>
+      <ListText>{match}</ListText>
+    </span>
+  </Autocomplete>
 </div>
 
 
@@ -71,18 +95,39 @@
     margin-bottom: 0;
   }
 
-  .multiselect :global(.mdc-menu__selection-group .mdc-menu__selection-group-icon) {
-    left: unset;
-    right: unset;
-    position: unset;
-    top: unset;
-    transform: unset;
-    display: unset;
-    visibility: hidden;
-    margin-right: 10px;
+  .multiselect :global(.mdc-text-field) {
+    height: auto;
+    max-width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
   }
 
-  .multiselect :global(.mdc-menu-item--selected .mdc-menu__selection-group-icon) {
+  .multiselect :global(.mdc-text-field.has-values .mdc-floating-label),
+  .multiselect :global(.mdc-text-field .mdc-floating-label--float-above) {
+    transform: scale(0.75);
+    top: 0;
+    transition-property: transform, top;
+  }
+
+  .multiselect :global(.mdc-text-field__input) {
+    flex: 1 0 80px;
+  }
+
+  .multiselect :global(.multiselect-menu-item-wrapper) {
+    height: 100%;
+    width: 100%;
+    display: inline-flex;
+    align-items: center;
+  }
+
+
+  .multiselect :global(.multiselect-menu-item-wrapper .mdc-deprecated-list-item__graphic) {
+    margin-right: 10px;
+    visibility: hidden;
+  }
+
+  .multiselect :global(.multiselect-menu-item-wrapper.selected .mdc-deprecated-list-item__graphic) {
     visibility: visible;
   }
 
