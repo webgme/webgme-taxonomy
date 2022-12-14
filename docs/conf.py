@@ -47,8 +47,8 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = 'DeepForge'
-copyright = '2017, Brian Broll'
+project = 'Taxonomy Design Studio'
+copyright = '2022, Brian Broll'
 author = 'Brian Broll'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -102,7 +102,7 @@ html_static_path = ['_static']
 # -- Options for HTMLHelp output ------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'deepforgedoc'
+htmlhelp_basename = 'taxstudiodoc'
 
 
 # -- Options for LaTeX output ---------------------------------------------
@@ -129,7 +129,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'deepforge.tex', 'deepforge Documentation',
+    (master_doc, 'taxonomy_studio.tex', 'Taxonomy Studio Documentation',
      'Brian Broll', 'manual'),
 ]
 
@@ -139,7 +139,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'deepforge', 'deepforge Documentation',
+    (master_doc, 'taxonomy_studio', 'Taxonomy Studio Documentation',
      [author], 1)
 ]
 
@@ -150,8 +150,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'deepforge', 'deepforge Documentation',
-     author, 'deepforge', 'One line description of project.',
+    (master_doc, 'taxonomy_studio', 'Taxonomy Studio Documentation',
+     author, 'taxonomy_studio', 'One line description of project.',
      'Miscellaneous'),
 ]
 
