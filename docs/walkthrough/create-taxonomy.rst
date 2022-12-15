@@ -20,3 +20,15 @@ Before we can import this CSV into a taxonomy project, we must first create it. 
 
 # TODO: add pictures creating a new project
 
+After we have created a new project, we can create a new taxonomy node by dragging it from the part browser:
+
+# TODO: add screenshot of adding a taxonomy node
+
+Finally, we can open the taxonomy node (by double-clicking on it) and import the vocabulary!
+
+# TODO: add screenshot of running the import plugin
+
+Now that we have created our first taxonomy, we can view the taxonomy as an expandable graph by switching to "Graph View" then use this taxonomy as we define our own content types in the next section!
+
+# TODO: add screenshot of graph view
+
