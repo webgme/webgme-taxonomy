@@ -75,7 +75,7 @@
     {:else if tree.type === "SetField"}
       <FormField>
         <Checkbox bind:checked indeterminate={checked === null} />
-        <Multiselect label={name} options={children.map(({ name }) => name)} bind:value />
+        <Multiselect label={name} options={children.map(({ name, id }) => ({ label: name, value: id }))} bind:value />
       </FormField>
     {:else}
       <FormField>

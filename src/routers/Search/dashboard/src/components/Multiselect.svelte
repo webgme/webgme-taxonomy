@@ -5,32 +5,45 @@
   import Textfield from '@smui/textfield';
   import Autocomplete from "@smui-extra/autocomplete";
 
+  type Option = { label: string, value: string };
+
   export let label: string | null = null
-  export let options: string[] = [];
+  export let options: Option[] = [];
   export let value: string[];
   export let singleSelect = false;
   
   const dispatch = createEventDispatcher();
   let autocomplete: InstanceType<typeof Autocomplete>;
   let text: string = "";
+  let prevValue: Option | null = null;
+  let selected: Option[] = [];
 
-  $: isSelected = options.reduce((selection, item) => {
-    const selected = value?.includes(item) ?? false;
-    selection[item] = selected;
-    return selection
-  }, {} as { [item: string]: boolean });
-
+  $: selected = selected.filter(opt => options.includes(opt));
   $: hasValues = !!value?.length;
 
-  function toggleSelection(item: string) {
-    const selected = isSelected[item] = !isSelected[item];
-    value = Object.keys(isSelected).filter(item => isSelected[item]);
-    dispatch("selectionChange", { item, selected });
+  function getOptionLabel(option: Option) {
+    return option?.label ?? "";
+  }
+
+  function toggleSelection(option: Option) {
+    const index = selected.indexOf(option);
+    const select = index < 0;
+
+    if (select) {
+      selected.push(option);
+    } else {
+      selected.splice(index, 1);
+    }
+    
+    selected = selected;
+    value = selected.map(opt => opt.value);
+    dispatch("selectionChange", { option, selected: select });
   }
 
   function handleSelection(event) {
     toggleSelection(event.detail);
     text = "";
+    prevValue = null;
     autocomplete.focus();
     if (singleSelect) {
       autocomplete.blur();
@@ -45,14 +58,15 @@
     bind:this={autocomplete}
     {options}
     {label}
-    bind:value={text}
+    {getOptionLabel}
+    bind:value={prevValue}
     selectOnExactMatch={false}
     on:SMUIAutocomplete:selected={handleSelection}
   >
     <Textfield {label} bind:value={text} class={hasValues ? "has-values" : ""}>
-      {#each (value || []) as chip}
+      {#each selected as chip}
         <Chip {chip}>
-          <ChipText>{chip}</ChipText>
+          <ChipText>{chip.label}</ChipText>
           <!--
             This "button" copied from Chip's "TrailingAction" component. Couldn't use
             TrailingAction component because its root is a "button" element, and when
@@ -75,10 +89,10 @@
       slot="match"
       let:match
       class="multiselect-menu-item-wrapper"
-      class:selected={isSelected[match]}
+      class:selected={selected.includes(match)}
     >
       <Graphic class="material-icons">check</Graphic>
-      <ListText>{match}</ListText>
+      <ListText>{match.label}</ListText>
     </span>
   </Autocomplete>
 </div>
