@@ -70,14 +70,9 @@ export class FilterTag {
   }
 
   isMatch(itemTag: Required<ItemTag>) {
-    const isMatchingTag = itemTag.ID === this.id && itemTag.value == this.value;
-    if (isMatchingTag) {
-      return true;
-    }
-
-    const tagHasAttribute =
-      itemTag.hasOwnProperty(this.id) && itemTag[this.id] === this.value;
-    return tagHasAttribute;
+    let matched = (itemTag.ID === this.id) && (itemTag.value == this.value);
+    matched ||= itemTag.hasOwnProperty(this.id) && (itemTag[this.id] === this.value);
+    return matched;
   }
 
   lean(): LeanTag {

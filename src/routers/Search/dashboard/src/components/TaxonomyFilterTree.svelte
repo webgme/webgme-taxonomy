@@ -66,7 +66,7 @@
         <Checkbox bind:checked indeterminate={checked === null} />
         <Select bind:value label={name}>
           {#each children as child}
-            <Option value={child.name}>{child.name}</Option>
+            <Option value={child.id}>{child.name}</Option>
           {/each}
         </Select>
       </FormField>
