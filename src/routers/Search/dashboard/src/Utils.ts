@@ -50,6 +50,18 @@ export function filterMap<I, O>(list: I[], fn: (x: I) => O): O[] {
   }, []);
 }
 
+export function arraysEqual<T>(array1: T[], array2: T[], options?: { ignoreOrder?: boolean, equals?: (a: T, b: T) => boolean }) {
+  if (array1 === array2) return true;
+  if (array1.length !== array2.length) return false;
+  
+  const [arr1, arr2] = options?.ignoreOrder ?
+    [[...array1].sort(), [...array2].sort()] :
+    [array1, array2];
+
+  const equals = options?.equals ?? Object.is;
+  return !arr1.some((elem, index) => !equals(elem, arr2[index]));
+}
+
 export function assert(cond: boolean, err: Error) {
   if (!cond) {
     throw err;

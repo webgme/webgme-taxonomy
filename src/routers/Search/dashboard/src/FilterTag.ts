@@ -38,6 +38,8 @@ export class FilterTag {
   selected: boolean = false;
   expanded: boolean = false;
 
+  protected static filterTypes: { [name: string]: typeof FilterTag } = {};
+
   constructor(id: string, name: string, type: string, value: any | null, children: FilterTag[]) {
     this.id = id;
     this.name = name;
@@ -79,12 +81,19 @@ export class FilterTag {
     return new LeanTag(this.id, this.value);
   }
 
+  static register<T extends typeof FilterTag>(typeName: string, typeClass: T) {
+    return this.filterTypes[typeName] = typeClass;
+  }
+
   static fromDict<T extends typeof FilterTag>(this: T, infoDict: Required<FilterTag>): InstanceType<T> {
     const children = this.fromDicts(infoDict.children);
     return new this(infoDict.id, infoDict.name, infoDict.type, infoDict.value, children) as InstanceType<T>;
   }
 
   static fromDicts<T extends typeof FilterTag>(this: T, infoDicts: Required<FilterTag>[]): InstanceType<T>[] {
-    return infoDicts.map<InstanceType<T>>(this.fromDict, this);
+    return (infoDicts as InstanceType<T>[]).map<InstanceType<T>>(infoDict => {
+      const constructor = this.filterTypes[infoDict.type] || this;
+      return constructor.fromDict<any>(infoDict);
+    }, this);
   }
 }
