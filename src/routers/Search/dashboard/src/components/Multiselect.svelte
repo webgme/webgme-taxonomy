@@ -9,16 +9,16 @@
 
   export let label: string | null = null
   export let options: Option[] = [];
-  export let value: string[];
+  export let value: string[] = [];
   export let singleSelect = false;
   
   const dispatch = createEventDispatcher();
   let autocomplete: InstanceType<typeof Autocomplete>;
   let text: string = "";
   let prevValue: Option | null = null;
-  let selected: Option[] = [];
 
-  $: selected = selected.filter(opt => options.includes(opt));
+  $: if (value == null) value = [];
+  $: selected = value.map(val => options.find(opt => opt.value === val));
   $: hasValues = !!value?.length;
 
   function getOptionLabel(option: Option) {
@@ -26,17 +26,16 @@
   }
 
   function toggleSelection(option: Option) {
-    const index = selected.indexOf(option);
+    const index = value.indexOf(option.value);
     const select = index < 0;
 
     if (select) {
-      selected.push(option);
+      value.push(option.value);
     } else {
-      selected.splice(index, 1);
+      value.splice(index, 1);
     }
-    
-    selected = selected;
-    value = selected.map(opt => opt.value);
+
+    value = value;
     dispatch("selectionChange", { option, selected: select });
   }
 

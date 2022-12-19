@@ -91,7 +91,7 @@ export class FilterTag {
   }
 
   static fromDicts<T extends typeof FilterTag>(this: T, infoDicts: Required<FilterTag>[]): InstanceType<T>[] {
-    return (infoDicts as InstanceType<T>[]).map<InstanceType<T>>(infoDict => {
+    return infoDicts.map<InstanceType<T>>(infoDict => {
       const constructor = this.filterTypes[infoDict.type] || this;
       return constructor.fromDict<any>(infoDict);
     }, this);
