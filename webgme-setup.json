@@ -3,6 +3,9 @@
     "seeds": {
       "taxonomy": {
         "src": "src/seeds/taxonomy"
+      },
+      "TaxonomyProject": {
+        "src": "src/seeds/TaxonomyProject"
       }
     },
     "plugins": {
