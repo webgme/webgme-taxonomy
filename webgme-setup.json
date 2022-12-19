@@ -21,6 +21,10 @@
       "OpenContentTypeDashboard": {
         "src": "src/plugins/OpenContentTypeDashboard",
         "test": "test/plugins/OpenContentTypeDashboard"
+      },
+      "ImportVocabulary": {
+        "src": "src/plugins/ImportVocabulary",
+        "test": "test/plugins/ImportVocabulary"
       }
     },
     "visualizers": {

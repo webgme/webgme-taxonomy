@@ -10,6 +10,7 @@ var config = require('webgme/config/config.default'),
 config.plugin.basePaths.push(__dirname + '/../src/plugins');
 config.plugin.basePaths.push(__dirname + '/../node_modules/webgme-json-importer/src/plugins');
 config.seedProjects.basePaths.push(__dirname + '/../src/seeds/taxonomy');
+config.seedProjects.basePaths.push(__dirname + '/../src/seeds/TaxonomyProject');
 
 
 
