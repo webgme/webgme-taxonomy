@@ -38,6 +38,10 @@ export class FilterTag {
   selected: boolean = false;
   expanded: boolean = false;
 
+  /**
+   * A map of all the registered `FilterTag` classes by it's "type" string.
+   * Used by the `fromDicts` method to create the correct class.
+   */
   protected static filterTypes: { [name: string]: typeof FilterTag } = {};
 
   constructor(id: string, name: string, type: string, value: any | null, children: FilterTag[]) {
@@ -81,6 +85,15 @@ export class FilterTag {
     return new LeanTag(this.id, this.value);
   }
 
+  /**
+   * Registers a `FilterTag` subclass for the given `typeName` string. This subclass
+   * will be used by the `fromDicts` method to for filter's matching the `typeName`.
+   *
+   * @template T The type of the `FilterTag` subclass.
+   * @param typeName The corresponding "type" string.
+   * @param typeClass The `FilterTag` subclass.
+   * @return The `FilterTag` subclass.
+   */
   static register<T extends typeof FilterTag>(typeName: string, typeClass: T) {
     return this.filterTypes[typeName] = typeClass;
   }

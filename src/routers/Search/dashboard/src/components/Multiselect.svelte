@@ -7,9 +7,13 @@
 
   type Option = { label: string, value: string };
 
+  /** The label for the input */
   export let label: string | null = null
+  /** The label/value options that can be selected */
   export let options: Option[] = [];
+  /** The values for the currently selected options */
   export let value: string[] = [];
+  /** Whether to auto-close the dropdown after an option is selected/de-selected (default is `false`) */
   export let singleSelect = false;
   
   const dispatch = createEventDispatcher();
