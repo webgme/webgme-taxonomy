@@ -18,17 +18,39 @@ In the above example, the vocabulary contains two terms, "person" and "pet." "Pe
 
 Before we can import this CSV into a taxonomy project, we must first create it. We can create a new project by navigating to the Taxonomy Design Studio and creating a new project from the initial modal:
 
-# TODO: add pictures creating a new project
+.. figure:: create_project.png
+    :align: center
+
+    Creating a new taxonomy project (from the TaxonomyProject seed).
+
 
 After we have created a new project, we can create a new taxonomy node by dragging it from the part browser:
 
-# TODO: add screenshot of adding a taxonomy node
+.. figure:: create_tax_node.png
+    :align: center
+
+    Create a new taxonomy (dragged from the panel in the bottom left).
+
 
 Finally, we can open the taxonomy node (by double-clicking on it) and import the vocabulary!
 
-# TODO: add screenshot of running the import plugin
+.. figure:: select_import_plugin.png
+    :align: center
+
+    Importing a vocabulary from a CSV to our new taxonomy.
+
+
+.. figure:: upload_csv.png
+    :align: center
+
+    Upload the vocabulary file and run the plugin to import the vocabulary!
+
 
 Now that we have created our first taxonomy, we can view the taxonomy as an expandable graph by switching to "Graph View" then use this taxonomy as we define our own content types in the next section!
 
-# TODO: add screenshot of graph view
+.. figure:: view_tax_results.png
+    :align: center
+
+    Importing a vocabulary from a CSV to our new taxonomy.
+
 

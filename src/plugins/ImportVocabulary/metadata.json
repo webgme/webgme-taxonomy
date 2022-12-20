@@ -1,0 +1,32 @@
+{
+  "id": "ImportVocabulary",
+  "name": "ImportVocabulary",
+  "version": "0.1.0",
+  "description": "",
+  "icon": {
+    "class": "glyphicon glyphicon-cog",
+    "src": ""
+  },
+  "disableServerSideExecution": false,
+  "disableBrowserSideExecution": false,
+  "dependencies": [],
+  "writeAccessRequired": false,
+  "configStructure": [
+    {
+      "name": "csv",
+      "displayName": "Vocabulary",
+      "description": "CSV file containing the CSV. For more information, check out https://webgme-taxonomy.readthedocs.io/en/latest/walkthrough/create-taxonomy.html",
+      "value": "",
+      "valueType": "asset",
+      "readOnly": false
+    },
+    {
+      "name": "overwrite",
+      "displayName": "Overwrite Existing?",
+      "description": "If true, all existing vocabularies will be replaced with the vocabularies defined in the uploaded file.",
+      "value": false,
+      "valueType": "boolean",
+      "readOnly": false
+    }
+  ]
+}
