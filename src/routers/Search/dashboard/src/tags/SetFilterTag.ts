@@ -1,4 +1,5 @@
-import { FilterTag, ItemTag } from ".";
+import FilterTag from "./FilterTag";
+import ItemTag from "./ItemTag";
 import { arraysEqual } from "../Utils";
 
 /**
@@ -13,7 +14,7 @@ export default class SetFilterTag extends FilterTag<"SetField"> {
    * @param itemTag The `ItemTag` to match against.
    * @returns `true` if the `itemTag`'s array values equal this filter's values.
    */
-  override isMatch(itemTag: Required<ItemTag>): boolean {
+  override isMatch(itemTag: ItemTag): boolean {
     const filterValue = this.value ?? [];
     const itemValue = (ItemTag.valueForId(itemTag, this.id) ?? [])
       .map(item => item.ID);

@@ -11,7 +11,7 @@ namespace fromDict {
   }
 }
 
-function fromDict<T extends string>(data: fromDict.Data) {
+function fromDict(data: fromDict.Data) {
   const { id, name, type, value, children } = data;
   const childTags = children?.map(fromDict) ?? [];
   const constructor = fromDict.types[type] || FilterTag;
