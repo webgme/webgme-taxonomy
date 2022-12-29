@@ -1,4 +1,4 @@
-import { FilterTag } from "./FilterTag";
+import FilterTag from "./tags/FilterTag";
 
 export enum TaxonomyType {
   Term = "Term",
@@ -6,7 +6,6 @@ export enum TaxonomyType {
   TextField = "TextField",
   // TODO
 }
-export default class TaxonomyData extends FilterTag {
-  type: TaxonomyType;
+export default class TaxonomyData extends FilterTag<TaxonomyType> {
   children: TaxonomyData[];
 }

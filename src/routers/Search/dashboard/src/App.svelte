@@ -1,6 +1,5 @@
 <script lang="ts">
-  import { FilterTag, LeanTag } from "./FilterTag";
-  import "./SetFilterTag";
+  import { FilterTag, LeanTag, fromDict } from "./tags";
   import TopAppBar, { Row, Section, Title } from "@smui/top-app-bar";
   import {
     getLatestArtifact,
@@ -33,7 +32,7 @@
   import Paper, { Content as PaperContent } from "@smui/paper";
   import Dropzone from "svelte-file-dropzone";
   import { ArtifactSetViewer, TaxonomyFilter } from "./components";
-  import TaxonomyData from "./TaxonomyData";
+  import type TaxonomyData from "./TaxonomyData";
   import TaxonomyReference from "./TaxonomyReference";
 
   let title: string;
@@ -178,7 +177,7 @@
   async function initialize() {
     configuration = await fetchConfiguration();
     currentTaxonomy = TaxonomyReference.from(configuration.project);
-    const taxonomy = TaxonomyData.fromDict(configuration.taxonomy);
+    const taxonomy = fromDict(configuration.taxonomy) as TaxonomyData;
     vocabularies = trimTaxonomy(taxonomy);
     filterTags = parseTagParams(params.get("filterTags"));
     contentType = configuration.name;
@@ -544,7 +543,7 @@
         trees={vocabularies}
         tags={itemTags}
         on:change={(event) =>
-          (filterTags = FilterTag.fromDicts(event.detail.filterTags))}
+          (filterTags = event.detail.filterTags.map(fromDict))}
       />
     </Content>
   </Drawer>
