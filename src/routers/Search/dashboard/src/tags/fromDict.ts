@@ -2,12 +2,12 @@ import FilterTag from "./FilterTag";
 import SetFilterTag from "./SetFilterTag";
 
 namespace fromDict {
-  export interface Data {
-    id: string
-    name: string
-    type: string
-    value: any
-    children?: Data[]
+  export interface Data<T extends string = string> {
+    id: string;
+    name: string;
+    type: T;
+    value: any;
+    children?: Data[];
   }
 }
 

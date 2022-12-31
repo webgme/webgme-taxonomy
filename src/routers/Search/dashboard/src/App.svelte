@@ -32,7 +32,7 @@
   import Paper, { Content as PaperContent } from "@smui/paper";
   import Dropzone from "svelte-file-dropzone";
   import { ArtifactSetViewer, TaxonomyFilter } from "./components";
-  import type TaxonomyData from "./TaxonomyData";
+  import TaxonomyData from "./TaxonomyData";
   import TaxonomyReference from "./TaxonomyReference";
 
   let title: string;
@@ -177,7 +177,7 @@
   async function initialize() {
     configuration = await fetchConfiguration();
     currentTaxonomy = TaxonomyReference.from(configuration.project);
-    const taxonomy = fromDict(configuration.taxonomy) as TaxonomyData;
+    const taxonomy = TaxonomyData.fromDict(configuration.taxonomy);
     vocabularies = trimTaxonomy(taxonomy);
     filterTags = parseTagParams(params.get("filterTags"));
     contentType = configuration.name;
