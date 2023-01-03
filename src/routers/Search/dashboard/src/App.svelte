@@ -1,5 +1,6 @@
 <script lang="ts">
   import { FilterTag, LeanTag } from "./FilterTag";
+  import "./SetFilterTag";
   import TopAppBar, { Row, Section, Title } from "@smui/top-app-bar";
   import {
     getLatestArtifact,
