@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { FilterTag } from "./FilterTag";
+  import type { FilterTag } from "../FilterTag";
   import TaxonomyFilterTree from "./TaxonomyFilterTree.svelte";
   export let trees: FilterTag[] = [];
   export let tags = [];

@@ -3,6 +3,9 @@
     "seeds": {
       "taxonomy": {
         "src": "src/seeds/taxonomy"
+      },
+      "TaxonomyProject": {
+        "src": "src/seeds/TaxonomyProject"
       }
     },
     "plugins": {
@@ -17,6 +20,14 @@
       "ExportSearchFilterData": {
         "src": "src/plugins/ExportSearchFilterData",
         "test": "test/plugins/ExportSearchFilterData"
+      },
+      "OpenContentTypeDashboard": {
+        "src": "src/plugins/OpenContentTypeDashboard",
+        "test": "test/plugins/OpenContentTypeDashboard"
+      },
+      "ImportVocabulary": {
+        "src": "src/plugins/ImportVocabulary",
+        "test": "test/plugins/ImportVocabulary"
       }
     },
     "visualizers": {

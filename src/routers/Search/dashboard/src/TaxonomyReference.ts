@@ -37,6 +37,7 @@ export default class TaxonomyReference {
 }
 
 interface Version {
+  hash: string;
   supports(otherVersion: Version): boolean;
 }
 

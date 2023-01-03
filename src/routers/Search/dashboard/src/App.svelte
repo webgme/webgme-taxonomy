@@ -1,12 +1,13 @@
 <script lang="ts">
   import { FilterTag, LeanTag } from "./FilterTag";
+  import "./SetFilterTag";
   import TopAppBar, { Row, Section, Title } from "@smui/top-app-bar";
   import {
     getLatestArtifact,
     filterMap,
     openUrl,
     encodeQueryParams,
-  } from "./Utils.ts";
+  } from "./Utils";
   import Textfield from "@smui/textfield";
   import IconButton from "@smui/icon-button";
   import { SvelteToast, toast } from "@zerodevx/svelte-toast";
@@ -29,19 +30,19 @@
   } from "@smui/dialog";
   import Radio from "@smui/radio";
   import Button, { Label } from "@smui/button";
+  import Paper, { Content as PaperContent } from "@smui/paper";
   import Dropzone from "svelte-file-dropzone";
-  import TaxonomyFilter from "./TaxonomyFilter.svelte";
-  import ArtifactSetViewer from "./ArtifactSetViewer.svelte";
-  import type TaxonomyData from "./TaxonomyData.ts";
-  import TaxonomyReference from "./TaxonomyReference.ts";
+  import { ArtifactSetViewer, TaxonomyFilter } from "./components";
+  import TaxonomyData from "./TaxonomyData";
+  import TaxonomyReference from "./TaxonomyReference";
 
   let title: string;
   let contentType: string = "Data";
   $: title = `${contentType} Dashboard`;
   let vocabularies: TaxonomyData[] = [];
 
-  import TagFormatter, { FormatError } from "./Formatter.ts";
-  import Storage, { RequestError } from "./Storage.ts";
+  import TagFormatter, { FormatError } from "./Formatter";
+  import Storage, { RequestError } from "./Storage";
   const storage = new Storage();
   let allItems = [];
   let items = [];
@@ -49,7 +50,7 @@
   const params = new URLSearchParams(location.search);
   let searchQuery: string = params.get("searchQuery") || "";
   let filterTags: FilterTag[] = [];
-  function parseTagParams(filterTagString: string | null): FilterTags[] {
+  function parseTagParams(filterTagString: string | null): FilterTag[] {
     if (filterTagString) {
       const leanTags: LeanTag[] = JSON.parse(filterTagString);
       return filterMap(leanTags, (leanTag) => {
@@ -143,7 +144,7 @@
     }
   }
 
-  function trimTaxonomy(taxonomy) {
+  function trimTaxonomy(taxonomy: TaxonomyData) {
     let vocabs = [taxonomy];
     while (vocabs.length === 1) {
       vocabs = vocabs[0].children;
@@ -177,7 +178,7 @@
   async function initialize() {
     configuration = await fetchConfiguration();
     currentTaxonomy = TaxonomyReference.from(configuration.project);
-    const taxonomy = FilterTag.fromDict(configuration.taxonomy);
+    const taxonomy = TaxonomyData.fromDict(configuration.taxonomy);
     vocabularies = trimTaxonomy(taxonomy);
     filterTags = parseTagParams(params.get("filterTags"));
     contentType = configuration.name;
@@ -332,14 +333,14 @@
   }
 
   async function readFile(file: File) {
-    return new Promise((res, rej) => {
+    return new Promise<string>((res, rej) => {
       const reader = new FileReader();
       reader.onload = () => {
         if (reader.error) {
           console.log("error:", reader.error);
           return rej(reader.error);
         } else {
-          return res(reader.result);
+          return res(reader.result as string);
         }
       };
       reader.readAsText(file);
@@ -398,6 +399,9 @@
   let artifactSets = [];
   $: artifactSets = getArtifactSets(items);
   let selectedArtifactSet;
+  $: if (!items.includes(selectedArtifactSet)) {
+    selectedArtifactSet = null;
+  }
 
   function getArtifactSets(items) {
     return [];
@@ -547,36 +551,44 @@
         trees={vocabularies}
         tags={itemTags}
         on:change={(event) =>
-          (filterTags = event.detail.filterTags.map(FilterTag.fromDict))}
+          (filterTags = FilterTag.fromDicts(event.detail.filterTags))}
       />
     </Content>
   </Drawer>
   <AppContent>
     <main style="display: inline-block; vertical-align: top">
       <!-- Artifact list -->
-      <List twoLine avatarList>
-        {#each items as item (item.hash)}
-          <Item on:SMUI:action={() => onItemClicked(item)}>
-            <Text>
-              <PrimaryText>{item.displayName}</PrimaryText>
-              <SecondaryText />
-            </Text>
-            {#each item.taxonomyTags as tag}
-              <!--
-                                                        <Chip chip={tag.id}>
-								{#if tag.type === 'EnumField'}
-						<Text>{tag.name}</Text>
-                                        {:else if tag.value}
-						<Text>{tag.name}: {tag.value}</Text>
-								{:else}
-						<Text>{tag.name}</Text>
-								{/if}
-                                                        </Chip>
-							-->
-            {/each}
-          </Item>
-        {/each}
-      </List>
+      {#if items.length}
+        <List twoLine avatarList>
+          {#each items as item (item.hash)}
+            <Item on:SMUI:action={() => onItemClicked(item)}>
+              <Text>
+                <PrimaryText>{item.displayName}</PrimaryText>
+                <SecondaryText />
+              </Text>
+              {#each item.taxonomyTags as tag}
+                <!--
+                                                          <Chip chip={tag.id}>
+                  {#if tag.type === 'EnumField'}
+              <Text>{tag.name}</Text>
+                                          {:else if tag.value}
+              <Text>{tag.name}: {tag.value}</Text>
+                  {:else}
+              <Text>{tag.name}</Text>
+                  {/if}
+                                                          </Chip>
+                -->
+              {/each}
+            </Item>
+          {/each}
+        </List>
+      {:else if !isLoading}
+        <Paper variant="unelevated" class="empty">
+          <PaperContent>
+            <p>No results found</p>
+          </PaperContent>
+        </Paper>
+      {/if}
     </main>
     {#if selectedArtifactSet}
       <ArtifactSetViewer
@@ -637,5 +649,10 @@
   }
   :global(.log.warn) {
     --toastBackground: red;
+  }
+
+  :global(.empty) {
+    opacity: 50%;
+    font-style: italic;
   }
 </style>

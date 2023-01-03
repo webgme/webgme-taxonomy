@@ -2,13 +2,14 @@ function factory() {
   const DEFAULT_TYPE = "Term";
   const CATEGORY_TYPE = "Term";
   const UNKNOWN_FIELD_TYPE = "TextOrEnumField";
+  const OptionFieldTypes = ["EnumField", "SetField"];
   const FieldTypes = [
     "TextField",
     "IntegerField",
     "FloatField",
     "BooleanField",
-    "EnumField",
     "CompoundField",
+    ...OptionFieldTypes,
   ];
   const Types = FieldTypes.concat([DEFAULT_TYPE, CATEGORY_TYPE]);
 
@@ -141,7 +142,7 @@ function factory() {
     let lastDepth = baseDepth;
     for (let i = 0; i < cells.length; i++) {
       let cell = cells[i];
-      // TODO: refactor this so it can be called from addEnumOptions
+      // TODO: refactor this so it can be called from addFieldOptions
       const node = cell.toWJI(cells[i + 1]);
       const parent = parentStack[cell.depth - 1];
       if (parent) {
@@ -187,15 +188,15 @@ function factory() {
     }
 
     const cellType = cell.getMetaType(cells[i + 1]);
-    if (cellType === "EnumField") {
-      i = addEnumOptions(node, cells, i);
+    if (OptionFieldTypes.includes(cellType)) {
+      i = addFieldOptions(node, cells, i);
     } else if (cellType === "Term") {
       i = addCompoundFields(node, cells, i);
     }
     return i;
   }
 
-  function addEnumOptions(node, cells, i) {
+  function addFieldOptions(node, cells, i) {
     const childOptDepth = cells[i].depth + 1;
     let j;
     for (j = i + 1; j < cells.length; j++) {

@@ -1,13 +1,15 @@
 <script lang="ts">
-  import TopAppBar, { Row, Section, Title } from "@smui/top-app-bar"
+  import TopAppBar, { Row, Section, Title } from "@smui/top-app-bar";
 
-  export let project: string | null = null
+  export let title: string | null = null;
 </script>
 
 <TopAppBar variant="static">
   <Row>
     <Section>
-      <Title>{ project ?? "Data" } Dashboard</Title>
+      {#if title}
+        <Title>{title}</Title>
+      {/if}
     </Section>
   </Row>
 </TopAppBar>

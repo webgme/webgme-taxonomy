@@ -1,18 +1,18 @@
 @media (min-width: 640px) {
-  main.svelte-z7sp86 {
+  main.svelte-x9elkr {
     max-width: none;
   }
 }
-.filter-header.svelte-z7sp86 {
+.filter-header.svelte-x9elkr {
   display: block;
   padding-top: 10px;
 }
-.drawer-container.svelte-z7sp86 {
+.drawer-container.svelte-x9elkr {
   position: relative;
   display: flex;
   height: 100%;
 }
-.svelte-z7sp86 .app-content {
+.svelte-x9elkr .app-content {
   flex: auto;
   overflow: auto;
   position: relative;
@@ -23,6 +23,10 @@
 }
 .log.warn {
   --toastBackground: red;
+}
+.empty {
+  opacity: 50%;
+  font-style: italic;
 }
 .dropzone.svelte-817dg2 {
   flex: 1;
@@ -42,14 +46,6 @@
 .dropzone.svelte-817dg2:focus {
   border-color: #2196f3;
 }
-.card-container.svelte-11g709w {
-  display: inline-block;
-  vertical-align: top;
-}
-.sticky.svelte-11g709w {
-  position: fixed;
-  top: 0;
-}
 ._toastContainer.svelte-yh90az {
   top: var(--toastContainerTop, 1.5rem);
   right: var(--toastContainerRight, 2rem);
@@ -61,6 +57,14 @@
   list-style-type: none;
   pointer-events: none;
   z-index: var(--toastContainerZIndex, 9999);
+}
+.card-container.svelte-11g709w {
+  display: inline-block;
+  vertical-align: top;
+}
+.sticky.svelte-11g709w {
+  position: fixed;
+  top: 0;
 }
 ul.svelte-7av3ky {
   margin: 0;
@@ -147,4 +151,44 @@ ul.svelte-7av3ky {
     --toastProgressBackground,
     var(--toastBarBackground, rgba(33, 150, 243, 0.75))
   );
+}
+.multiselect.svelte-ggzb6p {
+  display: flex;
+  align-items: center;
+}
+.multiselect.svelte-ggzb6p button {
+  margin-bottom: 0;
+}
+.multiselect.svelte-ggzb6p .mdc-text-field {
+  height: auto;
+  max-width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.multiselect.svelte-ggzb6p .mdc-text-field.has-values .mdc-floating-label,
+.multiselect.svelte-ggzb6p .mdc-text-field .mdc-floating-label--float-above {
+  transform: scale(0.75);
+  top: 0;
+  transition-property: transform, top;
+}
+.multiselect.svelte-ggzb6p .mdc-text-field__input {
+  flex: 1 0 80px;
+}
+.multiselect.svelte-ggzb6p .multiselect-menu-item-wrapper {
+  height: 100%;
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+}
+.multiselect.svelte-ggzb6p
+  .multiselect-menu-item-wrapper
+  .mdc-deprecated-list-item__graphic {
+  margin-right: 10px;
+  visibility: hidden;
+}
+.multiselect.svelte-ggzb6p
+  .multiselect-menu-item-wrapper.selected
+  .mdc-deprecated-list-item__graphic {
+  visibility: visible;
 }

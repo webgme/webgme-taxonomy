@@ -38,6 +38,12 @@ export class FilterTag {
   selected: boolean = false;
   expanded: boolean = false;
 
+  /**
+   * A map of all the registered `FilterTag` classes by it's "type" string.
+   * Used by the `fromDicts` method to create the correct class.
+   */
+  protected static filterTypes: { [name: string]: typeof FilterTag } = {};
+
   constructor(id: string, name: string, type: string, value: any | null, children: FilterTag[]) {
     this.id = id;
     this.name = name;
@@ -70,22 +76,37 @@ export class FilterTag {
   }
 
   isMatch(itemTag: Required<ItemTag>) {
-    const isMatchingTag = itemTag.ID === this.id && itemTag.value == this.value;
-    if (isMatchingTag) {
-      return true;
-    }
-
-    const tagHasAttribute =
-      itemTag.hasOwnProperty(this.id) && itemTag[this.id] === this.value;
-    return tagHasAttribute;
+    let matched = (itemTag.ID === this.id) && (itemTag.value == this.value);
+    matched ||= itemTag.hasOwnProperty(this.id) && (itemTag[this.id] === this.value);
+    return matched;
   }
 
   lean(): LeanTag {
     return new LeanTag(this.id, this.value);
   }
 
-  static fromDict(infoDict: Required<FilterTag>): FilterTag {
-    const children = infoDict.children.map(FilterTag.fromDict);
-    return new FilterTag(infoDict.id, infoDict.name, infoDict.type, infoDict.value, children);
+  /**
+   * Registers a `FilterTag` subclass for the given `typeName` string. This subclass
+   * will be used by the `fromDicts` method to for filter's matching the `typeName`.
+   *
+   * @template T The type of the `FilterTag` subclass.
+   * @param typeName The corresponding "type" string.
+   * @param typeClass The `FilterTag` subclass.
+   * @return The `FilterTag` subclass.
+   */
+  static register<T extends typeof FilterTag>(typeName: string, typeClass: T) {
+    return this.filterTypes[typeName] = typeClass;
+  }
+
+  static fromDict<T extends typeof FilterTag>(this: T, infoDict: Required<FilterTag>): InstanceType<T> {
+    const children = this.fromDicts(infoDict.children);
+    return new this(infoDict.id, infoDict.name, infoDict.type, infoDict.value, children) as InstanceType<T>;
+  }
+
+  static fromDicts<T extends typeof FilterTag>(this: T, infoDicts: Required<FilterTag>[]): InstanceType<T>[] {
+    return infoDicts.map<InstanceType<T>>(infoDict => {
+      const constructor = this.filterTypes[infoDict.type] || this;
+      return constructor.fromDict<any>(infoDict);
+    }, this);
   }
 }
