@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build": "rollup -c",
+    "build": "rollup -c && smui-theme compile public/build/smui.css -i src/theme",
     "dev": "rollup -c -w",
     "start": "sirv public --no-clear",
     "test": "ts-mocha -p tsconfig.json tests/**/*.spec.ts tests/*.spec.ts",
