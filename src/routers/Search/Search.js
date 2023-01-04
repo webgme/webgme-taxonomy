@@ -24,6 +24,9 @@ const DashboardConfiguration = require("../../common/SearchFilterDataExporter");
 const TagFormatter = require("../../common/TagFormatter");
 const path = require("path");
 const staticPath = path.join(__dirname, "dashboard", "public");
+const os = require("os");
+const { zip, COMPRESSION_LEVEL } = require("zip-a-folder");
+const fsp = require("fs/promises");
 
 const StorageAdapter = require("./adapters");
 let mainConfig = null;
@@ -190,7 +193,6 @@ function initialize(middlewareOpts) {
         return res.status(400).send("List of artifact IDs required");
       }
 
-      console.log("getting download URL", parentId, ids);
       const { root, core, contentType } = req.webgmeContext;
       const node = await Utils.findTaxonomyNode(core, root);
       const formatter = await TagFormatter.from(core, node);
@@ -200,12 +202,24 @@ function initialize(middlewareOpts) {
         req,
         mainConfig
       );
-      const zipFile = await storage.getDownloadPath(parentId, ids, formatter);
-      if (zipFile) {
-        return res.download(zipFile.path, path.basename(zipFile.name), () =>
-          zipFile.cleanUp()
+
+      const tmpDir = await fsp.mkdtemp(
+        path.join(os.tmpdir(), "webgme-taxonomy-")
+      );
+      const downloadDir = path.join(tmpDir, "download");
+      const zipPath = path.join(tmpDir, `${parentId}.zip`);
+      await storage.download(parentId, ids, formatter, downloadDir);
+      await zip(downloadDir, zipPath, {
+        compression: COMPRESSION_LEVEL.medium,
+      });
+      await fsp.rm(downloadDir, { recursive: true });
+
+      try {
+        await fsp.access(zipPath, fsp.constants.R_OK);
+        return res.download(zipPath, path.basename(zipPath), () =>
+          fsp.rm(tmpDir, { recursive: true })
         );
-      } else {
+      } catch (err) {
         // no files associated with the artifact
         return res.sendStatus(204);
       }

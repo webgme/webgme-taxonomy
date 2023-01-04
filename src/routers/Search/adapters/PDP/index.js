@@ -6,7 +6,6 @@
  *    Observation -> Artifact
  */
 const fetch = require("node-fetch");
-const { zip, COMPRESSION_LEVEL } = require("zip-a-folder");
 const fs = require("fs");
 const _ = require("underscore");
 const path = require("path");
@@ -167,16 +166,12 @@ class PDP {
   }
 
   // TODO: update method signature to be more generic
-  async getDownloadPath(processId, ids, formatter) {
+  async download(processId, ids, formatter, downloadDir) {
     const obsIdxAndVersions = ids.map((idString) =>
       idString.split("_").map((n) => +n)
     );
     // obsIdxAndVersions is now a list of tuples (index, version) for each observation
     // to download
-    const tmpDir = await PDP._prepareDownloadDir();
-    const downloadDir = path.join(tmpDir, "download");
-    const zipPath = path.join(tmpDir, `${processId}.zip`);
-
     await Promise.all(
       obsIdxAndVersions.map(([index, version]) =>
         this._downloadObservation(
@@ -188,10 +183,6 @@ class PDP {
         )
       )
     );
-
-    await zip(downloadDir, zipPath, { compression: COMPRESSION_LEVEL.medium });
-    await fsp.rm(downloadDir, { recursive: true });
-    return new ObservationFilesArchive(zipPath, tmpDir);
   }
 
   async _downloadObservation(
@@ -329,10 +320,6 @@ class PDP {
     this._writeData(filePath, JSON.stringify(metadata));
   }
 
-  static async _prepareDownloadDir() {
-    return await fsp.mkdtemp(path.join(os.tmpdir(), "webgme-taxonomy-"));
-  }
-
   static _correctFilePath(downloadDir, filename, index, version) {
     return path.join(
       downloadDir,
@@ -449,10 +436,6 @@ class ObservationFilesArchive extends DownloadFile {
   constructor(archivePath, tmpDir) {
     super(archivePath);
     this.tmpDir = tmpDir;
-  }
-
-  async cleanUp() {
-    await fsp.rm(this.tmpDir, { recursive: true });
   }
 }
 

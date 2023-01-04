@@ -112,12 +112,62 @@ class MongoAdapter extends Adapter {
     const [fileId, ...nameChunks] = extendedId.split("_");
     const filename = nameChunks.join("_");
     const writeStream = this._files.openUploadStreamWithId(fileId, filename);
-    console.log({ fileId, filename, fileStream });
-    fileStream.pipe(writeStream);
+    const stream = fileStream.pipe(writeStream);
+    await streamClose(stream);
   }
 
   // TODO: update method signature to be more generic
-  async getDownloadPath(artifactSetId, ids, formatter) {}
+  // TODO: update method signature to be more generic
+  async download(artifactSetId, ids, formatter, targetDir) {
+    const set = await this._collection.findOne({
+      _id: ObjectId(artifactSetId),
+    });
+    await Promise.all(
+      ids.map(async (idx) => {
+        const metadata = set.artifacts[idx];
+        const artifactPath = path.join(targetDir, idx.toString());
+        if (metadata) {
+          const metadataPath = path.join(artifactPath, "metadata.json");
+          try {
+            metadata.taxonomyTags = await formatter.toHumanFormat(
+              metadata.taxonomyTags
+            );
+            await writeJsonData(metadataPath, metadata);
+          } catch (err) {
+            const logPath = path.join(artifactPath, `warnings.txt`);
+            if (err instanceof FormatError) {
+              const metadata = responseObservation.data[0];
+              await writeJsonData(metadataPath, metadata);
+              writeData(
+                logPath,
+                `An error occurred when converting the taxonomy tags: ${err.message}\n\nThe internal format has been saved in metadata.json.`
+              );
+            } else {
+              writeData(
+                logPath,
+                `An error occurred when generating metadata.json: ${err.message}`
+              );
+            }
+          }
+          await Promise.all(
+            metadata.files.map((fileId) =>
+              this._downloadFile(fileId, artifactPath)
+            )
+          );
+        }
+      })
+    );
+  }
+
+  async _downloadFile(fileId, targetDir) {
+    fileId = fileId.toString();
+    const metadata = await this._files.find({ _id: fileId }).next();
+    const filepath = path.join(targetDir, metadata.filename);
+    const fileStream = await fs.createWriteStream(filepath);
+    const stream = this._files.openDownloadStream(fileId).pipe(fileStream);
+
+    await streamClose(stream);
+  }
 
   static from(core, storageNode) {
     const baseUrl = core.getAttribute(storageNode, "URI");
@@ -136,6 +186,20 @@ class ObservationFilesArchive extends DownloadFile {
   async cleanUp() {
     await fsp.rm(this.tmpDir, { recursive: true });
   }
+}
+
+async function writeData(filePath, data) {
+  const dirPath = path.dirname(filePath) + path.sep;
+  await fsp.mkdir(dirPath, { recursive: true });
+  await fsp.writeFile(filePath, data);
+}
+
+async function writeJsonData(filePath, metadata) {
+  writeData(filePath, JSON.stringify(metadata));
+}
+
+async function streamClose(stream) {
+  return new Promise((res, rej) => stream.on("close", res));
 }
 
 module.exports = MongoAdapter;

@@ -14,7 +14,7 @@ class Adapter {
     unimplemented();
   }
 
-  async getDownloadPath(artifactSetId, ids, formatter) {
+  async download(artifactSetId, ids, formatter) {
     // returns DownloadFile
     unimplemented();
   }
