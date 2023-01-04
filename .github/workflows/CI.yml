@@ -1,0 +1,37 @@
+name: "CI"
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  schedule:
+    - cron:  "0 0 * * *"
+
+jobs:
+  test:
+    name: "Test (node 16)"
+    runs-on: "ubuntu-latest"
+
+    steps:
+      - name: "Checkout Branch"
+        uses: actions/checkout@v3
+
+      - name: "Use Node.js 16"
+        uses: actions/setup-node@v3
+        with:
+          node-version: "16.x"
+
+      - name: "Start MongoDB"
+        uses: supercharge/mongodb-github-action@1.8.0
+        with:
+          mongodb-version: "5.0"
+
+      - name: "Install Dependencies"
+        run: npm install -g npm && npm install && npm run build
+        continue-on-error: true
+
+      - name: "Run Tests"
+        run: npm test
