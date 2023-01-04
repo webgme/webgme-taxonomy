@@ -1,5 +1,5 @@
 
-describe.skip('Dashboard', function() {
+describe.skip('TagFormat', function() {
     var testFixture = require('../../globals'),  // TODO: May need to change this if not created from webgme-cli
         superagent = testFixture.superagent,
         expect = testFixture.expect,
@@ -7,7 +7,7 @@ describe.skip('Dashboard', function() {
         server = testFixture.WebGME.standaloneServer(gmeConfig),
         // TODO: If not using webgme-cli, replace the mntPt w/ the desired mount point
         // If using the webgme-cli, this will look up the mount point for the given router
-        mntPt = require('../../../webgme-setup.json').components.routers['Dashboard'].mount,
+        mntPt = require('../../../webgme-setup.json').components.routers['TagFormat'].mount,
         urlFor = function(action) {
             return [
                 server.getUrl(),
