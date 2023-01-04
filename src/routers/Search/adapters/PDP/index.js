@@ -22,6 +22,17 @@ const { Artifact, ArtifactSet } = require("../common/Artifact");
 const CreateRequestLogger = require("./CreateRequestLogger");
 const logFilePath = process.env.CREATE_LOG_PATH || "./CreateProcesses.jsonl";
 const reqLogger = new CreateRequestLogger(logFilePath);
+const {
+  AppendResult,
+  UploadRequest,
+  UploadParams,
+} = require("../common/AppendResult");
+const UPLOAD_HEADERS = {
+  Accept: "application/xml",
+  "Content-Type": "application/octet-stream",
+  "x-ms-blob-type": "BlockBlob",
+  "x-ms-encryption-algorithm": "AES256",
+};
 
 class PDP {
   constructor(baseUrl, token, processType) {
@@ -277,7 +288,7 @@ class PDP {
     );
   }
 
-  async getUploadUrls(processId, lastId, metadata, files) {
+  async appendArtifact(processId, metadata, filenames) {
     const procInfo = await this._getProcessState(processId);
     const index = procInfo.numObservations;
     const version = 0;
@@ -287,9 +298,16 @@ class PDP {
       version,
       this.processType,
       metadata,
-      files
+      filenames
     );
-    return result.uploadDataFiles.files;
+
+    const files = result.uploadDataFiles.files.map((file) => {
+      const name = file.name.substring(4);
+      const params = new UploadParams(file.sasUrl, "PUT", UPLOAD_HEADERS);
+      return new UploadRequest(name, params);
+    });
+
+    return new AppendResult(index, files);
   }
 
   async _downloadFile(filePath, url) {

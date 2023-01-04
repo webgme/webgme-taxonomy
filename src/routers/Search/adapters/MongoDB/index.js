@@ -18,12 +18,18 @@ const DownloadFile = require("../common/DownloadFile");
 const { Artifact, ArtifactSet } = require("../common/Artifact");
 
 const mongoUri = require("../../../../../config").mongo.uri;
-const { MongoClient, GridFSBucket } = require("mongodb");
+const { MongoClient, GridFSBucket, ObjectId } = require("mongodb");
 const defaultClient = new MongoClient(mongoUri);
 const Adapter = require("../common/Adapter");
+const {
+  AppendResult,
+  UploadRequest,
+  UploadParams,
+} = require("../common/AppendResult");
 
 class MongoAdapter extends Adapter {
   constructor(mongoUri, collectionName) {
+    super();
     this._client = mongoUri ? new MongoClient(mongoUri) : defaultClient;
     const db = this._client.db();
     const name = `taxonomy_data_${collectionName}`;
@@ -68,29 +74,46 @@ class MongoAdapter extends Adapter {
     return "Created!";
   }
 
-  async getUploadUrls(artifactSetId, artifactId, metadata, files) {
+  async appendArtifact(artifactSetId, metadata, filenames) {
     const set = await this._collection.findOne({
       _id: ObjectId(artifactSetId),
     });
-    if (set.artifacts[artifactId]) {
-      throw new Error("Artifact ID already exists"); // FIXME: handle this case better
-    } // TODO: check that the index is the next one in the list?
 
-    // TODO: create the artifact
-    const fileIds = _.range(files.length).map(() => new ObjectId());
-    const artifact = {
-      // FIXME: is this the same as the metadata?
-      time: new Date(),
-      files: fileIds,
-    };
+    const fileIds = _.range(filenames.length).map(() => new ObjectId());
+    const artifact = Object.assign({}, metadata);
+    artifact.time = new Date();
+    artifact.files = fileIds;
 
     const query = { _id: ObjectId(artifactSetId) };
-    const result = await this._collection.updateOne(query, {
-      $push: { artifacts: artifact },
-    });
+    const result = await this._collection.findOneAndUpdate(
+      query,
+      {
+        $push: { artifacts: artifact },
+      },
+      { returnDocument: "after" }
+    );
 
-    // TODO: create the artifact and return tokens to the client
-    return _.zip(files, fileIds);
+    // TODO: handle artifact not found case
+    const index = result.value.artifacts.length;
+    const files = _.zip(filenames, fileIds).map(([name, id]) => {
+      const extendedId = encodeURIComponent(id + "_" + name);
+      const url = `./artifacts/${artifactSetId}/${index}/${extendedId}/upload`;
+      // TODO: add an authorization header
+      const params = new UploadParams(url, "POST");
+      return new UploadRequest(name, params);
+    });
+    return new AppendResult(index, files);
+  }
+
+  async uploadFile(artifactSetId, index, extendedId, fileStream) {
+    const set = await this._collection.findOne({
+      _id: ObjectId(artifactSetId),
+    });
+    const [fileId, ...nameChunks] = extendedId.split("_");
+    const filename = nameChunks.join("_");
+    const writeStream = this._files.openUploadStreamWithId(fileId, filename);
+    console.log({ fileId, filename, fileStream });
+    fileStream.pipe(writeStream);
   }
 
   // TODO: update method signature to be more generic

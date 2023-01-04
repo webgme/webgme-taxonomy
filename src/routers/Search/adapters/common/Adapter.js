@@ -9,8 +9,7 @@ class Adapter {
     unimplemented();
   }
 
-  // TODO: rename to createArtifact
-  async getUploadUrls(artifactSetId, artifactId, metadata, filenames) {
+  async appendArtifact(artifactSetId, artifactId, metadata, filenames) {
     // returns fileUploadInfo
     unimplemented();
   }
@@ -19,10 +18,18 @@ class Adapter {
     // returns DownloadFile
     unimplemented();
   }
+
+  async uploadFile(artifactSetId, index, fileId, fileStream) {
+    unsupported();
+  }
 }
 
 function unimplemented() {
   throw new Error("Found a method not overridden in subclass!");
+}
+
+function unsupported() {
+  throw new Error("Method not supported by storage adapter");
 }
 
 module.exports = Adapter;

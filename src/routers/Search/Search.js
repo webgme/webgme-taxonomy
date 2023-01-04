@@ -130,11 +130,10 @@ function initialize(middlewareOpts) {
   );
 
   router.post(
-    RouterUtils.getContentTypeRoutes("artifacts/:parentId/uploadUrl"),
+    RouterUtils.getContentTypeRoutes("artifacts/:parentId/append"),
     convertTaxonomyTags,
     async function (req, res) {
       const { parentId } = req.params;
-      const { lastId } = req.query;
       const { core, contentType } = req.webgmeContext;
       const storage = await StorageAdapter.from(
         core,
@@ -142,13 +141,40 @@ function initialize(middlewareOpts) {
         req,
         mainConfig
       );
-      const fileUploadInfo = await storage.getUploadUrls(
+      const appendResult = await storage.appendArtifact(
         parentId,
-        lastId,
         req.body.metadata,
         req.body.filenames
       );
-      res.json(fileUploadInfo);
+      appendResult.files.forEach((file) => {
+        const isRelative = file.params.url.startsWith("./");
+        if (isRelative) {
+          const baseUrl = req.originalUrl
+            .split(`artifacts/${parentId}/append`)
+            .shift();
+          file.params.url = baseUrl + file.params.url.substring(2);
+        }
+      });
+      res.json(appendResult);
+    }
+  );
+
+  router.post(
+    RouterUtils.getContentTypeRoutes(
+      "artifacts/:parentId/:index/:fileId/upload"
+    ),
+    async function (req, res) {
+      const { parentId, index, fileId } = req.params;
+      const { core, contentType } = req.webgmeContext;
+      const storage = await StorageAdapter.from(
+        core,
+        contentType,
+        req,
+        mainConfig
+      );
+      // TODO: verify that it is a legitimate request
+      const status = await storage.uploadFile(parentId, index, fileId, req);
+      res.json(status);
     }
   );
 
