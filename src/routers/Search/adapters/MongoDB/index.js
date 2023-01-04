@@ -18,15 +18,17 @@ const DownloadFile = require("../common/DownloadFile");
 const { Artifact, ArtifactSet } = require("../common/Artifact");
 
 const mongoUri = require("../../../../../config").mongo.uri;
-const { MongoClient } = require("mongodb");
+const { MongoClient, GridFSBucket } = require("mongodb");
 const defaultClient = new MongoClient(mongoUri);
+const Adapter = require("../common/Adapter");
 
-class MongoAdapter {
+class MongoAdapter extends Adapter {
   constructor(mongoUri, collectionName) {
     this._client = mongoUri ? new MongoClient(mongoUri) : defaultClient;
     const db = this._client.db();
-    collectionName = `taxonomy_data_${collectionName}`;
-    this._collection = db.collection(collectionName);
+    const name = `taxonomy_data_${collectionName}`;
+    this._collection = db.collection(name);
+    this._files = new GridFSBucket(db, { bucketName: name });
   }
 
   async listArtifacts() {
@@ -66,52 +68,38 @@ class MongoAdapter {
     return "Created!";
   }
 
+  async getUploadUrls(artifactSetId, artifactId, metadata, files) {
+    const set = await this._collection.findOne({
+      _id: ObjectId(artifactSetId),
+    });
+    if (set.artifacts[artifactId]) {
+      throw new Error("Artifact ID already exists"); // FIXME: handle this case better
+    } // TODO: check that the index is the next one in the list?
+
+    // TODO: create the artifact
+    const fileIds = _.range(files.length).map(() => new ObjectId());
+    const artifact = {
+      // FIXME: is this the same as the metadata?
+      time: new Date(),
+      files: fileIds,
+    };
+
+    const query = { _id: ObjectId(artifactSetId) };
+    const result = await this._collection.updateOne(query, {
+      $push: { artifacts: artifact },
+    });
+
+    // TODO: create the artifact and return tokens to the client
+    return _.zip(files, fileIds);
+  }
+
   // TODO: update method signature to be more generic
-  async getDownloadPath(processId, ids, formatter) {
-    const obsIdxAndVersions = ids.map((idString) =>
-      idString.split("_").map((n) => +n)
-    );
-    // obsIdxAndVersions is now a list of tuples (index, version) for each observation
-    // to download
-    const tmpDir = await PDP._prepareDownloadDir();
-    const downloadDir = path.join(tmpDir, "download");
-    const zipPath = path.join(tmpDir, `${processId}.zip`);
-
-    await Promise.all(
-      obsIdxAndVersions.map(([index, version]) =>
-        this._downloadObservation(
-          processId,
-          index,
-          version,
-          downloadDir,
-          formatter
-        )
-      )
-    );
-
-    await zip(downloadDir, zipPath, { compression: COMPRESSION_LEVEL.medium });
-    await fsp.rm(downloadDir, { recursive: true });
-    return new ObservationFilesArchive(zipPath, tmpDir);
-  }
-
-  async getUploadUrls(artifactId, lastId, metadata, files) {
-    const procInfo = await this._getProcessState(processId);
-    const index = procInfo.numObservations;
-    const version = 0;
-    const result = await this._appendObservationWithFiles(
-      processId,
-      index,
-      version,
-      this.processType,
-      metadata,
-      files
-    );
-    return result.uploadDataFiles.files;
-  }
+  async getDownloadPath(artifactSetId, ids, formatter) {}
 
   static from(core, storageNode) {
     const baseUrl = core.getAttribute(storageNode, "URI");
     const collection = core.getAttribute(storageNode, "collection");
+    // TODO: throw an error if the collection is not provided
     return new MongoAdapter(baseUrl, collection);
   }
 }
