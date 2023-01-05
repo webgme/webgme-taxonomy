@@ -432,13 +432,6 @@ class PDP {
   }
 }
 
-class ObservationFilesArchive extends DownloadFile {
-  constructor(archivePath, tmpDir) {
-    super(archivePath);
-    this.tmpDir = tmpDir;
-  }
-}
-
 function parseArtifact(obs) {
   const metadata = obs.data && obs.data[0];
   if (metadata && metadata.displayName) {

@@ -177,17 +177,6 @@ class MongoAdapter extends Adapter {
   }
 }
 
-class ObservationFilesArchive extends DownloadFile {
-  constructor(archivePath, tmpDir) {
-    super(archivePath);
-    this.tmpDir = tmpDir;
-  }
-
-  async cleanUp() {
-    await fsp.rm(this.tmpDir, { recursive: true });
-  }
-}
-
 async function writeData(filePath, data) {
   const dirPath = path.dirname(filePath) + path.sep;
   await fsp.mkdir(dirPath, { recursive: true });
