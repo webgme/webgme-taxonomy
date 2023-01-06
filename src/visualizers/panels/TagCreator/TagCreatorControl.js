@@ -287,13 +287,37 @@ define([
       Object.values(core.getAllMetaNodes(rootNode))
     );
     const exporter = new JSONSchemaExporter(core, meta);
-    const node = await Utils.findTaxonomyNode(core, rootNode);
-    if (node) {
-      const taxonomyData = await exporter.getSchemas(node);
-      taxonomyData.taxonomyPath = core.getPath(node);
-      return taxonomyData;
+
+    const activeNode = await core.loadByPath(rootNode, this._currentNodeId);
+    const vocabs = await this._getVocabularies(core, rootNode, activeNode);
+    const taxonomyData = await exporter.getVocabSchemas(vocabs);
+    if (vocabs.length) {
+      taxonomyData.taxonomyPath = core.getPath(core.getParent(vocabs[0]));
+    }
+    return taxonomyData;
+  };
+
+  TagCreatorControl.prototype._getVocabularies = async function (
+    core,
+    root,
+    activeNode
+  ) {
+    const contentTypePath = core.getPointerPath(activeNode, "contentType");
+    console.log("contentTypePath", contentTypePath);
+    if (contentTypePath) {
+      const contentType = await core.loadByPath(root, contentTypePath);
+      return await Promise.all(
+        core
+          .getMemberPaths(contentType, "vocabularies")
+          .map((path) => core.loadByPath(root, path))
+      );
     } else {
-      return {};
+      const node = await Utils.findTaxonomyNode(core, rootNode);
+      if (node) {
+        return await core.loadChildren(node);
+      } else {
+        return [];
+      }
     }
   };
 
