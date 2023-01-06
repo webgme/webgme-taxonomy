@@ -6,7 +6,6 @@
  *    Observation -> Artifact
  */
 const fetch = require("node-fetch");
-const { zip, COMPRESSION_LEVEL } = require("zip-a-folder");
 const fs = require("fs");
 const _ = require("underscore");
 const path = require("path");
@@ -17,11 +16,22 @@ const { FormatError } = require("../../../../common/TagFormatter");
 const { pipeline } = require("stream");
 const { promisify } = require("util");
 const streamPipeline = promisify(pipeline);
-const DownloadFile = require("../../DownloadFile");
-const { Artifact, ArtifactSet } = require("../../Artifact");
+const DownloadFile = require("../common/DownloadFile");
+const { Artifact, ArtifactSet } = require("../common/Artifact");
 const CreateRequestLogger = require("./CreateRequestLogger");
 const logFilePath = process.env.CREATE_LOG_PATH || "./CreateProcesses.jsonl";
 const reqLogger = new CreateRequestLogger(logFilePath);
+const {
+  AppendResult,
+  UploadRequest,
+  UploadParams,
+} = require("../common/AppendResult");
+const UPLOAD_HEADERS = {
+  Accept: "application/xml",
+  "Content-Type": "application/octet-stream",
+  "x-ms-blob-type": "BlockBlob",
+  "x-ms-encryption-algorithm": "AES256",
+};
 
 class PDP {
   constructor(baseUrl, token, processType) {
@@ -152,19 +162,16 @@ class PDP {
 
     //return newProc;
     // TODO: upload the data file
+    return "Submitted create request!";
   }
 
   // TODO: update method signature to be more generic
-  async getDownloadPath(processId, ids, formatter) {
+  async download(processId, ids, formatter, downloadDir) {
     const obsIdxAndVersions = ids.map((idString) =>
       idString.split("_").map((n) => +n)
     );
     // obsIdxAndVersions is now a list of tuples (index, version) for each observation
     // to download
-    const tmpDir = await PDP._prepareDownloadDir();
-    const downloadDir = path.join(tmpDir, "download");
-    const zipPath = path.join(tmpDir, `${processId}.zip`);
-
     await Promise.all(
       obsIdxAndVersions.map(([index, version]) =>
         this._downloadObservation(
@@ -176,10 +183,6 @@ class PDP {
         )
       )
     );
-
-    await zip(downloadDir, zipPath, { compression: COMPRESSION_LEVEL.medium });
-    await fsp.rm(downloadDir, { recursive: true });
-    return new ObservationFilesArchive(zipPath, tmpDir);
   }
 
   async _downloadObservation(
@@ -276,7 +279,7 @@ class PDP {
     );
   }
 
-  async getUploadUrls(processId, lastId, metadata, files) {
+  async appendArtifact(processId, metadata, filenames) {
     const procInfo = await this._getProcessState(processId);
     const index = procInfo.numObservations;
     const version = 0;
@@ -286,9 +289,16 @@ class PDP {
       version,
       this.processType,
       metadata,
-      files
+      filenames
     );
-    return result.uploadDataFiles.files;
+
+    const files = result.uploadDataFiles.files.map((file) => {
+      const name = file.name.substring(4);
+      const params = new UploadParams(file.sasUrl, "PUT", UPLOAD_HEADERS);
+      return new UploadRequest(name, params);
+    });
+
+    return new AppendResult(index, files);
   }
 
   async _downloadFile(filePath, url) {
@@ -308,10 +318,6 @@ class PDP {
 
   async _writeJsonData(filePath, metadata) {
     this._writeData(filePath, JSON.stringify(metadata));
-  }
-
-  static async _prepareDownloadDir() {
-    return await fsp.mkdtemp(path.join(os.tmpdir(), "webgme-taxonomy-"));
   }
 
   static _correctFilePath(downloadDir, filename, index, version) {
@@ -423,17 +429,6 @@ class PDP {
     const baseUrl = core.getAttribute(storageNode, "URL");
     const processType = core.getAttribute(storageNode, "processType");
     return new PDP(baseUrl, token, processType);
-  }
-}
-
-class ObservationFilesArchive extends DownloadFile {
-  constructor(archivePath, tmpDir) {
-    super(archivePath);
-    this.tmpDir = tmpDir;
-  }
-
-  async cleanUp() {
-    await fsp.rm(this.tmpDir, { recursive: true });
   }
 }
 

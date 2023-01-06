@@ -357,8 +357,15 @@
     //}
     //uploadMetadata.displayName = artifactName;
     //await storage.createArtifact(uploadMetadata, artifactFiles);
-    await storage.createArtifact({ displayName: artifactName }, artifactFiles);
-    displayError("Submitted creation request."); // FIXME: this isn't really an error...
+    const status = await storage.createArtifact(
+      { displayName: artifactName },
+      artifactFiles
+    );
+    displayMessage(status);
+    if (status === "Created!") {
+      // FIXME: replace this with a proper enum
+      fetchData();
+    }
   }
 
   let artifactName = "";

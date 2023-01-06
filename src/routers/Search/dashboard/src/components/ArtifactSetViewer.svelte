@@ -39,7 +39,7 @@
     });
   }
 
-  $: (artifactSet, onArtifactSetChange());
+  $: artifactSet, onArtifactSetChange();
 
   let prevSetHash = null;
 
