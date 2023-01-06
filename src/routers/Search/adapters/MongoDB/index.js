@@ -117,7 +117,6 @@ class MongoAdapter extends Adapter {
   }
 
   // TODO: update method signature to be more generic
-  // TODO: update method signature to be more generic
   async download(artifactSetId, ids, formatter, targetDir) {
     const set = await this._collection.findOne({
       _id: ObjectId(artifactSetId),
