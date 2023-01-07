@@ -302,6 +302,7 @@ define([
     root,
     activeNode
   ) {
+    const rootNode = core.getRoot(activeNode);
     const contentTypePath = core.getPointerPath(activeNode, "contentType");
     console.log("contentTypePath", contentTypePath);
     if (contentTypePath) {
