@@ -1,6 +1,5 @@
 <script lang="ts">
-  import { FilterTag, LeanTag } from "./FilterTag";
-  import "./SetFilterTag";
+  import { FilterTag, LeanTag, fromDict } from "./tags";
   import TopAppBar, { Row, Section, Title } from "@smui/top-app-bar";
   import {
     getLatestArtifact,
@@ -551,7 +550,7 @@
         trees={vocabularies}
         tags={itemTags}
         on:change={(event) =>
-          (filterTags = FilterTag.fromDicts(event.detail.filterTags))}
+          (filterTags = event.detail.filterTags.map(fromDict))}
       />
     </Content>
   </Drawer>

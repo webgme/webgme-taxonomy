@@ -1,5 +1,5 @@
 import Fuse from 'fuse.js'
-import { ItemTag } from './FilterTag'
+import { ItemTag } from './tags'
 
 /** Fuzzy matching options to pass to Fuse instance
  * 
