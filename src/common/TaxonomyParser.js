@@ -2,10 +2,7 @@ function factory() {
   const DEFAULT_TYPE = "Term";
   const CATEGORY_TYPE = "Term";
   const UNKNOWN_FIELD_TYPE = "TextOrEnumField";
-  const OptionFieldTypes = [
-    "EnumField",
-    "SetField",
-  ];
+  const OptionFieldTypes = ["EnumField", "SetField"];
   const FieldTypes = [
     "TextField",
     "IntegerField",

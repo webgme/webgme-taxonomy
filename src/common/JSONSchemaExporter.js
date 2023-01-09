@@ -7,7 +7,6 @@ function factory() {
   const optionTypes = ["EnumField", "SetField"];
 
   class JSONSchemaExporter {
-
     /**
      * Creates an instance of JSONSchemaExporter.
      * @param {GmeClasses.Core & { getMetaType(node: Core.Node): Core.Node }} core
@@ -67,7 +66,8 @@ function factory() {
         await Promise.all(termNodes.map((node) => this.getUiSchemaEntry(node)))
       ).map(([id, value]) => value);
       const itemsUiSchema = Object.assign(
-        {}, ...termsUiSchemas,
+        {},
+        ...termsUiSchemas,
         Object.fromEntries(hiddenProperties)
       );
       const uiSchema = {
@@ -103,9 +103,9 @@ function factory() {
         // if we are an enum or set, our children ui schemas should be merged into ours
         const childSchemas = childEntries.map(([id, schema]) => schema);
         const mergedChildren = Object.assign({}, ...childSchemas);
-        const mergedEntries = this.isSet(node) ?
-          [["items", Object.assign(mergedChildren, { "ui:title": " " })]] :
-          Object.entries(mergedChildren);
+        const mergedEntries = this.isSet(node)
+          ? [["items", Object.assign(mergedChildren, { "ui:title": " " })]]
+          : Object.entries(mergedChildren);
         entries.push(...mergedEntries);
       } else {
         entries.push(...childEntries);
@@ -162,9 +162,7 @@ function factory() {
      * @memberof JSONSchemaExporter
      */
     isOptionType(node) {
-      return optionTypes.some(
-        optType => this.isTypeOf(node, optType)
-      ); 
+      return optionTypes.some((optType) => this.isTypeOf(node, optType));
     }
 
     /**
@@ -177,8 +175,11 @@ function factory() {
      */
     isFieldOption(node) {
       const parent = this.core.getParent(node);
-      return (parent != null) && optionTypes.some(
-        optType => this.core.isTypeOf(parent, this.META[optType])
+      return (
+        parent != null &&
+        optionTypes.some((optType) =>
+          this.core.isTypeOf(parent, this.META[optType])
+        )
       );
     }
 
@@ -190,8 +191,7 @@ function factory() {
      * @memberof JSONSchemaExporter
      */
     isTerm(node) {
-      return (node != null) &&
-        this.core.isTypeOf(node, this.META.Term)
+      return node != null && this.core.isTypeOf(node, this.META.Term);
     }
 
     async getDependentDefinitions(node) {
@@ -345,14 +345,16 @@ function factory() {
             type: "array",
             uniqueItems: true,
             items: {
-              default: { ID:
-                await (async () => {
+              default: {
+                ID: await (async () => {
                   const firstChild = (await this.core.loadChildren(node))[0];
-                  return (firstChild != null) ? this.core.getGuid(firstChild) : undefined;
-                })()
+                  return firstChild != null
+                    ? this.core.getGuid(firstChild)
+                    : undefined;
+                })(),
               },
-              anyOf: await this.getChildrenRefs(node)
-            }
+              anyOf: await this.getChildrenRefs(node),
+            },
           });
       }
       return [guid, fieldSchema];
@@ -366,12 +368,10 @@ function factory() {
      * @memberof JSONSchemaExporter
      */
     async getChildrenRefs(node) {
-      return (await this.core.loadChildren(node)).map(
-        (child) => {
-          const guid = this.core.getGuid(child);
-          return this.getGuidRef(guid);
-        }
-      )
+      return (await this.core.loadChildren(node)).map((child) => {
+        const guid = this.core.getGuid(child);
+        return this.getGuidRef(guid);
+      });
     }
 
     /**
@@ -382,7 +382,7 @@ function factory() {
      * @memberof JSONSchemaExporter
      */
     getGuidRef(guid) {
-      return { $ref: `#/definitions/${guid}` }
+      return { $ref: `#/definitions/${guid}` };
     }
 
     static from(core, node) {

@@ -1,5 +1,5 @@
 import TaxonomyReference from "./TaxonomyReference";
-import {assert, filterMap, getLatestArtifact, Result} from './Utils';
+import {assert, filterMap, Result} from './Utils';
 
 class Storage {
   baseUrl: string;
@@ -34,29 +34,20 @@ class Storage {
     //.unwrap();
   }
 
-  async pushArtifact(file: File, sasUrl: string) {
-    console.log('Uploading to', sasUrl, file.name);
+  async _uploadFile(uploadReq, file: File) {
     const opts = {
-      method : 'PUT',
-      headers : {
-        'Accept' : 'application/xml',
-        'Content-Type' : 'application/octet-stream',
-        'x-ms-blob-type' : 'BlockBlob',
-        'x-ms-encryption-algorithm' : 'AES256',
-      },
+      method : uploadReq.params.method,
+      headers : uploadReq.params.headers,
       body: file
     };
-    return (await this._fetch(sasUrl, opts))
+    return (await this._fetch(uploadReq.params.url, opts))
         .mapError(err => new AppendDataError(err.message))
         .unwrap();
   }
 
   async appendArtifact(artifactSet, metadata, files: File[]) {
     console.log({action : 'append', metadata, files});
-    const last = getLatestArtifact(artifactSet);
-    const lastId = last && last.id;
-    const qs = lastId ? '?lastId=' + encodeURIComponent(lastId) : '';
-    const url = this.baseUrl + artifactSet.id + '/uploadUrl' + qs;
+    const url = this.baseUrl + artifactSet.id + '/append';
     const filenames = files.map((file: File) => file.name);
 
     // const myString = await this.readFile(files[0])
@@ -73,16 +64,15 @@ class Storage {
       })
     };
 
-    const uploadInfo = await (await this._fetchJson(url, opts))
+    const appendResult = await (await this._fetchJson(url, opts))
                            .mapError(err => new AppendDataError(err.message))
                            .unwrap();
 
-    const uploadTasks = uploadInfo.map(async (element) => {
-      const filename = element.name.substring(4);
-      const targetFile = files.find(a => a.name == filename);
+    const uploadTasks = appendResult.files.map(async (upload) => {
+      const targetFile = files.find(a => a.name == upload.name);
       assert(!!targetFile,
-             new AppendDataError('Could not find upload URL for ' + filename));
-      await this.pushArtifact(targetFile, element.sasUrl)
+             new AppendDataError('Could not find upload info for ' + upload.name));
+      await this._uploadFile(upload, targetFile);
     });
 
     await Promise.all(uploadTasks);
@@ -96,6 +86,7 @@ class Storage {
 
   async createArtifact(metadata, files) {
     console.log('Creating artifact:', metadata, files);
+    metadata.taxonomyTags = metadata.taxonomyTags || [];
     const opts = {
       method : 'POST',
       headers : {'Content-Type' : 'application/json'},

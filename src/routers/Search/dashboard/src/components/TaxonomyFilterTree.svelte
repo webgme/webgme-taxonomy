@@ -21,7 +21,8 @@
     tree.expanded = !tree.expanded;
   };
   $: arrowDown = tree.expanded;
-  $: showChildren = children.length && !["EnumField", "SetField"].includes(tree.type);
+  $: showChildren =
+    children.length && !["EnumField", "SetField"].includes(tree.type);
 
   let checked = tree.selected === undefined ? false : tree.selected;
   let value = tree.value || null;
@@ -75,7 +76,11 @@
     {:else if tree.type === "SetField"}
       <FormField>
         <Checkbox bind:checked indeterminate={checked === null} />
-        <Multiselect label={name} options={children.map(({ name, id }) => ({ label: name, value: id }))} bind:value />
+        <Multiselect
+          label={name}
+          options={children.map(({ name, id }) => ({ label: name, value: id }))}
+          bind:value
+        />
       </FormField>
     {:else}
       <FormField>

@@ -1,28 +1,28 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
+  import { createEventDispatcher } from "svelte";
   import Chip, { Text as ChipText } from "@smui/chips";
-  import { Graphic, Text as ListText } from '@smui/list';
-  import Textfield from '@smui/textfield';
+  import { Graphic, Text as ListText } from "@smui/list";
+  import Textfield from "@smui/textfield";
   import Autocomplete from "@smui-extra/autocomplete";
 
-  type Option = { label: string, value: string };
+  type Option = { label: string; value: string };
 
   /** The label for the input */
-  export let label: string | null = null
+  export let label: string | null = null;
   /** The label/value options that can be selected */
   export let options: Option[] = [];
   /** The values for the currently selected options */
   export let value: string[] = [];
   /** Whether to auto-close the dropdown after an option is selected/de-selected (default is `false`) */
   export let singleSelect = false;
-  
+
   const dispatch = createEventDispatcher();
   let autocomplete: InstanceType<typeof Autocomplete>;
   let text: string = "";
   let prevValue: Option | null = null;
 
   $: if (value == null) value = [];
-  $: selected = value.map(val => options.find(opt => opt.value === val));
+  $: selected = value.map((val) => options.find((opt) => opt.value === val));
   $: hasValues = !!value?.length;
 
   function getOptionLabel(option: Option) {
@@ -52,12 +52,10 @@
       autocomplete.blur();
     }
   }
-
 </script>
 
-
 <div class="multiselect">
-  <Autocomplete 
+  <Autocomplete
     bind:this={autocomplete}
     {options}
     {label}
@@ -81,14 +79,17 @@
             class="mdc-deprecated-chip-trailing-action mdc-ripple-upgraded"
             on:click|stopPropagation={() => toggleSelection(chip)}
           >
-            <span class="mdc-deprecated-chip-trailing-action__ripple"></span>
-            <span class="material-icons mdc-deprecated-chip-trailing-action__icon">cancel</span>
+            <span class="mdc-deprecated-chip-trailing-action__ripple" />
+            <span
+              class="material-icons mdc-deprecated-chip-trailing-action__icon"
+              >cancel</span
+            >
           </div>
         </Chip>
       {/each}
     </Textfield>
 
-    <span 
+    <span
       slot="match"
       let:match
       class="multiselect-menu-item-wrapper"
@@ -100,9 +101,7 @@
   </Autocomplete>
 </div>
 
-
 <style>
-
   .multiselect {
     display: flex;
     align-items: center;
@@ -138,15 +137,15 @@
     align-items: center;
   }
 
-
-  .multiselect :global(.multiselect-menu-item-wrapper .mdc-deprecated-list-item__graphic) {
+  .multiselect
+    :global(.multiselect-menu-item-wrapper .mdc-deprecated-list-item__graphic) {
     margin-right: 10px;
     visibility: hidden;
   }
 
-  .multiselect :global(.multiselect-menu-item-wrapper.selected .mdc-deprecated-list-item__graphic) {
+  .multiselect
+    :global(.multiselect-menu-item-wrapper.selected
+      .mdc-deprecated-list-item__graphic) {
     visibility: visible;
   }
-
 </style>
-

@@ -24,6 +24,9 @@ const DashboardConfiguration = require("../../common/SearchFilterDataExporter");
 const TagFormatter = require("../../common/TagFormatter");
 const path = require("path");
 const staticPath = path.join(__dirname, "dashboard", "public");
+const os = require("os");
+const { zip, COMPRESSION_LEVEL } = require("zip-a-folder");
+const fsp = require("fs/promises");
 
 const StorageAdapter = require("./adapters");
 let mainConfig = null;
@@ -107,10 +110,10 @@ function initialize(middlewareOpts) {
 
   router.post(
     RouterUtils.getContentTypeRoutes("artifacts/"),
-    // TODO: re-enable tag conversion once the process is created automatically
-    //convertTaxonomyTags,
+    convertTaxonomyTags,
     async function (req, res) {
       const { metadata } = req.body;
+      // FIXME: what if it isn't using the branch in the URL?
       metadata.taxonomy = {
         projectId: req.params.projectId,
         branch: req.params.branch,
@@ -123,17 +126,17 @@ function initialize(middlewareOpts) {
         mainConfig
       );
 
-      await storage.createArtifact(metadata);
-      res.json("Submitted create request!");
+      const status = await storage.createArtifact(metadata);
+      console.log(`about to send ${status} to client`);
+      res.json(status);
     }
   );
 
   router.post(
-    RouterUtils.getContentTypeRoutes("artifacts/:parentId/uploadUrl"),
+    RouterUtils.getContentTypeRoutes("artifacts/:parentId/append"),
     convertTaxonomyTags,
     async function (req, res) {
       const { parentId } = req.params;
-      const { lastId } = req.query;
       const { core, contentType } = req.webgmeContext;
       const storage = await StorageAdapter.from(
         core,
@@ -141,13 +144,40 @@ function initialize(middlewareOpts) {
         req,
         mainConfig
       );
-      const fileUploadInfo = await storage.getUploadUrls(
+      const appendResult = await storage.appendArtifact(
         parentId,
-        lastId,
         req.body.metadata,
         req.body.filenames
       );
-      res.json(fileUploadInfo);
+      appendResult.files.forEach((file) => {
+        const isRelative = file.params.url.startsWith("./");
+        if (isRelative) {
+          const baseUrl = req.originalUrl
+            .split(`artifacts/${parentId}/append`)
+            .shift();
+          file.params.url = baseUrl + file.params.url.substring(2);
+        }
+      });
+      res.json(appendResult);
+    }
+  );
+
+  router.post(
+    RouterUtils.getContentTypeRoutes(
+      "artifacts/:parentId/:index/:fileId/upload"
+    ),
+    async function (req, res) {
+      const { parentId, index, fileId } = req.params;
+      const { core, contentType } = req.webgmeContext;
+      const storage = await StorageAdapter.from(
+        core,
+        contentType,
+        req,
+        mainConfig
+      );
+      // TODO: verify that it is a legitimate request
+      const status = await storage.uploadFile(parentId, index, fileId, req);
+      res.json(status);
     }
   );
 
@@ -163,7 +193,6 @@ function initialize(middlewareOpts) {
         return res.status(400).send("List of artifact IDs required");
       }
 
-      console.log("getting download URL", parentId, ids);
       const { root, core, contentType } = req.webgmeContext;
       const node = await Utils.findTaxonomyNode(core, root);
       const formatter = await TagFormatter.from(core, node);
@@ -173,12 +202,24 @@ function initialize(middlewareOpts) {
         req,
         mainConfig
       );
-      const zipFile = await storage.getDownloadPath(parentId, ids, formatter);
-      if (zipFile) {
-        return res.download(zipFile.path, path.basename(zipFile.name), () =>
-          zipFile.cleanUp()
+
+      const tmpDir = await fsp.mkdtemp(
+        path.join(os.tmpdir(), "webgme-taxonomy-")
+      );
+      const downloadDir = path.join(tmpDir, "download");
+      const zipPath = path.join(tmpDir, `${parentId}.zip`);
+      await storage.download(parentId, ids, formatter, downloadDir);
+      await zip(downloadDir, zipPath, {
+        compression: COMPRESSION_LEVEL.medium,
+      });
+      await fsp.rm(downloadDir, { recursive: true });
+
+      try {
+        await fsp.access(zipPath, fsp.constants.R_OK);
+        return res.download(zipPath, path.basename(zipPath), () =>
+          fsp.rm(tmpDir, { recursive: true })
         );
-      } else {
+      } catch (err) {
         // no files associated with the artifact
         return res.sendStatus(204);
       }
