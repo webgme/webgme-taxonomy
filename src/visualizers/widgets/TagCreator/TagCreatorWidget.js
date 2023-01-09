@@ -37,7 +37,10 @@ define([
       if (taxonomyPath) {
         renderData.addButton(
           "Apply tags",
-          (tags) => this.addTags(taxonomyPath, tags),
+          (tags) => {
+            this.form.setMissingDefaults(schema, tags);
+            this.addTags(taxonomyPath, tags);
+          },
           "btn-info"
         );
       }
