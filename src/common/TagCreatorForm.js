@@ -49,26 +49,96 @@ function factory() {
      * item.
      */
     setMissingDefaults(schema, metadata) {
-      const defID = schema.properties.taxonomyTags.items.anyOf[0].$ref
-        .split("/")
-        .pop();
-      const defaultDef = schema.definitions[defID];
-      const defaults = Object.fromEntries(
-        Object.entries(defaultDef.properties)
-          .filter(([id, def]) => def.default)
-          .map(([id, def]) => [id, def.default])
+      const defaults = this._setMissingDefaults(
+        schema,
+        schema.definitions,
+        metadata
       );
+      return defaults;
+    }
 
-      metadata.taxonomyTags = metadata.taxonomyTags.map((tag) => {
-        if (!tag) {
-          tag = {};
+    /**
+     * Set the missing defaults in the metadata given the schema.
+     * Unlike the public version (`setMissingDefaults`), this one
+     * is written to be recursive and accept `definitions` explicitly.
+     */
+    _setMissingDefaults(schema, definitions, metadata) {
+      if (schema.type === "array") {
+        return metadata.map((md) =>
+          this._setMissingDefaults(schema.items, definitions, md)
+        );
+      } else if (schema.type === "object") {
+        const properties = this._getObjectProperties(schema, definitions);
+        if (properties) {
+          const data = metadata || {};
+          return Object.fromEntries(
+            Object.entries(properties).map(([id, val]) => [
+              id,
+              this._setMissingDefaults(val, definitions, data[id]),
+            ])
+          );
+        } else if (metadata === null || metadata === undefined) {
+          return this._getDefaultValue(schema, definitions) || {};
         }
-        if (!tag.ID) {
-          return Object.assign({}, defaults, tag);
-        }
-        return tag;
-      });
+      } else if (metadata === null || metadata === undefined) {
+        return this._getDefaultValue(schema, definitions) || metadata;
+      }
+
       return metadata;
+    }
+
+    /**
+     * Get the properties of an object. Follow references and anyOf defaults.
+     *
+     * The latter refers to this format:
+     *
+     *   {
+     *     type: "object",
+     *     anyOf: [{someDefaultObjectWithProps}]
+     *   }
+     */
+    _getObjectProperties(schema, definitions) {
+      if (schema.properties) {
+        return schema.properties;
+      }
+
+      if (schema.anyOf) {
+        return this._getObjectProperties(schema.anyOf[0], definitions);
+      }
+
+      if (schema.$ref) {
+        const defId = schema.$ref.split("/").pop();
+        return this._getObjectProperties(definitions[defId], definitions);
+      }
+    }
+
+    /**
+     * Get the default value from a JSON schema element. Follow references to definitions.
+     */
+    _getDefaultValue(schema, definitions) {
+      if (!schema) return schema;
+
+      if (schema.default) {
+        return schema.default;
+      } else if (schema.anyOf) {
+        const defItem = schema.anyOf[0];
+        if (defItem.$ref) {
+          const defID = defItem.$ref.split("/").pop();
+          const defaultDef = definitions[defID];
+          return this._getDefaultValue(defaultDef, definitions);
+        } else {
+          return this._getDefaultValue(defItem, definitions);
+        }
+      } else if (schema.type === "object") {
+        const defaults = Object.fromEntries(
+          Object.entries(schema.properties).map(([id, def]) => {
+            return [id, this._getDefaultValue(def, definitions)];
+          })
+        );
+        return defaults;
+      } else if (schema.type === "array") {
+        return this._getDefaultValue(schema.items, definitions) || [];
+      }
     }
 
     downloadJSON(object, name = "tags") {
@@ -139,6 +209,10 @@ function factory() {
     return JSON.parse(JSON.stringify(obj));
   }
 
+  function filterMap(list, fn) {
+    return list.map(fn).filter((i) => i !== undefined);
+  }
+
   const DefaultFormatter = {
     toHumanFormat(tag) {
       return tag;
@@ -151,6 +225,8 @@ function factory() {
 
 if (typeof define !== "undefined") {
   define([], factory);
+} else if (typeof window === "undefined") {
+  module.exports = factory();
 } else {
   this.TagCreatorForm = factory();
 }
