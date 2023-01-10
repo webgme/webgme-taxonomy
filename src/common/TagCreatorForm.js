@@ -209,10 +209,6 @@ function factory() {
     return JSON.parse(JSON.stringify(obj));
   }
 
-  function filterMap(list, fn) {
-    return list.map(fn).filter((i) => i !== undefined);
-  }
-
   const DefaultFormatter = {
     toHumanFormat(tag) {
       return tag;
