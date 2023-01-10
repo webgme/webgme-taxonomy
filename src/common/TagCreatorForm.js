@@ -54,6 +54,9 @@ function factory() {
         schema.definitions,
         metadata
       );
+      // We need to mutate the original for form validation to
+      // validate the correct version of the object.
+      extend(metadata, defaults);
       return defaults;
     }
 
@@ -207,6 +210,16 @@ function factory() {
 
   function deepCopy(obj) {
     return JSON.parse(JSON.stringify(obj));
+  }
+
+  function extend(target, source) {
+    Object.entries(source).forEach(([k, v]) => {
+      const isObject = typeof v === "object" && !Array.isArray(v);
+      if (isObject) {
+        v = extend(target[k], v);
+      }
+      target[k] = v;
+    });
   }
 
   const DefaultFormatter = {
