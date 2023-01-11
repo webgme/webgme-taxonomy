@@ -113,8 +113,5 @@ describe("TagCreatorForm", function () {
       assert.equal(defaults.taxonomyTags.length, 1);
       assert.equal(defaults.taxonomyTags[0].field, "hello");
     });
-
-    it("should set defaults recursively", function () {});
   });
-  // TODO:
 });
