@@ -99,7 +99,6 @@ function initialize(middlewareOpts) {
           mainConfig
         );
         const artifacts = await storage.listArtifacts();
-        console.log({ artifacts });
         res.status(200).json(artifacts).end();
       } catch (e) {
         logger.error(e.stack);
@@ -127,7 +126,6 @@ function initialize(middlewareOpts) {
       );
 
       const status = await storage.createArtifact(metadata);
-      console.log(`about to send ${status} to client`);
       res.json(status);
     }
   );

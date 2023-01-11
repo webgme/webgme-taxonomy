@@ -16,6 +16,7 @@ const { promisify } = require("util");
 const streamPipeline = promisify(pipeline);
 const DownloadFile = require("../common/DownloadFile");
 const { Artifact, ArtifactSet } = require("../common/Artifact");
+const ModelError = require('../common/ModelError');
 
 const mongoUri = require("../../../../../config").mongo.uri;
 const { MongoClient, GridFSBucket, ObjectId } = require("mongodb");
@@ -171,7 +172,10 @@ class MongoAdapter extends Adapter {
   static from(core, storageNode) {
     const baseUrl = core.getAttribute(storageNode, "URI");
     const collection = core.getAttribute(storageNode, "collection");
-    // TODO: throw an error if the collection is not provided
+    if (!collection) {
+      const msg = 'No MongoDB collection specified';
+      throw new ModelError(core.getPath(storageNode), msg);
+    }
     return new MongoAdapter(baseUrl, collection);
   }
 }

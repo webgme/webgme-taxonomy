@@ -428,6 +428,11 @@ class PDP {
 
     const baseUrl = core.getAttribute(storageNode, "URL");
     const processType = core.getAttribute(storageNode, "processType");
+
+    if (!baseUrl) {
+      const msg = 'PDP URL specified for PDP';
+      throw new ModelError(core.getPath(storageNode), msg);
+    }
     return new PDP(baseUrl, token, processType);
   }
 }
