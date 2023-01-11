@@ -1,6 +1,7 @@
 // TODO: load the different adapter types
 
 const RouterUtils = require("../../../common/routers/Utils");
+const { StorageNotFoundError } = require("./common/ModelError");
 const fs = require("fs");
 const SUPPORTED_ADAPTERS = Object.fromEntries(
   fs
@@ -15,6 +16,10 @@ class Adapters {
     const storageNode = (await core.loadChildren(contentTypeNode)).find(
       (child) => isTypeOf(core, child, "Storage")
     );
+
+    if (!storageNode) {
+      throw new StorageNotFoundError(core, contentTypeNode);
+    }
 
     const adapterType = core.getAttribute(
       core.getMetaType(storageNode),

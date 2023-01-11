@@ -73,7 +73,7 @@ function initialize(middlewareOpts) {
 
   router.get(
     RouterUtils.getContentTypeRoutes("configuration.json"),
-    async (req, res) => {
+    RouterUtils.handleUserErrors(logger, async function (req, res) {
       const { core, contentType } = req.webgmeContext;
       const configuration = await DashboardConfiguration.from(
         core,
@@ -82,14 +82,14 @@ function initialize(middlewareOpts) {
       configuration.project = req.webgmeContext.projectVersion;
       configuration.contentTypePath = core.getPath(contentType);
       res.json(configuration);
-    }
+    })
   );
 
   // Accessing and updating data via the storage adapter
   router.get(
     RouterUtils.getContentTypeRoutes("artifacts/"),
     // TODO: add the artifact ID...
-    async function (req, res) {
+    RouterUtils.handleUserErrors(logger, async function (req, res) {
       try {
         const { core, contentType } = req.webgmeContext;
         const storage = await StorageAdapter.from(
@@ -104,13 +104,13 @@ function initialize(middlewareOpts) {
         logger.error(e.stack);
         res.sendStatus(401);
       }
-    }
+    })
   );
 
   router.post(
     RouterUtils.getContentTypeRoutes("artifacts/"),
     convertTaxonomyTags,
-    async function (req, res) {
+    RouterUtils.handleUserErrors(logger, async function (req, res) {
       const { metadata } = req.body;
       // FIXME: what if it isn't using the branch in the URL?
       metadata.taxonomy = {
@@ -127,13 +127,13 @@ function initialize(middlewareOpts) {
 
       const status = await storage.createArtifact(metadata);
       res.json(status);
-    }
+    })
   );
 
   router.post(
     RouterUtils.getContentTypeRoutes("artifacts/:parentId/append"),
     convertTaxonomyTags,
-    async function (req, res) {
+    RouterUtils.handleUserErrors(logger, async function (req, res) {
       const { parentId } = req.params;
       const { core, contentType } = req.webgmeContext;
       const storage = await StorageAdapter.from(
@@ -157,14 +157,14 @@ function initialize(middlewareOpts) {
         }
       });
       res.json(appendResult);
-    }
+    })
   );
 
   router.post(
     RouterUtils.getContentTypeRoutes(
       "artifacts/:parentId/:index/:fileId/upload"
     ),
-    async function (req, res) {
+    RouterUtils.handleUserErrors(logger, async function (req, res) {
       const { parentId, index, fileId } = req.params;
       const { core, contentType } = req.webgmeContext;
       const storage = await StorageAdapter.from(
@@ -176,12 +176,12 @@ function initialize(middlewareOpts) {
       // TODO: verify that it is a legitimate request
       const status = await storage.uploadFile(parentId, index, fileId, req);
       res.json(status);
-    }
+    })
   );
 
   router.get(
     RouterUtils.getContentTypeRoutes("artifacts/:parentId/download"),
-    async function (req, res) {
+    RouterUtils.handleUserErrors(logger, async function (req, res) {
       const { parentId } = req.params;
       // TODO: get the IDs for the specific observations to get
       let ids;
@@ -221,7 +221,7 @@ function initialize(middlewareOpts) {
         // no files associated with the artifact
         return res.sendStatus(204);
       }
-    }
+    })
   );
 
   logger.debug("ready");

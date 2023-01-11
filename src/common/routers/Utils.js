@@ -127,17 +127,21 @@ const Utils = {
   addProjectScopeMiddleware(middlewareOpts, router, options = {}) {
     const { logger } = middlewareOpts;
     const { unsafe } = options;
-    const contextFn = !unsafe ?
-      (request) => Utils.getWebGMEContext(middlewareOpts, request) :
-      (request) => {
-        const userId = request.params.projectId.split("+").shift();
-        return Utils.getWebGMEContextUnsafe(middlewareOpts, userId, request.params);
-      };
+    const contextFn = !unsafe
+      ? (request) => Utils.getWebGMEContext(middlewareOpts, request)
+      : (request) => {
+          const userId = request.params.projectId.split("+").shift();
+          return Utils.getWebGMEContextUnsafe(
+            middlewareOpts,
+            userId,
+            request.params
+          );
+        };
     return router.use(
       Utils.getProjectScopedRoutes(),
       handleUserErrors(
         logger,
-        async (req) => req.webgmeContext = await contextFn(req)
+        async (req) => (req.webgmeContext = await contextFn(req))
       )
     );
   },
@@ -152,7 +156,7 @@ function handleUserErrors(logger, fn) {
       }
     } catch (e) {
       if (e instanceof UserError) {
-        res.status(e.statusCode).send(e.message);
+        e.sendVia(res);
       } else {
         logger.error(e);
         res.sendStatus(500);
@@ -165,6 +169,10 @@ class UserError extends Error {
   constructor(msg, code = 400) {
     super(msg);
     this.statusCode = code;
+  }
+
+  sendVia(response) {
+    response.status(this.statusCode).send(this.message);
   }
 }
 

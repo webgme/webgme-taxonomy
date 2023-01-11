@@ -16,7 +16,7 @@ const { promisify } = require("util");
 const streamPipeline = promisify(pipeline);
 const DownloadFile = require("../common/DownloadFile");
 const { Artifact, ArtifactSet } = require("../common/Artifact");
-const ModelError = require('../common/ModelError');
+const { MissingAttributeError } = require("../common/ModelError");
 
 const mongoUri = require("../../../../../config").mongo.uri;
 const { MongoClient, GridFSBucket, ObjectId } = require("mongodb");
@@ -29,9 +29,9 @@ const {
 } = require("../common/AppendResult");
 
 class MongoAdapter extends Adapter {
-  constructor(mongoUri, collectionName) {
+  constructor(client, collectionName) {
     super();
-    this._client = mongoUri ? new MongoClient(mongoUri) : defaultClient;
+    this._client = client;
     const db = this._client.db();
     const name = `taxonomy_data_${collectionName}`;
     this._collection = db.collection(name);
@@ -170,13 +170,14 @@ class MongoAdapter extends Adapter {
   }
 
   static from(core, storageNode) {
-    const baseUrl = core.getAttribute(storageNode, "URI");
     const collection = core.getAttribute(storageNode, "collection");
     if (!collection) {
-      const msg = 'No MongoDB collection specified';
-      throw new ModelError(core.getPath(storageNode), msg);
+      throw new MissingAttributeError(core, storageNode, "collection");
     }
-    return new MongoAdapter(baseUrl, collection);
+
+    const mongoUri = core.getAttribute(storageNode, "URI");
+    const client = mongoUri ? new MongoClient(mongoUri) : defaultClient;
+    return new MongoAdapter(client, collection);
   }
 }
 

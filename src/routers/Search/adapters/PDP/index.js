@@ -17,6 +17,7 @@ const { pipeline } = require("stream");
 const { promisify } = require("util");
 const streamPipeline = promisify(pipeline);
 const DownloadFile = require("../common/DownloadFile");
+const { MissingAttributeError } = require("../common/ModelError");
 const { Artifact, ArtifactSet } = require("../common/Artifact");
 const CreateRequestLogger = require("./CreateRequestLogger");
 const logFilePath = process.env.CREATE_LOG_PATH || "./CreateProcesses.jsonl";
@@ -430,8 +431,10 @@ class PDP {
     const processType = core.getAttribute(storageNode, "processType");
 
     if (!baseUrl) {
-      const msg = 'PDP URL specified for PDP';
-      throw new ModelError(core.getPath(storageNode), msg);
+      throw new MissingAttributeError(core, storageNode, "URL");
+    }
+    if (!processType) {
+      throw new MissingAttributeError(core, storageNode, "processType");
     }
     return new PDP(baseUrl, token, processType);
   }
