@@ -244,15 +244,6 @@ function factory() {
         this.core.getAttribute(n, "name")
       );
       const properties = Object.fromEntries(zip(fieldNames, fieldSchemas));
-      console.log(
-        "found",
-        fieldNodes.length,
-        "fields for",
-        this.core.getAttribute(node, "name"),
-        (await this.core.loadChildren(node)).length,
-        properties
-      );
-
       return properties;
     }
 
@@ -311,7 +302,6 @@ function factory() {
             },
           });
       }
-      console.log({ baseName, fieldSchema });
       return fieldSchema;
     }
 
