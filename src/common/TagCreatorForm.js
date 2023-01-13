@@ -20,10 +20,7 @@ function factory() {
               const formData = deepCopy(
                 this.setMissingDefaults(data.schema, data.formData)
               );
-              const downloadData = await this.formatData(formatter, formData);
-              this.downloadJSON(
-                Object.assign({}, data.downloadData, downloadData)
-              );
+              this.downloadJSON(Object.assign({}, data.downloadData, formData));
             },
           },
           "Download"
