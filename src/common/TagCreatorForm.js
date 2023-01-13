@@ -8,7 +8,6 @@ function factory() {
 
     render(data) {
       const Form = JSONSchemaForm.default;
-      const { formatter } = data;
       const children = React.createElement("div", null, [
         ...data.buttons,
         React.createElement(
@@ -29,13 +28,6 @@ function factory() {
       this.root.render(
         React.createElement(Form, data.getProperties(), children)
       );
-    }
-
-    async formatData(formatter, formData) {
-      formData.taxonomyTags = await formatter.toHumanFormat(
-        formData.taxonomyTags
-      );
-      return formData;
     }
 
     /**
@@ -162,18 +154,11 @@ function factory() {
   }
 
   class FormRenderData {
-    constructor(
-      schema,
-      uiSchema,
-      formData = {},
-      downloadData = {},
-      formatter = DefaultFormatter
-    ) {
+    constructor(schema, uiSchema, formData = {}, downloadData = {}) {
       this.schema = schema;
       this.downloadData = downloadData;
       this.uiSchema = uiSchema;
       this.formData = formData || { taxonomyTags: [] };
-      this.formatter = formatter;
       this.buttons = [];
     }
 
