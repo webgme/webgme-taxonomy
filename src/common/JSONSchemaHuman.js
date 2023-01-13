@@ -60,29 +60,26 @@ function factory() {
         // FIXME: we need to figure out how to hide the top title...
         title: this.core.getAttribute(node, "name"),
         properties: {},
+        additionalProperties: false,
       };
       const termFields = await Promise.all(
         parentTerms.map((n) => this.getDefinition(n))
       );
-      console.log(schema.title, { termFields });
-
       const properties = zip(parentTerms, termFields).reduce(
         (schema, [parent, fields]) => {
           const name = this.core.getAttribute(parent, "name");
-          console.log("parent", name);
           return (schema.properties[name] = fields);
         },
         schema
       );
 
-      // TODO: populate the properties
       return schema;
     }
 
     getAncestorTerms(node) {
       const nodes = [node];
       let parent = this.core.getParent(node);
-      while (this.isTerm(parent)) {
+      while (this.isTerm(parent) || this.isVocab(parent)) {
         nodes.unshift(parent);
         parent = this.core.getParent(parent);
       }
@@ -171,6 +168,10 @@ function factory() {
       return node != null && this.core.isTypeOf(node, this.META.Term);
     }
 
+    isVocab(node) {
+      return node != null && this.core.isTypeOf(node, this.META.Vocabulary);
+    }
+
     async getDependentDefinitions(node) {
       const children = await this.core.loadChildren(node);
       if (this.isOptionType(node)) {
@@ -205,6 +206,7 @@ function factory() {
     hasProperties(node) {
       return (
         this.core.isTypeOf(node, this.META.Term) ||
+        this.core.isTypeOf(node, this.META.Vocabulary) ||
         this.core.isTypeOf(node, this.META.CompoundField)
       );
     }
@@ -219,6 +221,7 @@ function factory() {
           type: "object",
           properties,
           required: Object.keys(properties),
+          additionalProperties: false,
         };
       } else if (isFieldOpt) {
         const schema = await this.getFieldSchema(node);
@@ -251,27 +254,6 @@ function factory() {
       );
 
       return properties;
-    }
-
-    /**
-     * Gets an array of tuples for evaluating a node's constant properties.
-     *
-     * @return {[string, (node: Core.Node) => string][]} An array of property name/value function tuples
-     * @memberof JSONSchemaExporter
-     */
-    getConstantProperties() {
-      return [["ID", (node) => this.core.getGuid(node)]];
-    }
-
-    getConstantProperty(name, value) {
-      return [
-        name,
-        {
-          type: "string",
-          const: value,
-          default: value,
-        },
-      ];
     }
 
     /**
@@ -315,6 +297,7 @@ function factory() {
           fieldSchema.type = "object";
           fieldSchema.properties = {};
           fieldSchema.properties[name] = await this.getDefinition(node);
+          fieldSchema.additionalProperties = false;
           break;
         case "SetField":
           children = await this.core.loadChildren(node);
@@ -322,15 +305,6 @@ function factory() {
             type: "array",
             uniqueItems: true,
             items: {
-              default: {
-                // TODO: Update this
-                ID: await (async () => {
-                  const firstChild = children[0];
-                  return firstChild != null
-                    ? this.core.getAttribute(firstChild, "name")
-                    : undefined;
-                })(),
-              },
               anyOf: await Promise.all(
                 children.map((c) => this.getFieldSchema(c))
               ),
@@ -339,31 +313,6 @@ function factory() {
       }
       console.log({ baseName, fieldSchema });
       return fieldSchema;
-    }
-
-    /**
-     * Get JSON references to the node's children.
-     *
-     * @param {Core.Node} node The GME node to get child references for
-     * @return {Promise<{ $ref: string }[]>}  JSON references to the `node`'s children
-     * @memberof JSONSchemaExporter
-     */
-    async getChildrenRefs(node) {
-      return (await this.core.loadChildren(node)).map((child) => {
-        const guid = this.core.getGuid(child);
-        return this.getGuidRef(guid);
-      });
-    }
-
-    /**
-     * Gets a JSON ref to the given GUID definition.
-     *
-     * @param {string} guid The GUID to get a ref for
-     * @return {{ $ref: string }} A JSON ref to the GUID definition
-     * @memberof JSONSchemaExporter
-     */
-    getGuidRef(guid) {
-      return { $ref: `#/definitions/${guid}` };
     }
 
     static from(core, node) {

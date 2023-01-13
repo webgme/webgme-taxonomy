@@ -1,11 +1,10 @@
 /**
  * This converts to and from a human-readable format for tags. Specifically, this will replace the GUIDs with display names for all the terms and properties.
  */
-function factory() {
+function factory(Importer) {
   class TagFormatter {
-    constructor(nodeNameLookup, nodeGuidLookup) {
-      this.nodeNameLookup = nodeNameLookup;
-      this.nodeGuidLookup = nodeGuidLookup;
+    constructor(taxonomyWJI) {
+      this.taxonomy = taxonomyWJI;
     }
 
     /**
@@ -13,148 +12,58 @@ function factory() {
      * that for the top-level tag.
      */
     toGuidFormat(tags) {
-      return tags.map((tag) => this._toGuidFormat(tag));
+      return tags.map((tag) => this._toGuidFormat(this.taxonomy, tag));
     }
 
-    _toGuidFormat(tag, guid = null) {
-      const data = omit(tag, "Tag");
-      if (!guid) {
-        guid = this.nodeGuidLookup.getGuid(tag.Tag, data);
-        assert(guid, new TagNotFoundError(tag.Tag));
-      }
-
-      const entries = Object.entries(data);
-      // given a property (or parent name), resolve it to a GUID
-      const guidTag = Object.fromEntries(
-        entries.map(([name, data]) => {
-          const propertyGuid = this.nodeGuidLookup.getPropertyGuid(
-            guid,
-            name,
-            data
-          );
-          assert(propertyGuid, new PropertyNotFoundError(guid, name));
-          // If this is an enum, the values will be stored by ID (or converted to GUID format)
-          const valueGuid = this.nodeGuidLookup.getPropertyValueGuid(
-            guid,
-            name,
-            data
-          );
-          if (isObject(data)) {
-            data = this._toGuidFormat(data, valueGuid || propertyGuid);
-          } else if (valueGuid) {
-            data = valueGuid;
-          }
-
-          return [propertyGuid, data];
-        })
+    _findTagNode(parentNode, tagName) {
+      const node = parentNode.children.find(
+        (child) => child.attributes.name === tagName
       );
+      assert(node, new TagNotFoundError(tagName));
+      return node;
+    }
 
-      guidTag.ID = guid;
-      return guidTag;
+    _toGuidFormat(node, tag, currentTag = {}) {
+      return mapObject(tag, (name, data) => {
+        const tagNode = this._findTagNode(node, name);
+        const isNestedData = typeof data === "object";
+        const tagData = isNestedData
+          ? this._toGuidFormat(tagNode, data, currentTag)
+          : data;
+
+        return [tagNode.guid, tagData];
+      });
     }
 
     toHumanFormat(tags) {
-      return tags.map((tag) => this._toHumanFormat(tag));
+      const nodesByGuid = Object.fromEntries(
+        this._allNodes(this.taxonomy).map((node) => [node.guid, node])
+      );
+      return tags.map((tag) => this._toHumanFormat(tag, nodesByGuid));
     }
 
-    _toHumanFormat(tag) {
-      const entries = Object.entries(tag).filter(([k]) => k !== "ID");
-      // TODO: for enums, look up the names
-      const humanReadable = Object.fromEntries(
-        entries.map(([guid, data]) => {
-          const name = this.nodeNameLookup.getName(guid);
-          assert(name, new TagNotFoundError(guid));
-          let newData;
-          if (isObject(data)) {
-            newData = this._toHumanFormat(data);
-          } else {
-            const valueName = this.nodeNameLookup.getPropertyValueName(
-              guid,
-              data
-            );
-            newData = valueName || data;
-          }
-          return [name, newData];
-        })
-      );
-      humanReadable.Tag = this.nodeNameLookup.getName(tag.ID);
-      return humanReadable;
+    _allNodes(node) {
+      const children = node.children || [];
+      return [node, ...children.flatMap((child) => this._allNodes(child))];
+    }
+
+    _toHumanFormat(tag, nodesByGuid) {
+      return mapObject(tag, (guid, data) => {
+        const tagNode = nodesByGuid[guid];
+        const isNestedData = typeof data === "object";
+        const tagData = isNestedData
+          ? this._toHumanFormat(data, nodesByGuid)
+          : data;
+
+        return [tagNode.attributes.name, tagData];
+      });
     }
 
     static async from(core, taxonomyRoot) {
-      // Construct the lookup tables for the display names and GUIDs
-      const nodes = await core.loadSubTree(taxonomyRoot);
-      const namesAndGuids = nodes.map((node) => [
-        core.getAttribute(node, "name"),
-        core.getGuid(node),
-      ]);
-
-      const nodeNameDict = Object.fromEntries(
-        namesAndGuids.map(([name, guid]) => [guid, name])
-      );
-
-      // Construct the lookup table for the GUID (given the name).
-      // The key may not be unique so the data structure is a little more involved.
-      const propsForGuid = await Promise.all(
-        nodes.map(async (node) => {
-          const children = await core.loadChildren(node);
-          const properties = children.filter((node) => !isTerm(core, node));
-
-          const parent = core.getParent(node);
-          if (parent) {
-            properties.push(parent);
-          }
-
-          const propertyDict = Object.fromEntries(
-            properties.map((node) => [
-              core.getAttribute(node, "name"),
-              core.getGuid(node),
-            ])
-          );
-
-          return [core.getGuid(node), propertyDict];
-        })
-      );
-      const enumItemEntries = await Promise.all(
-        nodes
-          .filter((node) => isTypeOf(core, node, "EnumField"))
-          .map(async (field) => {
-            const children = await core.loadChildren(field);
-            const parentGuid = core.getGuid(core.getParent(field));
-            const fieldName = core.getAttribute(field, "name");
-            const fieldGuid = core.getGuid(field);
-            return children.map((enumOpt) => [
-              parentGuid,
-              fieldGuid,
-              fieldName,
-              core.getAttribute(enumOpt, "name"),
-              core.getGuid(enumOpt),
-            ]);
-          })
-      );
-      const enumItems = {};
-      const enumNameDict = {};
-      enumItemEntries
-        .flat()
-        .forEach(([parentGuid, fieldGuid, fieldName, enumName, enumGuid]) => {
-          enumItems[parentGuid] = enumItems[parentGuid] || {};
-          enumItems[parentGuid][fieldName] =
-            enumItems[parentGuid][fieldName] || {};
-          enumItems[parentGuid][fieldName][enumName] = enumGuid;
-
-          enumNameDict[fieldGuid] = enumNameDict[fieldGuid] || {};
-          enumNameDict[fieldGuid][enumGuid] = enumName;
-        });
-      const nodeNameLookup = new NodeNameLookupTable(
-        nodeNameDict,
-        enumNameDict
-      );
-      const nodeGuidLookup = new NodeGuidLookupTable(
-        namesAndGuids,
-        Object.fromEntries(propsForGuid),
-        enumItems
-      );
-      return new TagFormatter(nodeNameLookup, nodeGuidLookup);
+      const root = core.getRoot(taxonomyRoot);
+      const importer = new Importer(core, root);
+      const taxonomyWJI = await importer.toJSON(taxonomyRoot);
+      return new TagFormatter(taxonomyWJI);
     }
   }
 
@@ -275,13 +184,19 @@ function factory() {
     if (!cond) throw err;
   }
 
+  function mapObject(obj, fn) {
+    return Object.fromEntries(Object.entries(obj).map(([k, v]) => fn(k, v)));
+  }
+
   TagFormatter.GuidLookupTable = NodeGuidLookupTable;
   TagFormatter.NodeNameLookupTable = NodeNameLookupTable;
   return TagFormatter;
 }
 
 if (typeof define !== "undefined") {
-  define([], factory);
+  define(["webgme-json-importer/JSONImporter"], factory);
 } else {
-  module.exports = factory();
+  const { requirejs } = require("webgme");
+  const Importer = requirejs("webgme-json-importer/JSONImporter");
+  module.exports = factory(Importer);
 }

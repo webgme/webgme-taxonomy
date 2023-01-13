@@ -1,74 +1,96 @@
 describe("TagFormatter", function () {
   const TagFormatter = require("../../src/common/TagFormatter");
   const assert = require("assert");
-  let formatter;
+  const Utils = require("../Utils");
+  let formatter, nodesByGuid;
 
-  before(() => {
-    const nodesByGuid = [
-      "tag1",
-      "tag2",
-      "dupTag",
-      "dupTag",
-      "prop1",
-      "prop2",
-      "prop2",
-    ].map((name, i) => [i, name]);
-    const nodeNameDict = Object.fromEntries(nodesByGuid);
+  function keysAtDepth(obj, depth) {
+    let objects = [obj];
+    let keys = [];
+    for (i = -1; i < depth; i++) {
+      keys = objects.flatMap((obj) => Object.keys(obj));
+      objects = objects
+        .flatMap((obj) => Object.values(obj))
+        .filter((obj) => typeof obj === "object");
+    }
+    return keys;
+  }
 
-    const guidList = nodesByGuid.map((pair) => pair.reverse());
-    const propsForTagGuid = {
-      1: { prop2: 5 },
-      2: { prop2: 6 },
-      3: { prop1: 4 },
+  before(async () => {
+    const { core, project, commitHash } = await Utils.initializeProject(
+      "TagFormatter",
+      "TaxonomyProject"
+    );
+    const root = await Utils.getNewRootNode(project, commitHash, core);
+    const csv = `vocab,,,
+      ,enumTerm,,
+      ,,enumProp (enum),
+      ,,,enumItem1
+      ,,,,itemField (int)
+      ,,,enumItem2
+      ,enumTerm2,,
+      ,,name (text),
+      ,,enumSubTerm2,
+      ,,,child_name (text)
+      ,simpleTerm,,
+      ,enumTerm3,,
+      ,,enumItem3 (text)`;
+    const taxonomy = await Utils.createTaxonomyFromCsv(core, root, csv);
+    formatter = await TagFormatter.from(core, taxonomy);
+    nodesByGuid = Object.fromEntries(
+      formatter._allNodes(formatter.taxonomy).map((node) => [node.guid, node])
+    );
+  });
+
+  function check(tag, depth) {
+    const [guidTag] = formatter.toGuidFormat([tag]);
+    for (let i = 0; i < depth; i++) {
+      const names = keysAtDepth(tag, i);
+      keysAtDepth(guidTag, i).forEach(keyGuid => {
+      const name = nodesByGuid[keyGuid].attributes.name;
+        assert(
+          names.includes(name),
+          `Could not resolve ${keyGuid}. Expected one of ${names.join(", ")}`
+        );
+        const index = names.indexOf(name);
+        names.splice(index, 1);
+      });
+      assert.equal(names.length,0, `Found names: ${names.join(', ')}`);
+    }
+    const [humanTag] = formatter.toHumanFormat([guidTag]);
+    assert.deepEqual(humanTag, tag);
+  }
+
+  it("should convert term names to guid", function () {
+    const tag = {
+      vocab: {
+        simpleTerm: {},
+      },
     };
-    const guidLookup = new TagFormatter.GuidLookupTable(guidList, propsForTagGuid);
-    const nameLookup = new TagFormatter.NodeNameLookupTable(nodeNameDict, {});
-    formatter = new TagFormatter(nameLookup, guidLookup);
+    check(tag, 2);
   });
 
-  describe("from guid format", function () {
-    const tag = { ID: 0, 4: "hello!" };
-    let humanTag;
-
-    before(() => {
-      humanTag = formatter.toHumanFormat([tag])[0];
-    });
-
-    it("should resolve ID", function () {
-      assert.equal(humanTag.Tag, "tag1");
-    });
-
-    it("should resolve props", function () {
-      assert.equal(humanTag.prop1, tag[4]);
-    });
+  it("should convert properties to guid", function () {
+    const tag = {
+      vocab: {
+        enumTerm3: {
+          enumItem3: "hello",
+        },
+      },
+    };
+    check(tag, 3);
   });
 
-  describe("from human format", function () {
-    it("should resolve Tag", function () {
-      const tag = { Tag: "tag2", prop2: "world!" };
-      const [guidTag] = formatter.toGuidFormat([tag]);
-      assert.equal(guidTag.ID, 1);
-    });
-
-    it("should resolve properties", function () {
-      const tag = { Tag: "tag2", prop2: "world!" };
-      const [guidTag] = formatter.toGuidFormat([tag]);
-      assert.equal(guidTag[5], tag.prop2);
-    });
-
-    it("should save enum values by UUID", function () {
-      // TODO
-    });
-
-    it.skip("should resolve duplicate tags using props", function () {
-      const tag = { Tag: "dupTag", prop1: "world!" };
-      const [guidTag] = formatter.toGuidFormat([tag]);
-      assert.equal(guidTag.ID, 3);
-      assert.equal(guidTag[4], tag.prop1);
-    });
-  });
-
-  it.skip("should throw error if ambiguous tag names (ctor)", function () {
-    throw new Error('todo!');  // TODO
+  it("should convert enum items to guid", function () {
+    const tag = {
+      vocab: {
+        enumTerm: {
+          enumProp: {
+            enumItem1: {},
+          },
+        },
+      },
+    };
+    check(tag, 4);
   });
 });
