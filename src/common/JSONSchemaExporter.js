@@ -1,8 +1,3 @@
-/*globals define*/
-/*eslint-env node, browser*/
-// @ts-check
-/// <reference path="define.d.ts" />
-
 function factory() {
   const optionTypes = ["EnumField", "SetField"];
 
@@ -25,13 +20,11 @@ function factory() {
     }
 
     async getVocabSchemas(vocabs, taxonomyName) {
-      const defEntries = (
-        await Promise.all(vocabs.map((node) => this.getDefinitionEntries(node)))
-      ).flat();
-      const definitions = Object.fromEntries(defEntries);
+      const definitions = {};
       const termNodes = (
         await Promise.all(vocabs.map((node) => this.getTermNodes(node)))
       ).flat();
+
       const properties = {
         taxonomyTags: {
           title: taxonomyName,
@@ -40,10 +33,9 @@ function factory() {
           minItems: 1,
           items: {
             type: "object",
-            anyOf: termNodes.map((node) => {
-              const guid = this.core.getGuid(node);
-              return this.getGuidRef(guid);
-            }),
+            anyOf: await Promise.all(
+              termNodes.map((node) => this.getTermSchema(node))
+            ),
           },
         },
       };
@@ -53,75 +45,57 @@ function factory() {
         definitions,
       };
 
-      const hiddenProperties = this.getConstantProperties().map(([name]) => [
-        name,
-        {
-          "ui:widget": "hidden",
-        },
-      ]);
-      const defHiddenProperties = Object.fromEntries(
-        Object.keys(definitions).map((name) => [name, hiddenProperties])
-      );
-      const termsUiSchemas = (
-        await Promise.all(termNodes.map((node) => this.getUiSchemaEntry(node)))
-      ).map(([id, value]) => value);
-      const itemsUiSchema = Object.assign(
-        {},
-        ...termsUiSchemas,
-        Object.fromEntries(hiddenProperties)
-      );
       const uiSchema = {
         taxonomyTags: {
-          items: itemsUiSchema,
+          items: {}, // TODO: can we hide the title shown under the dropdown?
         },
       };
       return { schema, uiSchema };
+    }
+
+    async getTermSchema(node) {
+      const parentTerms = this.getAncestorTerms(node);
+      const schema = {
+        type: "object",
+        // FIXME: we need to figure out how to hide the top title...
+        title: this.core.getAttribute(node, "name"),
+        properties: {},
+        additionalProperties: false,
+      };
+      const termFields = await Promise.all(
+        parentTerms.map((n) => this.getDefinition(n))
+      );
+      const properties = zip(parentTerms, termFields).reduce(
+        (schema, [parent, fields]) => {
+          const name = this.core.getAttribute(parent, "name");
+          return (schema.properties[name] = fields);
+        },
+        schema
+      );
+
+      return schema;
+    }
+
+    getAncestorTerms(node) {
+      const nodes = [node];
+      let parent = this.core.getParent(node);
+      while (this.isTerm(parent) || this.isVocab(parent)) {
+        nodes.unshift(parent);
+        parent = this.core.getParent(parent);
+      }
+      return nodes;
+    }
+
+    async getTermFields(node) {
+      const fieldNodes = (await this.core.loadChildren(node)).filter(
+        (n) => !this.isTerm(n)
+      );
     }
 
     async getTermNodes(node) {
       return (await this.core.loadSubTree(node)).filter((node) =>
         this.isTerm(node)
       );
-    }
-
-    async getUiSchemaEntry(node) {
-      const entries = this.getConstantProperties().map(([name]) => [
-        name,
-        {
-          "ui:widget": "hidden",
-        },
-      ]);
-
-      const fields = (await this.core.loadChildren(node)).filter((child) =>
-        this.isTypeOf(child, "Field")
-      );
-      const childEntries = await Promise.all(
-        fields.map((child) => this.getUiSchemaEntry(child))
-      );
-
-      if (this.isOptionType(node)) {
-        // if we are an enum or set, our children ui schemas should be merged into ours
-        const childSchemas = childEntries.map(([id, schema]) => schema);
-        const mergedChildren = Object.assign({}, ...childSchemas);
-        const mergedEntries = this.isSet(node)
-          ? [["items", Object.assign(mergedChildren, { "ui:title": " " })]]
-          : Object.entries(mergedChildren);
-        entries.push(...mergedEntries);
-      } else {
-        entries.push(...childEntries);
-      }
-
-      const isTerm = !this.isTypeOf(node, "Field");
-      if (isTerm) {
-        const parent = this.core.getParent(node);
-        if (parent) {
-          const parentEntry = await this.getUiSchemaEntry(parent);
-          entries.push(parentEntry);
-        }
-      }
-
-      const guid = this.core.getGuid(node);
-      return [guid, Object.fromEntries(entries)];
     }
 
     isTypeOf(node, name) {
@@ -194,6 +168,10 @@ function factory() {
       return node != null && this.core.isTypeOf(node, this.META.Term);
     }
 
+    isVocab(node) {
+      return node != null && this.core.isTypeOf(node, this.META.Vocabulary);
+    }
+
     async getDependentDefinitions(node) {
       const children = await this.core.loadChildren(node);
       if (this.isOptionType(node)) {
@@ -228,6 +206,7 @@ function factory() {
     hasProperties(node) {
       return (
         this.core.isTypeOf(node, this.META.Term) ||
+        this.core.isTypeOf(node, this.META.Vocabulary) ||
         this.core.isTypeOf(node, this.META.CompoundField)
       );
     }
@@ -242,11 +221,10 @@ function factory() {
           type: "object",
           properties,
           required: Object.keys(properties),
+          additionalProperties: false,
         };
       } else if (isFieldOpt) {
-        const [guid, schema] = await this.getFieldSchema(node);
-        schema.default = guid;
-        schema.const = guid;
+        const schema = await this.getFieldSchema(node);
         return schema;
       } else {
         throw new Error("Cannot get definition for " + this.core.getPath(node));
@@ -256,52 +234,26 @@ function factory() {
     async getProperties(node) {
       const isTerm = this.isTerm(node);
       const isFieldOpt = this.isFieldOption(node);
-      const properties =
-        isTerm || isFieldOpt ? this.getConstantPropertiesFor(node) : [];
       const fieldNodes = (await this.core.loadChildren(node)).filter((child) =>
         this.core.isTypeOf(child, this.META.Field)
       );
-
-      // if parent is a term, add it as a property
-      const parent = this.core.getParent(node);
-      if (this.isTerm(parent)) {
-        const guid = this.core.getGuid(parent);
-        properties.push([guid, this.getGuidRef(guid)]);
-      }
-
-      return Object.fromEntries([
-        ...properties,
-        ...(await Promise.all(
-          fieldNodes.map((node) => this.getFieldSchema(node))
-        )),
-      ]);
-    }
-
-    /**
-     * Gets an array of tuples for evaluating a node's constant properties.
-     *
-     * @return {[string, (node: Core.Node) => string][]} An array of property name/value function tuples
-     * @memberof JSONSchemaExporter
-     */
-    getConstantProperties() {
-      return [["ID", (node) => this.core.getGuid(node)]];
-    }
-
-    getConstantPropertiesFor(node) {
-      return this.getConstantProperties().map(([name, valueFn]) =>
-        this.getConstantProperty(name, valueFn(node))
+      const fieldSchemas = await Promise.all(
+        fieldNodes.map((node) => this.getFieldSchema(node))
       );
-    }
+      const fieldNames = fieldNodes.map((n) =>
+        this.core.getAttribute(n, "name")
+      );
+      const properties = Object.fromEntries(zip(fieldNames, fieldSchemas));
+      console.log(
+        "found",
+        fieldNodes.length,
+        "fields for",
+        this.core.getAttribute(node, "name"),
+        (await this.core.loadChildren(node)).length,
+        properties
+      );
 
-    getConstantProperty(name, value) {
-      return [
-        name,
-        {
-          type: "string",
-          const: value,
-          default: value,
-        },
-      ];
+      return properties;
     }
 
     /**
@@ -316,6 +268,7 @@ function factory() {
       const guid = this.core.getGuid(node);
       const baseNode = this.core.getMetaType(node);
       const baseName = this.core.getAttribute(baseNode, "name");
+      let children;
 
       /** @type {{ [key:string]: any }} */
       let fieldSchema = {
@@ -335,54 +288,31 @@ function factory() {
           fieldSchema.type = "string";
           break;
         case "EnumField":
-          fieldSchema.anyOf = await this.getChildrenRefs(node);
+          children = await this.core.loadChildren(node);
+          fieldSchema.anyOf = await Promise.all(
+            children.map((c) => this.getFieldSchema(c))
+          );
           break;
-        case "CompoundField": // TODO: use guid?
-          fieldSchema = this.getGuidRef(guid);
+        case "CompoundField":
+          fieldSchema.type = "object";
+          fieldSchema.properties = {};
+          fieldSchema.properties[name] = await this.getDefinition(node);
+          fieldSchema.additionalProperties = false;
           break;
         case "SetField":
+          children = await this.core.loadChildren(node);
           Object.assign(fieldSchema, {
             type: "array",
             uniqueItems: true,
             items: {
-              default: {
-                ID: await (async () => {
-                  const firstChild = (await this.core.loadChildren(node))[0];
-                  return firstChild != null
-                    ? this.core.getGuid(firstChild)
-                    : undefined;
-                })(),
-              },
-              anyOf: await this.getChildrenRefs(node),
+              anyOf: await Promise.all(
+                children.map((c) => this.getFieldSchema(c))
+              ),
             },
           });
       }
-      return [guid, fieldSchema];
-    }
-
-    /**
-     * Get JSON references to the node's children.
-     *
-     * @param {Core.Node} node The GME node to get child references for
-     * @return {Promise<{ $ref: string }[]>}  JSON references to the `node`'s children
-     * @memberof JSONSchemaExporter
-     */
-    async getChildrenRefs(node) {
-      return (await this.core.loadChildren(node)).map((child) => {
-        const guid = this.core.getGuid(child);
-        return this.getGuidRef(guid);
-      });
-    }
-
-    /**
-     * Gets a JSON ref to the given GUID definition.
-     *
-     * @param {string} guid The GUID to get a ref for
-     * @return {{ $ref: string }} A JSON ref to the GUID definition
-     * @memberof JSONSchemaExporter
-     */
-    getGuidRef(guid) {
-      return { $ref: `#/definitions/${guid}` };
+      console.log({ baseName, fieldSchema });
+      return fieldSchema;
     }
 
     static from(core, node) {
@@ -392,6 +322,15 @@ function factory() {
       );
       return new JSONSchemaExporter(core, meta);
     }
+  }
+
+  function range(len) {
+    return [...new Array(len)].map((_, i) => i);
+  }
+
+  function zip(...lists) {
+    const maxIndex = Math.min(...lists.map((l) => l.length));
+    return range(maxIndex).map((i) => lists.map((l) => l[i]));
   }
 
   return JSONSchemaExporter;

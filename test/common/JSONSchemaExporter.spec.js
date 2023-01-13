@@ -10,17 +10,21 @@ describe("JSONSchemaExporter", function () {
   const ajv = new Ajv();
   const { OmittedProperties, NodeSelections } = Importer;
   const assert = require("assert");
+  const gmeConfig = testFixture.getGmeConfig();
   const path = testFixture.path;
   const SEED_DIR = path.join(__dirname, "..", "..", "src", "seeds");
   const Q = testFixture.Q;
   const logger = testFixture.logger.fork("JSONImporter");
   const projectName = "testProject";
-  const Utils = require('../Utils');
+  const Utils = require("../Utils");
   let project, gmeAuth, storage, commitHash, core;
 
   before(async function () {
     this.timeout(7500);
-    const params = await Utils.initializeProject("JSONSchemaExporter", "taxonomy");
+    const params = await Utils.initializeProject(
+      "JSONSchemaExporter",
+      "taxonomy"
+    );
     gmeAuth = params.gmeAuth;
     storage = params.storage;
     commitHash = params.commitHash;
@@ -37,12 +41,13 @@ describe("JSONSchemaExporter", function () {
     const taxonomy = await Utils.createTaxonomyFromCsv(core, root, csv);
     const exporter = JSONSchemaExporter.from(core, root);
     const { schema, uiSchema } = await exporter.getSchemas(taxonomy);
+    console.log(JSON.stringify(schema, null, 2));
     const validate = ajv.compile(schema);
-    const formatter = await TagFormatter.from(core, taxonomy);
-
-    return async (humanTag) => {
-      const [guidTag] = await formatter.toGuidFormat([humanTag]);
-      return await validate(guidTag);
+    return (tag) => {
+      const completeTags = {
+        taxonomyTags: [tag],
+      };
+      return validate(completeTags);
     };
   }
 
@@ -53,44 +58,27 @@ describe("JSONSchemaExporter", function () {
     });
 
     it("should support string enums", async function () {
-      const taxCsv = `tax,,,
-        ,vocab,,,
-        ,,enumTerm,,
-        ,,,enumProp (enum),
-        ,,,,enumItem1 (text)
-        ,,,,enumItem2 (text)
-        ,,,,enumItem3 (text)`;
+      const taxCsv = `vocab,,,
+        ,enumTerm,,
+        ,,enumProp (enum),
+        ,,,enumItem1 (text)
+        ,,,,itemField (int)
+        ,,,enumItem2 (text)
+        ,enumTerm2,,
+        ,,name (text),
+        ,,enumSubTerm2,
+        ,,,child_name (text)
+        ,enumTerm3,,
+        ,,enumItem3 (text)`;
       const tag = {
-        Tag: "enumTerm",
-        enumProp: "enumItem1",
+        vocab: {
+          enumTerm: {
+            enumProp: { enumItem1: {} },
+          },
+        },
       };
       const validate = await getValidateFn(core, root, taxCsv);
       assert(await validate(tag));
-    });
-
-    it("should convert string to GUID (and back)", async function () {
-      // FIXME: this really belongs in the formatter tests
-      const taxCsv = `tax,,,
-        ,vocab,,,
-        ,,enumTerm,,
-        ,,,enumProp (enum),
-        ,,,,enumItem1 (text)
-        ,,,,enumItem2 (text)
-        ,,,,enumItem3 (text)`;
-      const humanTag = {
-        Tag: "enumTerm",
-        enumProp: "enumItem1",
-      };
-      const taxonomy = await Utils.createTaxonomyFromCsv(core, root, taxCsv);
-      const exporter = JSONSchemaExporter.from(core, root);
-      const { schema, uiSchema } = await exporter.getSchemas(taxonomy);
-      const validate = ajv.compile(schema);
-      const formatter = await TagFormatter.from(core, taxonomy);
-
-      const [guidTag] = await formatter.toGuidFormat([humanTag]);
-      assert(!Object.values(guidTag).includes(humanTag.enumProp));
-      const [humanTag2] = await formatter.toHumanFormat([guidTag]);
-      assert.deepEqual(humanTag, humanTag2);
     });
 
     it("should support compound enums", async function () {
@@ -101,12 +89,15 @@ describe("JSONSchemaExporter", function () {
         ,,,,name (text)
         ,,,enumItem2,
         ,,,,age (int)`;
-      // TODO: how does this work?
       const tag = {
-        Tag: "enumTerm",
-        enumProp: {
-          Tag: "enumItem1",
-          name: "test name",
+        vocab: {
+          enumTerm: {
+            enumProp: {
+              enumItem1: {
+                name: "test name",
+              },
+            },
+          },
         },
       };
       const validate = await getValidateFn(core, root, taxCsv);
@@ -125,31 +116,55 @@ describe("JSONSchemaExporter", function () {
         validate = await getValidateFn(core, root, taxCsv);
       });
 
-      it("should support compound tags", async function () {
+      it("should fail if invalid enum item", async function () {
         const tag = {
-          Tag: "enumTerm",
-          enumProp: {
-            Tag: "compoundEnumOpt",
-            name: "test name",
+          vocab: {
+            enumTerm: {
+              enumProp: {
+                Tag: "compoundEnumOpt",
+                name: "test name",
+              },
+            },
           },
         };
-        assert(await validate(tag));
+        assert(!validate(tag));
+      });
+
+      it("should support compound tags", async function () {
+        const tag = {
+          vocab: {
+            enumTerm: {
+              enumProp: {
+                compoundEnumOpt: {
+                  name: "test name",
+                },
+              },
+            },
+          },
+        };
+        assert(validate(tag));
       });
 
       it("should support string tags", async function () {
         const tag = {
-          Tag: "enumTerm",
-          enumProp: "stringEnumOpt"
+          vocab: {
+            enumTerm: {
+              enumProp: { stringEnumOpt: {} },
+            },
+          },
         };
-        assert(await validate(tag));
+        assert(validate(tag));
       });
 
       it("should error on invalid strings", async function () {
         const tag = {
-          Tag: "enumTerm",
-          enumProp: "invalidString"
+          vocab: {
+            enumTerm: {
+              enumProp: "invalidString",
+            },
+          },
         };
-        assert.rejects(validate(tag));
+        assert(!validate(tag));
       });
     });
   });
