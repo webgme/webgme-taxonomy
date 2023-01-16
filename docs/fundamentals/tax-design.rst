@@ -33,4 +33,4 @@ Taxonomy Evolution
 There is only one thing worst than continual evolution of taxonomies, to decide it early and making wrong choices. Taxonomy evolution will be helped in UDCP the following manner:
 
 1. Taxonomies are also a specific content type that are uploaded into the taxonomy repository. As such, taxonomies can be indexed, versioned and  each uploaded content explicitly linked to the taxonomy version under which its tags were created.
-2. The impact of updates to taxonomies can vary significantly from minimal to breaking existing code or not finding exiting content. Therefore we keep taxonomy updates centralized and use a semantic versioning scheme widely adopted in software that differentiates between major, minor and patch releases. 
+2. The impact of updates to taxonomies can vary significantly from minimal to breaking existing code or not finding existing content. Therefore we keep taxonomy updates centralized and use a semantic versioning scheme widely adopted in software that differentiates between major, minor and patch releases. 
