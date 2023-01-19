@@ -2,7 +2,7 @@ describe("TagFormatter", function () {
   const TagFormatter = require("../../src/common/TagFormatter");
   const assert = require("assert");
   const Utils = require("../Utils");
-  let formatter, nodesByGuid;
+  let formatter, nodesByGuid, storage, gmeAuth;
 
   function keysAtDepth(obj, depth) {
     let objects = [obj];
@@ -17,10 +17,13 @@ describe("TagFormatter", function () {
   }
 
   before(async () => {
-    const { core, project, commitHash } = await Utils.initializeProject(
+    const params = await Utils.initializeProject(
       "TagFormatter",
       "TaxonomyProject"
     );
+    const { core, project, commitHash } = params;
+    storage = params.storage;
+    gmeAuth = params.gmeAuth;
     const root = await Utils.getNewRootNode(project, commitHash, core);
     const csv = `vocab,,,
       ,enumTerm,,
@@ -40,6 +43,11 @@ describe("TagFormatter", function () {
     nodesByGuid = Object.fromEntries(
       formatter._allNodes(formatter.taxonomy).map((node) => [node.guid, node])
     );
+  });
+
+  after(function () {
+    storage.closeDatabase();
+    gmeAuth.unload();
   });
 
   function check(tag, depth) {
