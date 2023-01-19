@@ -107,3 +107,7 @@ export function encodeQueryParams(dict: {[key: string]: string}) {
     .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
     .join('&');
 }
+
+export function isObject(thing) {
+  return typeof thing === 'object' && !Array.isArray(thing);
+}

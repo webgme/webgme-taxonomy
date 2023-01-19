@@ -6,6 +6,7 @@
     filterMap,
     openUrl,
     encodeQueryParams,
+    isObject,
   } from "./Utils";
   import Textfield from "@smui/textfield";
   import IconButton from "@smui/icon-button";
@@ -279,6 +280,7 @@
         taxonomyTags: await formatter.toHumanFormat(appendItem.taxonomyTags),
       };
     } catch (err) {
+      displayError(err);
       if (err instanceof FormatError) {
         console.warn("Latest artifact has invalid taxonomy tags:", err.message);
       } else {
@@ -319,8 +321,7 @@
       displayMessage("Upload complete!");
       fetchData();
     } catch (err) {
-      console.log(err);
-      displayErrorMsg(`Unable to upload: ${err.message}`);
+      displayError(err);
     }
     clearProgressMessage(updMsgId);
   }
@@ -405,7 +406,7 @@
       const url = await storage.getDownloadUrl(artifactSet.id, ...artifactIds);
       openUrl(url);
     } catch (err) {
-      return displayErrorMsg(err.message);
+      return displayError(err);
     }
   }
 
@@ -433,6 +434,22 @@
         node: configuration.contentTypePath,
       });
     openUrl(url);
+  }
+
+  function getTagDisplayName(tag) {
+    // FIXME: there is no way to tell the difference btwn terms and compound fields...
+    let currentTag = tag;
+    const tagNames = [];
+    while (currentTag) {
+      const [name, tag] =
+        Object.entries(currentTag).find(([name, data]) => isObject(data)) || [];
+      currentTag = tag;
+      if (name) {
+        tagNames.push(name);
+      }
+    }
+
+    return tagNames.pop(); // Only return the most specific one for now...
   }
 </script>
 
@@ -462,7 +479,7 @@
     <p>
       Taxonomy Terms <span style="font-style:italic">(optional)</span>:<br />
       {appendMetadata
-        ? appendMetadata.taxonomyTags.map((tag) => tag.Tag).join(", ")
+        ? appendMetadata.taxonomyTags.map(getTagDisplayName).join(", ")
         : ""}
     </p>
     <Dropzone on:drop={onAppendTagsFileDrop} accept=".json">
