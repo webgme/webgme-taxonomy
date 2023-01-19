@@ -1,17 +1,17 @@
 /*globals define, WebGMEGlobal*/
 
 define([
-  "./lib/react-jsonschema-form",
+  "./lib/jsonschema-form.umd",
   "./lib/react-dom.production.min",
-  "./lib/validator-ajv8.production.min",
   "react",
   "webgme-taxonomy/TagCreatorForm",
   "css!./styles/TagCreatorWidget.css",
-], function (JSONSchemaForm, ReactDOM, validator, React, TagCreatorForm) {
+], function (JSONSchemaForm, ReactDOM, React, TagCreatorForm) {
   "use strict";
 
   const WIDGET_CLASS = "tag-creator";
-  TagCreatorForm.inject(React, ReactDOM, JSONSchemaForm);
+  const { Form, validator } = JSONSchemaForm;
+  TagCreatorForm.inject(React, ReactDOM, Form, validator);
   const FormRenderData = TagCreatorForm.FormRenderData;
 
   class TagCreatorWidget {
