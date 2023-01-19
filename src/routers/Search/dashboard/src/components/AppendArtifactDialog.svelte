@@ -1,3 +1,7 @@
+<!--
+  @component
+  A dialog for appending artifacts to a set.
+-->
 <script lang="ts">
   import Dialog, { Content, Title, Actions } from "@smui/dialog";
   import Textfield from "@smui/textfield";
@@ -8,15 +12,20 @@
   import { isObject, readFile } from "../Utils";
   import TagFormatter, { FormatError } from "../Formatter";
   import type Storage from "../Storage";
+
+  /** Event type for dropping files onto a dropzone. */
   type DropEvent = CustomEvent<{ acceptedFiles: File[] }>;
 
   const dispatch = createEventDispatcher();
   const storage: Storage = getContext("storage");
   const formatter = new TagFormatter();
 
+  /** The artifact set to append a new artifact to. Null to hide dialog.*/
   export let set: { displayName: string, taxonomyTags: any[] } | null = null;
+  /** The content type name for the artifact set to append to. */
   export let contentType: string;
 
+  /** The files to append as an artifact to this artifact set. */
   let files: File[] = [];
   let metadata: any;
 
