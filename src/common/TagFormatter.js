@@ -186,7 +186,9 @@ function factory(Importer) {
 if (typeof define !== "undefined") {
   define(["webgme-json-importer/JSONImporter"], factory);
 } else {
-  const { requirejs } = require("webgme");
-  const Importer = requirejs("webgme-json-importer/JSONImporter");
+  const webgme = require("webgme");
+  const config = require("../../config");
+  webgme.addToRequireJsPaths(config);
+  const Importer = webgme.requirejs("webgme-json-importer/JSONImporter");
   module.exports = factory(Importer);
 }
