@@ -235,8 +235,8 @@ function factory() {
     /**
      * Get the properties field for a given node.
      *
-     * @param {Core.Node} node A field node to get JSON schema for
-     * @return {Promise<[string, { [key:string]: any }]>} A promise for guid/schema tuple
+     * @param {Core.Node} node A field node to get properties for
+     * @return {Promise<{ [key:string]: any }>} A promise for properties dict
      * @memberof JSONSchemaExporter
      */
     async getProperties(node) {
@@ -257,14 +257,13 @@ function factory() {
      * Get the JSON Schema for field node.
      *
      * @param {Core.Node} node A field node to get JSON schema for
-     * @return {Promise<[string, { [key:string]: any }]>} A promise for guid/schema tuple
+     * @return {Promise<{ [key:string]: any }>} A promise for schema
      * @memberof JSONSchemaExporter
      */
     async getFieldSchema(node) {
       const name = this.core.getAttribute(node, "name");
       const baseNode = this.core.getMetaType(node);
       const baseName = this.core.getAttribute(baseNode, "name");
-      let children;
 
       /** @type {{ [key:string]: any }} */
       let fieldSchema = {
@@ -284,10 +283,7 @@ function factory() {
           fieldSchema.type = "string";
           break;
         case "EnumField":
-          children = await this.core.loadChildren(node);
-          fieldSchema.anyOf = await Promise.all(
-            children.map((c) => this.getFieldSchema(c))
-          );
+          Object.assign(fieldSchema, await this._getAnyOfSchema(node));
           break;
         case "CompoundField":
           fieldSchema.type = "object";
@@ -296,18 +292,46 @@ function factory() {
           fieldSchema.additionalProperties = false;
           break;
         case "SetField":
-          children = await this.core.loadChildren(node);
           Object.assign(fieldSchema, {
             type: "array",
             uniqueItems: true,
-            items: {
-              anyOf: await Promise.all(
-                children.map((c) => this.getFieldSchema(c))
-              ),
-            },
+            items: await this._getAnyOfSchema(node),
           });
       }
       return fieldSchema;
+    }
+
+    /**
+     * Get a partial JSON schema allowing any of the node's children.
+     *
+     * @param {Core.Node} node A field node to get JSON schema for
+     * @return {Promise<{ [key:string]: any }>} A promise for schema w/ anyOf, default fields
+     * @memberof JSONSchemaExporter
+     */
+    async _getAnyOfSchema(node) {
+      const children = await this.core.loadChildren(node);
+      const childSchemas = await Promise.all(
+        children.map((c) => this.getFieldSchema(c))
+      );
+      return {
+        anyOf: childSchemas,
+        default: this._getDefault(childSchemas[0]),
+      };
+    }
+
+    _getDefault(fieldSchema) {
+      if (fieldSchema.default) {
+        return fieldSchema.default;
+      }
+
+      if (fieldSchema.properties) {
+        return Object.fromEntries(
+          Object.entries(fieldSchema.properties).map(([k, v]) => [
+            k,
+            this._getDefault(v),
+          ])
+        );
+      }
     }
 
     static from(core, node) {
