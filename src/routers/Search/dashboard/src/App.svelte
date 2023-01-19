@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { setContext } from "svelte";
   import { FilterTag, LeanTag, fromDict } from "./tags";
   import TopAppBar, { Row, Section, Title } from "@smui/top-app-bar";
   import {
@@ -44,7 +45,8 @@
 
   import TagFormatter, { FormatError } from "./Formatter";
   import Storage, { ModelError, RequestError } from "./Storage";
-  const storage = new Storage();
+  const storage = setContext("storage", new Storage());
+  
   let allItems = [];
   let items = [];
 
