@@ -162,11 +162,6 @@ function factory(Importer) {
       super(`Tag not found: ${tagName}`);
     }
   }
-  class PropertyNotFoundError extends FormatError {
-    constructor(guid, name) {
-      super(`Property "${name}" not found in ${guid}`);
-    }
-  }
   class EnumNotFoundError extends FormatError {
     constructor(guid, name) {
       super(`Enum option "${name}" not found in ${guid}`);
@@ -174,11 +169,6 @@ function factory(Importer) {
   }
 
   TagFormatter.FormatError = FormatError;
-  function omit(obj, ...keys) {
-    return Object.fromEntries(
-      Object.entries(obj).filter(([k /*v*/]) => !keys.includes(k))
-    );
-  }
 
   function assert(cond, err) {
     if (!cond) throw err;
