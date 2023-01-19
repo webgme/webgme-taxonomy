@@ -4,7 +4,7 @@ export default class TagFormatter {
   constructor() {
     this.baseUrl = window.location.href
       .replace("Search", "TagFormat")
-      .replace(/static.*$/, "human");
+      .replace(/[^\/]+\/static.*$/, "human");
   }
 
   async toHumanFormat(tags: any[]) {
