@@ -23,7 +23,6 @@ function factory() {
     }
 
     async getVocabSchemas(vocabs, taxonomyName) {
-      const definitions = {};
       const termNodes = (
         await Promise.all(vocabs.map((node) => this.getTermNodes(node)))
       ).flat();
@@ -45,7 +44,6 @@ function factory() {
       const schema = {
         type: "object",
         properties,
-        definitions,
       };
 
       const uiSchema = {
