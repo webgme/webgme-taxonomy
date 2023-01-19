@@ -1,3 +1,6 @@
+/*globals define*/
+/*eslint-env node, browser*/
+// @ts-check
 function factory() {
   const optionTypes = ["EnumField", "SetField"];
 
@@ -231,9 +234,14 @@ function factory() {
       }
     }
 
+    /**
+     * Get the properties field for a given node.
+     *
+     * @param {Core.Node} node A field node to get JSON schema for
+     * @return {Promise<[string, { [key:string]: any }]>} A promise for guid/schema tuple
+     * @memberof JSONSchemaExporter
+     */
     async getProperties(node) {
-      const isTerm = this.isTerm(node);
-      const isFieldOpt = this.isFieldOption(node);
       const fieldNodes = (await this.core.loadChildren(node)).filter((child) =>
         this.core.isTypeOf(child, this.META.Field)
       );
@@ -256,7 +264,6 @@ function factory() {
      */
     async getFieldSchema(node) {
       const name = this.core.getAttribute(node, "name");
-      const guid = this.core.getGuid(node);
       const baseNode = this.core.getMetaType(node);
       const baseName = this.core.getAttribute(baseNode, "name");
       let children;
