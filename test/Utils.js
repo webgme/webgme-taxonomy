@@ -1,4 +1,4 @@
-const Q = require('q');
+import {ninvoke} from 'q';
 
 let counter = 1;
 
@@ -7,8 +7,8 @@ const Utils = {
     const branchName = "test" + counter++;
     await project.createBranch(branchName, commitHash);
     const branchHash = await project.getBranchHash(branchName);
-    const commit = await Q.ninvoke(project, "loadObject", branchHash);
-    return await Q.ninvoke(core, "loadRoot", commit.root);
+    const commit = await ninvoke(project, "loadObject", branchHash);
+    return await ninvoke(core, "loadRoot", commit.root);
   }
 };
 

@@ -41,7 +41,7 @@
   let vocabularies: TaxonomyData[] = [];
 
   import TagFormatter, { FormatError } from "./Formatter";
-  import Storage, { RequestError } from "./Storage";
+  import Storage, { ModelError, RequestError } from "./Storage";
   const storage = new Storage();
   let allItems = [];
   let items = [];
@@ -136,7 +136,7 @@
       const response = await fetch(url);
       return await response.json();
     } catch (err) {
-      displayError(
+      displayErrorMsg(
         "An error occurred. Please double check the URL and try again."
       );
       throw err;
@@ -152,7 +152,24 @@
     return vocabs;
   }
 
-  function displayError(msg: string) {
+  function displayError(err: Error) {
+    if (err instanceof ModelError) {
+      const url = location.origin + "?" + err.context.toQueryParams();
+      const toastHtml = `
+        <strong>Configuration Error Detected</strong>
+        <br/>
+        ${err.message}
+        <br/>
+        Click <a href="${url}" target="_blank">here</a> to open project.`;
+      toast.push(toastHtml, { initial: 0, classes: ["warn"] }); // background red
+    } else if (err instanceof RequestError) {
+      displayErrorMsg(err.message);
+    } else {
+      displayErrorMsg("An error occurred. Please try again later");
+    }
+  }
+
+  function displayErrorMsg(msg: string) {
     toast.push(msg, { classes: ["warn"] }); // background red
   }
 
@@ -195,13 +212,11 @@
         set.children = validArtifacts;
       });
     } catch (err) {
-      const errMessage =
-        err instanceof RequestError
-          ? err.message
-          : "An error occurred. Please try again later";
-      displayError(errMessage);
+      console.log("model error", err instanceof ModelError);
+      displayError(err);
 
-      if (!(err instanceof RequestError)) {
+      // TODO: combine request error and model error (shared parent)...
+      if (!(err instanceof RequestError || err instanceof ModelError)) {
         throw err;
       }
     }
@@ -293,7 +308,7 @@
 
   async function onAppendClicked() {
     if (!appendFiles) {
-      return displayError(`${contentType} file required.`);
+      return displayErrorMsg(`${contentType} file required.`);
     }
 
     const metadata = appendMetadata;
@@ -305,7 +320,7 @@
       fetchData();
     } catch (err) {
       console.log(err);
-      displayError(`Unable to upload: ${err.message}`);
+      displayErrorMsg(`Unable to upload: ${err.message}`);
     }
     clearProgressMessage(updMsgId);
   }
@@ -352,7 +367,7 @@
     }
     // TODO: re-enable this once they can create datasets on their own
     //if (artifactFiles.length === 0) {
-    //  return displayError("No dataset files provided");
+    //  return displayErrorMsg("No dataset files provided");
     //}
     //uploadMetadata.displayName = artifactName;
     //await storage.createArtifact(uploadMetadata, artifactFiles);
@@ -382,7 +397,7 @@
     const { artifactSet, artifactIds } = event;
     try {
       if (artifactIds.length === 0) {
-        return displayError("Nothing to download: No data found.");
+        return displayErrorMsg("Nothing to download: No data found.");
       }
       displayMessage(
         `Downloading ${artifactIds.length} from ${artifactSet.displayName}...`
@@ -390,7 +405,7 @@
       const url = await storage.getDownloadUrl(artifactSet.id, ...artifactIds);
       openUrl(url);
     } catch (err) {
-      return displayError(err.message);
+      return displayErrorMsg(err.message);
     }
   }
 

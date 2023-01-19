@@ -12,13 +12,14 @@ const SUPPORTED_ADAPTERS = Object.fromEntries(
 const assert = require("assert");
 
 class Adapters {
-  static async from(core, contentTypeNode, req, config) {
-    const storageNode = (await core.loadChildren(contentTypeNode)).find(
-      (child) => isTypeOf(core, child, "Storage")
+  static async from(gmeContext, req, config) {
+    const { core, contentType } = gmeContext;
+    const storageNode = (await core.loadChildren(contentType)).find((child) =>
+      isTypeOf(core, child, "Storage")
     );
 
     if (!storageNode) {
-      throw new StorageNotFoundError(core, contentTypeNode);
+      throw new StorageNotFoundError(gmeContext, contentType);
     }
 
     const adapterType = core.getAttribute(
@@ -33,7 +34,7 @@ class Adapters {
         400
       )
     );
-    return await Adapter.from(core, storageNode, req, config);
+    return await Adapter.from(gmeContext, storageNode, req, config);
   }
 }
 

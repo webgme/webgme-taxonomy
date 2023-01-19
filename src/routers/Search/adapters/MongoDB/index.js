@@ -3,18 +3,11 @@
  * in documents along with any contained artifacts.
  */
 const fetch = require("node-fetch");
-const { zip, COMPRESSION_LEVEL } = require("zip-a-folder");
 const fs = require("fs");
 const _ = require("underscore");
 const path = require("path");
-const os = require("os");
 const fsp = require("fs/promises");
-const RouterUtils = require("../../../../common/routers/Utils");
 const { FormatError } = require("../../../../common/TagFormatter");
-const { pipeline } = require("stream");
-const { promisify } = require("util");
-const streamPipeline = promisify(pipeline);
-const DownloadFile = require("../common/DownloadFile");
 const { Artifact, ArtifactSet } = require("../common/Artifact");
 const { MissingAttributeError } = require("../common/ModelError");
 
@@ -169,10 +162,11 @@ class MongoAdapter extends Adapter {
     await streamClose(stream);
   }
 
-  static from(core, storageNode) {
+  static from(gmeContext, storageNode) {
+    const { core } = gmeContext;
     const collection = core.getAttribute(storageNode, "collection");
     if (!collection) {
-      throw new MissingAttributeError(core, storageNode, "collection");
+      throw new MissingAttributeError(gmeContext, storageNode, "collection");
     }
 
     const mongoUri = core.getAttribute(storageNode, "URI");

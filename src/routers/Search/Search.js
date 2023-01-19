@@ -90,20 +90,13 @@ function initialize(middlewareOpts) {
     RouterUtils.getContentTypeRoutes("artifacts/"),
     // TODO: add the artifact ID...
     RouterUtils.handleUserErrors(logger, async function (req, res) {
-      try {
-        const { core, contentType } = req.webgmeContext;
-        const storage = await StorageAdapter.from(
-          core,
-          contentType,
-          req,
-          mainConfig
-        );
-        const artifacts = await storage.listArtifacts();
-        res.status(200).json(artifacts).end();
-      } catch (e) {
-        logger.error(e.stack);
-        res.sendStatus(401);
-      }
+      const storage = await StorageAdapter.from(
+        req.webgmeContext,
+        req,
+        mainConfig
+      );
+      const artifacts = await storage.listArtifacts();
+      res.status(200).json(artifacts).end();
     })
   );
 
@@ -117,10 +110,8 @@ function initialize(middlewareOpts) {
         projectId: req.params.projectId,
         branch: req.params.branch,
       };
-      const { core, contentType } = req.webgmeContext;
       const storage = await StorageAdapter.from(
-        core,
-        contentType,
+        req.webgmeContext,
         req,
         mainConfig
       );
@@ -135,10 +126,8 @@ function initialize(middlewareOpts) {
     convertTaxonomyTags,
     RouterUtils.handleUserErrors(logger, async function (req, res) {
       const { parentId } = req.params;
-      const { core, contentType } = req.webgmeContext;
       const storage = await StorageAdapter.from(
-        core,
-        contentType,
+        req.webgmeContext,
         req,
         mainConfig
       );
@@ -166,10 +155,8 @@ function initialize(middlewareOpts) {
     ),
     RouterUtils.handleUserErrors(logger, async function (req, res) {
       const { parentId, index, fileId } = req.params;
-      const { core, contentType } = req.webgmeContext;
       const storage = await StorageAdapter.from(
-        core,
-        contentType,
+        req.webgmeContext,
         req,
         mainConfig
       );
@@ -191,12 +178,11 @@ function initialize(middlewareOpts) {
         return res.status(400).send("List of artifact IDs required");
       }
 
-      const { root, core, contentType } = req.webgmeContext;
+      const { root, core } = req.webgmeContext;
       const node = await Utils.findTaxonomyNode(core, root);
       const formatter = await TagFormatter.from(core, node);
       const storage = await StorageAdapter.from(
-        core,
-        contentType,
+        req.webgmeContext,
         req,
         mainConfig
       );

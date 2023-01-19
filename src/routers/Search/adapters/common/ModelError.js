@@ -1,32 +1,47 @@
-const { UserError } = require("../../../common/routers/Utils");
+const { UserError } = require("../../../../common/routers/Utils");
 const UNPROCESSABLE_ENTITY = 422;
 
 class ModelError extends UserError {
-  constructor(nodeId, msg) {
+  constructor(context, msg) {
     super(msg, UNPROCESSABLE_ENTITY);
-    this.nodeId = nodeId;
+    this.modelContext = context;
   }
 
   sendVia(response) {
-    response.status(this.statusCode).json(JSON.stringify(this));
+    const data = {
+      message: this.message,
+      context: this.modelContext,
+    };
+    response.status(this.statusCode).json(data);
+  }
+
+  static getContext(gmeContext, node) {
+    const { core, project, branchName } = gmeContext;
+    return {
+      projectId: project.projectId,
+      branch: branchName, // TODO: add support for more types of references to a project
+      nodeId: core.getPath(node),
+    };
   }
 }
 
 class MissingAttributeError extends ModelError {
-  constructor(core, node, attrName) {
-    const nodeId = core.getPath(node);
+  constructor(gmeContext, node, attrName) {
+    const { core } = gmeContext;
     const name = core.getAttribute(node, "name");
     const msg = `No ${attrName} specified for ${name}`;
-    super(nodeId, msg);
+    const context = ModelError.getContext(gmeContext, node);
+    super(context, msg);
   }
 }
 
 class StorageNotFoundError extends ModelError {
-  constructor(core, contentTypeNode) {
-    const nodeId = core.getPath(contentTypeNode);
+  constructor(gmeContext, contentTypeNode) {
+    const { core } = gmeContext;
     const name = core.getAttribute(contentTypeNode, "name");
     const msg = `No storage configured for ${name}`;
-    super(nodeId, msg);
+    const context = ModelError.getContext(gmeContext, node);
+    super(context, msg);
   }
 }
 
