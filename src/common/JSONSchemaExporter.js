@@ -48,7 +48,7 @@ function factory() {
 
       const uiSchema = {
         taxonomyTags: {
-          items: {}, // TODO: can we hide the title shown under the dropdown?
+          items: {},
         },
       };
       return { schema, uiSchema };
