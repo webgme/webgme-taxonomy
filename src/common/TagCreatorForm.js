@@ -1,5 +1,5 @@
 function factory() {
-  let React, ReactDOM, JSONSchemaForm;
+  let React, ReactDOM, JSONSchemaForm, validator;
 
   class TagCreatorForm {
     constructor(element) {
@@ -7,7 +7,6 @@ function factory() {
     }
 
     render(data) {
-      const Form = JSONSchemaForm.default;
       const children = React.createElement("div", null, [
         ...data.buttons,
         React.createElement(
@@ -26,7 +25,7 @@ function factory() {
         ),
       ]);
       this.root.render(
-        React.createElement(Form, data.getProperties(), children)
+        React.createElement(JSONSchemaForm, data.getProperties(), children)
       );
     }
 
@@ -145,11 +144,12 @@ function factory() {
       element.remove();
     }
 
-    static inject(_React, _ReactDOM, _JSONSchemaForm) {
+    static inject(_React, _ReactDOM, _JSONSchemaForm, _validator) {
       // dependency injection
       React = _React;
       ReactDOM = _ReactDOM;
       JSONSchemaForm = _JSONSchemaForm;
+      validator = _validator;
     }
   }
 
@@ -186,6 +186,7 @@ function factory() {
         onChange,
         uiSchema: this.uiSchema,
         formData,
+        validator,
       };
     }
   }

@@ -2,7 +2,8 @@ const FormRenderData = TagCreatorForm.FormRenderData;
 let form;
 
 window.onload = function () {
-  TagCreatorForm.inject(React, ReactDOM, JSONSchemaForm);
+  const { Form, validator } = JSONSchemaForm;
+  TagCreatorForm.inject(React, ReactDOM, Form, validator);
 
   const container = document.getElementById("form-container");
   form = new TagCreatorForm(container);

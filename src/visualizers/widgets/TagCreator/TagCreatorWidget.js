@@ -3,10 +3,11 @@
 define([
   "./lib/react-jsonschema-form",
   "./lib/react-dom.production.min",
+  "./lib/validator-ajv8.production.min",
   "react",
   "webgme-taxonomy/TagCreatorForm",
   "css!./styles/TagCreatorWidget.css",
-], function (JSONSchemaForm, ReactDOM, React, TagCreatorForm) {
+], function (JSONSchemaForm, ReactDOM, validator, React, TagCreatorForm) {
   "use strict";
 
   const WIDGET_CLASS = "tag-creator";
