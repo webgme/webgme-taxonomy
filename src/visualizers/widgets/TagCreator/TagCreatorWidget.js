@@ -27,13 +27,12 @@ define([
       this._logger.debug("Widget is resizing...");
     }
 
-    render(schema, uiSchema, formData, downloadData, taxonomyPath, formatter) {
+    render(schema, uiSchema, formData, downloadData, taxonomyPath) {
       const renderData = new FormRenderData(
         schema,
         uiSchema,
         formData,
-        downloadData,
-        formatter
+        downloadData
       );
       if (taxonomyPath) {
         renderData.addButton(
