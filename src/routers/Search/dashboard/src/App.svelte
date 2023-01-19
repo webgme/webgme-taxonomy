@@ -7,6 +7,7 @@
     openUrl,
     encodeQueryParams,
     isObject,
+    readFile,
   } from "./Utils";
   import Textfield from "@smui/textfield";
   import IconButton from "@smui/icon-button";
@@ -354,21 +355,6 @@
     if (tagsFile) {
       uploadMetadata = JSON.parse(await readFile(tagsFile));
     }
-  }
-
-  async function readFile(file: File) {
-    return new Promise<string>((res, rej) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        if (reader.error) {
-          console.log("error:", reader.error);
-          return rej(reader.error);
-        } else {
-          return res(reader.result as string);
-        }
-      };
-      reader.readAsText(file);
-    });
   }
 
   async function onUploadClicked() {
