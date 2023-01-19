@@ -5,6 +5,7 @@
  * and then generate this file automatically from that. However, you can 
  * simply write css if you prefer
  */
+@import url("/extlib/src/routers/TagCreator/form/styles.css");
 
 .tag-creator {
   outline: none; }
