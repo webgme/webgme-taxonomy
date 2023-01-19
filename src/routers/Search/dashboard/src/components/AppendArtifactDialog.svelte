@@ -5,7 +5,7 @@
   import Button, { Label } from "@smui/button";
 
   import { createEventDispatcher, getContext } from "svelte";
-  import { readFile } from "../Utils";
+  import { isObject, readFile } from "../Utils";
   import TagFormatter, { FormatError } from "../Formatter";
   import type Storage from "../Storage";
   type DropEvent = CustomEvent<{ acceptedFiles: File[] }>;
@@ -31,7 +31,7 @@
 
   $: displayName = set?.displayName ?? "";
   $: appendName = displayName;
-  $: if (set != null) setMetadata(set.taxonomyTags);
+  $: if (set != null) setMetadata(set.taxonomyTags ?? []);
 
   async function setMetadata(tags: any[]) {
     try {
@@ -81,6 +81,22 @@
     return dispatch("error", { error });
   }
 
+  function getTagDisplayName(tag) {
+    // FIXME: there is no way to tell the difference btwn terms and compound fields...
+    let currentTag = tag;
+    const tagNames = [];
+    while (currentTag) {
+      const [name, tag] =
+        Object.entries(currentTag).find(([, data]) => isObject(data)) || [];
+      currentTag = tag;
+      if (name) {
+        tagNames.push(name);
+      }
+    }
+
+    return tagNames.pop(); // Only return the most specific one for now...
+  }
+
 </script>
 
 
@@ -107,7 +123,7 @@
     <p>
       Taxonomy Terms <span style="font-style:italic">(optional)</span>:<br />
       {metadata
-        ? metadata.taxonomyTags.map((tag) => tag.Tag).join(", ")
+        ? metadata.taxonomyTags.map(getTagDisplayName).join(", ")
         : ""}
     </p>
 
