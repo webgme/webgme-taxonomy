@@ -1,4 +1,3 @@
-// TODO: add css
 const FormRenderData = TagCreatorForm.FormRenderData;
 let form;
 
