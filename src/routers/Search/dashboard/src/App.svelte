@@ -213,7 +213,6 @@
         set.children = validArtifacts;
       });
     } catch (err) {
-      console.log("model error", err instanceof ModelError);
       displayError(err);
 
       // TODO: combine request error and model error (shared parent)...

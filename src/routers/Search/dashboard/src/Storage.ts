@@ -120,14 +120,12 @@ class ModelContext {
   }
 
   toQueryParams(): string {
-    const params = {
+    const params = new URLSearchParams({
       project : this.projectId,
       branch : this.branch,
       node : this.nodeId,
-    };
-    return Object.entries(params)
-        .map(([ k, v ]) => k + '=' + encodeURIComponent(v))
-        .join('&');
+    });
+    return params.toString();
   }
 }
 
