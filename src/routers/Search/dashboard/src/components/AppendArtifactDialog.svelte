@@ -28,19 +28,21 @@
   /** The files to append as an artifact to this artifact set. */
   let files: File[] = [];
   let metadata: any;
-
-  const acccessors = {
-    get open() { return set != null },
-    set open(val: boolean) { 
-      if (!val && (set != null)) {
-        set = null;
-      }
-    }
-  };
+  let open = false;
 
   $: displayName = set?.displayName ?? "";
   $: appendName = displayName;
+  $: setOpen(set != null);
+  $: if (!open) clearSet();
   $: if (set != null) setMetadata(set.taxonomyTags ?? []);
+
+  function setOpen(value: boolean) {
+    if (value !== open) open = value;
+  }
+  
+  function clearSet() {
+    if (set != null) set = null;
+  }
 
   async function setMetadata(tags: any[]) {
     try {
@@ -110,7 +112,7 @@
 
 
 <Dialog
-  bind:open={acccessors.open}
+  bind:open
   aria-labelledby="title"
   aria-describedby="content"
 >
