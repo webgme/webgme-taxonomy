@@ -137,7 +137,7 @@
       const response = await fetch(url);
       return await response.json();
     } catch (err) {
-      displayErrorMsg(
+      displayError(
         "An error occurred. Please double check the URL and try again."
       );
       throw err;
@@ -153,8 +153,11 @@
     return vocabs;
   }
 
-  function displayError(err: Error) {
+  function displayError(err: string | Error) {
+    const toastOpts = { initial: 0, classes: ["warn"] }; // background red
+
     if (err instanceof ModelError) {
+      // display clickable dialog
       const url = location.origin + "?" + err.context.toQueryParams();
       const toastHtml = `
         <strong>Configuration Error Detected</strong>
@@ -162,16 +165,18 @@
         ${err.message}
         <br/>
         Click <a href="${url}" target="_blank">here</a> to open project.`;
-      toast.push(toastHtml, { initial: 0, classes: ["warn"] }); // background red
-    } else if (err instanceof RequestError) {
-      displayErrorMsg(err.message);
+      toast.push(toastHtml, toastOpts);
+    } else if (err instanceof Error) {
+      // display basic error message
+      let msg =
+        err instanceof RequestError
+          ? err.message
+          : "An error occurred. Please try again later";
+      toast.push(msg, toastOpts);
     } else {
-      displayErrorMsg("An error occurred. Please try again later");
+      // display basic error message
+      toast.push(err, toastOpts);
     }
-  }
-
-  function displayErrorMsg(msg: string) {
-    toast.push(msg, { classes: ["warn"] }); // background red
   }
 
   function displayMessage(msg: string) {
@@ -309,7 +314,7 @@
 
   async function onAppendClicked() {
     if (!appendFiles) {
-      return displayErrorMsg(`${contentType} file required.`);
+      return displayError(`${contentType} file required.`);
     }
 
     const metadata = appendMetadata;
@@ -367,7 +372,7 @@
     }
     // TODO: re-enable this once they can create datasets on their own
     //if (artifactFiles.length === 0) {
-    //  return displayErrorMsg("No dataset files provided");
+    //  return displayError("No dataset files provided");
     //}
     //uploadMetadata.displayName = artifactName;
     //await storage.createArtifact(uploadMetadata, artifactFiles);
@@ -397,7 +402,7 @@
     const { artifactSet, artifactIds } = event;
     try {
       if (artifactIds.length === 0) {
-        return displayErrorMsg("Nothing to download: No data found.");
+        return displayError("Nothing to download: No data found.");
       }
       displayMessage(
         `Downloading ${artifactIds.length} from ${artifactSet.displayName}...`
@@ -441,7 +446,7 @@
     const tagNames = [];
     while (currentTag) {
       const [name, tag] =
-        Object.entries(currentTag).find(([name, data]) => isObject(data)) || [];
+        Object.entries(currentTag).find(([, data]) => isObject(data)) || [];
       currentTag = tag;
       if (name) {
         tagNames.push(name);
