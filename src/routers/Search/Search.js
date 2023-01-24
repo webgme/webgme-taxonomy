@@ -206,6 +206,7 @@ function initialize(middlewareOpts) {
         return false;
       } catch (err) {
         // no files associated with the artifact
+        logger.error(err);
         res.sendStatus(204);
       }
     })
