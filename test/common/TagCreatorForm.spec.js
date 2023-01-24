@@ -101,17 +101,135 @@ describe("TagCreatorForm", function () {
       const schema = { type: "string", default: "hello" };
       assert.deepEqual(
         TagForm.prototype._setMissingDefaults(schema, {}, null),
-        schema.default
+        schema.default,
       );
     });
 
     it("should set default in array", function () {
       const schema = getSchema("simpleTag");
-      const defaults = TagForm.prototype.setMissingDefaults(schema, {
+      const form = Object.create(TagForm.prototype);
+      const defaults = form.setMissingDefaults(schema, {
         taxonomyTags: [null],
       });
       assert.equal(defaults.taxonomyTags.length, 1);
       assert.equal(defaults.taxonomyTags[0].field, "hello");
+    });
+  });
+
+  describe("hasConflictingProp", function () {
+    let schema = {
+      "type": "object",
+      "title": "validity",
+      "properties": {
+        "Base": {
+          "title": "Base",
+          "type": "object",
+          "properties": {
+            "validity": {
+              "title": "validity",
+              "type": "object",
+              "properties": {
+                "value": {
+                  "title": "value",
+                  "anyOf": [
+                    {
+                      "title": "deleted",
+                      "type": "object",
+                      "properties": {
+                        "deleted": {
+                          "title": "deleted",
+                          "type": "object",
+                          "properties": {},
+                          "required": [],
+                          "additionalProperties": false,
+                        },
+                      },
+                      "additionalProperties": false,
+                    },
+                    {
+                      "title": "valid",
+                      "type": "object",
+                      "properties": {
+                        "valid": {
+                          "title": "valid",
+                          "type": "object",
+                          "properties": {},
+                          "required": [],
+                          "additionalProperties": false,
+                        },
+                      },
+                      "additionalProperties": false,
+                    },
+                    {
+                      "title": "timelapsed",
+                      "type": "object",
+                      "properties": {
+                        "timelapsed": {
+                          "title": "timelapsed",
+                          "type": "object",
+                          "properties": {},
+                          "required": [],
+                          "additionalProperties": false,
+                        },
+                      },
+                      "additionalProperties": false,
+                    },
+                    {
+                      "title": "invalid",
+                      "type": "object",
+                      "properties": {
+                        "invalid": {
+                          "title": "invalid",
+                          "type": "object",
+                          "properties": {},
+                          "required": [],
+                          "additionalProperties": false,
+                        },
+                      },
+                      "additionalProperties": false,
+                    },
+                    {
+                      "title": "corrupted",
+                      "type": "object",
+                      "properties": {
+                        "corrupted": {
+                          "title": "corrupted",
+                          "type": "object",
+                          "properties": {},
+                          "required": [],
+                          "additionalProperties": false,
+                        },
+                      },
+                      "additionalProperties": false,
+                    },
+                  ],
+                },
+              },
+              "required": [
+                "value",
+              ],
+              "additionalProperties": false,
+            },
+          },
+          "required": [],
+          "additionalProperties": false,
+        },
+      },
+      "additionalProperties": false,
+    };
+    const object = {
+      "Base": {
+        "validity": {
+          "value": {
+            "valid": {},
+          },
+        },
+      },
+    };
+
+    it("should verify valid nested props", function () {
+      const form = Object.create(TagForm.prototype);
+      assert(!form._hasConflictingProp(schema, {}, object));
     });
   });
 });
