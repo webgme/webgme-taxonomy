@@ -59,14 +59,18 @@ function factory() {
           this._setMissingDefaults(schema.items, definitions, md)
         );
       } else if (schema.type === "object") {
-        const properties = this._getObjectProperties(schema, definitions);
+        const properties = this._getObjectProperties(
+          schema,
+          definitions,
+          metadata,
+        );
         if (properties) {
           const data = metadata || {};
           return Object.fromEntries(
             Object.entries(properties).map(([id, val]) => [
               id,
               this._setMissingDefaults(val, definitions, data[id]),
-            ])
+            ]),
           );
         } else if (metadata === null || metadata === undefined) {
           return this._getDefaultValue(schema, definitions) || {};
@@ -88,13 +92,17 @@ function factory() {
      *     anyOf: [{someDefaultObjectWithProps}]
      *   }
      */
-    _getObjectProperties(schema, definitions) {
+    _getObjectProperties(schema, definitions, metadata) {
       if (schema.properties) {
         return schema.properties;
       }
 
       if (schema.anyOf) {
-        return this._getObjectProperties(schema.anyOf[0], definitions);
+        // filter out non-matches and return the first
+        const validSchemas = schema.anyOf.filter((s) =>
+          !this._hasConflictingProp(s, definitions, metadata)
+        );
+        return this._getObjectProperties(validSchemas[0], definitions);
       }
 
       if (schema.$ref) {
@@ -103,6 +111,30 @@ function factory() {
       }
     }
 
+    _hasConflictingProp(schema, definitions, metadata) {
+      const propDict = this._getObjectProperties(
+        schema,
+        definitions,
+        metadata,
+      );
+      const validProps = Object.keys(propDict);
+      const properties = Object.keys(metadata);
+      const invalidProp = properties.find((prop) => {
+        if (!validProps.includes(prop)) {
+          return true;
+        }
+
+        const value = metadata[prop];
+        if (typeof schema === "object") {
+          const valueSchema = propDict[prop];
+          return this._hasConflictingProp(valueSchema, definitions, value);
+        }
+
+        return false;
+      });
+
+      return !!invalidProp;
+    }
     /**
      * Get the default value from a JSON schema element. Follow references to definitions.
      */
@@ -133,8 +165,7 @@ function factory() {
     }
 
     downloadJSON(object, name = "tags") {
-      const dataStr =
-        "data:text/json;charset=utf-8," +
+      const dataStr = "data:text/json;charset=utf-8," +
         encodeURIComponent(JSON.stringify(object));
       const element = document.createElement("a");
       element.setAttribute("href", dataStr);
@@ -173,8 +204,8 @@ function factory() {
               action(this.formData);
             },
           },
-          name
-        )
+          name,
+        ),
       );
     }
 
