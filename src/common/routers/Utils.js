@@ -24,30 +24,19 @@ const Utils = {
     console.log("CTX-branch:", branch);
     const context = {};
 
-    const projectList = await safeStorage.getProjects({
-      username: userId,
-    });
-    console.log("CTX-projects: ", projectList);
-    const projectAuthParams = {
-      entityType: safeStorage.authorizer.ENTITY_TYPES.PROJECT,
-    };
-    const authorizations = await Promise.all(
-      projectList.map(
-        async (projectInfo) =>
-          await safeStorage.authorizer.getAccessRights(
-            userId,
-            projectInfo._id,
-            projectAuthParams
-          )
-      )
-    );
-    console.log("CTX-authorizations: ", authorizations);
-
-    context.project = await safeStorage.openProject({
-      username: userId,
-      projectId,
-    });
-    // TODO: throw ProjectNotFoundError if not found or invalid perms
+    try {
+      context.project = await safeStorage.openProject({
+        username: userId,
+        projectId,
+      });
+    } catch (err) {
+      const authError = err.message.includes("authorized");
+      if (authError) {
+        throw new ProjectNotFoundError();
+      } else {
+        throw err;
+      }
+    }
     context.project.setUser(userId);
 
     context.core = new Core(context.project, {
