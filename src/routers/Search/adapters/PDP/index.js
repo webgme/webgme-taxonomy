@@ -16,7 +16,7 @@ const { FormatError } = require("../../../../common/TagFormatter");
 const { pipeline } = require("stream");
 const { promisify } = require("util");
 const streamPipeline = promisify(pipeline);
-const DownloadFile = require("../common/DownloadFile");
+const { MissingAttributeError } = require("../common/ModelError");
 const { Artifact, ArtifactSet } = require("../common/Artifact");
 const CreateRequestLogger = require("./CreateRequestLogger");
 const logFilePath = process.env.CREATE_LOG_PATH || "./CreateProcesses.jsonl";
@@ -420,7 +420,8 @@ class PDP {
     return await response.json();
   }
 
-  static from(core, storageNode, req, gmeConfig) {
+  static from(gmeContext, storageNode, req, gmeConfig) {
+    const { core } = gmeContext;
     // TODO: create the storage adapter from the content type
     // const token = require("./token");
     const token =
@@ -428,6 +429,13 @@ class PDP {
 
     const baseUrl = core.getAttribute(storageNode, "URL");
     const processType = core.getAttribute(storageNode, "processType");
+
+    if (!baseUrl) {
+      throw new MissingAttributeError(gmeContext, storageNode, "URL");
+    }
+    if (!processType) {
+      throw new MissingAttributeError(gmeContext, storageNode, "processType");
+    }
     return new PDP(baseUrl, token, processType);
   }
 }

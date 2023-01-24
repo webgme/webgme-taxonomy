@@ -6,6 +6,7 @@
     filterMap,
     openUrl,
     encodeQueryParams,
+    isObject,
   } from "./Utils";
   import Textfield from "@smui/textfield";
   import IconButton from "@smui/icon-button";
@@ -41,7 +42,7 @@
   let vocabularies: TaxonomyData[] = [];
 
   import TagFormatter, { FormatError } from "./Formatter";
-  import Storage, { RequestError } from "./Storage";
+  import Storage, { ModelError, RequestError } from "./Storage";
   const storage = new Storage();
   let allItems = [];
   let items = [];
@@ -152,8 +153,30 @@
     return vocabs;
   }
 
-  function displayError(msg: string) {
-    toast.push(msg, { classes: ["warn"] }); // background red
+  function displayError(err: string | Error) {
+    const toastOpts = { initial: 0, classes: ["warn"] }; // background red
+
+    if (err instanceof ModelError) {
+      // display clickable dialog
+      const url = location.origin + "?" + err.context.toQueryParams();
+      const toastHtml = `
+        <strong>Configuration Error Detected</strong>
+        <br/>
+        ${err.message}
+        <br/>
+        Click <a href="${url}" target="_blank">here</a> to open project.`;
+      toast.push(toastHtml, toastOpts);
+    } else if (err instanceof Error) {
+      // display basic error message
+      let msg =
+        err instanceof RequestError
+          ? err.message
+          : "An error occurred. Please try again later";
+      toast.push(msg, toastOpts);
+    } else {
+      // display basic error message
+      toast.push(err, toastOpts);
+    }
   }
 
   function displayMessage(msg: string) {
@@ -195,13 +218,10 @@
         set.children = validArtifacts;
       });
     } catch (err) {
-      const errMessage =
-        err instanceof RequestError
-          ? err.message
-          : "An error occurred. Please try again later";
-      displayError(errMessage);
+      displayError(err);
 
-      if (!(err instanceof RequestError)) {
+      // TODO: combine request error and model error (shared parent)...
+      if (!(err instanceof RequestError || err instanceof ModelError)) {
         throw err;
       }
     }
@@ -264,6 +284,7 @@
         taxonomyTags: await formatter.toHumanFormat(appendItem.taxonomyTags),
       };
     } catch (err) {
+      displayError(err);
       if (err instanceof FormatError) {
         console.warn("Latest artifact has invalid taxonomy tags:", err.message);
       } else {
@@ -304,8 +325,7 @@
       displayMessage("Upload complete!");
       fetchData();
     } catch (err) {
-      console.log(err);
-      displayError(`Unable to upload: ${err.message}`);
+      displayError(err);
     }
     clearProgressMessage(updMsgId);
   }
@@ -390,7 +410,7 @@
       const url = await storage.getDownloadUrl(artifactSet.id, ...artifactIds);
       openUrl(url);
     } catch (err) {
-      return displayError(err.message);
+      return displayError(err);
     }
   }
 
@@ -418,6 +438,22 @@
         node: configuration.contentTypePath,
       });
     openUrl(url);
+  }
+
+  function getTagDisplayName(tag) {
+    // FIXME: there is no way to tell the difference btwn terms and compound fields...
+    let currentTag = tag;
+    const tagNames = [];
+    while (currentTag) {
+      const [name, tag] =
+        Object.entries(currentTag).find(([, data]) => isObject(data)) || [];
+      currentTag = tag;
+      if (name) {
+        tagNames.push(name);
+      }
+    }
+
+    return tagNames.pop(); // Only return the most specific one for now...
   }
 </script>
 
@@ -447,7 +483,7 @@
     <p>
       Taxonomy Terms <span style="font-style:italic">(optional)</span>:<br />
       {appendMetadata
-        ? appendMetadata.taxonomyTags.map((tag) => tag.Tag).join(", ")
+        ? appendMetadata.taxonomyTags.map(getTagDisplayName).join(", ")
         : ""}
     </p>
     <Dropzone on:drop={onAppendTagsFileDrop} accept=".json">

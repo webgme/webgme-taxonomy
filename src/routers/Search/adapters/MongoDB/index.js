@@ -3,19 +3,13 @@
  * in documents along with any contained artifacts.
  */
 const fetch = require("node-fetch");
-const { zip, COMPRESSION_LEVEL } = require("zip-a-folder");
 const fs = require("fs");
 const _ = require("underscore");
 const path = require("path");
-const os = require("os");
 const fsp = require("fs/promises");
-const RouterUtils = require("../../../../common/routers/Utils");
 const { FormatError } = require("../../../../common/TagFormatter");
-const { pipeline } = require("stream");
-const { promisify } = require("util");
-const streamPipeline = promisify(pipeline);
-const DownloadFile = require("../common/DownloadFile");
 const { Artifact, ArtifactSet } = require("../common/Artifact");
+const { MissingAttributeError } = require("../common/ModelError");
 
 const mongoUri = require("../../../../../config").mongo.uri;
 const { MongoClient, GridFSBucket, ObjectId } = require("mongodb");
@@ -28,9 +22,9 @@ const {
 } = require("../common/AppendResult");
 
 class MongoAdapter extends Adapter {
-  constructor(mongoUri, collectionName) {
+  constructor(client, collectionName) {
     super();
-    this._client = mongoUri ? new MongoClient(mongoUri) : defaultClient;
+    this._client = client;
     const db = this._client.db();
     const name = `taxonomy_data_${collectionName}`;
     this._collection = db.collection(name);
@@ -168,11 +162,16 @@ class MongoAdapter extends Adapter {
     await streamClose(stream);
   }
 
-  static from(core, storageNode) {
-    const baseUrl = core.getAttribute(storageNode, "URI");
+  static from(gmeContext, storageNode) {
+    const { core } = gmeContext;
     const collection = core.getAttribute(storageNode, "collection");
-    // TODO: throw an error if the collection is not provided
-    return new MongoAdapter(baseUrl, collection);
+    if (!collection) {
+      throw new MissingAttributeError(gmeContext, storageNode, "collection");
+    }
+
+    const mongoUri = core.getAttribute(storageNode, "URI");
+    const client = mongoUri ? new MongoClient(mongoUri) : defaultClient;
+    return new MongoAdapter(client, collection);
   }
 }
 
