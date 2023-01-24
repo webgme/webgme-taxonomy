@@ -27,6 +27,7 @@ const staticPath = path.join(__dirname, "dashboard", "public");
 const os = require("os");
 const { zip, COMPRESSION_LEVEL } = require("zip-a-folder");
 const fsp = require("fs/promises");
+const fs = require("fs");
 
 const StorageAdapter = require("./adapters");
 let mainConfig = null;
@@ -199,13 +200,15 @@ function initialize(middlewareOpts) {
       await fsp.rm(downloadDir, { recursive: true });
 
       try {
-        await fsp.access(zipPath, fsp.constants.R_OK);
-        return res.download(zipPath, path.basename(zipPath), () =>
+        await fsp.access(zipPath, fs.constants.R_OK);
+        res.download(zipPath, path.basename(zipPath), () =>
           fsp.rm(tmpDir, { recursive: true })
         );
+        return false;
       } catch (err) {
         // no files associated with the artifact
-        return res.sendStatus(204);
+        logger.error(err);
+        res.sendStatus(204);
       }
     })
   );

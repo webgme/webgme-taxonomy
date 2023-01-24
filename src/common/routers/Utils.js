@@ -139,8 +139,8 @@ const Utils = {
 function handleUserErrors(logger, fn) {
   return async function (req, res, next) {
     try {
-      await fn(req, res, next);
-      if (!res.headersSent) {
+      const cont = await fn(req, res, next) ?? true;
+      if (cont && !res.headersSent) {
         next();
       }
     } catch (e) {
