@@ -284,6 +284,9 @@ function factory() {
           break;
         case "EnumField":
           Object.assign(fieldSchema, await this._getAnyOfSchema(node));
+          // Currently, setting the default is problematic for enums and results in the default key
+          // always being added (resulting in many validation errors)
+          delete fieldSchema.default;
           break;
         case "CompoundField":
           fieldSchema.type = "object";
