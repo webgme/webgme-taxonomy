@@ -281,7 +281,7 @@
     appendName = appendItem.displayName;
     try {
       appendMetadata = {
-        taxonomyTags: await formatter.toHumanFormat(appendItem.taxonomyTags),
+        taxonomyTags: await formatter.toHumanFormat(appendItem.taxonomyTags ?? []),
       };
     } catch (err) {
       displayError(err);
