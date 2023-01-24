@@ -96,10 +96,7 @@ export function capitalize(word: string): string {
 }
 
 export function openUrl(url: string) {
-    const anchor = document.createElement("a");
-    anchor.setAttribute("href", url);
-    anchor.setAttribute("target", "_blank");
-    anchor.click();
+  return window.open(url, '_blank');
 }
 
 export function encodeQueryParams(dict: {[key: string]: string}) {
