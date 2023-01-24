@@ -15,7 +15,6 @@
 
 // http://expressjs.com/en/guide/routing.html
 const express = require("express");
-const assert = require("assert");
 const router = express.Router();
 const path = require("path");
 const fs = require("fs");
@@ -46,7 +45,7 @@ function initialize(middlewareOpts) {
   logger.debug("initializing ...");
 
   // Ensure authenticated can be used only after this rule.
-  router.use("*", function (req, res, next) {
+  router.use("*", function (_req, res, next) {
     // TODO: set all headers, check rate limit, etc.
 
     // This header ensures that any failures with authentication won't redirect.
