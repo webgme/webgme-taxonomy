@@ -211,14 +211,12 @@
     isLoading = true;
     try {
       allItems = await storage.listArtifacts();
-      console.log("fetchData - allItems, pre-filter:", allItems);
       allItems.forEach((set) => {
         const validArtifacts = set.children.filter(
-          (item) => !item.taxonomyTags?.length || (item.taxonomy && currentTaxonomy.supports(item.taxonomy))
+          (item) => item.taxonomy && currentTaxonomy.supports(item.taxonomy)
         );
         set.children = validArtifacts;
       });
-      console.log("fetchData - allItems, post-filter:", allItems);
     } catch (err) {
       displayError(err);
 
