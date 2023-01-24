@@ -200,12 +200,13 @@ function initialize(middlewareOpts) {
 
       try {
         await fsp.access(zipPath, fsp.constants.R_OK);
-        return res.download(zipPath, path.basename(zipPath), () =>
+        res.download(zipPath, path.basename(zipPath), () =>
           fsp.rm(tmpDir, { recursive: true })
         );
+        return false;
       } catch (err) {
         // no files associated with the artifact
-        return res.sendStatus(204);
+        res.sendStatus(204);
       }
     })
   );
