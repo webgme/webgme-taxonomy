@@ -202,7 +202,7 @@ class PDP {
     try {
       const metadata = responseObservation.data[0];
       metadata.taxonomyTags = await formatter.toHumanFormat(
-        metadata.taxonomyTags
+        metadata.taxonomyTags ?? []
       );
       const metadataPath = path.join(
         downloadDir,

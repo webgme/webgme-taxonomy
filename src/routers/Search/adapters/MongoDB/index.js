@@ -123,7 +123,7 @@ class MongoAdapter extends Adapter {
           const metadataPath = path.join(artifactPath, "metadata.json");
           try {
             metadata.taxonomyTags = await formatter.toHumanFormat(
-              metadata.taxonomyTags
+              metadata.taxonomyTags ? []
             );
             await writeJsonData(metadataPath, metadata);
           } catch (err) {
