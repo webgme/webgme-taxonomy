@@ -112,6 +112,8 @@ function factory() {
     }
 
     _hasConflictingProp(schema, definitions, metadata) {
+      if (!metadata) return false;
+
       const propDict = this._getObjectProperties(
         schema,
         definitions,
