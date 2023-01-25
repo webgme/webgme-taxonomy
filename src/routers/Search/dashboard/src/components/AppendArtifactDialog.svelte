@@ -33,15 +33,10 @@
   $: displayName = set?.displayName ?? "";
   $: appendName = displayName;
   $: setOpen(set != null);
-  $: if (!open) clearSet();
   $: if (set != null) setMetadata(set.taxonomyTags ?? []);
 
   function setOpen(value: boolean) {
     if (value !== open) open = value;
-  }
-  
-  function clearSet() {
-    if (set != null) set = null;
   }
 
   async function setMetadata(tags: any[]) {
@@ -108,6 +103,10 @@
     return tagNames.pop(); // Only return the most specific one for now...
   }
 
+  function closeHandler(e: CustomEvent<{ action: string }>) {
+    if (set != null) set = null;
+  }
+
 </script>
 
 
@@ -115,6 +114,7 @@
   bind:open
   aria-labelledby="title"
   aria-describedby="content"
+  on:SMUIDialog:closed={closeHandler}
 >
   <Title id="append-artifact-title">Append data to {displayName}</Title>
   <Content id="append-artifact-content">
