@@ -144,7 +144,6 @@ define([
                 this._getJSONSchemas(nodeId),
                 this._getCurrentFormData(nodeId),
                 this._getDownloadData(),
-                this._getFormatter(nodeId),
               ]),
             ([schemas, formData, downloadData]) => {
               const { taxonomyPath, schema, uiSchema } = schemas;
