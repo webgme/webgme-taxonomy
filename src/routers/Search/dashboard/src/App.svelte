@@ -285,7 +285,7 @@
   let appendMsgId;
 
   function onAppendFinish(event: CustomEvent<{ error?: string }>) {
-    const error = event.detail?.error
+    const error = event.detail?.error;
     if (error == null) {
       displayMessage("Upload complete!");
       fetchData().catch(displayError);

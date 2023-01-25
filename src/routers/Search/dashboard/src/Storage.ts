@@ -1,5 +1,17 @@
 import TaxonomyReference from "./TaxonomyReference";
 import {assert, filterMap, Result} from './Utils';
+import { writable, Readable } from 'svelte/store';
+
+type UploadParams = {
+  method: string;
+  url: string;
+  headers: { [name: string]: string };
+};
+
+export type UploadPromise = Promise<boolean> & Readable<number> & {
+  file: File;
+  abort: () => void;
+};
 
 class Storage {
   baseUrl: string;
@@ -22,23 +34,40 @@ class Storage {
     return this.baseUrl + parentId + `/download?${qs}`;
   }
 
-  async _uploadFile(uploadReq, file: File) {
-    const opts = {
-      method : uploadReq.params.method,
-      headers : uploadReq.params.headers,
-      body : file
-    };
-    return (await this._fetch(uploadReq.params.url, opts, AppendDataError))
-        .unwrap();
+  private _uploadFile({ method, url, headers }: UploadParams, file: File) {
+    const { subscribe, set } = writable(0);
+    const request = new XMLHttpRequest();
+    request.upload.addEventListener("progress", (ev) => 
+      {
+        console.log("upload progress: ", ev.loaded / ev.total);
+        set(ev.loaded / ev.total);
+      }, false);
+    const promise = new Promise<boolean>(function (resolve, reject) {
+      request.addEventListener("load", () => {
+        set(1);
+        resolve(true);
+      }, false);
+      request.addEventListener("error", () => {
+        const error = new AppendDataError(request.statusText || "Upload failed");
+        reject(error);
+      }, false);
+      request.addEventListener("abort", () => resolve(false), false);
+    });
+    request.open(method, url);
+    Object.entries(headers || {})
+      .forEach(([name, value]: [string, string]) => request.setRequestHeader(name, value));
+    request.send(file);
+    return Object.assign(promise, {
+      file,
+      subscribe,
+      abort() { request.abort(); }
+    }) as UploadPromise;
   }
 
   async appendArtifact(artifactSet, metadata, files: File[]) {
     console.log({action : 'append', metadata, files});
     const url = this.baseUrl + artifactSet.id + '/append';
     const filenames = files.map((file: File) => file.name);
-
-    // const myString = await this.readFile(files[0])
-    // console.log(myString)
 
     const opts = {
       method : 'post',
@@ -52,19 +81,14 @@ class Storage {
     };
 
     const appendResult = await (await this._fetchJson(url, opts, AppendDataError))
-                             .unwrap();
+      .unwrap() as { files: any[] };
 
-    const uploadTasks = appendResult.files.map(async (upload) => {
-      const targetFile = files.find(a => a.name == upload.name);
-      assert(
-          !!targetFile,
-          new AppendDataError('Could not find upload info for ' + upload.name));
-      await this._uploadFile(upload, targetFile);
+    const uploads = appendResult.files.map(({ name, params }: { name: string, params: UploadParams}) => {
+      const targetFile = files.find(a => a.name == name);
+      assert(!!targetFile, new AppendDataError('Could not find upload info for ' + name));
+      return this._uploadFile(params, targetFile);
     });
-
-    await Promise.all(uploadTasks);
-
-    console.log('Append artifact:', metadata, files);
+    return Promise.all(uploads);
   }
 
   async updateArtifact(metadata, newContent) {
