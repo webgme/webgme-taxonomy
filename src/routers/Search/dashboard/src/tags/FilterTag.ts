@@ -42,12 +42,35 @@ export default class FilterTag<T extends string = string> {
   }
 
   isMatch(itemTag: ItemTag) {
-    let matched = (itemTag.ID === this.id) && (itemTag.value == this.value);
-    matched ||= itemTag.hasOwnProperty(this.id) && (itemTag[this.id] === this.value);
+    const value = getItemTagValue(itemTag, this.id);
+    let matched = this.value ? this.value === value : !!value;
     return matched;
   }
 
   lean(): LeanTag {
     return new LeanTag(this.id, this.value);
   }
+}
+
+function getItemTagValue(itemTag: ItemTag, key: string) {
+  const keys = Object.keys(itemTag);
+  if (keys.includes(key)) {
+    return itemTag[key];
+  }
+
+  const value = Object.values(itemTag)
+    .filter((v) => typeof v === "object")
+    .find((v) => getItemTagValue(v, key));
+
+  return value;
+}
+
+function itemIDs(itemTag: ItemTag) {
+  return Object.entries(itemTag).flatMap(([k, v]) => {
+    const keys = [k];
+    if (typeof v === "object") {
+      keys.push(...itemIDs(v));
+    }
+    return keys;
+  });
 }
