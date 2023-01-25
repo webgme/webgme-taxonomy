@@ -313,6 +313,10 @@ function factory() {
      */
     async _getAnyOfSchema(node) {
       const children = await this.core.loadChildren(node);
+      if (!children.length) {
+        return { type: "null" };
+      }
+
       const childSchemas = await Promise.all(
         children.map((c) => this.getFieldSchema(c))
       );
