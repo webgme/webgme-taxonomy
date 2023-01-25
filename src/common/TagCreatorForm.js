@@ -113,6 +113,10 @@ function factory() {
 
     _hasConflictingProp(schema, definitions, metadata) {
       if (!metadata) return false;
+      const mdType = typeof metadata;
+      if (mdType !== "object") {
+        return schema?.type !== mdType; // has a conflict is types mismatch
+      }
 
       const propDict = this._getObjectProperties(
         schema,
