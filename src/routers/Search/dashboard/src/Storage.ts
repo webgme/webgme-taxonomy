@@ -83,12 +83,11 @@ class Storage {
     const appendResult = await (await this._fetchJson(url, opts, AppendDataError))
       .unwrap() as { files: any[] };
 
-    const uploads = appendResult.files.map(({ name, params }: { name: string, params: UploadParams}) => {
+    return appendResult.files.map(({ name, params }: { name: string, params: UploadParams}) => {
       const targetFile = files.find(a => a.name == name);
       assert(!!targetFile, new AppendDataError('Could not find upload info for ' + name));
       return this._uploadFile(params, targetFile);
     });
-    return Promise.all(uploads);
   }
 
   async updateArtifact(metadata, newContent) {

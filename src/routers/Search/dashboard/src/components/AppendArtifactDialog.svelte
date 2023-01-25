@@ -12,7 +12,7 @@
   import { createEventDispatcher, getContext } from "svelte";
   import { isObject, readFile } from "../Utils";
   import TagFormatter, { FormatError } from "../Formatter";
-  import type Storage from "../Storage";
+  import type { default as Storage, UploadPromise } from "../Storage";
 
   /** Event type for dropping files onto a dropzone. */
   type DropEvent = CustomEvent<{ acceptedFiles: File[] }>;
@@ -30,7 +30,7 @@
   let files: File[] = [];
   let metadata: any;
   let open = false;
-  let uploading: Promise<boolean[]> | null = null;
+  let uploading: Promise<UploadPromise[]> | null = null;
 
   $: displayName = set?.displayName ?? "";
   $: appendName = displayName;
@@ -77,7 +77,8 @@
     metadata.displayName = appendName;
     dispatch("upload");
     try {
-      await (uploading = storage.appendArtifact(set, metadata, files));
+      uploading = storage.appendArtifact(set, metadata, files);
+      await Promise.allSettled(await uploading);
       dispatch("complete");
     } catch (err) {
       console.log(err);
@@ -134,11 +135,28 @@
     <p>{contentType} file(s):</p>
 
     <ul>
-      {#each files as file}
+      {#each files as file, index}
         <li>
           <div>{file.name}</div>
           {#if !!uploading}
-            <LinearProgress indeterminate />
+            {#await uploading}
+              <LinearProgress indeterminate />
+            {:then uploads}
+              {@const upload = uploads[index]}
+              {#await upload}
+                <LinearProgress indeterminate />
+              {:then success}
+                {#if success}
+                  <span class="success">Done</span>
+                {:else}
+                  <span class="warning">Cancelled</span>
+                {/if}
+              {:catch error}
+                <span class="danger">Upload failed</span>
+              {/await}
+            {:catch error}
+              <span style="danger">Upload failed</span>
+            {/await}
           {/if}
         </li>
       {/each}
@@ -149,7 +167,7 @@
         <p>Select dataset to upload.</p>
       </Dropzone>
     {:else}
-      <Dropzone disabled>
+      <Dropzone disabled multiple={true}>
         <p>Select dataset to upload.</p>
       </Dropzone>
     {/if}
