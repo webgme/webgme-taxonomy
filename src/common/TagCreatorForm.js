@@ -93,6 +93,7 @@ function factory() {
      *   }
      */
     _getObjectProperties(schema, definitions, metadata) {
+      if (!schema) return [];
       if (schema.properties) {
         return schema.properties;
       }
