@@ -7,6 +7,7 @@
   import Textfield from "@smui/textfield";
   import Dropzone from "svelte-file-dropzone";
   import Button, { Label } from "@smui/button";
+  import LinearProgress from '@smui/linear-progress';
 
   import { createEventDispatcher, getContext } from "svelte";
   import { isObject, readFile } from "../Utils";
@@ -132,7 +133,12 @@
 
     <ul>
       {#each files as file}
-        <li>{file.name}</li>
+        <li>
+          <div>{file.name}</div>
+          {#if !!uploading}
+            <LinearProgress indeterminate />
+          {/if}
+        </li>
       {/each}
     </ul>
 
