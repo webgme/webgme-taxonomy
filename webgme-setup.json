@@ -28,6 +28,10 @@
       "ImportVocabulary": {
         "src": "src/plugins/ImportVocabulary",
         "test": "test/plugins/ImportVocabulary"
+      },
+      "OpenTagForm": {
+        "src": "src/plugins/OpenTagForm",
+        "test": "test/plugins/OpenTagForm"
       }
     },
     "visualizers": {
