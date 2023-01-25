@@ -122,6 +122,8 @@
 
 <Dialog
   bind:open
+  scrimClickAction={ uploading ? "" : null }
+  escapeKeyAction={ uploading ? "" : null }
   aria-labelledby="title"
   aria-describedby="content"
   on:SMUIDialog:closed={closeHandler}
@@ -175,12 +177,12 @@
       >Click to select tags for your dataset.</a
     >
   </Content>
-  <Actions>
-    <Button>
+  <div class="dialog-actions">
+    <Button disabled={uploading} on:click={() => close()}>
       <Label>Cancel</Label>
     </Button>
-    <Button on:click={() => onAppendClicked()}>
+    <Button disabled={uploading} on:click={() => onAppendClicked()}>
       <Label>Upload</Label>
     </Button>
-  </Actions>
+  </div>
 </Dialog>
