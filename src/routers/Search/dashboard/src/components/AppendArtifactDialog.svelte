@@ -10,6 +10,7 @@
   import LinearProgress from '@smui/linear-progress';
 
   import { createEventDispatcher, getContext } from "svelte";
+  import type { Unsubscriber } from "svelte/store";
   import { isObject, readFile } from "../Utils";
   import TagFormatter, { FormatError } from "../Formatter";
   import type { default as Storage, UploadPromise } from "../Storage";
@@ -36,6 +37,7 @@
   $: appendName = displayName;
   $: setOpen(set != null);
   $: if (set != null) setMetadata(set.taxonomyTags ?? []);
+  $: progresses = uploading ? Array(files.length).fill(0) : [];
 
   function setOpen(value: boolean) {
     if (value !== open) open = value;
@@ -76,15 +78,23 @@
 
     metadata.displayName = appendName;
     dispatch("upload");
+    let unsubscribers: Unsubscriber[] = [];
     try {
       uploading = storage.appendArtifact(set, metadata, files);
-      await Promise.allSettled(await uploading);
+      const uploads = await uploading;
+      unsubscribers = uploads.map((upload, index) => {
+        return upload.subscribe(
+          progress => progresses[index] = progress
+        );
+      });
+      await Promise.allSettled(uploads);  
       dispatch("complete");
     } catch (err) {
       console.log(err);
       dispatchError(`Unable to upload: ${err.message}`);
     }
     finally {
+      unsubscribers.forEach(unsubscriber => unsubscriber())
       uploading = null;
       close();
     }
@@ -143,8 +153,9 @@
               <LinearProgress indeterminate />
             {:then uploads}
               {@const upload = uploads[index]}
+              {@const progress = progresses[index]}
               {#await upload}
-                <LinearProgress indeterminate />
+                <LinearProgress {progress} />
               {:then success}
                 {#if success}
                   <span class="success">Done</span>

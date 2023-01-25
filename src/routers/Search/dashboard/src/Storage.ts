@@ -37,11 +37,9 @@ class Storage {
   private _uploadFile({ method, url, headers }: UploadParams, file: File) {
     const { subscribe, set } = writable(0);
     const request = new XMLHttpRequest();
-    request.upload.addEventListener("progress", (ev) => 
-      {
-        console.log("upload progress: ", ev.loaded / ev.total);
+    request.upload.addEventListener("progress", (ev) => {
         set(ev.loaded / ev.total);
-      }, false);
+    }, false);
     const promise = new Promise<boolean>(function (resolve, reject) {
       request.addEventListener("load", () => {
         set(1);
