@@ -29,6 +29,7 @@
   let files: File[] = [];
   let metadata: any;
   let open = false;
+  let uploading: Promise<boolean[]> | null = null;
 
   $: displayName = set?.displayName ?? "";
   $: appendName = displayName;
@@ -75,12 +76,20 @@
     metadata.displayName = appendName;
     dispatch("upload");
     try {
-      await storage.appendArtifact(set, metadata, files);
+      await (uploading = storage.appendArtifact(set, metadata, files));
       dispatch("complete");
     } catch (err) {
       console.log(err);
       dispatchError(`Unable to upload: ${err.message}`);
     }
+    finally {
+      uploading = null;
+      close();
+    }
+  }
+
+  function close() {
+    open = false;
   }
 
   function dispatchError(error: string) {
