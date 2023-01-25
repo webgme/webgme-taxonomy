@@ -84,8 +84,14 @@
       const matchingTags = filterTags.every(
         (filterTag) => !!taxonomyTags.find((tag) => filterTag.isMatch(tag))
       );
+      const hasMatchingArtifact = item.children.find(child => {
+      const { displayName, taxonomyTags = [] } = child;
+        return filterTags.every(
+          (filterTag) => !!taxonomyTags.find((tag) => filterTag.isMatch(tag))
+        );
+      });
 
-      if (matchingTags) {
+      if (matchingTags || hasMatchingArtifact) {
         return searchQuery
           ? displayName.toLowerCase().includes(searchQuery.toLowerCase())
           : true;
@@ -226,7 +232,6 @@
       }
     }
     isLoading = false;
-    console.log({ allItems });
     onFilterUpdate(searchQuery, filterTags);
   }
 
