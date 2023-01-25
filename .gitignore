@@ -132,3 +132,7 @@ leap/
 
 # Azure debug configuration
 config/config.azure.js
+
+#Search dashboard ignore components
+src/routers/Search/dashboard/src/Bearer.ts
+src/routers/Search/dashboard/public/build/

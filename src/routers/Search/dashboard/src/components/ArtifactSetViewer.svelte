@@ -33,6 +33,12 @@
     });
   }
 
+  async function onCopyIdClicked() {
+    const id = selected.length === 1 ? artifactSet.id + '_' + selected[0] : artifactSet.id;
+    await navigator.clipboard.writeText(id);
+    parent.postMessage({type:'selectArtifact', value:id}, window.location.origin);
+  }
+
   async function onUploadClicked() {
     dispatch("upload", {
       artifactSet: artifactSet,
@@ -156,6 +162,9 @@
       </Button>
       <Button on:click={onDownloadClicked} disabled={selected.length == 0}>
         <Label>Download</Label>
+      </Button>
+      <Button on:click={onCopyIdClicked} disabled={selected.length > 1}>
+        <Label>Copy Id</Label>
       </Button>
     </Actions>
   </Card>
