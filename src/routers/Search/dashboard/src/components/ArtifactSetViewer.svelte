@@ -36,9 +36,7 @@
   async function onCopyIdClicked() {
     const id = selected.length === 1 ? artifactSet.id + '_' + selected[0] : artifactSet.id;
     await navigator.clipboard.writeText(id);
-    if(parent) {
-      parent.window.postMessage(JSON.stringify({type:'selectArtifact', value:id}), window.location.origin);
-    }
+    parent.postMessage({type:'selectArtifact', value:id}, window.location.origin);
   }
 
   async function onUploadClicked() {
@@ -159,7 +157,7 @@
       </List>
     </Content>
     <Actions>
-      <Button on:click={onUploadClicked} disabled={selected.length != 0}>
+      <Button on:click={onUploadClicked}>
         <Label>Upload</Label>
       </Button>
       <Button on:click={onDownloadClicked} disabled={selected.length == 0}>
