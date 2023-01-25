@@ -128,7 +128,7 @@
 >
   <Title id="append-artifact-title">Append data to {displayName}</Title>
   <Content id="append-artifact-content">
-    <Textfield label="Name" bind:value={appendName} />
+    <Textfield label="Name" bind:value={appendName} disabled={!!uploading} />
     <p>{contentType} file(s):</p>
 
     <ul>
@@ -142,9 +142,15 @@
       {/each}
     </ul>
 
-    <Dropzone on:drop={onAppendFileDrop} multiple={true}>
-      <p>Select dataset to upload.</p>
-    </Dropzone>
+    {#if !uploading}
+      <Dropzone on:drop={onAppendFileDrop} multiple={true}>
+        <p>Select dataset to upload.</p>
+      </Dropzone>
+    {:else}
+      <Dropzone disabled>
+        <p>Select dataset to upload.</p>
+      </Dropzone>
+    {/if}
 
     <p>
       Taxonomy Terms <span style="font-style:italic">(optional)</span>:<br />
@@ -153,9 +159,15 @@
         : ""}
     </p>
 
-    <Dropzone on:drop={onAppendTagsFileDrop} accept=".json">
-      <p>Select tags file for dataset.</p>
-    </Dropzone>
+    {#if !uploading}
+      <Dropzone on:drop={onAppendTagsFileDrop} accept=".json">
+        <p>Select tags file for dataset.</p>
+      </Dropzone>
+    {:else}
+      <Dropzone disabled accept=".json">
+        <p>Select tags file for dataset.</p>
+      </Dropzone>
+    {/if}
 
     <a
       target="_blank"
