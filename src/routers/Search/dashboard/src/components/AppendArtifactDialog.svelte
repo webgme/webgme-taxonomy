@@ -158,15 +158,15 @@
                 <LinearProgress {progress} />
               {:then success}
                 {#if success}
-                  <span class="success">Done</span>
+                  <span class="upload-result success">Done</span>
                 {:else}
-                  <span class="warning">Cancelled</span>
+                  <span class="upload-result  warning">Cancelled</span>
                 {/if}
               {:catch error}
-                <span class="danger">Upload failed</span>
+                <span class="upload-result  error">Failed</span>
               {/await}
             {:catch error}
-              <span style="danger">Upload failed</span>
+              <span style="upload-result  error">Failed</span>
             {/await}
           {/if}
         </li>
@@ -215,3 +215,30 @@
     </Button>
   </div>
 </Dialog>
+
+<style>
+
+  .dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    padding: 0.5em;
+  }
+
+  .upload-result {
+    font-size: 0.8em;
+    font-style: italic;
+  }
+
+  .success {
+    color: var(--mdc-theme-success);
+  }
+
+  .warning {
+    color: var(--mdc-theme-warning);
+  }
+
+  .error {
+    color: var(--mdc-theme-error);
+  }
+
+</style>

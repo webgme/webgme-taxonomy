@@ -582,10 +582,10 @@
   }
 
   :global(.log.info) {
-    --toastBackground: green;
+    --toastBackground: var(--mdc-theme-success);
   }
   :global(.log.warn) {
-    --toastBackground: red;
+    --toastBackground: var(--mdc-theme-error);
   }
 
   :global(.empty) {
