@@ -48,7 +48,6 @@ export default class FilterTag<T extends string = string> {
       return true;
     }
     const value = ItemTag.valueForKey(itemTag, this.id);
-    console.log("Filter Tag match value:", value);
     return  (this.value === value);
   }
 
