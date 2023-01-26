@@ -39,7 +39,8 @@ export default class FilterTag<T extends string = string> {
   }
 
   canMatch(itemTag: ItemTag) {
-    return (itemTag.ID === this.id) || itemTag.hasOwnProperty(this.id);
+    const value = ItemTag.valueForKey(itemTag, this.id);
+    return isDefined(value);
   }
 
   isMatch(itemTag: ItemTag) {

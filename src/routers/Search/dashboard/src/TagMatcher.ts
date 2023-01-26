@@ -18,7 +18,7 @@ const fuseOptions: Fuse.IFuseOptions<any> = {
  */
 export default function (valueId: string, tags: ItemTag[]) {
   const list = tags
-    .map(tag => ItemTag.valueForId(tag, valueId))
+    .map(tag => ItemTag.valueForKey(tag, valueId))
     .sort()
     .filter((val, index, sorted) => (val != null) && (val !== sorted[index - 1]));
 
