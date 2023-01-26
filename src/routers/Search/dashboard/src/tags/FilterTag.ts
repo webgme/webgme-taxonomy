@@ -1,5 +1,6 @@
-import type ItemTag from "./ItemTag";
+import ItemTag from "./ItemTag";
 import LeanTag from "./LeanTag";
+import { isDefined } from "../Utils";
 
 /*
  * A FilterTag is a tag that can be used to filter the search results.
@@ -42,35 +43,15 @@ export default class FilterTag<T extends string = string> {
   }
 
   isMatch(itemTag: ItemTag) {
-    const value = getItemTagValue(itemTag, this.id);
-    let matched = this.value ? this.value === value : !!value;
-    return matched;
+    if (!isDefined(this.value)) {
+      return true;
+    }
+    const value = ItemTag.valueForKey(itemTag, this.id);
+    console.log("Filter Tag match value:", value);
+    return  (this.value === value);
   }
 
   lean(): LeanTag {
     return new LeanTag(this.id, this.value);
   }
-}
-
-function getItemTagValue(itemTag: ItemTag, key: string) {
-  const keys = Object.keys(itemTag);
-  if (keys.includes(key)) {
-    return itemTag[key];
-  }
-
-  const value = Object.values(itemTag)
-    .filter((v) => typeof v === "object")
-    .find((v) => getItemTagValue(v, key));
-
-  return value;
-}
-
-function itemIDs(itemTag: ItemTag) {
-  return Object.entries(itemTag).flatMap(([k, v]) => {
-    const keys = [k];
-    if (typeof v === "object") {
-      keys.push(...itemIDs(v));
-    }
-    return keys;
-  });
 }
