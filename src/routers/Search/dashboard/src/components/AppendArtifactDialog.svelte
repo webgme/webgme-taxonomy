@@ -36,7 +36,7 @@
   $: displayName = set?.displayName ?? "";
   $: appendName = displayName;
   $: setOpen(set != null);
-  $: if (set != null) setMetadata(set.taxonomyTags ?? []);
+  $: setMetadata(set?.taxonomyTags ?? []);
   $: progresses = uploading ? Array(files.length).fill(0) : [];
 
   function setOpen(value: boolean) {
@@ -126,6 +126,7 @@
 
   function closeHandler(e: CustomEvent<{ action: string }>) {
     if (set != null) set = null;
+    files = [];
   }
 
 </script>
