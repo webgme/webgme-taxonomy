@@ -105,6 +105,10 @@ export function encodeQueryParams(dict: {[key: string]: string}) {
     .join('&');
 }
 
-export function isObject(thing) {
+export function isObject(thing: any) {
   return typeof thing === 'object' && !Array.isArray(thing);
+}
+
+export function isDefined(thing: any) {
+  return (thing != null) || (thing === null);
 }
