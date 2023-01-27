@@ -105,10 +105,10 @@ export function encodeQueryParams(dict: {[key: string]: string}) {
     .join('&');
 }
 
-export function isObject(thing: any) {
+export function isObject<T>(thing: T): thing is Exclude<T, undefined | string | number | boolean | Array<any> | Function> {
   return typeof thing === 'object' && !Array.isArray(thing);
 }
 
-export function isDefined(thing: any) {
+export function isDefined<T>(thing: T): thing is Exclude<T, undefined> {
   return (thing != null) || (thing === null);
 }
