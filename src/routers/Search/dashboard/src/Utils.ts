@@ -108,3 +108,18 @@ export function encodeQueryParams(dict: {[key: string]: string}) {
 export function isObject(thing) {
   return typeof thing === 'object' && !Array.isArray(thing);
 }
+
+export async function readFile(file: File) {
+  return new Promise<string>((res, rej) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (reader.error) {
+        console.log("error:", reader.error);
+        return rej(reader.error);
+      } else {
+        return res(reader.result as string);
+      }
+    };
+    reader.readAsText(file);
+  });
+}

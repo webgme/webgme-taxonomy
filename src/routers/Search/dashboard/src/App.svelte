@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { setContext } from "svelte";
   import { FilterTag, LeanTag, fromDict } from "./tags";
   import TopAppBar, { Row, Section, Title } from "@smui/top-app-bar";
   import {
@@ -6,7 +7,7 @@
     filterMap,
     openUrl,
     encodeQueryParams,
-    isObject,
+    readFile,
   } from "./Utils";
   import Textfield from "@smui/textfield";
   import IconButton from "@smui/icon-button";
@@ -31,8 +32,12 @@
   import Radio from "@smui/radio";
   import Button, { Label } from "@smui/button";
   import Paper, { Content as PaperContent } from "@smui/paper";
-  import Dropzone from "svelte-file-dropzone";
-  import { ArtifactSetViewer, TaxonomyFilter } from "./components";
+  import { 
+    AppendArtifactDialog,
+    ArtifactSetViewer,
+    TaxonomyFilter
+  } from "./components";
+
   import TaxonomyData from "./TaxonomyData";
   import TaxonomyReference from "./TaxonomyReference";
 
@@ -43,7 +48,8 @@
 
   import TagFormatter, { FormatError } from "./Formatter";
   import Storage, { ModelError, RequestError } from "./Storage";
-  const storage = new Storage();
+  const storage = setContext("storage", new Storage());
+  
   let allItems = [];
   let items = [];
 
@@ -275,64 +281,22 @@
   initialize();
 
   ////// Item actions //////
-  let appendArtifact = false;
-  let appendFiles = [];
   let appendItem;
-  let appendMetadata;
-  let appendName = "";
-  let formatter = new TagFormatter();
-  async function onAppendItem(item) {
-    appendItem = item;
-    appendName = appendItem.displayName;
-    try {
-      appendMetadata = {
-        taxonomyTags: await formatter.toHumanFormat(appendItem.taxonomyTags ?? []),
-      };
-    } catch (err) {
-      displayError(err);
-      if (err instanceof FormatError) {
-        console.warn("Latest artifact has invalid taxonomy tags:", err.message);
-      } else {
-        console.error(
-          "An error occurred while setting default tags",
-          err.stack
-        );
-      }
-    }
-    appendArtifact = true;
-  }
+  let appendMsgId;
 
-  function onAppendFileDrop(event) {
-    const { acceptedFiles } = event.detail;
-    if (acceptedFiles.length) {
-      appendFiles = acceptedFiles;
-    }
-    // TODO: handle rejections
-  }
-
-  async function onAppendTagsFileDrop(event) {
-    const [tagsFile] = event.detail.acceptedFiles;
-    if (tagsFile) {
-      appendMetadata = JSON.parse(await readFile(tagsFile));
-    }
-  }
-
-  async function onAppendClicked() {
-    if (!appendFiles) {
-      return displayError(`${contentType} file required.`);
-    }
-
-    const metadata = appendMetadata;
-    metadata.displayName = appendName;
-    const updMsgId = displayProgressMessage("Upload in progress");
-    try {
-      await storage.appendArtifact(appendItem, metadata, appendFiles);
+  function onAppendFinish(event: CustomEvent<{ error?: string }>) {
+    const error = event.detail?.error;
+    if (error == null) {
       displayMessage("Upload complete!");
-      fetchData();
-    } catch (err) {
-      displayError(err);
+      fetchData().catch(displayError);
     }
-    clearProgressMessage(updMsgId);
+    else {
+      displayError(error);
+    }
+    if (appendMsgId != null) {
+      clearProgressMessage(appendMsgId);
+      appendMsgId = null;
+    }
   }
 
   ////// Artifact Upload //////
@@ -354,21 +318,6 @@
     if (tagsFile) {
       uploadMetadata = JSON.parse(await readFile(tagsFile));
     }
-  }
-
-  async function readFile(file: File) {
-    return new Promise<string>((res, rej) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        if (reader.error) {
-          console.log("error:", reader.error);
-          return rej(reader.error);
-        } else {
-          return res(reader.result as string);
-        }
-      };
-      reader.readAsText(file);
-    });
   }
 
   async function onUploadClicked() {
@@ -444,71 +393,19 @@
       });
     openUrl(url);
   }
-
-  function getTagDisplayName(tag) {
-    // FIXME: there is no way to tell the difference btwn terms and compound fields...
-    let currentTag = tag;
-    const tagNames = [];
-    while (currentTag) {
-      const [name, tag] =
-        Object.entries(currentTag).find(([, data]) => isObject(data)) || [];
-      currentTag = tag;
-      if (name) {
-        tagNames.push(name);
-      }
-    }
-
-    return tagNames.pop(); // Only return the most specific one for now...
-  }
 </script>
 
 <svelte:head>
   <title>{title}</title>
 </svelte:head>
-<!-- Artifact append dialog -->
-<Dialog
-  bind:open={appendArtifact}
-  aria-labelledby="title"
-  aria-describedby="content"
->
-  <DialogTitle id="title"
-    >Append data to {appendItem && appendItem.displayName}</DialogTitle
-  >
-  <DialogContent id="content">
-    <Textfield label="Name" bind:value={appendName} />
-    <p>{contentType} file(s):</p>
-    <ul>
-      {#each appendFiles as file}
-        <li>{file.name}</li>
-      {/each}
-    </ul>
-    <Dropzone on:drop={onAppendFileDrop} multiple={true}>
-      <p>Select dataset to upload.</p>
-    </Dropzone>
-    <p>
-      Taxonomy Terms <span style="font-style:italic">(optional)</span>:<br />
-      {appendMetadata
-        ? appendMetadata.taxonomyTags.map(getTagDisplayName).join(", ")
-        : ""}
-    </p>
-    <Dropzone on:drop={onAppendTagsFileDrop} accept=".json">
-      <p>Select tags file for dataset.</p>
-    </Dropzone>
-    <a
-      target="_blank"
-      href={window.location.href.replace("/Search/", "/TagCreator/")}
-      >Click to select tags for your dataset.</a
-    >
-  </DialogContent>
-  <Actions>
-    <Button>
-      <Label>Cancel</Label>
-    </Button>
-    <Button on:click={() => onAppendClicked()}>
-      <Label>Upload</Label>
-    </Button>
-  </Actions>
-</Dialog>
+
+<AppendArtifactDialog
+  {contentType}
+  bind:set={appendItem}
+  on:upload="{() => appendMsgId = displayProgressMessage('Upload in progress')}"
+  on:complete={onAppendFinish}
+  on:error={onAppendFinish}
+></AppendArtifactDialog>
 
 <!-- Artifact creation dialog -->
 <Dialog
@@ -635,7 +532,7 @@
         bind:artifactSet={selectedArtifactSet}
         bind:contentType
         on:download={(event) => onDownload(event.detail)}
-        on:upload={(event) => onAppendItem(event.detail.artifactSet)}
+        on:upload={(event) => appendItem = event.detail.artifactSet}
       />
     {/if}
   </AppContent>
@@ -685,10 +582,10 @@
   }
 
   :global(.log.info) {
-    --toastBackground: green;
+    --toastBackground: var(--mdc-theme-success);
   }
   :global(.log.warn) {
-    --toastBackground: red;
+    --toastBackground: var(--mdc-theme-error);
   }
 
   :global(.empty) {
