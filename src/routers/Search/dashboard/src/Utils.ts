@@ -112,3 +112,18 @@ export function isObject<T>(thing: T): thing is Exclude<T, undefined | string | 
 export function isDefined<T>(thing: T): thing is Exclude<T, undefined> {
   return (thing != null) || (thing === null);
 }
+
+export async function readFile(file: File) {
+  return new Promise<string>((res, rej) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (reader.error) {
+        console.log("error:", reader.error);
+        return rej(reader.error);
+      } else {
+        return res(reader.result as string);
+      }
+    };
+    reader.readAsText(file);
+  });
+}

@@ -11,6 +11,13 @@
   $error: color-palette.$red-900
 );
 
+:root {
+  --mdc-theme-success: #{color-palette.$green-500};
+  --mdc-theme-info: #{color-palette.$blue-500};
+  --mdc-theme-warning: #{color-palette.$orange-500};
+  --mdc-theme-error: #{theme.$error};
+}
+
 html,
 body {
   background-color: theme.$surface;
