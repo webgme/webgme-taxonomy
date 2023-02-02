@@ -38,6 +38,10 @@ export default class FilterTag<T extends string = string> {
     return path;
   }
 
+  isLabel() {
+    return !isDefined(this.value)
+  }
+
   canMatch(itemTag: ItemTag) {
     const value = ItemTag.valueForKey(itemTag, this.id);
     return isDefined(value);
@@ -45,9 +49,9 @@ export default class FilterTag<T extends string = string> {
 
   isMatch(itemTag: ItemTag) {
     const value = ItemTag.valueForKey(itemTag, this.id);
-    return !isDefined(this.value)
-      ? isDefined(value)
-      : (this.value === value);
+    const foundTag = isDefined(value);
+    const tagValuesMatch = (this.value === value);
+    return this.isLabel ? foundTag : tagValuesMatch;
   }
 
   lean(): LeanTag {
