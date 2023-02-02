@@ -44,11 +44,10 @@ export default class FilterTag<T extends string = string> {
   }
 
   isMatch(itemTag: ItemTag) {
-    if (!isDefined(this.value)) {
-      return true;
-    }
     const value = ItemTag.valueForKey(itemTag, this.id);
-    return  (this.value === value);
+    return !isDefined(this.value)
+      ? isDefined(value)
+      : (this.value === value);
   }
 
   lean(): LeanTag {
