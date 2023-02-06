@@ -498,7 +498,10 @@
       {#if items.length}
         <List twoLine avatarList>
           {#each items as item (item.hash)}
-            <Item on:SMUI:action={() => onItemClicked(item)}>
+            <Item
+              selected={item === selectedArtifactSet}
+              on:SMUI:action={() => onItemClicked(item)}
+            >
               <Text>
                 <PrimaryText>{item.displayName}</PrimaryText>
                 <SecondaryText />
