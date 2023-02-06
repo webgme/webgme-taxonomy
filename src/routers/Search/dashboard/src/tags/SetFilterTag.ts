@@ -16,7 +16,7 @@ export default class SetFilterTag extends FilterTag<"SetField"> {
    */
   override isMatch(itemTag: ItemTag): boolean {
     const filterValue = this.value ?? [];
-    const itemValue = (ItemTag.valueForId(itemTag, this.id) ?? [])
+    const itemValue = (ItemTag.valueForKey(itemTag, this.id) ?? [])
       .map(item => item.ID);
     return arraysEqual(filterValue, itemValue, { ignoreOrder: true });
   }
