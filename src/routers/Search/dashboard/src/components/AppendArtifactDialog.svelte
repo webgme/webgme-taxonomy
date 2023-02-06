@@ -59,7 +59,7 @@
   function onAppendFileDrop(event: DropEvent) {
     const { acceptedFiles } = event.detail;
     if (acceptedFiles.length) {
-      files = acceptedFiles;
+      files = files.concat(acceptedFiles);
     }
     // TODO: handle rejections
   }
@@ -100,6 +100,11 @@
     }
   }
 
+  function removeFileAt(index: number) {
+    files.splice(index, 1);
+    files = files;
+  }
+  
   function close() {
     open = false;
   }
