@@ -11,6 +11,7 @@
   import IconButton from '@smui/icon-button';
 
   import { createEventDispatcher, getContext } from "svelte";
+  import { fade } from 'svelte/transition';
   import type { Unsubscriber } from "svelte/store";
   import { isObject, readFile } from "../Utils";
   import TagFormatter, { FormatError } from "../Formatter";
@@ -152,8 +153,8 @@
     <p>{contentType} file(s):</p>
 
     <ul class="append-files">
-      {#each files as file, index}
-        <li>
+      {#each files as file, index (file.name + '-' + file.lastModified)}
+        <li transition:fade="{{ duration: 200 }}">
           <div class="append-file">
             <span class="append-file-name">{file.name}</span>
             {#if !uploading}
