@@ -1,6 +1,7 @@
 /*globals define*/
 /*eslint-env node, browser*/
 // @ts-check
+/// <reference path="define.d.ts" />
 function factory() {
   const optionTypes = ["EnumField", "SetField"];
 
@@ -162,13 +163,20 @@ function factory() {
      * Gets whether the given node is a taxonomy term.
      *
      * @param {Core.Node | null} node The node to check the type of
-     * @return {boolean} Whether or not the `node` is a taconomy term
+     * @return {node is Core.Node} Whether or not the `node` is a taxonomy term
      * @memberof JSONSchemaExporter
      */
     isTerm(node) {
       return node != null && this.core.isTypeOf(node, this.META.Term);
     }
 
+    /**
+     * Gets whether the given node is a vocabulary node.
+     *
+     * @param {Core.Node | null} node The node to check the type of
+     * @return {node is Core.Node} Whether or not the `node` is a vocabulary
+     * @memberof JSONSchemaExporter
+     */
     isVocab(node) {
       return node != null && this.core.isTypeOf(node, this.META.Vocabulary);
     }
