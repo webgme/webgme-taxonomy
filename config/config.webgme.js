@@ -38,7 +38,7 @@ config.rest.components['JSONSchema'] = {
   options: {}
 };
 config.rest.components['Dashboard'] = {
-  src: __dirname + '/../src/routers/Dashboard/Dashboard.js',
+  src: __dirname + '/../src/routers/Dashboard/build/',
   mount: 'routers/Dashboard',
   options: {}
 };
