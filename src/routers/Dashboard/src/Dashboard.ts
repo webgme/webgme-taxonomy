@@ -17,7 +17,7 @@ import * as RouterUtils from '../../../common/routers/Utils';
 import ContextFacade from './ContextFacade';
 
 export const router = express.Router();
-const staticPath = path.join(__dirname, "..", "dashboard", "dist");
+const staticPath = path.join(__dirname, "..", "app", "dist");
 
 type MiddlewareOpts = {
   /** Passed by the webgme server. */
