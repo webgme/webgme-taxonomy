@@ -10,31 +10,14 @@
 
 // http://expressjs.com/en/guide/routing.html
 
-import type from 'webgme';
 import * as express from 'express';
 import * as path from 'path';
+import type { MiddlewareOptions } from '../../../common/types';
 import * as RouterUtils from '../../../common/routers/Utils';
 import ContextFacade from './ContextFacade';
 
 export const router = express.Router();
 const staticPath = path.join(__dirname, "..", "app", "dist");
-
-type MiddlewareOpts = {
-  /** Passed by the webgme server. */
-  gmeConfig: GmeConfig.GmeConfig,
-  /** logger */
-  logger: Global.GmeLogger,
-  /** Ensures the user is authenticated. */
-  ensureAuthenticated: express.RequestHandler,
-  /** If authenticated retrieves the userId from the request. */
-  getUserId: (req: express.Request) => string,
-  /** Authorization module. */
-  gmeAuth: Object,
-  /** Accesses the storage and emits events (PROJECT_CREATED, COMMIT..). */
-  safeStorage: Object,
-  /** Spawns and keeps track of "worker" sub-processes. */
-  workerManager: Object,
-}
 
 /**
  * Called when the server is created but before it starts to listening to incoming requests.
@@ -43,8 +26,9 @@ type MiddlewareOpts = {
  *
  * @param middlewareOpts - Passed by the webgme server.
  */
-export function initialize(middlewareOpts: MiddlewareOpts) {
+export function initialize(middlewareOpts: MiddlewareOptions) {
   const { ensureAuthenticated } = middlewareOpts;
+  middlewareOpts.getUserId
   const logger = middlewareOpts.logger.fork('Dashboard');
 
   logger.debug('initializing ...');

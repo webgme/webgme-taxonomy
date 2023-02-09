@@ -1,19 +1,7 @@
-type WebGMEContext = {
-  core: GmeClasses.Core,
-  root: Core.Node,
-  project: {
-    projectName: string,
-  },
-  projectVersion: {
-    id: string,
-    branch?: string,
-    tag?: string,
-    commitHash?: string,
-  }
-};
+import type { WebgmeContext } from '../../../common/types';
 
 export default class ContextFacade {
-  constructor(protected context: WebGMEContext) {}
+  constructor(protected context: WebgmeContext) {}
 
   async getContentTypeNodes() {
     const { core, root } = this.context;
