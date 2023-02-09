@@ -13,7 +13,7 @@
     "pluginHook": "node ./node_modules/webgme-engine/src/bin/plugin_hook.js",
     "users": "node ./node_modules/webgme-engine/src/bin/usermanager.js",
     "clean_up": "node ./node_modules/webgme-engine/src/bin/clean_up.js",
-    "prepublish": "cd src/routers/Dashboard/dashboard && npm run build && cd ../../Search/dashboard && npm run build",
+    "prepublish": "tsc --build && cd src/routers/Dashboard/app && npm run build && cd ../../Search/dashboard && npm run build",
     "prepare": "husky install"
   },
   "version": "1.1.0",
