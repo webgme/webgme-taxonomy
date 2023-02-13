@@ -1,3 +1,12 @@
+declare global {
+  /**
+   * This global type declaration is necessary prior to importing webgme types
+   * to prevent `Cannot find name 'GLbyte'` type error. It should probably be
+   * fixed in the webgme types.
+   */
+  type GLbyte = number;
+}
+
 import type from 'webgme';
 import type { Request, RequestHandler } from 'express';
 
