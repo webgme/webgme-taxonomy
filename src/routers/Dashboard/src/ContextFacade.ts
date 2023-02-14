@@ -1,7 +1,7 @@
-class ContextFacade {
-  constructor(webgmeContext) {
-    this.context = webgmeContext;
-  }
+import type { WebgmeContext } from '../../../common/types';
+
+export default class ContextFacade {
+  constructor(protected context: WebgmeContext) {}
 
   async getContentTypeNodes() {
     const { core, root } = this.context;
@@ -11,16 +11,16 @@ class ContextFacade {
     const children = await core.loadChildren(root);
     return children.filter(child => contentTypeMetanodes.some(mn => core.isTypeOf(child, mn)));
   }
-
-  getScopedUrl(node) {
+  
+  getScopedUrl(node: Core.Node) {
     const { projectVersion, core } = this.context;
     const path = node ? [core.getPath(node)] : [];
     const { id, branch, tag, commitHash } = projectVersion;
-    const version = !commitHash ? !tag ? ['branch', branch] : ['tag', tag] : ['commit', commitHash];
+    const version = !commitHash ? !tag ? ['branch', branch!] : ['tag', tag] : ['commit', commitHash];
     const scope = [id, ...version, ...path].map(encodeURIComponent);
     return ['/routers/Search', ...scope, 'static/'].join('/');
   }
-
+  
   async getProjectInfo() {
     const { project: { projectName }, core } = this.context;
     const contentTypeNodes = await this.getContentTypeNodes();
@@ -34,5 +34,3 @@ class ContextFacade {
     };
   }
 }
-
-module.exports = ContextFacade;

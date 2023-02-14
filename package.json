@@ -13,13 +13,15 @@
     "pluginHook": "node ./node_modules/webgme-engine/src/bin/plugin_hook.js",
     "users": "node ./node_modules/webgme-engine/src/bin/usermanager.js",
     "clean_up": "node ./node_modules/webgme-engine/src/bin/clean_up.js",
-    "prepublish": "cd src/routers/Dashboard/dashboard && npm run build && cd ../../Search/dashboard && npm run build",
+    "build": "tsc --build",
+    "prepublish": "npm run build && cd src/routers/Dashboard/app && npm run build && cd ../../Search/dashboard && npm run build",
     "prepare": "husky install"
   },
   "version": "1.1.0",
   "devDependencies": {
     "@smui/icon-button": "^6.1.0",
     "@smui/linear-progress": "^6.1.0",
+    "@types/express": "^4.17.17",
     "@zerodevx/svelte-toast": "^0.7.2",
     "ajv": "^8.11.0",
     "chai": "^4.3.6",

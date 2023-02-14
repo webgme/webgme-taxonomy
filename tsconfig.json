@@ -1,0 +1,8 @@
+// More info on TypeScript project references:
+// https://www.typescriptlang.org/docs/handbook/project-references.html
+{
+  "files": [],
+  "references": [
+    { "path": "src/routers/Dashboard" },
+  ]
+}
