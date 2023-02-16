@@ -38,6 +38,7 @@ export type WebgmeContext = {
   root: Core.Node,
   project: {
     projectName: string,
+    projectId: string,
   },
   projectVersion: {
     id: string,
@@ -46,3 +47,4 @@ export type WebgmeContext = {
     commitHash?: string,
   }
 };
+

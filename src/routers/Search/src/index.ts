@@ -14,23 +14,22 @@
 "use strict";
 
 // http://expressjs.com/en/guide/routing.html
-var express = require("express"),
-  router = express.Router(),
-  logger;
+import * as express from "express";
+import type { Request, Response, Router, RequestHandler, NextFunction } from "express";
+const router = express.Router();
 
-const RouterUtils = require("../../common/routers/Utils");
-const Utils = require("../../common/Utils");
-const DashboardConfiguration = require("../../common/SearchFilterDataExporter");
-const TagFormatter = require("../../common/TagFormatter");
-const path = require("path");
+import RouterUtils from "../../../common/routers/Utils";
+import type {MiddlewareOptions } from '../../../common/types';
+import Utils from "../../../common/Utils";
+import DashboardConfiguration from "../../../common/SearchFilterDataExporter";
+import TagFormatter from "../../../common/TagFormatter";
+import path from "path";
 const staticPath = path.join(__dirname, "dashboard", "public");
-const os = require("os");
-const { zip, COMPRESSION_LEVEL } = require("zip-a-folder");
-const fsp = require("fs/promises");
-const fs = require("fs");
-
-const StorageAdapter = require("./adapters");
-let mainConfig = null;
+import os from "os";
+import { zip, COMPRESSION_LEVEL } from "zip-a-folder";
+import fsp from "fs/promises";
+import fs from "fs";
+import StorageAdapter from "./adapters";
 
 /* N.B. gmeAuth, safeStorage and workerManager are not ready to use until the start function is called.
  * (However inside an incoming request they are all ensured to have been initialized.)
@@ -44,13 +43,12 @@ let mainConfig = null;
  * @param {object} middlewareOpts.safeStorage - Accesses the storage and emits events (PROJECT_CREATED, COMMIT..).
  * @param {object} middlewareOpts.workerManager - Spawns and keeps track of "worker" sub-processes.
  */
-function initialize(middlewareOpts) {
-  const ensureAuthenticated = middlewareOpts.ensureAuthenticated;
-
-  logger = middlewareOpts.logger.fork("Search");
+function initialize(middlewareOpts: MiddlewareOptions) {
+  const {ensureAuthenticated} = middlewareOpts;
+  const logger = middlewareOpts.logger.fork("Search");
   logger.debug("initializing ...");
 
-  mainConfig = middlewareOpts.gmeConfig;
+  const mainConfig = middlewareOpts.gmeConfig;
 
   // Ensure authenticated can be used only after this rule.
   // router.use("*", function (req, res, next) {
@@ -216,7 +214,7 @@ function initialize(middlewareOpts) {
   logger.debug("ready");
 }
 
-async function convertTaxonomyTags(req, res, next) {
+async function convertTaxonomyTags(req: Request, res: Response, next: NextFunction) {
   const { root, core } = req.webgmeContext;
   const node = await Utils.findTaxonomyNode(core, root);
   const formatter = await TagFormatter.from(core, node);
@@ -237,7 +235,7 @@ async function convertTaxonomyTags(req, res, next) {
  * Called before the server starts listening.
  * @param {function} callback
  */
-function start(callback) {
+function start(callback: () => void) {
   callback();
 }
 
@@ -245,7 +243,7 @@ function start(callback) {
  * Called after the server stopped listening.
  * @param {function} callback
  */
-function stop(callback) {
+function stop(callback: () => void) {
   callback();
 }
 

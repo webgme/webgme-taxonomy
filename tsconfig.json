@@ -4,5 +4,6 @@
   "files": [],
   "references": [
     { "path": "src/routers/Dashboard" },
+    { "path": "src/routers/Search" },
   ]
 }

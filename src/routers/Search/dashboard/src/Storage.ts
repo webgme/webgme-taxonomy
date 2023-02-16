@@ -1,5 +1,6 @@
 import TaxonomyReference from "./TaxonomyReference";
-import {assert, filterMap, Result} from './Utils';
+import {assert, Result} from './Utils';
+import {filterMap} from '../../src/Utils';
 import { writable, Readable } from 'svelte/store';
 
 type UploadParams = {

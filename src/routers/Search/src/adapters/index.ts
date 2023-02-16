@@ -1,18 +1,18 @@
 // TODO: load the different adapter types
 
-const RouterUtils = require("../../../common/routers/Utils");
-const { StorageNotFoundError } = require("./common/ModelError");
-const fs = require("fs");
+import RouterUtils from "../../../../common/routers/Utils";
+import { StorageNotFoundError } from "./common/ModelError";
+import fs from "fs";
 const SUPPORTED_ADAPTERS = Object.fromEntries(
   fs
     .readdirSync(__dirname)
     .filter((name) => !name.endsWith(".js") && name !== "common")
     .map((name) => [name.toLowerCase(), require(`./${name}`)])
 );
-const assert = require("assert");
+import assert from "assert";
 
-class Adapters {
-  static async from(gmeContext, req, config) {
+export default class Adapters {
+  static async from(gmeContext, req: Request, config) {
     const { core, contentType } = gmeContext;
     const storageNode = (await core.loadChildren(contentType)).find((child) =>
       isTypeOf(core, child, "Storage")
@@ -38,7 +38,7 @@ class Adapters {
   }
 }
 
-function isTypeOf(core, node, name) {
+function isTypeOf(core: GmeClasses.Core,node: Core.Node, name: string) {
   let basenode = core.getMetaType(node);
   while (basenode) {
     if (core.getAttribute(basenode, "name") === name) {
@@ -49,5 +49,3 @@ function isTypeOf(core, node, name) {
 
   return false;
 }
-
-module.exports = Adapters;

@@ -40,16 +40,6 @@ export class Result<V, E> {
   }
 }
 
-export function filterMap<I, O>(list: I[], fn: (x: I) => O): O[] {
-  return list.reduce((items, input) => {
-    const mapped = fn(input);
-    if (mapped !== undefined) {
-      items.push(mapped);
-    }
-    return items;
-  }, []);
-}
-
 /**
  * Returns whether the two arrays are equal.
  *
