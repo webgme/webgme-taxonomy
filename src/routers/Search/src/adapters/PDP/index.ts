@@ -10,21 +10,23 @@ import fs from "fs";
 import _ from "underscore";
 import path from "path";
 import fsp from "fs/promises";
-import {newtype} from "./types";
-import type {Process, Observation, ProcessID, AppendObservationResponse} from "./types";
+import { newtype } from "./types";
+import type { Process, Observation, ProcessID, AppendObservationResponse, GetObservationFilesResponse } from "./types";
 import RouterUtils from "../../../../../common/routers/Utils";
+import type { AuthenticatedRequest } from "../../../../../common/routers/Utils";
+import type TagFormatter from "../../../../../common/TagFormatter";
 import { FormatError } from "../../../../../common/TagFormatter";
-import type {WebgmeContext} from "../../../../../common/types";
+import type { WebgmeContext, AzureGmeConfig } from "../../../../../common/types";
 import { pipeline } from "stream";
 import { promisify } from "util";
 const streamPipeline = promisify(pipeline);
 import { MissingAttributeError } from "../common/ModelError";
-import type {Adapter, ArtifactMetadata, Artifact, Repository} from "../common/types";
-import {filterMap, range, sleep} from "../../Utils";
+import type { Adapter, ArtifactMetadata, Artifact, Repository } from "../common/types";
+import { filterMap, range, sleep } from "../../Utils";
 import CreateRequestLogger from "./CreateRequestLogger";
 const logFilePath = process.env.CREATE_LOG_PATH || "./CreateProcesses.jsonl";
 const reqLogger = new CreateRequestLogger(logFilePath);
-import  {
+import {
   AppendResult,
   UploadRequest,
   UploadParams,
@@ -37,7 +39,7 @@ const UPLOAD_HEADERS = {
 };
 
 interface FetchOpts {
-  headers?: {[key: string]: string};
+  headers?: { [key: string]: string };
   method?: string;
   body?: string;
 }
@@ -108,7 +110,7 @@ export default class PDP implements Adapter {
     return observations;
   }
 
-  async _getObsFiles(processId: ProcessID, obsIndex: number, version: number) {
+  async _getObsFiles(processId: ProcessID, obsIndex: number, version: number): Promise<GetObservationFilesResponse> {
     const queryDict = {
       processId: processId.toString(),
       obsIndex: obsIndex.toString(),
@@ -163,7 +165,7 @@ export default class PDP implements Adapter {
   }
 
   // TODO: update method signature to be more generic
-  async download(repoId: string, ids: string[], formatter, downloadDir: string) {
+  async download(repoId: string, ids: string[], formatter: TagFormatter, downloadDir: string) {
     const processId = newtype<ProcessID>(repoId);
     const obsIdxAndVersions = ids.map((idString) =>
       idString.split("_").map((n) => +n)
@@ -188,7 +190,7 @@ export default class PDP implements Adapter {
     obsIndex: number,
     version: number,
     downloadDir: string,
-    formatter
+    formatter: TagFormatter
   ) {
     // Let's first get the observation metadata
     const responseObservation = await this._getObs(
@@ -198,7 +200,7 @@ export default class PDP implements Adapter {
     );
     try {
       const metadata = responseObservation.data[0];
-      metadata.taxonomyTags = await formatter.toHumanFormat(
+      metadata.taxonomyTags = formatter.toHumanFormat(
         metadata.taxonomyTags ?? []
       );
       const metadataPath = path.join(
@@ -216,7 +218,7 @@ export default class PDP implements Adapter {
         `${version}`,
         `warnings.txt`
       );
-      if (err instanceof FormatError) {
+      if (isFormatError(err)) {
         const metadata = responseObservation.data[0];
         const metadataPath = path.join(
           downloadDir,
@@ -230,9 +232,10 @@ export default class PDP implements Adapter {
           `An error occurred when converting the taxonomy tags: ${err.message}\n\nThe internal format has been saved in metadata.json.`
         );
       } else {
+        let msg = err instanceof Error ? err.message : err;
         this._writeData(
           logPath,
-          `An error occurred when generating metadata.json: ${err.message}`
+          `An error occurred when generating metadata.json: ${msg}`
         );
       }
     }
@@ -385,7 +388,7 @@ export default class PDP implements Adapter {
     return await this._fetchJson(url, { headers: {}, method: "put" });
   }
 
-  static _addQueryParams(baseUrl: string, queryDict: {[key: string]: string}): string {
+  static _addQueryParams(baseUrl: string, queryDict: { [key: string]: string }): string {
     const queryString = Object.entries(queryDict)
       .map((part) => part.join("="))
       .join("&");
@@ -406,7 +409,7 @@ export default class PDP implements Adapter {
     return await response.json();
   }
 
-  static from(gmeContext: WebgmeContext, storageNode: Core.Node, req: Request, gmeConfig: GmeConfig.GmeConfig) {
+  static from(gmeContext: WebgmeContext, storageNode: Core.Node, req: AuthenticatedRequest, gmeConfig: AzureGmeConfig) {
     const { core } = gmeContext;
     // TODO: create the storage adapter from the content type
     // const token = require("./token");
@@ -438,4 +441,8 @@ function parseArtifact(obs: Observation): Artifact | undefined {
       time: obs.startTime
     };
   }
+}
+
+function isFormatError(err: any): err is FormatError {
+  return err instanceof FormatError;
 }

@@ -1,10 +1,12 @@
 import type {AppendResult} from './AppendResult';
+import type TagFormatter from '../../../../../common/TagFormatter';
+
 export interface Adapter {
   listArtifacts(): Promise<Repository[]>;
   createArtifact(metadata: ArtifactMetadata): Promise<string>;
   appendArtifact(repoId: string, metadata: ArtifactMetadata, filenames: string[]): Promise<AppendResult>;
     // returns fileUploadInfo
-  download(repoId: string, ids: string[], formatter, downloadDir: string): Promise<void>;
+  download(repoId: string, ids: string[], formatter: TagFormatter, downloadDir: string): Promise<void>;
 }
 
 export interface Artifact {

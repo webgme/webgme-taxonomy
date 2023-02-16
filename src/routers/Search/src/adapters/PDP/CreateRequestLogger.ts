@@ -2,6 +2,7 @@
  * This is a temporary mechanism to log (and email) creation request
  */
 import fsp from "fs/promises";
+import type {ArtifactMetadata} from "../common/types";
 
 export default class CreateRequestLogger {
   filepath: string;
@@ -12,7 +13,7 @@ export default class CreateRequestLogger {
     this._writeTask = Promise.resolve();
   }
 
-  log(observerId: string, metadata) {
+  log(observerId: string, metadata: ArtifactMetadata) {
     const request = {
       observerId,
       metadata,

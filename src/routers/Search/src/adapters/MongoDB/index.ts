@@ -2,28 +2,33 @@
  * This is a storage adapter for MongoDB which stores artifact sets
  * in documents along with any contained artifacts.
  */
-const fetch = require("node-fetch");
-const fs = require("fs");
-const _ = require("underscore");
-const path = require("path");
-const fsp = require("fs/promises");
-const { FormatError } = require("../../../../common/TagFormatter");
-const { Artifact, ArtifactSet } = require("../common/Artifact");
-const { MissingAttributeError } = require("../common/ModelError");
-
-const mongoUri = require("../../../../../config").mongo.uri;
-const { MongoClient, GridFSBucket, ObjectId } = require("mongodb");
-const defaultClient = new MongoClient(mongoUri);
-const Adapter = require("../common/Adapter");
-const {
+import fs from "fs";
+import _ from "underscore";
+import path from "path";
+import fsp from "fs/promises";
+import type { Adapter, ArtifactMetadata, Artifact, Repository } from "../common/types";
+import type TagFormatter from "../../../../../common/TagFormatter";
+import { FormatError } from "../../../../../common/TagFormatter";
+import { MissingAttributeError } from "../common/ModelError";
+import { MongoClient, GridFSBucket, ObjectId } from "mongodb";
+import type { Collection, Document } from 'mongodb';
+import gmeConfig from "../../../../../../config";
+import {
   AppendResult,
   UploadRequest,
   UploadParams,
-} = require("../common/AppendResult");
+} from "../common/AppendResult";
+import { WebgmeContext } from "../../../../../common/types";
 
-class MongoAdapter extends Adapter {
-  constructor(client, collectionName) {
-    super();
+const mongoUri = gmeConfig.mongo.uri;
+const defaultClient = new MongoClient(mongoUri);
+
+class MongoAdapter implements Adapter {
+  private _client: MongoClient;
+  private _files: GridFSBucket;
+  private _collection: Collection<Document>;
+
+  constructor(client: MongoClient, collectionName: string) {
     this._client = client;
     const db = this._client.db();
     const name = `taxonomy_data_${collectionName}`;
@@ -31,32 +36,34 @@ class MongoAdapter extends Adapter {
     this._files = new GridFSBucket(db, { bucketName: name });
   }
 
-  async listArtifacts() {
+  async listArtifacts(): Promise<Repository[]> {
     const documents = await this._collection.find({}).toArray();
-    return documents.map((doc) => {
+    const repos: Repository[] = documents.map((doc) => {
+      const docId = doc._id.toString();
       const artifacts = doc.artifacts.map(
-        (data, index) =>
-          new Artifact(
-            doc._id,
-            index,
-            data.displayName,
-            data.taxonomyTags,
-            data.taxonomyVersion,
-            data.time
-          )
+        (data: ArtifactMetadata, index: number) => ({
+          parentId: docId,
+          id: index.toString(),
+          displayName: data.displayName,
+          taxonomyTags: data.taxonomyTags,
+          taxonomy: data.taxonomyVersion,
+          time: data.time
+        })
       );
 
-      return new ArtifactSet(
-        doc._id,
-        doc.displayName,
-        doc.taxonomyTags,
-        doc.taxonomyVersion,
-        artifacts
-      );
+      return {
+        id: docId,
+        displayName: doc.displayName,
+        taxonomyTags: doc.taxonomyTags,
+        taxonomy: doc.taxonomyVersion,
+        children: artifacts
+      };
     });
+
+    return repos;
   }
 
-  async createArtifact(metadata) {
+  async createArtifact(metadata: ArtifactMetadata) {
     const artifactSet = {
       displayName: metadata.displayName,
       taxonomyVersion: metadata.taxonomy,
@@ -68,17 +75,21 @@ class MongoAdapter extends Adapter {
     return "Created!";
   }
 
-  async appendArtifact(artifactSetId, metadata, filenames) {
-    const set = await this._collection.findOne({
-      _id: ObjectId(artifactSetId),
+  async appendArtifact(repoId: string, metadata: ArtifactMetadata, filenames: string[]) {
+    const repo = await this._collection.findOne({
+      _id: new ObjectId(repoId),
     });
 
     const fileIds = _.range(filenames.length).map(() => new ObjectId());
-    const artifact = Object.assign({}, metadata);
-    artifact.time = new Date();
-    artifact.files = fileIds;
+    const artifact: Artifact = {
+      displayName: metadata.displayName,
+      taxonomyTags: metadata.taxonomyTags,
+      taxonomy: metadata.taxonomyVersion,
+      time: (new Date()).toString(),
+      files: fileIds.map(id => id.toString()),
+    };
 
-    const query = { _id: ObjectId(artifactSetId) };
+    const query = { _id: ObjectId(repoId) };
     const result = await this._collection.findOneAndUpdate(
       query,
       {
@@ -91,7 +102,7 @@ class MongoAdapter extends Adapter {
     const index = result.value.artifacts.length;
     const files = _.zip(filenames, fileIds).map(([name, id]) => {
       const extendedId = encodeURIComponent(id + "_" + name);
-      const url = `./artifacts/${artifactSetId}/${index}/${extendedId}/upload`;
+      const url = `./artifacts/${repoId}/${index}/${extendedId}/upload`;
       // TODO: add an authorization header
       const params = new UploadParams(url, "POST");
       return new UploadRequest(name, params);
@@ -99,10 +110,7 @@ class MongoAdapter extends Adapter {
     return new AppendResult(index, files);
   }
 
-  async uploadFile(artifactSetId, index, extendedId, fileStream) {
-    const set = await this._collection.findOne({
-      _id: ObjectId(artifactSetId),
-    });
+  async uploadFile(repoId: string, index, extendedId, fileStream) {
     const [fileId, ...nameChunks] = extendedId.split("_");
     const filename = nameChunks.join("_");
     const writeStream = this._files.openUploadStreamWithId(fileId, filename);
@@ -111,10 +119,15 @@ class MongoAdapter extends Adapter {
   }
 
   // TODO: update method signature to be more generic
-  async download(artifactSetId, ids, formatter, targetDir) {
+  async download(repoId: string, ids: string[], formatter: TagFormatter, targetDir: string): Promise<void> {
     const set = await this._collection.findOne({
-      _id: ObjectId(artifactSetId),
+      _id: new ObjectId(repoId),
     });
+    if (!set) {
+      // TODO: throw an error
+      return;
+    }
+
     await Promise.all(
       ids.map(async (idx) => {
         const metadata = set.artifacts[idx];
@@ -122,14 +135,13 @@ class MongoAdapter extends Adapter {
         if (metadata) {
           const metadataPath = path.join(artifactPath, "metadata.json");
           try {
-            metadata.taxonomyTags = await formatter.toHumanFormat(
+            metadata.taxonomyTags = formatter.toHumanFormat(
               metadata.taxonomyTags ?? []
             );
             await writeJsonData(metadataPath, metadata);
           } catch (err) {
             const logPath = path.join(artifactPath, `warnings.txt`);
             if (err instanceof FormatError) {
-              const metadata = responseObservation.data[0];
               await writeJsonData(metadataPath, metadata);
               writeData(
                 logPath,
@@ -152,17 +164,21 @@ class MongoAdapter extends Adapter {
     );
   }
 
-  async _downloadFile(fileId, targetDir) {
+  async _downloadFile(fileId: ObjectId, targetDir: string) {
     fileId = fileId.toString();
     const metadata = await this._files.find({ _id: fileId }).next();
-    const filepath = path.join(targetDir, metadata.filename);
-    const fileStream = await fs.createWriteStream(filepath);
-    const stream = this._files.openDownloadStream(fileId).pipe(fileStream);
+    if (metadata) {
+      const filepath = path.join(targetDir, metadata.filename);
+      const fileStream = fs.createWriteStream(filepath);
+      const stream = this._files.openDownloadStream(fileId).pipe(fileStream);
 
-    await streamClose(stream);
+      await streamClose(stream);
+    } else {
+      // TODO: what if the file isn't found?
+    }
   }
 
-  static from(gmeContext, storageNode) {
+  static from(gmeContext: WebgmeContext, storageNode: Core.Node) {
     const { core } = gmeContext;
     const collection = core.getAttribute(storageNode, "collection");
     if (!collection) {
@@ -170,22 +186,22 @@ class MongoAdapter extends Adapter {
     }
 
     const mongoUri = core.getAttribute(storageNode, "URI");
-    const client = mongoUri ? new MongoClient(mongoUri) : defaultClient;
-    return new MongoAdapter(client, collection);
+    const client = mongoUri ? new MongoClient(mongoUri.toString()) : defaultClient;
+    return new MongoAdapter(client, collection.toString());
   }
 }
 
-async function writeData(filePath, data) {
+async function writeData(filePath: string, data: string) {
   const dirPath = path.dirname(filePath) + path.sep;
   await fsp.mkdir(dirPath, { recursive: true });
   await fsp.writeFile(filePath, data);
 }
 
-async function writeJsonData(filePath, metadata) {
+async function writeJsonData(filePath: string, metadata: ArtifactMetadata) {
   writeData(filePath, JSON.stringify(metadata));
 }
 
-async function streamClose(stream) {
+async function streamClose(stream): Promise<void> {
   return new Promise((res, rej) => stream.on("close", res));
 }
 

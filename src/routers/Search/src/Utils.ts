@@ -16,4 +16,3 @@ export function filterMap<I, O>(list: I[], fn: (x: I) => O | undefined): O[] {
     return items;
   }, []);
 }
-
