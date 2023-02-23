@@ -1,5 +1,6 @@
 // TODO: load the different adapter types
 
+import type { WebgmeContext } from "../../../../common/types";
 import RouterUtils from "../../../../common/routers/Utils";
 import { StorageNotFoundError } from "./common/ModelError";
 import fs from "fs";
@@ -12,7 +13,7 @@ const SUPPORTED_ADAPTERS = Object.fromEntries(
 import assert from "assert";
 
 export default class Adapters {
-  static async from(gmeContext, req: Request, config) {
+  static async from(gmeContext: WebgmeContext, req: Request, config: any) {
     const { core, contentType } = gmeContext;
     const storageNode = (await core.loadChildren(contentType)).find((child) =>
       isTypeOf(core, child, "Storage")
@@ -26,7 +27,8 @@ export default class Adapters {
       core.getMetaType(storageNode),
       "name"
     );
-    const Adapter = SUPPORTED_ADAPTERS[adapterType.toLowerCase()];
+    const adapterName = adapterType?.toString().toLowerCase()
+    const Adapter = (adapterName != null) ? SUPPORTED_ADAPTERS[adapterName] : null;
     assert(
       Adapter,
       new RouterUtils.UserError(
@@ -38,8 +40,8 @@ export default class Adapters {
   }
 }
 
-function isTypeOf(core: GmeClasses.Core,node: Core.Node, name: string) {
-  let basenode = core.getMetaType(node);
+function isTypeOf(core: WebgmeContext['core'], node: Core.Node, name: string) {
+  let basenode: Core.Node | null = core.getMetaType(node);
   while (basenode) {
     if (core.getAttribute(basenode, "name") === name) {
       return true;

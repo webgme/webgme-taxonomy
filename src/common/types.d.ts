@@ -73,7 +73,7 @@ export type MiddlewareOptions = {
 };
 
 export type WebgmeContext = {
-  core: GmeClasses.Core,
+  core: GmeClasses.Core & { getMetaType(node: Core.Node): Core.Node },
   root: Core.Node,
   project: {
     projectName: string,
