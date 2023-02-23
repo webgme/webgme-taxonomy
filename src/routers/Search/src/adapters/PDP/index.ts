@@ -73,7 +73,7 @@ export default class PDP implements Adapter {
 
     const artifacts: Artifact[] = filterMap(processObservations.flat(), parseArtifact);
     const repos: Repository[] = Object.entries(
-      _.groupBy(artifacts, (artifact) => artifact.parentId)
+      _.groupBy(artifacts, (artifact) => artifact.parentId ?? "")
     ).map(([parentId, artifacts]) => {
       artifacts.sort((a1, a2) => (a1.time < a2.time ? -1 : 1));
       const { displayName } = artifacts[0];

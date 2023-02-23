@@ -16,7 +16,7 @@ export interface Artifact {
   taxonomyTags: any[];
   taxonomy: TaxonomyVersion;
   time: string;
-  files: string[];
+  files?: string[];
 }
 
 export interface Repository {
