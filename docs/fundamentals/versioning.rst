@@ -28,6 +28,7 @@ Listed below are types of changes and the minimum version bump required. If mult
 Techniques to Avoiding Breaking Changes
 ---------------------------------------
 Some of the breaking changes above have non-breaking alternatives to use for taxonomy evolution:
+
 - Term/Field Deletion: Deprecate the term instead.
 - Term Move: Deprecate the original and add a new term.
 - Term/Field Rename: Add alias for original name and rename.
