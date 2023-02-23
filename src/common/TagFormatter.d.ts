@@ -3,5 +3,5 @@ export default interface TagFormatter {
   toHumanFormat(tags: any[]): any[];
 }
 
-export interface FormatError extends Error {
+export class FormatError extends Error {
 }

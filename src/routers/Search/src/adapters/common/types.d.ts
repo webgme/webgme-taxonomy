@@ -10,12 +10,13 @@ export interface Adapter {
 }
 
 export interface Artifact {
-  parentId: string;
-  id: string;
+  parentId?: string;
+  id?: string;
   displayName: string;
   taxonomyTags: any[];
   taxonomy: TaxonomyVersion;
   time: string;
+  files: string[];
 }
 
 export interface Repository {
@@ -30,6 +31,7 @@ export interface ArtifactMetadata {
   displayName: string;
   taxonomyTags: any[];
   taxonomyVersion: TaxonomyVersion;
+  time: string;
 }
 
 export type TaxonomyVersion = TaxonomyRelease | TaxonomyBranch | TaxonomyCommit;

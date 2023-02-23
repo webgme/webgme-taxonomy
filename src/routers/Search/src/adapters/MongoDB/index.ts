@@ -3,6 +3,7 @@
  * in documents along with any contained artifacts.
  */
 import fs from "fs";
+import stream from "stream";
 import _ from "underscore";
 import path from "path";
 import fsp from "fs/promises";
@@ -66,7 +67,7 @@ class MongoAdapter implements Adapter {
   async createArtifact(metadata: ArtifactMetadata) {
     const artifactSet = {
       displayName: metadata.displayName,
-      taxonomyVersion: metadata.taxonomy,
+      taxonomyVersion: metadata.taxonomyVersion,
       taxonomyTags: [],
       artifacts: [],
     };
@@ -89,17 +90,17 @@ class MongoAdapter implements Adapter {
       files: fileIds.map(id => id.toString()),
     };
 
-    const query = { _id: ObjectId(repoId) };
+    const query = { _id: new ObjectId(repoId) };
     const result = await this._collection.findOneAndUpdate(
       query,
       {
-        $push: { artifacts: artifact },
+        $push: { artifacts: artifact } as Document,
       },
       { returnDocument: "after" }
     );
 
     // TODO: handle artifact not found case
-    const index = result.value.artifacts.length;
+    const index = result.value?.artifacts.length ?? 0;
     const files = _.zip(filenames, fileIds).map(([name, id]) => {
       const extendedId = encodeURIComponent(id + "_" + name);
       const url = `./artifacts/${repoId}/${index}/${extendedId}/upload`;
@@ -110,10 +111,11 @@ class MongoAdapter implements Adapter {
     return new AppendResult(index, files);
   }
 
-  async uploadFile(repoId: string, index, extendedId, fileStream) {
+  async uploadFile(repoId: string, index: unknown, extendedId: string, fileStream: stream.Readable) {
     const [fileId, ...nameChunks] = extendedId.split("_");
     const filename = nameChunks.join("_");
-    const writeStream = this._files.openUploadStreamWithId(fileId, filename);
+    const objId = new ObjectId(fileId);
+    const writeStream = this._files.openUploadStreamWithId(objId, filename);
     const stream = fileStream.pipe(writeStream);
     await streamClose(stream);
   }
@@ -148,14 +150,15 @@ class MongoAdapter implements Adapter {
                 `An error occurred when converting the taxonomy tags: ${err.message}\n\nThe internal format has been saved in metadata.json.`
               );
             } else {
+              const message = (err instanceof Error) ? err.message : err?.toString();
               writeData(
                 logPath,
-                `An error occurred when generating metadata.json: ${err.message}`
+                `An error occurred when generating metadata.json: ${message}`
               );
             }
           }
           await Promise.all(
-            metadata.files.map((fileId) =>
+            metadata.files.map((fileId: ObjectId) =>
               this._downloadFile(fileId, artifactPath)
             )
           );
@@ -165,12 +168,12 @@ class MongoAdapter implements Adapter {
   }
 
   async _downloadFile(fileId: ObjectId, targetDir: string) {
-    fileId = fileId.toString();
-    const metadata = await this._files.find({ _id: fileId }).next();
+    const id = new ObjectId(fileId.toString());
+    const metadata = await this._files.find({ _id: id }).next();
     if (metadata) {
       const filepath = path.join(targetDir, metadata.filename);
       const fileStream = fs.createWriteStream(filepath);
-      const stream = this._files.openDownloadStream(fileId).pipe(fileStream);
+      const stream = this._files.openDownloadStream(id).pipe(fileStream);
 
       await streamClose(stream);
     } else {
@@ -201,7 +204,7 @@ async function writeJsonData(filePath: string, metadata: ArtifactMetadata) {
   writeData(filePath, JSON.stringify(metadata));
 }
 
-async function streamClose(stream): Promise<void> {
+async function streamClose(stream: stream.Stream): Promise<void> {
   return new Promise((res, rej) => stream.on("close", res));
 }
 
