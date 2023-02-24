@@ -1,5 +1,6 @@
 import type {AppendResult} from './AppendResult';
 import type TagFormatter from '../../../../../common/TagFormatter';
+import type { WebgmeContext, WebgmeRequest } from '../../../../../common/types';
 
 export interface Adapter {
   listArtifacts(): Promise<Repository[]>;
@@ -7,6 +8,10 @@ export interface Adapter {
   appendArtifact(repoId: string, metadata: ArtifactMetadata, filenames: string[]): Promise<AppendResult>;
     // returns fileUploadInfo
   download(repoId: string, ids: string[], formatter: TagFormatter, downloadDir: string): Promise<void>;
+}
+
+export interface AdapterStatic {
+  from(gmeContext: WebgmeContext, storageNode: Core.Node, request: WebgmeRequest, config: any): Adapter;
 }
 
 export interface Artifact {

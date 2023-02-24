@@ -1,10 +1,12 @@
 // TODO: load the different adapter types
 
-import type { WebgmeContext } from "../../../../common/types";
+import type { WebgmeContext, WebgmeRequest } from "../../../../common/types";
 import RouterUtils from "../../../../common/routers/Utils";
 import { StorageNotFoundError } from "./common/ModelError";
 import fs from "fs";
-const SUPPORTED_ADAPTERS = Object.fromEntries(
+import type { AdapterStatic } from "./common/types";
+
+const SUPPORTED_ADAPTERS: { [type: string]: AdapterStatic } = Object.fromEntries(
   fs
     .readdirSync(__dirname)
     .filter((name) => !name.endsWith(".js") && name !== "common")
@@ -13,7 +15,7 @@ const SUPPORTED_ADAPTERS = Object.fromEntries(
 import assert from "assert";
 
 export default class Adapters {
-  static async from(gmeContext: WebgmeContext, req: Request, config: any) {
+  static async from(gmeContext: WebgmeContext, req: WebgmeRequest, config: any) {
     const { core, contentType } = gmeContext;
     const storageNode = (await core.loadChildren(contentType)).find((child) =>
       isTypeOf(core, child, "Storage")

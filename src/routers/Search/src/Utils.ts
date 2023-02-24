@@ -14,5 +14,9 @@ export function filterMap<I, O>(list: I[], fn: (x: I) => O | undefined): O[] {
       items.push(mapped);
     }
     return items;
-  }, []);
+  }, <Array<O>>[]);
+}
+
+export function isString<T>(possibleStr: T): possibleStr is Extract<T, string> {
+  return typeof possibleStr === 'string';
 }

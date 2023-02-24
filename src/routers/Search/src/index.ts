@@ -19,8 +19,9 @@ import type { Request, Response, Router, RequestHandler, NextFunction } from "ex
 const router = express.Router();
 
 import RouterUtils from "../../../common/routers/Utils";
-import type {MiddlewareOptions } from '../../../common/types';
+import type {MiddlewareOptions, WebgmeRequest } from '../../../common/types';
 import Utils from "../../../common/Utils";
+import { isString } from "./Utils";
 import DashboardConfiguration from "../../../common/SearchFilterDataExporter";
 import TagFormatter from "../../../common/TagFormatter";
 import path from "path";
@@ -171,14 +172,20 @@ function initialize(middlewareOpts: MiddlewareOptions) {
       const { parentId } = req.params;
       // TODO: get the IDs for the specific observations to get
       let ids;
-      try {
+      if (isString(req.query.ids)){
         ids = JSON.parse(req.query.ids);
-      } catch (err) {
-        return res.status(400).send("List of artifact IDs required");
+      }
+      else {
+        res.status(400).send("List of artifact IDs required");
+        return;
       }
 
       const { root, core } = req.webgmeContext;
       const node = await Utils.findTaxonomyNode(core, root);
+      if (node == null) {
+        res.status(400).send("No taxonomy node found");
+        return;
+      }
       const formatter = await TagFormatter.from(core, node);
       const storage = await StorageAdapter.from(
         req.webgmeContext,
@@ -205,7 +212,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
         return false;
       } catch (err) {
         // no files associated with the artifact
-        logger.error(err);
+        logger.error(`${err}`);
         res.sendStatus(204);
       }
     })
@@ -215,8 +222,9 @@ function initialize(middlewareOpts: MiddlewareOptions) {
 }
 
 async function convertTaxonomyTags(req: Request, res: Response, next: NextFunction) {
-  const { root, core } = req.webgmeContext;
+  const { root, core } = (<WebgmeRequest>req).webgmeContext;
   const node = await Utils.findTaxonomyNode(core, root);
+  if (node == null) return res.status(400).send("No taxonomy node found");
   const formatter = await TagFormatter.from(core, node);
   const { metadata } = req.body;
   try {
