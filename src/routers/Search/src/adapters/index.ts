@@ -8,9 +8,9 @@ import type { AdapterStatic } from "./common/types";
 
 const SUPPORTED_ADAPTERS: { [type: string]: AdapterStatic } = Object.fromEntries(
   fs
-    .readdirSync(__dirname)
-    .filter((name) => !name.endsWith(".js") && name !== "common")
-    .map((name) => [name.toLowerCase(), require(`./${name}`)])
+    .readdirSync(__dirname, { withFileTypes: true })
+    .filter(entry => entry.isDirectory() && (entry.name !== "common"))
+    .map(({ name }) => [name.toLowerCase(), require(`./${name}`).default])
 );
 import assert from "assert";
 
