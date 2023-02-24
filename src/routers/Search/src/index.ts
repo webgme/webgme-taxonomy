@@ -25,7 +25,7 @@ import { isString } from "./Utils";
 import DashboardConfiguration from "../../../common/SearchFilterDataExporter";
 import TagFormatter from "../../../common/TagFormatter";
 import path from "path";
-const staticPath = path.join(__dirname, "dashboard", "public");
+const staticPath = path.join(__dirname, "..", "dashboard", "public");
 import os from "os";
 import { zip, COMPRESSION_LEVEL } from "zip-a-folder";
 import fsp from "fs/promises";
