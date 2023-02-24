@@ -160,9 +160,13 @@ function initialize(middlewareOpts: MiddlewareOptions) {
         req,
         mainConfig
       );
-      // TODO: verify that it is a legitimate request
-      const status = await storage.uploadFile(parentId, index, fileId, req);
-      res.json(status);
+      if (storage.uploadFile) {
+        const status = await storage.uploadFile(parentId, index, fileId, req);
+        res.json(status);
+      }
+      else {
+        res.sendStatus(400);
+      }
     })
   );
 

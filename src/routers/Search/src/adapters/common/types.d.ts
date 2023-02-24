@@ -8,6 +8,7 @@ export interface Adapter {
   appendArtifact(repoId: string, metadata: ArtifactMetadata, filenames: string[]): Promise<AppendResult>;
     // returns fileUploadInfo
   download(repoId: string, ids: string[], formatter: TagFormatter, downloadDir: string): Promise<void>;
+  uploadFile?(repoId: string, index: string, fileId: string, req: WebgmeRequest): Promise<void>;
 }
 
 export interface AdapterStatic {
