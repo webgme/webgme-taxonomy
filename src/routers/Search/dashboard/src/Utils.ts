@@ -1,4 +1,3 @@
-
 /**
  * A Result is the result from a request. Errors can be mapped (like
  * combinators). Unwrapping the result will either throw an error (if an error
@@ -116,4 +115,14 @@ export async function readFile(file: File) {
     };
     reader.readAsText(file);
   });
+}
+
+export function filterMap<I, O>(list: I[], fn: (x: I) => O | undefined): O[] {
+  return list.reduce((items, input) => {
+    const mapped = fn(input);
+    if (isDefined(mapped)) {
+      items.push(mapped);
+    }
+    return items;
+  }, <Array<O>>[]);
 }

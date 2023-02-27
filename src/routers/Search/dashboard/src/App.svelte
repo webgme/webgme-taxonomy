@@ -2,7 +2,7 @@
   import { setContext } from "svelte";
   import { FilterTag, LeanTag, fromDict } from "./tags";
   import TopAppBar, { Row, Section, Title } from "@smui/top-app-bar";
-  import { filterMap } from "../../src/Utils";
+  import { filterMap } from "./Utils";
   import {
     getLatestArtifact,
     openUrl,
