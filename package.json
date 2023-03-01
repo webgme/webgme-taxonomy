@@ -17,7 +17,7 @@
     "prepublish": "npm run build && cd src/routers/Dashboard/app && npm run build && cd ../../Search/dashboard && npm run build",
     "prepare": "husky install"
   },
-  "version": "1.1.0",
+  "version": "1.2.0",
   "devDependencies": {
     "@smui/icon-button": "^6.1.0",
     "@smui/linear-progress": "^6.1.0",
