@@ -9,7 +9,7 @@
     "test": "ts-mocha -p tsconfig.json tests/**/*.spec.ts tests/*.spec.ts",
     "check": "svelte-check --tsconfig ./tsconfig.json",
     "postinstall": "patch-package",
-    "prepublish": "npm run build"
+    "prepare": "npm run build"
   },
   "devDependencies": {
     "@rollup/plugin-alias": "^4.0.2",

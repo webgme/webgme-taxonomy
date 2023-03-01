@@ -14,8 +14,8 @@
     "users": "node ./node_modules/webgme-engine/src/bin/usermanager.js",
     "clean_up": "node ./node_modules/webgme-engine/src/bin/clean_up.js",
     "build": "tsc --build",
-    "prepublish": "npm run build",
-    "prepare": "husky install"
+    "prepublish": "husky install",
+    "prepare": "npm run build && cd src/routers/Dashboard/app && npm install && cd ../../Search/dashboard && npm install"
   },
   "version": "1.1.0",
   "devDependencies": {
