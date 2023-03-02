@@ -2,9 +2,9 @@
   import { setContext } from "svelte";
   import { FilterTag, LeanTag, fromDict } from "./tags";
   import TopAppBar, { Row, Section, Title } from "@smui/top-app-bar";
+  import { filterMap } from "./Utils";
   import {
     getLatestArtifact,
-    filterMap,
     openUrl,
     encodeQueryParams,
     readFile,
@@ -32,10 +32,10 @@
   import Radio from "@smui/radio";
   import Button, { Label } from "@smui/button";
   import Paper, { Content as PaperContent } from "@smui/paper";
-  import { 
+  import {
     AppendArtifactDialog,
     ArtifactSetViewer,
-    TaxonomyFilter
+    TaxonomyFilter,
   } from "./components";
 
   import TaxonomyData from "./TaxonomyData";
@@ -49,7 +49,7 @@
   import TagFormatter, { FormatError } from "./Formatter";
   import Storage, { ModelError, RequestError } from "./Storage";
   const storage = setContext("storage", new Storage());
-  
+
   let allItems = [];
   let items = [];
 
@@ -90,8 +90,8 @@
       const matchingTags = filterTags.every(
         (filterTag) => !!taxonomyTags.find((tag) => filterTag.isMatch(tag))
       );
-      const hasMatchingArtifact = item.children.find(child => {
-      const { displayName, taxonomyTags = [] } = child;
+      const hasMatchingArtifact = item.children.find((child) => {
+        const { displayName, taxonomyTags = [] } = child;
         return filterTags.every(
           (filterTag) => !!taxonomyTags.find((tag) => filterTag.isMatch(tag))
         );
@@ -289,8 +289,7 @@
     if (error == null) {
       displayMessage("Upload complete!");
       fetchData().catch(displayError);
-    }
-    else {
+    } else {
       displayError(error);
     }
     if (appendMsgId != null) {
@@ -402,10 +401,10 @@
 <AppendArtifactDialog
   {contentType}
   bind:set={appendItem}
-  on:upload="{() => appendMsgId = displayProgressMessage('Upload in progress')}"
+  on:upload={() => (appendMsgId = displayProgressMessage("Upload in progress"))}
   on:complete={onAppendFinish}
   on:error={onAppendFinish}
-></AppendArtifactDialog>
+/>
 
 <!-- Artifact creation dialog -->
 <Dialog
@@ -535,7 +534,7 @@
         bind:artifactSet={selectedArtifactSet}
         bind:contentType
         on:download={(event) => onDownload(event.detail)}
-        on:upload={(event) => appendItem = event.detail.artifactSet}
+        on:upload={(event) => (appendItem = event.detail.artifactSet)}
       />
     {/if}
   </AppContent>

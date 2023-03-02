@@ -5,27 +5,32 @@
  *    Process -> ArtifactSet
  *    Observation -> Artifact
  */
-const fetch = require("node-fetch");
-const fs = require("fs");
-const _ = require("underscore");
-const path = require("path");
-const os = require("os");
-const fsp = require("fs/promises");
-const RouterUtils = require("../../../../common/routers/Utils");
-const { FormatError } = require("../../../../common/TagFormatter");
-const { pipeline } = require("stream");
-const { promisify } = require("util");
+import fetch from "node-fetch";
+import fs from "fs";
+import _ from "underscore";
+import path from "path";
+import fsp from "fs/promises";
+import { newtype } from "./types";
+import type { Process, Observation, ProcessID, AppendObservationResponse, GetObservationFilesResponse } from "./types";
+import RouterUtils from "../../../../../common/routers/Utils";
+import type { AuthenticatedRequest } from "../../../../../common/routers/Utils";
+import type TagFormatter from "../../../../../common/TagFormatter";
+import { FormatError } from "../../../../../common/TagFormatter";
+import type { WebgmeContext, AzureGmeConfig } from "../../../../../common/types";
+import { pipeline } from "stream";
+import { promisify } from "util";
 const streamPipeline = promisify(pipeline);
-const { MissingAttributeError } = require("../common/ModelError");
-const { Artifact, ArtifactSet } = require("../common/Artifact");
-const CreateRequestLogger = require("./CreateRequestLogger");
+import { MissingAttributeError } from "../common/ModelError";
+import type { Adapter, ArtifactMetadata, Artifact, Repository } from "../common/types";
+import { filterMap, range, sleep } from "../../Utils";
+import CreateRequestLogger from "./CreateRequestLogger";
 const logFilePath = process.env.CREATE_LOG_PATH || "./CreateProcesses.jsonl";
 const reqLogger = new CreateRequestLogger(logFilePath);
-const {
+import {
   AppendResult,
   UploadRequest,
   UploadParams,
-} = require("../common/AppendResult");
+} from "../common/AppendResult";
 const UPLOAD_HEADERS = {
   Accept: "application/xml",
   "Content-Type": "application/octet-stream",
@@ -33,15 +38,30 @@ const UPLOAD_HEADERS = {
   "x-ms-encryption-algorithm": "AES256",
 };
 
-class PDP {
-  constructor(baseUrl, token, processType) {
+interface FetchOpts {
+  headers?: { [key: string]: string };
+  method?: string;
+  body?: string;
+}
+
+const DefaultFetchOpts = () => ({
+  headers: {},
+  method: 'GET',
+});
+
+export default class PDP implements Adapter {
+  private _baseUrl: string;
+  private _token: string;
+  processType: string;
+
+  constructor(baseUrl: string, token: string, processType: string) {
     this._baseUrl = baseUrl;
     this._token = token;
     this.processType = processType;
   }
 
-  async listArtifacts() {
-    const allProcesses = await this._fetchJson(
+  async listArtifacts(): Promise<Repository[]> {
+    const allProcesses: Process[] = await this._fetchJson(
       "v2/Process/ListProcesses?permission=read"
     );
 
@@ -51,88 +71,26 @@ class PDP {
         .map(({ processId }) => this.getProcessObservations(processId))
     );
 
-    const artifacts = filterMap(processObservations.flat(), parseArtifact);
-    const artifactSets = Object.entries(
-      _.groupBy(artifacts, (artifact) => artifact.parentId)
+    const artifacts: Artifact[] = filterMap(processObservations.flat(), parseArtifact);
+    const repos: Repository[] = Object.entries(
+      _.groupBy(artifacts, (artifact) => artifact.parentId ?? "")
     ).map(([parentId, artifacts]) => {
       artifacts.sort((a1, a2) => (a1.time < a2.time ? -1 : 1));
-      const { displayName } = _.first(artifacts);
-      const { taxonomyTags, taxonomyVersion } = _.last(artifacts);
-      return new ArtifactSet(
-        parentId,
+      const { displayName } = artifacts[0];
+      const lastIndex = artifacts.length - 1;
+      const { taxonomyTags, taxonomy } = artifacts[lastIndex];
+      return {
+        id: parentId,
         displayName,
         taxonomyTags,
-        taxonomyVersion,
-        artifacts
-      );
+        taxonomy,
+        children: artifacts
+      };
     });
-    return artifactSets;
+    return repos;
   }
 
-  async getDownloadUrls(processId, obsIndex, version) {
-    const result = await this._getObsFiles(processId, obsIndex, version);
-    await sleep(5000); // FIXME: check for it to be ready. Not very pretty currently...
-    return result.files.map((file) => file.sasUrl);
-  }
-
-  async _getObsFiles(processId, obsIndex, version) {
-    const queryDict = {
-      processId,
-      obsIndex,
-      version,
-      endObsIndex: obsIndex,
-    };
-    const url = PDP._addQueryParams("v3/Files/GetObservationFiles", queryDict);
-    const opts = {
-      method: "put",
-    };
-    return await this._fetchJson(url, opts);
-  }
-
-  async _getObs(processId, obsIndex, version) {
-    const queryDict = {
-      processId,
-      obsIndex,
-      version,
-    };
-    const url = PDP._addQueryParams("v2/Process/GetObservation", queryDict);
-    const opts = {
-      method: "get",
-    };
-    return await this._fetchJson(url, opts);
-  }
-
-  async _getFileTransferStatus(processId, directoryId, transferId) {
-    const queryDict = {
-      processId,
-      directoryId,
-      transferId,
-    };
-    const url = PDP._addQueryParams("v2/Files/GetTransferState", queryDict);
-    const opts = {
-      method: "get",
-    };
-    return await this._fetchJson(url, opts);
-  }
-
-  async getLatestObservation(pid) {
-    const procInfo = await this._getProcessState(pid);
-
-    const observations = await this._fetchJson(
-      "v2/Process/GetObservation?processId=" +
-        pid +
-        "&obsIndex=" +
-        (procInfo.numObservations - 1)
-    );
-
-    return observations;
-  }
-
-  async _getProcessState(pid) {
-    return await this._fetchJson(`v2/Process/GetProcessState?processId=${pid}`);
-  }
-
-  async getProcessObservations(pid) {
+  async getProcessObservations(pid: ProcessID): Promise<Observation[]> {
     const obsInfo = await this._fetchJson(
       `v2/Process/GetProcessState?processId=${pid}`
     );
@@ -152,7 +110,48 @@ class PDP {
     return observations;
   }
 
-  async createArtifact(metadata) {
+  async _getObsFiles(processId: ProcessID, obsIndex: number, version: number): Promise<GetObservationFilesResponse> {
+    const queryDict = {
+      processId: processId.toString(),
+      obsIndex: obsIndex.toString(),
+      version: version.toString(),
+      endObsIndex: obsIndex.toString(),
+    };
+    const url = PDP._addQueryParams("v3/Files/GetObservationFiles", queryDict);
+    const opts = {
+      method: "put",
+    };
+    return await this._fetchJson(url, opts);
+  }
+
+  async _getObs(processId: ProcessID, obsIndex: number, version: number) {
+    const queryDict = {
+      processId: processId.toString(),
+      obsIndex: obsIndex.toString(),
+      version: version.toString(),
+    };
+    const url = PDP._addQueryParams("v2/Process/GetObservation", queryDict);
+    const opts = {
+      method: "get",
+    };
+    return await this._fetchJson(url, opts);
+  }
+
+  async _getFileTransferStatus(processId: ProcessID, directoryId: string, transferId: string) {
+    const queryDict = {
+      processId: processId.toString(),
+      directoryId: directoryId.toString(),
+      transferId: transferId.toString(),
+    };
+    const url = PDP._addQueryParams("v2/Files/GetTransferState", queryDict);
+    return await this._fetchJson(url);
+  }
+
+  async _getProcessState(pid: ProcessID) {
+    return await this._fetchJson(`v2/Process/GetProcessState?processId=${pid}`);
+  }
+
+  async createArtifact(metadata: ArtifactMetadata): Promise<string> {
     const observerId = RouterUtils.getObserverIdFromToken(this._token);
     reqLogger.log(observerId, metadata);
 
@@ -166,7 +165,8 @@ class PDP {
   }
 
   // TODO: update method signature to be more generic
-  async download(processId, ids, formatter, downloadDir) {
+  async download(repoId: string, ids: string[], formatter: TagFormatter, downloadDir: string) {
+    const processId = newtype<ProcessID>(repoId);
     const obsIdxAndVersions = ids.map((idString) =>
       idString.split("_").map((n) => +n)
     );
@@ -186,13 +186,12 @@ class PDP {
   }
 
   async _downloadObservation(
-    processId,
-    obsIndex,
-    version,
-    downloadDir,
-    formatter
+    processId: ProcessID,
+    obsIndex: number,
+    version: number,
+    downloadDir: string,
+    formatter: TagFormatter
   ) {
-    console.log(obsIndex, version);
     // Let's first get the observation metadata
     const responseObservation = await this._getObs(
       processId,
@@ -201,7 +200,7 @@ class PDP {
     );
     try {
       const metadata = responseObservation.data[0];
-      metadata.taxonomyTags = await formatter.toHumanFormat(
+      metadata.taxonomyTags = formatter.toHumanFormat(
         metadata.taxonomyTags ?? []
       );
       const metadataPath = path.join(
@@ -219,7 +218,7 @@ class PDP {
         `${version}`,
         `warnings.txt`
       );
-      if (err instanceof FormatError) {
+      if (isFormatError(err)) {
         const metadata = responseObservation.data[0];
         const metadataPath = path.join(
           downloadDir,
@@ -233,9 +232,10 @@ class PDP {
           `An error occurred when converting the taxonomy tags: ${err.message}\n\nThe internal format has been saved in metadata.json.`
         );
       } else {
+        let msg = err instanceof Error ? err.message : err;
         this._writeData(
           logPath,
-          `An error occurred when generating metadata.json: ${err.message}`
+          `An error occurred when generating metadata.json: ${msg}`
         );
       }
     }
@@ -270,8 +270,8 @@ class PDP {
           PDP._correctFilePath(
             downloadDir,
             file.name,
-            obsIndex.toString(),
-            version.toString()
+            obsIndex,
+            version
           ),
           file.sasUrl
         )
@@ -279,7 +279,8 @@ class PDP {
     );
   }
 
-  async appendArtifact(processId, metadata, filenames) {
+  async appendArtifact(repoId: string, metadata: ArtifactMetadata, filenames: string[]): Promise<AppendResult> {
+    const processId = newtype<ProcessID>(repoId);
     const procInfo = await this._getProcessState(processId);
     const index = procInfo.numObservations;
     const version = 0;
@@ -301,7 +302,7 @@ class PDP {
     return new AppendResult(index, files);
   }
 
-  async _downloadFile(filePath, url) {
+  async _downloadFile(filePath: string, url: string) {
     const dirPath = path.dirname(filePath) + path.sep;
     await fsp.mkdir(dirPath, { recursive: true });
 
@@ -310,26 +311,26 @@ class PDP {
     await streamPipeline(response.body, writeStream);
   }
 
-  async _writeData(filePath, data) {
+  async _writeData(filePath: string, data: string) {
     const dirPath = path.dirname(filePath) + path.sep;
     await fsp.mkdir(dirPath, { recursive: true });
     await fsp.writeFile(filePath, data);
   }
 
-  async _writeJsonData(filePath, metadata) {
+  async _writeJsonData(filePath: string, metadata: ArtifactMetadata) {
     this._writeData(filePath, JSON.stringify(metadata));
   }
 
-  static _correctFilePath(downloadDir, filename, index, version) {
+  static _correctFilePath(downloadDir: string, filename: string, index: number, version: number) {
     return path.join(
       downloadDir,
-      index,
-      version,
+      index.toString(),
+      version.toString(),
       filename.replace("dat/" + index, "")
     );
   }
 
-  _createObservationData(processId, type, data) {
+  _createObservationData(processId: ProcessID, type: string, data: ArtifactMetadata): Observation {
     const timestamp = new Date().toISOString();
     return {
       isFunction: false,
@@ -340,6 +341,7 @@ class PDP {
       index: 0,
       version: 0,
       startTime: timestamp,
+      endTime: timestamp,
       applicationDependencies: [],
       processDependencies: [],
       data: [data],
@@ -347,31 +349,19 @@ class PDP {
     };
   }
 
-  async _appendObservation(processId, type, data) {
-    const observation = this._createObservationData(processId, type, data);
-    const response = await this._fetchJson(
-      `v3/Process/AppendObservation?processId=${processId}`,
-      {
-        method: "post",
-        body: observation,
-      }
-    );
-  }
-
   async _appendObservationWithFiles(
-    processId,
-    index,
-    version,
-    type,
-    data,
-    files
-  ) {
+    processId: ProcessID,
+    index: number,
+    version: number,
+    type: string,
+    data: ArtifactMetadata,
+    files: string[]
+  ): Promise<AppendObservationResponse> {
     const observation = this._createObservationData(processId, type, data);
     observation.index = index;
     observation.version = version;
     observation.dataFiles = files;
 
-    console.log(observation);
     return await this._fetchJson(
       `v3/Process/AppendObservation?processId=${processId}&uploadExpiresInMins=180`,
       {
@@ -384,28 +374,28 @@ class PDP {
     );
   }
 
-  async _createProcess(type) {
+  async _createProcess(type: string) {
     //TODO we probably need description field
     const queryDict = {
-      isFunction: false,
-      isVirtual: false,
+      isFunction: false.toString(),
+      isVirtual: false.toString(),
       processType: encodeURIComponent(type),
       processDescription: encodeURIComponent(
         "A process created from webgme-taxonomy"
       ),
     };
     const url = PDP._addQueryParams("v2/Process/CreateProcess", queryDict);
-    return await this._fetchJson(url, { method: "put" });
+    return await this._fetchJson(url, { headers: {}, method: "put" });
   }
 
-  static _addQueryParams(baseUrl, queryDict) {
+  static _addQueryParams(baseUrl: string, queryDict: { [key: string]: string }): string {
     const queryString = Object.entries(queryDict)
       .map((part) => part.join("="))
       .join("&");
     return baseUrl.replace(/\??$/, "?") + queryString;
   }
 
-  async _fetch(url, opts = {}) {
+  async _fetch(url: string, opts: FetchOpts = DefaultFetchOpts()) {
     url = this._baseUrl + url;
     opts.headers = opts.headers || {};
     opts.headers.Authorization = "Bearer " + this._token;
@@ -414,13 +404,12 @@ class PDP {
     return await fetch(url, opts);
   }
 
-  async _fetchJson(url, opts = {}) {
+  async _fetchJson(url: string, opts: FetchOpts = DefaultFetchOpts()) {
     const response = await this._fetch(url, opts);
-    console.log(response);
     return await response.json();
   }
 
-  static from(gmeContext, storageNode, req, gmeConfig) {
+  static from(gmeContext: WebgmeContext, storageNode: Core.Node, req: AuthenticatedRequest, gmeConfig: AzureGmeConfig) {
     const { core } = gmeContext;
     // TODO: create the storage adapter from the content type
     // const token = require("./token");
@@ -436,41 +425,24 @@ class PDP {
     if (!processType) {
       throw new MissingAttributeError(gmeContext, storageNode, "processType");
     }
-    return new PDP(baseUrl, token, processType);
+    return new PDP(baseUrl.toString(), token, processType.toString());
   }
 }
 
-function parseArtifact(obs) {
+function parseArtifact(obs: Observation): Artifact | undefined {
   const metadata = obs.data && obs.data[0];
   if (metadata && metadata.displayName) {
-    return new Artifact(
-      obs.processId,
-      obs.index + "_" + obs.version,
-      metadata.displayName,
-      metadata.taxonomyTags,
-      metadata.taxonomyVersion,
-      obs.startTime
-    );
+    return {
+      parentId: obs.processId.toString(),
+      id: obs.index + "_" + obs.version,
+      displayName: metadata.displayName,
+      taxonomyTags: metadata.taxonomyTags,
+      taxonomy: metadata.taxonomyVersion,
+      time: obs.startTime
+    };
   }
 }
 
-async function sleep(duration) {
-  return new Promise((res) => setTimeout(res, duration));
+function isFormatError(err: any): err is FormatError {
+  return err instanceof FormatError;
 }
-
-function range(start, end) {
-  const len = end - start;
-  return [...new Array(len)].map((v, index) => start + index);
-}
-
-function filterMap(list, fn) {
-  return list.reduce((keep, next) => {
-    const result = fn(next);
-    if (result !== undefined) {
-      keep.push(result);
-    }
-    return keep;
-  }, []);
-}
-
-module.exports = PDP;
