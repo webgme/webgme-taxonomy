@@ -15,7 +15,7 @@
     "clean_up": "node ./node_modules/webgme-engine/src/bin/clean_up.js",
     "build": "tsc --build",
     "prepublish": "husky install",
-    "prepare": "npm run build"
+    "prepare": "npm run build && cd src/routers/Dashboard/app && npm install && cd ../../Search/dashboard && npm install"
   },
   "version": "1.2.0",
   "devDependencies": {
@@ -36,8 +36,6 @@
     "mongodb": "^4.11.0",
     "node-fetch": "^2.6.6",
     "svelte": "^3.50.0",
-    "taxonomy-dashboard": "file:src/routers/Dashboard/app",
-    "taxonomy-search": "file:src/routers/Search",
     "webgme": "github:webgme/webgme#azure",
     "webgme-json-importer": "github:deepforge-dev/webgme-json-importer",
     "zip-a-folder": "^1.1.5"
