@@ -27,6 +27,14 @@ Terms
 1. Terms have types that determine how they are instantiated in tags that are finally assigned to content elements. While the simplest type of terms are labels, they are frequently not sufficient for expressing richer characterization. In these cases terms may have attributes that can evaluate to complex types. In general, complex terms have strong performance penalty while doing content filtering. 
 2. Decision about a term to be mandatory, recommended or optional is an important step helping tag assignment during content upload.
 
+Taxonomy Design and Data Discovery
+----------------------------------
+
+Another important consideration when designing taxonomies is the implications on the discoverability of the uploaded data tagged with the given term. The data dashboard allows searching and filtering at the level of the artifacts within a repository. As a result, tags should correspond to the entire artifact that they are associated with and not a subset of the uploaded data. If further filtering on data uploaded as part of an artifact, a CWL workflow is recommended.
+
+For example, a CSV of subject data (one subject per row) should not be tagged with subject-level terms such as subject gender or race information. If an artifact is tagged as such, the entire CSV would be returned if it contains any subject with the given tag. In these situations, it is recommended to use terms at the level of the cohort. In this case, we could first find all datasets containing the measurements of interest then pass them as inputs to a pipeline that queries the subjects of interest from the data files.
+
+
 Taxonomy Evolution
 ------------------
 
