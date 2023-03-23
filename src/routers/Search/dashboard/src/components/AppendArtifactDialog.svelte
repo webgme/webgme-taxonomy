@@ -7,11 +7,11 @@
   import Textfield from "@smui/textfield";
   import Dropzone from "svelte-file-dropzone";
   import Button, { Label } from "@smui/button";
-  import LinearProgress from '@smui/linear-progress';
-  import IconButton from '@smui/icon-button';
+  import LinearProgress from "@smui/linear-progress";
+  import IconButton from "@smui/icon-button";
 
   import { createEventDispatcher, getContext } from "svelte";
-  import { fade } from 'svelte/transition';
+  import { fade } from "svelte/transition";
   import type { Unsubscriber } from "svelte/store";
   import { isObject, readFile } from "../Utils";
   import TagFormatter, { FormatError } from "../Formatter";
@@ -25,7 +25,7 @@
   const formatter = new TagFormatter();
 
   /** The artifact set to append a new artifact to. Null to hide dialog.*/
-  export let set: { displayName: string, taxonomyTags: any[] } | null = null;
+  export let set: { displayName: string; taxonomyTags: any[] } | null = null;
   /** The content type name for the artifact set to append to. */
   export let contentType: string;
 
@@ -53,7 +53,10 @@
       if (err instanceof FormatError) {
         console.warn("Latest artifact has invalid taxonomy tags:", err.message);
       } else {
-        console.error("An error occurred while setting default tags", err.stack);
+        console.error(
+          "An error occurred while setting default tags",
+          err.stack
+        );
       }
     }
   }
@@ -85,18 +88,15 @@
       uploading = storage.appendArtifact(set, metadata, files);
       const uploads = await uploading;
       unsubscribers = uploads.map((upload, index) => {
-        return upload.subscribe(
-          progress => progresses[index] = progress
-        );
+        return upload.subscribe((progress) => (progresses[index] = progress));
       });
-      await Promise.allSettled(uploads);  
+      await Promise.allSettled(uploads);
       dispatch("complete");
     } catch (err) {
       console.log(err);
       dispatchError(`Unable to upload: ${err.message}`);
-    }
-    finally {
-      unsubscribers.forEach(unsubscriber => unsubscriber())
+    } finally {
+      unsubscribers.forEach((unsubscriber) => unsubscriber());
       uploading = null;
       close();
     }
@@ -106,7 +106,7 @@
     files.splice(index, 1);
     files = files;
   }
-  
+
   function close() {
     open = false;
   }
@@ -135,14 +135,12 @@
     if (set != null) set = null;
     files = [];
   }
-
 </script>
-
 
 <Dialog
   bind:open
-  scrimClickAction={ uploading ? "" : null }
-  escapeKeyAction={ uploading ? "" : null }
+  scrimClickAction={uploading ? "" : null}
+  escapeKeyAction={uploading ? "" : null}
   aria-labelledby="title"
   aria-describedby="content"
   on:SMUIDialog:closed={closeHandler}
@@ -153,16 +151,16 @@
     <p>{contentType} file(s):</p>
 
     <ul class="append-files">
-      {#each files as file, index (file.name + '-' + file.lastModified)}
-        <li transition:fade="{{ duration: 200 }}">
+      {#each files as file, index (file.name + "-" + file.lastModified)}
+        <li transition:fade={{ duration: 200 }}>
           <div class="append-file">
             <span class="append-file-name">{file.name}</span>
             {#if !uploading}
               <IconButton
                 class="material-icons"
                 size="button"
-                on:click={() => removeFileAt(index)}
-              >close</IconButton>
+                on:click={() => removeFileAt(index)}>close</IconButton
+              >
             {/if}
           </div>
           {#if !!uploading}
@@ -202,9 +200,7 @@
 
     <p>
       Taxonomy Terms <span style="font-style:italic">(optional)</span>:<br />
-      {metadata
-        ? metadata.taxonomyTags.map(getTagDisplayName).join(", ")
-        : ""}
+      {metadata ? metadata.taxonomyTags.map(getTagDisplayName).join(", ") : ""}
     </p>
 
     {#if !uploading}
@@ -219,7 +215,9 @@
 
     <a
       target="_blank"
-      href={window.location.href.replace("/Search/", "/TagCreator/")}
+      href={window.location.href
+        .replace("/Search/", "/TagCreator/")
+        .replace("static/", "data/static/")}
       >Click to select tags for your dataset.</a
     >
   </Content>
@@ -234,7 +232,6 @@
 </Dialog>
 
 <style>
-
   .append-file {
     display: inline-flex;
     width: 100%;
@@ -248,7 +245,7 @@
   .append-file :global(button) {
     margin-bottom: 0;
   }
-  
+
   .dialog-actions {
     display: flex;
     justify-content: flex-end;
@@ -271,5 +268,4 @@
   .error {
     color: var(--mdc-theme-error);
   }
-
 </style>
