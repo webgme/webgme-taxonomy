@@ -25,6 +25,17 @@ function factory() {
         return children.find(isTaxonomyNode);
       }, Promise.resolve(null));
     },
+    async getVocabulariesFor(core, contentType, scope = "data") {
+      // TODO: should we fall back from one scope to the other?
+      const metaType =
+        scope === "repo" ? "RepositoryVocabularies" : "DataVocabularies";
+      const children = await core.loadChildren(contentType);
+      const container = children.find((node) => {
+        const typeNode = core.getBase(node);
+        return core.getAttribute(typeNode, "name") === metaType;
+      });
+      return await core.loadChildren(container);
+    },
   };
 
   return Utils;

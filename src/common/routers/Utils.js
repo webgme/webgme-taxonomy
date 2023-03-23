@@ -11,7 +11,7 @@ const Utils = {
     return await Utils.getWebGMEContextUnsafe(
       middlewareOpts,
       userId,
-      projectContext
+      projectContext,
     );
   },
   // This is unsafe since it bypasses permissions
@@ -68,7 +68,7 @@ const Utils = {
       context.branchName = branch || "master";
       context.projectVersion.branch = branch;
       context.commitObject = await context.project.getCommitObject(
-        context.branchName
+        context.branchName,
       );
     }
 
@@ -87,6 +87,11 @@ const Utils = {
   getContentTypeRoutes(route = "") {
     const contentTypeRoute = `:contentTypePath/${route}`;
     return Utils.getProjectScopedRoutes(contentTypeRoute);
+  },
+
+  getContentTypeVocabRoutes(route = "") {
+    const vocabRoute = `:vocabScope(data|repo)/${route}`;
+    return Utils.getContentTypeRoutes(vocabRoute);
   },
 
   getProjectScopedRoutes(route = "") {
@@ -109,7 +114,7 @@ const Utils = {
         assert(contentType, new ContentTypeNotFoundError(contentTypePath));
         req.webgmeContext.contentType = contentType;
         console.log("CTX received:", req.originalUrl);
-      })
+      }),
     );
   },
 
@@ -119,19 +124,19 @@ const Utils = {
     const contextFn = !unsafe
       ? (request) => Utils.getWebGMEContext(middlewareOpts, request)
       : (request) => {
-          const userId = request.params.projectId.split("+").shift();
-          return Utils.getWebGMEContextUnsafe(
-            middlewareOpts,
-            userId,
-            request.params
-          );
-        };
+        const userId = request.params.projectId.split("+").shift();
+        return Utils.getWebGMEContextUnsafe(
+          middlewareOpts,
+          userId,
+          request.params,
+        );
+      };
     return router.use(
       Utils.getProjectScopedRoutes(),
       handleUserErrors(
         logger,
-        async (req) => (req.webgmeContext = await contextFn(req))
-      )
+        async (req) => (req.webgmeContext = await contextFn(req)),
+      ),
     );
   },
 };
@@ -139,7 +144,7 @@ const Utils = {
 function handleUserErrors(logger, fn) {
   return async function (req, res, next) {
     try {
-      const cont = await fn(req, res, next) ?? true;
+      const cont = (await fn(req, res, next)) ?? true;
       if (cont && !res.headersSent) {
         next();
       }
@@ -174,6 +179,12 @@ class ProjectNotFoundError extends UserError {
 class ContentTypeNotFoundError extends UserError {
   constructor(path) {
     super(`Content type not found: ${path}`, 404);
+  }
+}
+
+class VocabScopeNotFoundError extends UserError {
+  constructor(path, scope) {
+    super(`No ${scope} vocabularies defined for ${path}`, 404);
   }
 }
 

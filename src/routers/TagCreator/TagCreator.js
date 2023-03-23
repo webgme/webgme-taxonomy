@@ -22,6 +22,7 @@ const fsp = fs.promises;
 const _ = require("underscore");
 const JSONSchemaExporter = require("../../common/JSONSchemaExporter");
 const RouterUtils = require("../../common/routers/Utils");
+const Utils = require("../../common/Utils");
 
 /**
  * Called when the server is created but before it starts to listening to incoming requests.
@@ -56,23 +57,26 @@ function initialize(middlewareOpts) {
   // Use ensureAuthenticated if the routes require authentication. (Can be set explicitly for each route.)
   router.use("*", ensureAuthenticated);
 
+  console.log(RouterUtils.getContentTypeVocabRoutes("static/"));
   const staticPath = path.join(__dirname, "form");
   router.use(
-    RouterUtils.getContentTypeRoutes("static/"),
+    RouterUtils.getContentTypeVocabRoutes("static/"),
     express.static(staticPath)
   );
 
   RouterUtils.addContentTypeMiddleware(middlewareOpts, router);
 
   router.get(
-    RouterUtils.getContentTypeRoutes("configuration.json"),
+    RouterUtils.getContentTypeVocabRoutes("configuration.json"),
     async function (req, res) {
+      const { vocabScope } = req.params;
       const { root, core, contentType } = req.webgmeContext;
       const exporter = JSONSchemaExporter.from(core, root);
-      const vocabularies = await Promise.all(
-        core
-          .getMemberPaths(contentType, "vocabularies")
-          .map((path) => core.loadByPath(root, path))
+      // TODO: better error handling when scope not defined in model
+      const vocabularies = await Utils.getVocabulariesFor(
+        core,
+        contentType,
+        vocabScope
       );
       const config = await exporter.getVocabSchemas(vocabularies);
       config.taxonomyVersion = req.webgmeContext.projectVersion;
@@ -110,12 +114,12 @@ function stop(callback) {
  */
 async function generateFormHtml(gmeConfig) {
   const formTemplate = _.template(
-    fs.readFileSync(path.join(__dirname, "form", "index.html.ejs"), "utf8")
+    fs.readFileSync(path.join(__dirname, "form", "index.html.ejs"), "utf8"),
   );
   const { requirejsPaths } = gmeConfig;
   const commonPath = requirejsPaths["webgme-taxonomy"].replace(
     /^\./,
-    "/extlib"
+    "/extlib",
   );
   const opts = {
     commonPath,
@@ -123,7 +127,7 @@ async function generateFormHtml(gmeConfig) {
   };
   await fsp.writeFile(
     path.join(__dirname, "form", "index.html"),
-    formTemplate(opts)
+    formTemplate(opts),
   );
 }
 

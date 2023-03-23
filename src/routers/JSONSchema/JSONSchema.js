@@ -11,12 +11,13 @@
  * <host>/path/subPath, for example GET <host>/path/subPath/getExample will be routed to the getExample below.
  */
 
-'use strict';
+"use strict";
 
 // http://expressjs.com/en/guide/routing.html
-var express = require('express'),
+var express = require("express"),
   router = express.Router();
 const RouterUtils = require("../../common/routers/Utils");
+const Utils = require("../../common/Utils");
 const JSONSchemaExporter = require("../../common/JSONSchemaExporter");
 
 /**
@@ -34,43 +35,46 @@ const JSONSchemaExporter = require("../../common/JSONSchemaExporter");
  * @param {object} middlewareOpts.workerManager - Spawns and keeps track of "worker" sub-processes.
  */
 function initialize(middlewareOpts) {
-  var logger = middlewareOpts.logger.fork('JSONSchema'),
+  var logger = middlewareOpts.logger.fork("JSONSchema"),
     ensureAuthenticated = middlewareOpts.ensureAuthenticated,
     getUserId = middlewareOpts.getUserId;
 
-  logger.debug('initializing ...');
+  logger.debug("initializing ...");
 
   // Ensure authenticated can be used only after this rule.
-  router.use('*', function (req, res, next) {
+  router.use("*", function (req, res, next) {
     // TODO: set all headers, check rate limit, etc.
 
     // This header ensures that any failures with authentication won't redirect.
-    res.setHeader('X-WebGME-Media-Type', 'webgme.v1');
+    res.setHeader("X-WebGME-Media-Type", "webgme.v1");
     next();
   });
-
 
   // Use ensureAuthenticated if the routes require authentication. (Can be set explicitly for each route.)
   // router.use('*', ensureAuthenticated);
   // Authentication not needed since actual data isn't shared, just taxonomy used to label data (as JSON schema).
-  RouterUtils.addContentTypeMiddleware(middlewareOpts, router, { unsafe: true });
+  RouterUtils.addContentTypeMiddleware(middlewareOpts, router, {
+    unsafe: true,
+  });
 
   router.get(
-    RouterUtils.getContentTypeRoutes("schema.json"),
+    RouterUtils.getContentTypeVocabRoutes("schema.json"),
     async (request, response) => {
+      const { vocabScope } = request.params;
       const { root, core, contentType } = request.webgmeContext;
       const exporter = JSONSchemaExporter.from(core, root);
-      const vocabularies = await Promise.all(
-        core
-          .getMemberPaths(contentType, "vocabularies")
-          .map((path) => core.loadByPath(root, path))
+      // FIXME: Doesn't this need to know if it is for the repository or an individual artifact?
+      const vocabularies = await Utils.getVocabulariesFor(
+        core,
+        contentType,
+        vocabScope
       );
       const { schema } = await exporter.getVocabSchemas(vocabularies);
       return response.json(schema);
     }
   );
 
-  logger.debug('ready');
+  logger.debug("ready");
 }
 
 /**
@@ -89,10 +93,9 @@ function stop(callback) {
   callback();
 }
 
-
 module.exports = {
   initialize: initialize,
   router: router,
   start: start,
-  stop: stop
+  stop: stop,
 };
