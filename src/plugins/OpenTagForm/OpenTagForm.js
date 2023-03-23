@@ -7,12 +7,9 @@
  * properties and methods visit %host%/docs/source/PluginBase.html.
  */
 
-define([
-  "text!./metadata.json",
-  "plugin/PluginBase",
-], function (
+define(["text!./metadata.json", "plugin/PluginBase"], function (
   pluginMetadata,
-  PluginBase,
+  PluginBase
 ) {
   "use strict";
 
@@ -27,14 +24,19 @@ define([
     async main() {
       const baseUrl = window.location.href.replace(/\?.*$/, "");
       const versionString = await this.getVersionString();
-      const url = baseUrl +
+      const { vocabScope } = this.getCurrentConfig();
+      const url =
+        baseUrl +
         "routers/TagCreator/" +
         encodeURIComponent(this.project.projectId) +
         "/" +
         versionString +
         "/" +
         encodeURIComponent(this.core.getPath(this.activeNode)) +
+        "/" +
+        vocabScope +
         "/static/index.html";
+
       window.open(url, "TagForm");
       this.result.setSuccess(true);
     }
@@ -49,7 +51,7 @@ define([
       const versionInfo = {};
       const tags = await this.project.getTags();
       const currentTag = Object.entries(tags).find(
-        ([tag, commit]) => commit === this.commitHash,
+        ([tag, commit]) => commit === this.commitHash
       );
 
       if (currentTag) {

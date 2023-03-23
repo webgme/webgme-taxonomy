@@ -8,7 +8,7 @@
  *       "children": [...child nodes]
  *     }
  */
-function factory() {
+function factory(Utils) {
   class VocabExporter {
     constructor(core) {
       this.core = core;
@@ -38,14 +38,15 @@ function factory() {
     static async from(core, contentTypeNode) {
       const name = core.getAttribute(contentTypeNode, "name");
       const exporter = new VocabExporter(core);
-      const root = core.getRoot(contentTypeNode);
-      const vocabularies = await Promise.all(
-        core
-          .getMemberPaths(contentTypeNode, "vocabularies")
-          .map((path) =>
-            core.loadByPath(root, path).then((node) => exporter.toSchema(node))
-          )
+      const vocabNodes = await Utils.getVocabulariesFor(
+        core,
+        contentTypeNode,
+        "data"
       );
+      const vocabularies = await Promise.all(
+        vocabNodes.map((node) => exporter.toSchema(node))
+      );
+
       return new ContentTypeExporter(name, vocabularies);
     }
   }
@@ -72,7 +73,8 @@ function factory() {
 }
 
 if (typeof define !== "undefined") {
-  define([], factory);
+  define(["./Utils"], factory);
 } else {
-  module.exports = factory();
+  const Utils = require("./Utils");
+  module.exports = factory(Utils);
 }
