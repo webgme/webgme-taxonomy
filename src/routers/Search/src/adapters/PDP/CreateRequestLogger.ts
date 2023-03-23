@@ -2,7 +2,7 @@
  * This is a temporary mechanism to log (and email) creation request
  */
 import fsp from "fs/promises";
-import type {ArtifactMetadata} from "../common/types";
+import type { ArtifactMetadata } from "../common/types";
 
 export default class CreateRequestLogger {
   filepath: string;
@@ -24,4 +24,4 @@ export default class CreateRequestLogger {
       fsp.appendFile(this.filepath, JSON.stringify(request) + "\n")
     );
   }
-};
+}

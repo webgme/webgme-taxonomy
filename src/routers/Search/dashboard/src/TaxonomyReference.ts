@@ -16,7 +16,8 @@ export default class TaxonomyReference {
   }
 
   supports(otherVersion: TaxonomyReference): boolean {
-    return this.id === otherVersion.id && this.version.supports(otherVersion.version);
+    return this.id === otherVersion.id &&
+      this.version.supports(otherVersion.version);
   }
 
   static from(taxonomyVersion: TaxonomyVersionData): TaxonomyReference {
@@ -99,7 +100,7 @@ export class SemanticVersion {
   minor: number;
   patch: number;
 
-  constructor(major: number, minor=0, patch=0) {
+  constructor(major: number, minor = 0, patch = 0) {
     this.major = major;
     this.minor = minor;
     this.patch = patch;
@@ -114,9 +115,9 @@ export class SemanticVersion {
   }
 
   static parse(versionString: string): SemanticVersion {
-    versionString = versionString.replace(/^v?/, '');
-    const [major, minor=0, patch=0] = versionString.split('.')
-      .map(str => {
+    versionString = versionString.replace(/^v?/, "");
+    const [major, minor = 0, patch = 0] = versionString.split(".")
+      .map((str) => {
         if (!/\d+/.test(str)) {
           throw new ParseError(versionString);
         }

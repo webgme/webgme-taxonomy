@@ -17,7 +17,7 @@ function factory(Importer) {
 
     _findTagNode(parentNode, tagName) {
       const node = parentNode.children.find(
-        (child) => child.attributes.name === tagName
+        (child) => child.attributes.name === tagName,
       );
       assert(node, new TagNotFoundError(tagName));
       return node;
@@ -37,7 +37,7 @@ function factory(Importer) {
 
     toHumanFormat(tags) {
       const nodesByGuid = Object.fromEntries(
-        this._allNodes(this.taxonomy).map((node) => [node.guid, node])
+        this._allNodes(this.taxonomy).map((node) => [node.guid, node]),
       );
       return tags.map((tag) => this._toHumanFormat(tag, nodesByGuid));
     }
@@ -101,7 +101,7 @@ function factory(Importer) {
         throw new TagNotFoundError(tagName);
       } else if (matchingNames.length > 1) {
         throw new Error(
-          `Resolving ambiguous taxonomy terms is currently unsupported (${tagName})`
+          `Resolving ambiguous taxonomy terms is currently unsupported (${tagName})`,
         );
       }
 
@@ -123,7 +123,7 @@ function factory(Importer) {
 
       assert(
         !isEnumValue || valueGuid,
-        new EnumNotFoundError(propertyName, propertyValue)
+        new EnumNotFoundError(propertyName, propertyValue),
       );
       return valueGuid;
     }
@@ -133,7 +133,7 @@ function factory(Importer) {
     const value = dict;
     return keys.reduce(
       (dict, k) => (isObject(dict) ? dict[k] : undefined),
-      dict
+      dict,
     );
   }
   function isObject(thing) {

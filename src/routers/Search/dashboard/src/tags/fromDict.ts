@@ -18,14 +18,16 @@ function fromDict(data: fromDict.Data) {
   return new constructor(id, name, type, value, childTags);
 }
 
-type FilterTagConstructor = new (...args: ConstructorParameters<typeof FilterTag>) => FilterTag;
+type FilterTagConstructor = new (
+  ...args: ConstructorParameters<typeof FilterTag>
+) => FilterTag;
 
 /**
  * A map of all the registered `FilterTag` classes by it's "type" string.
  * Used by the `fromDicts` method to create the correct class.
  */
 fromDict.types = {
-  "SetField": SetFilterTag
+  "SetField": SetFilterTag,
 } as { [name: string]: FilterTagConstructor };
 
 export default fromDict;

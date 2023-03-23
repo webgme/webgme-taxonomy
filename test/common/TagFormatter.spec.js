@@ -19,7 +19,7 @@ describe("TagFormatter", function () {
   before(async () => {
     const params = await Utils.initializeProject(
       "TagFormatter",
-      "TaxonomyProject"
+      "TaxonomyProject",
     );
     const { core, project, commitHash } = params;
     storage = params.storage;
@@ -41,7 +41,7 @@ describe("TagFormatter", function () {
     const taxonomy = await Utils.createTaxonomyFromCsv(core, root, csv);
     formatter = await TagFormatter.from(core, taxonomy);
     nodesByGuid = Object.fromEntries(
-      formatter._allNodes(formatter.taxonomy).map((node) => [node.guid, node])
+      formatter._allNodes(formatter.taxonomy).map((node) => [node.guid, node]),
     );
   });
 
@@ -54,16 +54,16 @@ describe("TagFormatter", function () {
     const [guidTag] = formatter.toGuidFormat([tag]);
     for (let i = 0; i < depth; i++) {
       const names = keysAtDepth(tag, i);
-      keysAtDepth(guidTag, i).forEach(keyGuid => {
-      const name = nodesByGuid[keyGuid].attributes.name;
+      keysAtDepth(guidTag, i).forEach((keyGuid) => {
+        const name = nodesByGuid[keyGuid].attributes.name;
         assert(
           names.includes(name),
-          `Could not resolve ${keyGuid}. Expected one of ${names.join(", ")}`
+          `Could not resolve ${keyGuid}. Expected one of ${names.join(", ")}`,
         );
         const index = names.indexOf(name);
         names.splice(index, 1);
       });
-      assert.equal(names.length,0, `Found names: ${names.join(', ')}`);
+      assert.equal(names.length, 0, `Found names: ${names.join(", ")}`);
     }
     const [humanTag] = formatter.toHumanFormat([guidTag]);
     assert.deepEqual(humanTag, tag);

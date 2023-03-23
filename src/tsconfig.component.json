@@ -8,7 +8,7 @@
     "strict": true,
     "moduleResolution": "node",
     "sourceMap": true,
-    "composite": true,
+    "composite": true
   },
   "exclude": ["node_modules"]
 }

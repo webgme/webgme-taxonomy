@@ -7,8 +7,8 @@ declare global {
   type GLbyte = number;
 }
 
-import type from 'webgme';
-import type { Request, RequestHandler } from 'express';
+import type from "webgme";
+import type { Request, RequestHandler } from "express";
 
 export interface AzureGmeConfig extends GmeConfig.GmeConfig {
   authentication: {
@@ -45,47 +45,47 @@ export interface AzureGmeConfig extends GmeConfig.GmeConfig {
 
     azureActiveDirectory: {
       cookieId: string;
-    }
-  }
+    };
+  };
 }
 
 /**
  * Options passed to middleware initializers by the webgme server.
- * 
+ *
  * `gmeAuth`, `safeStorage` and `workerManager` are not ready to use until the `start` function is called.
  * (However inside an incoming request they are all ensured to have been initialized.)
  */
 export type MiddlewareOptions = {
   /** Passed by the webgme server. */
-  gmeConfig: GmeConfig.GmeConfig,
+  gmeConfig: GmeConfig.GmeConfig;
   /** logger */
-  logger: Global.GmeLogger,
+  logger: Global.GmeLogger;
   /** Ensures the user is authenticated. */
-  ensureAuthenticated: RequestHandler,
+  ensureAuthenticated: RequestHandler;
   /** If authenticated retrieves the userId from the request. */
-  getUserId: (req: Request) => string,
+  getUserId: (req: Request) => string;
   /** Authorization module. */
-  gmeAuth: Object,
+  gmeAuth: Object;
   /** Accesses the storage and emits events (PROJECT_CREATED, COMMIT..). */
-  safeStorage: Object,
+  safeStorage: Object;
   /** Spawns and keeps track of "worker" sub-processes. */
-  workerManager: Object,
+  workerManager: Object;
 };
 
 export type WebgmeContext = {
-  core: GmeClasses.Core & { getMetaType(node: Core.Node): Core.Node },
-  root: Core.Node,
-  contentType: Core.Node,
+  core: GmeClasses.Core & { getMetaType(node: Core.Node): Core.Node };
+  root: Core.Node;
+  contentType: Core.Node;
   project: {
-    projectName: string,
-    projectId: string,
-  },
+    projectName: string;
+    projectId: string;
+  };
   projectVersion: {
-    id: string,
-    branch?: string,
-    tag?: string,
-    commitHash?: string,
-  }
+    id: string;
+    branch?: string;
+    tag?: string;
+    commitHash?: string;
+  };
 };
 
 export type WebgmeRequest = Request & { webgmeContext: WebgmeContext };

@@ -32,7 +32,7 @@ define([
         schema,
         uiSchema,
         formData,
-        downloadData
+        downloadData,
       );
       if (taxonomyPath) {
         renderData.addButton(
@@ -41,7 +41,7 @@ define([
             this.form.setMissingDefaults(schema, tags);
             this.addTags(taxonomyPath, tags);
           },
-          "btn-info"
+          "btn-info",
         );
       }
       this.form.render(renderData);

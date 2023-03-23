@@ -26,8 +26,9 @@ function factory() {
       }, Promise.resolve(null));
     },
     async getVocabulariesFor(core, contentType, scope = "data") {
-      const metaType =
-        scope === "repo" ? "RepositoryVocabularies" : "DataVocabularies";
+      const metaType = scope === "repo"
+        ? "RepositoryVocabularies"
+        : "DataVocabularies";
       const children = await core.loadChildren(contentType);
       const container = children.find((node) => {
         const typeNode = core.getBase(node);

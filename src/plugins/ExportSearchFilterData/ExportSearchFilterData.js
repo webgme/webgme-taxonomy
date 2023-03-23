@@ -19,7 +19,7 @@ define([
     async main() {
       const config = await DashboardConfiguration.from(
         this.core,
-        this.activeNode
+        this.activeNode,
       );
       const name = this.core.getAttribute(this.activeNode, "name");
       this.addFile(`${name}.json`, JSON.stringify(config));

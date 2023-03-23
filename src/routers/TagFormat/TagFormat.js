@@ -39,7 +39,9 @@ function initialize(middlewareOpts) {
 
   // Skipping authentication here as data is not easy to determine from these routes.
   // The GUID/display name (and fields) need to be guessed exactly.
-  RouterUtils.addProjectScopeMiddleware(middlewareOpts, router, { unsafe: true })
+  RouterUtils.addProjectScopeMiddleware(middlewareOpts, router, {
+    unsafe: true,
+  });
 
   router.get(
     RouterUtils.getProjectScopedRoutes(":format(guid|human)"),
@@ -71,14 +73,14 @@ function initialize(middlewareOpts) {
           res.status(400).send(err.message);
         } else {
           logger.error(
-            `Error occurred during tag format conversion: ${err.stack}`
+            `Error occurred during tag format conversion: ${err.stack}`,
           );
           res
             .status(500)
             .send("Internal error occurred. Please try again later.");
         }
       }
-    }
+    },
   );
 
   logger.debug("ready");

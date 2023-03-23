@@ -37,7 +37,7 @@ function factory() {
           items: {
             type: "object",
             anyOf: await Promise.all(
-              termNodes.map((node) => this.getTermSchema(node))
+              termNodes.map((node) => this.getTermSchema(node)),
             ),
           },
         },
@@ -65,14 +65,14 @@ function factory() {
         additionalProperties: false,
       };
       const termFields = await Promise.all(
-        parentTerms.map((n) => this.getDefinition(n))
+        parentTerms.map((n) => this.getDefinition(n)),
       );
       const properties = zip(parentTerms, termFields).reduce(
         (schema, [parent, fields]) => {
           const name = this.core.getAttribute(parent, "name");
           return (schema.properties[name] = fields);
         },
-        schema
+        schema,
       );
 
       return schema;
@@ -90,7 +90,7 @@ function factory() {
 
     async getTermFields(node) {
       const fieldNodes = (await this.core.loadChildren(node)).filter(
-        (n) => !this.isTerm(n)
+        (n) => !this.isTerm(n),
       );
     }
 
@@ -189,7 +189,7 @@ function factory() {
         return children.filter(
           (child) =>
             this.core.isTypeOf(child, this.META.Term) ||
-            this.core.isTypeOf(child, this.META.CompoundField)
+            this.core.isTypeOf(child, this.META.CompoundField),
         );
       }
     }
@@ -200,14 +200,14 @@ function factory() {
 
       const childDefs = (
         await Promise.all(
-          children.map((node) => this.getDefinitionEntries(node))
+          children.map((node) => this.getDefinitionEntries(node)),
         )
       ).flat();
       const myDefs = await Promise.all(
         dependentDefs.map(async (node) => [
           this.core.getGuid(node),
           await this.getDefinition(node),
-        ])
+        ]),
       );
       return myDefs.concat(childDefs);
     }
@@ -252,7 +252,7 @@ function factory() {
         this.core.isTypeOf(child, this.META.Field)
       );
       const fieldSchemas = await Promise.all(
-        fieldNodes.map((node) => this.getFieldSchema(node))
+        fieldNodes.map((node) => this.getFieldSchema(node)),
       );
       const fieldNames = fieldNodes.map((n) =>
         this.core.getAttribute(n, "name")
@@ -326,7 +326,7 @@ function factory() {
       }
 
       const childSchemas = await Promise.all(
-        children.map((c) => this.getFieldSchema(c))
+        children.map((c) => this.getFieldSchema(c)),
       );
       return {
         anyOf: childSchemas,
@@ -344,7 +344,7 @@ function factory() {
           Object.entries(fieldSchema.properties).map(([k, v]) => [
             k,
             this._getDefault(v),
-          ])
+          ]),
         );
       }
     }
@@ -352,7 +352,7 @@ function factory() {
     static from(core, node) {
       const metanodes = Object.values(core.getAllMetaNodes(node));
       const meta = Object.fromEntries(
-        metanodes.map((n) => [core.getAttribute(n, "name"), n])
+        metanodes.map((n) => [core.getAttribute(n, "name"), n]),
       );
       return new JSONSchemaExporter(core, meta);
     }

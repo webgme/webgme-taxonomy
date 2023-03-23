@@ -14,7 +14,7 @@ export default class FilterTag<T extends string = string> {
     public name: string,
     public type: T,
     public value: any,
-    public children: FilterTag[]
+    public children: FilterTag[],
   ) {
     value ??= null;
   }
@@ -28,8 +28,10 @@ export default class FilterTag<T extends string = string> {
   }
 
   findPath(tagId: string) {
-    const path = this.id === tagId ? [] :
-      this.children.reduce((path, child) => path || child.findPath(tagId), null);
+    const path = this.id === tagId ? [] : this.children.reduce(
+      (path, child) => path || child.findPath(tagId),
+      null,
+    );
 
     if (path) {
       path.unshift(this);
@@ -39,7 +41,7 @@ export default class FilterTag<T extends string = string> {
   }
 
   isLabel() {
-    return !isDefined(this.value)
+    return !isDefined(this.value);
   }
 
   canMatch(itemTag: ItemTag) {
@@ -50,7 +52,7 @@ export default class FilterTag<T extends string = string> {
   isMatch(itemTag: ItemTag) {
     const value = ItemTag.valueForKey(itemTag, this.id);
     const foundTag = isDefined(value);
-    const tagValuesMatch = (this.value === value);
+    const tagValuesMatch = this.value === value;
     return this.isLabel ? foundTag : tagValuesMatch;
   }
 

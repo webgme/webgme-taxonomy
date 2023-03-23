@@ -4,96 +4,96 @@
  */
 
 define([
-    'js/PanelBase/PanelBaseWithHeader',
-    'js/PanelManager/IActivePanel',
-    'widgets/TagCreator/TagCreatorWidget',
-    './TagCreatorControl'
+  "js/PanelBase/PanelBaseWithHeader",
+  "js/PanelManager/IActivePanel",
+  "widgets/TagCreator/TagCreatorWidget",
+  "./TagCreatorControl",
 ], function (
-    PanelBaseWithHeader,
-    IActivePanel,
-    TagCreatorWidget,
-    TagCreatorControl
+  PanelBaseWithHeader,
+  IActivePanel,
+  TagCreatorWidget,
+  TagCreatorControl,
 ) {
-    'use strict';
+  "use strict";
 
-    function TagCreatorPanel(layoutManager, params) {
-        var options = {};
-        //set properties from options
-        options[PanelBaseWithHeader.OPTIONS.LOGGER_INSTANCE_NAME] = 'TagCreatorPanel';
-        options[PanelBaseWithHeader.OPTIONS.FLOATING_TITLE] = true;
+  function TagCreatorPanel(layoutManager, params) {
+    var options = {};
+    //set properties from options
+    options[PanelBaseWithHeader.OPTIONS.LOGGER_INSTANCE_NAME] =
+      "TagCreatorPanel";
+    options[PanelBaseWithHeader.OPTIONS.FLOATING_TITLE] = true;
 
-        //call parent's constructor
-        PanelBaseWithHeader.apply(this, [options, layoutManager]);
+    //call parent's constructor
+    PanelBaseWithHeader.apply(this, [options, layoutManager]);
 
-        this._client = params.client;
+    this._client = params.client;
 
-        //initialize UI
-        this._initialize();
+    //initialize UI
+    this._initialize();
 
-        this.logger.debug('ctor finished');
-    }
+    this.logger.debug("ctor finished");
+  }
 
-    //inherit from PanelBaseWithHeader
-    _.extend(TagCreatorPanel.prototype, PanelBaseWithHeader.prototype);
-    _.extend(TagCreatorPanel.prototype, IActivePanel.prototype);
+  //inherit from PanelBaseWithHeader
+  _.extend(TagCreatorPanel.prototype, PanelBaseWithHeader.prototype);
+  _.extend(TagCreatorPanel.prototype, IActivePanel.prototype);
 
-    TagCreatorPanel.prototype._initialize = function () {
-        var self = this;
+  TagCreatorPanel.prototype._initialize = function () {
+    var self = this;
 
-        //set Widget title
-        this.setTitle('');
+    //set Widget title
+    this.setTitle("");
 
-        this.widget = new TagCreatorWidget(this.logger, this.$el);
+    this.widget = new TagCreatorWidget(this.logger, this.$el);
 
-        this.widget.setTitle = function (title) {
-            self.setTitle(title);
-        };
-
-        this.control = new TagCreatorControl({
-            logger: this.logger,
-            client: this._client,
-            widget: this.widget
-        });
-
-        this.onActivate();
+    this.widget.setTitle = function (title) {
+      self.setTitle(title);
     };
 
-    /* OVERRIDE FROM WIDGET-WITH-HEADER */
-    /* METHOD CALLED WHEN THE WIDGET'S READ-ONLY PROPERTY CHANGES */
-    TagCreatorPanel.prototype.onReadOnlyChanged = function (isReadOnly) {
-        //apply parent's onReadOnlyChanged
-        PanelBaseWithHeader.prototype.onReadOnlyChanged.call(this, isReadOnly);
+    this.control = new TagCreatorControl({
+      logger: this.logger,
+      client: this._client,
+      widget: this.widget,
+    });
 
-    };
+    this.onActivate();
+  };
 
-    TagCreatorPanel.prototype.onResize = function (width, height) {
-        this.logger.debug('onResize --> width: ' + width + ', height: ' + height);
-        this.widget.onWidgetContainerResize(width, height);
-    };
+  /* OVERRIDE FROM WIDGET-WITH-HEADER */
+  /* METHOD CALLED WHEN THE WIDGET'S READ-ONLY PROPERTY CHANGES */
+  TagCreatorPanel.prototype.onReadOnlyChanged = function (isReadOnly) {
+    //apply parent's onReadOnlyChanged
+    PanelBaseWithHeader.prototype.onReadOnlyChanged.call(this, isReadOnly);
+  };
 
-    /* * * * * * * * Visualizer life cycle callbacks * * * * * * * */
-    TagCreatorPanel.prototype.destroy = function () {
-        this.control.destroy();
-        this.widget.destroy();
+  TagCreatorPanel.prototype.onResize = function (width, height) {
+    this.logger.debug("onResize --> width: " + width + ", height: " + height);
+    this.widget.onWidgetContainerResize(width, height);
+  };
 
-        PanelBaseWithHeader.prototype.destroy.call(this);
-        WebGMEGlobal.KeyboardManager.setListener(undefined);
-        WebGMEGlobal.Toolbar.refresh();
-    };
+  /* * * * * * * * Visualizer life cycle callbacks * * * * * * * */
+  TagCreatorPanel.prototype.destroy = function () {
+    this.control.destroy();
+    this.widget.destroy();
 
-    TagCreatorPanel.prototype.onActivate = function () {
-        this.widget.onActivate();
-        this.control.onActivate();
-        WebGMEGlobal.KeyboardManager.setListener(this.widget);
-        WebGMEGlobal.Toolbar.refresh();
-    };
+    PanelBaseWithHeader.prototype.destroy.call(this);
+    WebGMEGlobal.KeyboardManager.setListener(undefined);
+    WebGMEGlobal.Toolbar.refresh();
+  };
 
-    TagCreatorPanel.prototype.onDeactivate = function () {
-        this.widget.onDeactivate();
-        this.control.onDeactivate();
-        WebGMEGlobal.KeyboardManager.setListener(undefined);
-        WebGMEGlobal.Toolbar.refresh();
-    };
+  TagCreatorPanel.prototype.onActivate = function () {
+    this.widget.onActivate();
+    this.control.onActivate();
+    WebGMEGlobal.KeyboardManager.setListener(this.widget);
+    WebGMEGlobal.Toolbar.refresh();
+  };
 
-    return TagCreatorPanel;
+  TagCreatorPanel.prototype.onDeactivate = function () {
+    this.widget.onDeactivate();
+    this.control.onDeactivate();
+    WebGMEGlobal.KeyboardManager.setListener(undefined);
+    WebGMEGlobal.Toolbar.refresh();
+  };
+
+  return TagCreatorPanel;
 });

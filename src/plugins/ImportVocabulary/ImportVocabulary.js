@@ -34,7 +34,7 @@ define([
         await importer.apply(this.activeNode, newState);
       } else {
         await Promise.all(
-          vocabs.map((v) => importer.import(this.activeNode, v))
+          vocabs.map((v) => importer.import(this.activeNode, v)),
         );
       }
 

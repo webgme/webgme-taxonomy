@@ -23,7 +23,7 @@ function factory(Utils) {
         name: this.core.getAttribute(node, "name"),
         type: this.core.getAttribute(base, "name"),
         children: await Promise.all(
-          children.map((child) => this.toSchema(child))
+          children.map((child) => this.toSchema(child)),
         ),
       };
     }
@@ -41,10 +41,10 @@ function factory(Utils) {
       const vocabNodes = await Utils.getVocabulariesFor(
         core,
         contentTypeNode,
-        "data"
+        "data",
       );
       const vocabularies = await Promise.all(
-        vocabNodes.map((node) => exporter.toSchema(node))
+        vocabNodes.map((node) => exporter.toSchema(node)),
       );
 
       return new ContentTypeExporter(name, vocabularies);

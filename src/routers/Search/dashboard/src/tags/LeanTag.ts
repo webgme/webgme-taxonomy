@@ -4,11 +4,11 @@
  * tags in the URL.
  */
 export default class LeanTag {
-    id: string;
-    value: any | null;
-  
-    constructor(id: string, value: any) {
-      this.id = id;
-      this.value = value;
-    }
+  id: string;
+  value: any | null;
+
+  constructor(id: string, value: any) {
+    this.id = id;
+    this.value = value;
   }
+}
