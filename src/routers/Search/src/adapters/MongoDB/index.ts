@@ -7,24 +7,29 @@ import stream from "stream";
 import _ from "underscore";
 import path from "path";
 import fsp from "fs/promises";
-import type { Adapter, ArtifactMetadata, Artifact, Repository } from "../common/types";
+import type {
+  Adapter,
+  Artifact,
+  ArtifactMetadata,
+  Repository,
+} from "../common/types";
 import type TagFormatter from "../../../../../common/TagFormatter";
 import { FormatError } from "../../../../../common/TagFormatter";
 import { MissingAttributeError } from "../common/ModelError";
-import { MongoClient, GridFSBucket, ObjectId } from "mongodb";
-import type { Collection, Document } from 'mongodb';
+import { GridFSBucket, MongoClient, ObjectId } from "mongodb";
+import type { Collection, Document } from "mongodb";
 import gmeConfig from "../../../../../../config";
 import {
   AppendResult,
-  UploadRequest,
   UploadParams,
+  UploadRequest,
 } from "../common/AppendResult";
 import { WebgmeContext } from "../../../../../common/types";
 
 const mongoUri = gmeConfig.mongo.uri;
 const defaultClient = new MongoClient(mongoUri);
 
-class MongoAdapter implements Adapter {
+export default class MongoAdapter implements Adapter {
   private _client: MongoClient;
   private _files: GridFSBucket;
   private _collection: Collection<Document>;
@@ -48,8 +53,8 @@ class MongoAdapter implements Adapter {
           displayName: data.displayName,
           taxonomyTags: data.taxonomyTags,
           taxonomy: data.taxonomyVersion,
-          time: data.time
-        })
+          time: data.time,
+        }),
       );
 
       return {
@@ -57,7 +62,7 @@ class MongoAdapter implements Adapter {
         displayName: doc.displayName,
         taxonomyTags: doc.taxonomyTags,
         taxonomy: doc.taxonomyVersion,
-        children: artifacts
+        children: artifacts,
       };
     });
 
@@ -76,7 +81,11 @@ class MongoAdapter implements Adapter {
     return "Created!";
   }
 
-  async appendArtifact(repoId: string, metadata: ArtifactMetadata, filenames: string[]) {
+  async appendArtifact(
+    repoId: string,
+    metadata: ArtifactMetadata,
+    filenames: string[],
+  ) {
     const repo = await this._collection.findOne({
       _id: new ObjectId(repoId),
     });
@@ -87,7 +96,7 @@ class MongoAdapter implements Adapter {
       taxonomyTags: metadata.taxonomyTags,
       taxonomy: metadata.taxonomyVersion,
       time: (new Date()).toString(),
-      files: fileIds.map(id => id.toString()),
+      files: fileIds.map((id) => id.toString()),
     };
 
     const query = { _id: new ObjectId(repoId) };
@@ -96,7 +105,7 @@ class MongoAdapter implements Adapter {
       {
         $push: { artifacts: artifact } as Document,
       },
-      { returnDocument: "after" }
+      { returnDocument: "after" },
     );
 
     // TODO: handle artifact not found case
@@ -111,7 +120,12 @@ class MongoAdapter implements Adapter {
     return new AppendResult(index, files);
   }
 
-  async uploadFile(repoId: string, index: unknown, extendedId: string, fileStream: stream.Readable) {
+  async uploadFile(
+    repoId: string,
+    index: unknown,
+    extendedId: string,
+    fileStream: stream.Readable,
+  ) {
     const [fileId, ...nameChunks] = extendedId.split("_");
     const filename = nameChunks.join("_");
     const objId = new ObjectId(fileId);
@@ -121,7 +135,12 @@ class MongoAdapter implements Adapter {
   }
 
   // TODO: update method signature to be more generic
-  async download(repoId: string, ids: string[], formatter: TagFormatter, targetDir: string): Promise<void> {
+  async download(
+    repoId: string,
+    ids: string[],
+    formatter: TagFormatter,
+    targetDir: string,
+  ): Promise<void> {
     const set = await this._collection.findOne({
       _id: new ObjectId(repoId),
     });
@@ -138,7 +157,7 @@ class MongoAdapter implements Adapter {
           const metadataPath = path.join(artifactPath, "metadata.json");
           try {
             metadata.taxonomyTags = formatter.toHumanFormat(
-              metadata.taxonomyTags ?? []
+              metadata.taxonomyTags ?? [],
             );
             await writeJsonData(metadataPath, metadata);
           } catch (err) {
@@ -147,23 +166,25 @@ class MongoAdapter implements Adapter {
               await writeJsonData(metadataPath, metadata);
               writeData(
                 logPath,
-                `An error occurred when converting the taxonomy tags: ${err.message}\n\nThe internal format has been saved in metadata.json.`
+                `An error occurred when converting the taxonomy tags: ${err.message}\n\nThe internal format has been saved in metadata.json.`,
               );
             } else {
-              const message = (err instanceof Error) ? err.message : err?.toString();
+              const message = (err instanceof Error)
+                ? err.message
+                : err?.toString();
               writeData(
                 logPath,
-                `An error occurred when generating metadata.json: ${message}`
+                `An error occurred when generating metadata.json: ${message}`,
               );
             }
           }
           await Promise.all(
             metadata.files.map((fileId: ObjectId) =>
               this._downloadFile(fileId, artifactPath)
-            )
+            ),
           );
         }
-      })
+      }),
     );
   }
 
@@ -189,7 +210,9 @@ class MongoAdapter implements Adapter {
     }
 
     const mongoUri = core.getAttribute(storageNode, "URI");
-    const client = mongoUri ? new MongoClient(mongoUri.toString()) : defaultClient;
+    const client = mongoUri
+      ? new MongoClient(mongoUri.toString())
+      : defaultClient;
     return new MongoAdapter(client, collection.toString());
   }
 }
@@ -207,5 +230,3 @@ async function writeJsonData(filePath: string, metadata: ArtifactMetadata) {
 async function streamClose(stream: stream.Stream): Promise<void> {
   return new Promise((res, rej) => stream.on("close", res));
 }
-
-module.exports = MongoAdapter;
