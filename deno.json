@@ -2,7 +2,8 @@
   "fmt": {
     "files": {
       "exclude": [
-        "src/visualizers/widgets/TagCreator/lib/react-dom.production.min.js"
+        "src/visualizers/widgets/TagCreator/lib/react-dom.production.min.js",
+        "src/visualizers/widgets/TagCreator/lib/react.production.min.js"
       ]
     }
   }
