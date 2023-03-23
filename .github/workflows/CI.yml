@@ -31,7 +31,6 @@ jobs:
 
       - name: "Install Dependencies"
         run: npm install -g npm && npm install && npm run build
-        continue-on-error: true
 
       - name: "Run Tests"
         run: npm test
