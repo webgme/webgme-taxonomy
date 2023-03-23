@@ -4,3 +4,16 @@ data
 docs
 test
 test-tmp
+tmp
+node_modules
+
+.github
+.vscode
+
+package-lock.json
+rollup.config.js
+svelte.config.js
+tsconfig.*
+vite.config.ts
+
+src/routers/Dashboard/src

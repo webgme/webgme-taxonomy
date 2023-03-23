@@ -10,6 +10,45 @@ declare global {
 import type from 'webgme';
 import type { Request, RequestHandler } from 'express';
 
+export interface AzureGmeConfig extends GmeConfig.GmeConfig {
+  authentication: {
+    enable: boolean;
+    allowGuests: boolean;
+    allowUserRegistration: boolean;
+    guestAccount: string;
+    logInUrl: string;
+    logOutUrl: string;
+    salts: number;
+    authorizer: {
+      path: string;
+      options: any;
+    };
+    jwt: {
+      expiresIn: number;
+      renewBeforeExpires: number;
+      cookieId: string;
+      publicKey: string;
+      privateKey: string;
+      tokenGenerator: string;
+      algorithm: string;
+      logOutUrlField: string | null;
+    };
+    encryption: {
+      algorithm: string;
+      key: string;
+    };
+    allowPasswordReset: boolean;
+    allowedResetInterval: number;
+    resetTimeout: number;
+    resetUrl: string;
+    useEmailForId: boolean;
+
+    azureActiveDirectory: {
+      cookieId: string;
+    }
+  }
+}
+
 /**
  * Options passed to middleware initializers by the webgme server.
  * 
@@ -34,10 +73,12 @@ export type MiddlewareOptions = {
 };
 
 export type WebgmeContext = {
-  core: GmeClasses.Core,
+  core: GmeClasses.Core & { getMetaType(node: Core.Node): Core.Node },
   root: Core.Node,
+  contentType: Core.Node,
   project: {
     projectName: string,
+    projectId: string,
   },
   projectVersion: {
     id: string,
@@ -46,3 +87,5 @@ export type WebgmeContext = {
     commitHash?: string,
   }
 };
+
+export type WebgmeRequest = Request & { webgmeContext: WebgmeContext };

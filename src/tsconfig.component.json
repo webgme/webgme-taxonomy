@@ -9,7 +9,6 @@
     "moduleResolution": "node",
     "sourceMap": true,
     "composite": true,
-    "tsBuildInfoFile": "tsconfig.tsbuildinfo"
   },
   "exclude": ["node_modules"]
 }

@@ -27,10 +27,20 @@ Terms
 1. Terms have types that determine how they are instantiated in tags that are finally assigned to content elements. While the simplest type of terms are labels, they are frequently not sufficient for expressing richer characterization. In these cases terms may have attributes that can evaluate to complex types. In general, complex terms have strong performance penalty while doing content filtering. 
 2. Decision about a term to be mandatory, recommended or optional is an important step helping tag assignment during content upload.
 
+Taxonomy Design and Data Discovery
+----------------------------------
+
+Another important consideration when designing taxonomies is the implications on the discoverability of the uploaded data tagged with the given term. The data dashboard allows searching and filtering at the level of the artifacts within a repository. As a result, tags should correspond to the entire artifact that they are associated with and not a subset of the uploaded data. If further filtering on data uploaded as part of an artifact, a CWL workflow is recommended.
+
+For example, a CSV of subject data (one subject per row) should not be tagged with subject-level terms such as subject gender or race information. If an artifact is tagged as such, the entire CSV would be returned if it contains any subject with the given tag. In these situations, it is recommended to use terms at the level of the cohort. In this case, we could first find all datasets containing the measurements of interest then pass them as inputs to a pipeline that queries the subjects of interest from the data files.
+
+
 Taxonomy Evolution
 ------------------
 
 There is only one thing worse than continual evolution of taxonomies, to decide it early and making wrong choices. Taxonomy evolution will be helped in UDCP the following manner:
 
-1. Taxonomies are also a specific content type that are uploaded into the taxonomy repository. As such, taxonomies can be indexed, versioned and  each uploaded content explicitly linked to the taxonomy version under which its tags were created.
+1. Taxonomies are also a specific content type that are uploaded into the taxonomy repository. As such, taxonomies can be indexed, versioned and each uploaded content explicitly linked to the taxonomy version under which its tags were created.
 2. The impact of updates to taxonomies can vary significantly from minimal to breaking existing code or not finding existing content. Therefore we keep taxonomy updates centralized and use a semantic versioning scheme widely adopted in software that differentiates between major, minor and patch releases. 
+
+For more details about taxonomy evolution, check out the "Evolving Taxonomies" section.

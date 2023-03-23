@@ -23,7 +23,7 @@ describe("JSONSchemaExporter", function () {
     this.timeout(7500);
     const params = await Utils.initializeProject(
       "JSONSchemaExporter",
-      "taxonomy"
+      "taxonomy",
     );
     gmeAuth = params.gmeAuth;
     storage = params.storage;
@@ -41,7 +41,6 @@ describe("JSONSchemaExporter", function () {
     const taxonomy = await Utils.createTaxonomyFromCsv(core, root, csv);
     const exporter = JSONSchemaExporter.from(core, root);
     const { schema, uiSchema } = await exporter.getSchemas(taxonomy);
-    console.log(JSON.stringify(schema, null, 2));
     const validate = ajv.compile(schema);
     return (tag) => {
       const completeTags = {

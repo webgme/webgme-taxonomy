@@ -1,3 +1,6 @@
+// @ts-check
+/// <reference path="define.d.ts" />
+
 function factory() {
   const Utils = {
     async findTaxonomyNode(core, node) {
