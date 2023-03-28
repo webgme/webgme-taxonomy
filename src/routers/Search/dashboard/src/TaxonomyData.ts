@@ -17,4 +17,3 @@ export default class TaxonomyData extends FilterTag<TaxonomyType> {
     return new TaxonomyData(id, name, type, value, childTags);
   }
 }
-

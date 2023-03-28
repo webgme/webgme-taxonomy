@@ -18,7 +18,7 @@ const Utils = {
   async createTaxonomyFromCsv(core, root, csv) {
     const vocabRoots = TaxonomyParser.fromCSV(csv);
     vocabRoots.forEach(
-      (vocabRoot) => (vocabRoot.pointers.base = "@meta:Vocabulary")
+      (vocabRoot) => (vocabRoot.pointers.base = "@meta:Vocabulary"),
     );
     const tax = { pointers: { base: "@meta:Taxonomy" }, children: vocabRoots };
     const importer = new Importer(core, root);
@@ -31,7 +31,7 @@ const Utils = {
     const projectName = name + "_" + Date.now() + Math.random() * 10000;
     const gmeAuth = await testFixture.clearDBAndGetGMEAuth(
       gmeConfig,
-      projectName
+      projectName,
     );
     const storage = testFixture.getMemoryStorage(logger, gmeConfig, gmeAuth);
     await storage.openDatabase();

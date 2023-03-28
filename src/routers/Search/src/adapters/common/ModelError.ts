@@ -1,6 +1,6 @@
-import type {WebgmeContext} from '../../../../../common/types';
+import type { WebgmeContext } from "../../../../../common/types";
 import { UserError } from "../../../../../common/routers/Utils";
-import type {Response} from 'express';
+import type { Response } from "express";
 const UNPROCESSABLE_ENTITY = 422;
 
 interface ModelContext {

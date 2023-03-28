@@ -10,11 +10,11 @@
 
 // http://expressjs.com/en/guide/routing.html
 
-import * as express from 'express';
-import * as path from 'path';
-import type { MiddlewareOptions } from '../../../common/types';
-import * as RouterUtils from '../../../common/routers/Utils';
-import ContextFacade from './ContextFacade';
+import * as express from "express";
+import * as path from "path";
+import type { MiddlewareOptions } from "../../../common/types";
+import * as RouterUtils from "../../../common/routers/Utils";
+import ContextFacade from "./ContextFacade";
 
 export const router = express.Router();
 const staticPath = path.join(__dirname, "..", "app", "dist");
@@ -28,10 +28,10 @@ const staticPath = path.join(__dirname, "..", "app", "dist");
  */
 export function initialize(middlewareOpts: MiddlewareOptions) {
   const { ensureAuthenticated } = middlewareOpts;
-  middlewareOpts.getUserId
-  const logger = middlewareOpts.logger.fork('Dashboard');
+  middlewareOpts.getUserId;
+  const logger = middlewareOpts.logger.fork("Dashboard");
 
-  logger.debug('initializing ...');
+  logger.debug("initializing ...");
 
   // Ensure authenticated can be used only after this rule.
   // router.use('*', function (req, res, next) {
@@ -43,11 +43,11 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
   // });
 
   // Use ensureAuthenticated if the routes require authentication. (Can be set explicitly for each route.)
-  router.use('*', ensureAuthenticated);
+  router.use("*", ensureAuthenticated);
 
   router.use(
     RouterUtils.getProjectScopedRoutes("static/"),
-    express.static(staticPath)
+    express.static(staticPath),
   );
 
   RouterUtils.addProjectScopeMiddleware(middlewareOpts, router);
@@ -55,13 +55,13 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
   router.get(
     RouterUtils.getProjectScopedRoutes("info"),
     async (req, res) => {
-      const context = new ContextFacade((<any>req).webgmeContext);
-      const body = await context.getProjectInfo()
+      const context = new ContextFacade((<any> req).webgmeContext);
+      const body = await context.getProjectInfo();
       res.json(body);
-    }
+    },
   );
 
-  logger.debug('ready');
+  logger.debug("ready");
 }
 
 /**

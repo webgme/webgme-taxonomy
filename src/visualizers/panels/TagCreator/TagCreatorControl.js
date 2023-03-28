@@ -16,10 +16,10 @@ define([
   JSONSchemaExporter,
   Utils,
   nodePropertyNames,
-  Q
+  Q,
 ) {
   const TAG_SET_NAMES = "taxonomyTags";
-  ("use strict");
+  "use strict";
 
   function TagCreatorControl(options) {
     this._logger = options.logger.fork("Control");
@@ -47,13 +47,13 @@ define([
         (await core.loadSubTree(taxonomyNode)).map((node) => [
           core.getGuid(node),
           node,
-        ])
+        ]),
       );
 
       // remove existing members
       const existingMemberPaths = core.getMemberPaths(
         activeNode,
-        TAG_SET_NAMES
+        TAG_SET_NAMES,
       );
       existingMemberPaths.forEach((memberPath) =>
         core.delMember(activeNode, TAG_SET_NAMES, memberPath)
@@ -74,7 +74,7 @@ define([
             TAG_SET_NAMES,
             tagPath,
             name,
-            value
+            value,
           );
         });
       });
@@ -99,7 +99,7 @@ define([
         [startCommit],
         rootHash,
         objects,
-        commitMsg
+        commitMsg,
       );
     };
   };
@@ -152,10 +152,10 @@ define([
                 uiSchema,
                 formData,
                 downloadData,
-                taxonomyPath
+                taxonomyPath,
               );
             },
-          ]
+          ],
         );
       });
 
@@ -178,11 +178,12 @@ define([
     const tagDict = await Q.ninvoke(
       this._client,
       "getTags",
-      taxonomyVersion.id
+      taxonomyVersion.id,
     );
     const commitHash = this._client.getActiveCommitHash();
-    const [tag] =
-      Object.entries(tagDict).find(([_tag, hash]) => hash === commitHash) || [];
+    const [tag] = Object.entries(tagDict).find(([_tag, hash]) =>
+      hash === commitHash
+    ) || [];
     const branch = this._client.getActiveBranchName();
 
     if (tag) {
@@ -221,7 +222,7 @@ define([
             .map((name) => [
               name,
               node.getMemberAttribute(TAG_SET_NAMES, memberPath, name),
-            ])
+            ]),
         );
         return attrDict;
       });
@@ -229,7 +230,7 @@ define([
       console.log({ memberPaths });
       const memberNodes = await this._loadNodes(memberPaths);
       const taxonomyTags = await Promise.all(
-        memberNodes.map((node, i) => this._getTagData(node, memberAttrs[i]))
+        memberNodes.map((node, i) => this._getTagData(node, memberAttrs[i])),
       );
       console.log({ taxonomyTags });
       return { taxonomyTags };
@@ -252,7 +253,7 @@ define([
       return deferred.resolve(nodes);
     });
     const territory = Object.fromEntries(
-      nodePaths.map((path) => [path, { children: 0 }])
+      nodePaths.map((path) => [path, { children: 0 }]),
     );
     this._client.updateTerritory(territoryId, territory);
 
@@ -280,7 +281,7 @@ define([
     const { core, rootNode } = await this._getCoreInstance();
     const meta = this._toMetaDict(
       core,
-      Object.values(core.getAllMetaNodes(rootNode))
+      Object.values(core.getAllMetaNodes(rootNode)),
     );
     const exporter = new JSONSchemaExporter(core, meta);
 
@@ -296,7 +297,7 @@ define([
   TagCreatorControl.prototype._getVocabularies = async function (
     core,
     root,
-    activeNode
+    activeNode,
   ) {
     const rootNode = core.getRoot(activeNode);
     const contentTypePath = core.getPointerPath(activeNode, "contentType");
@@ -306,7 +307,7 @@ define([
       return await Promise.all(
         core
           .getMemberPaths(contentType, "vocabularies")
-          .map((path) => core.loadByPath(root, path))
+          .map((path) => core.loadByPath(root, path)),
       );
     } else {
       const node = await Utils.findTaxonomyNode(core, rootNode);
@@ -329,13 +330,13 @@ define([
 
   TagCreatorControl.prototype._toMetaDict = function (core, nodes) {
     return Object.fromEntries(
-      nodes.map((node) => [core.getAttribute(node, "name"), node])
+      nodes.map((node) => [core.getAttribute(node, "name"), node]),
     );
   };
 
   TagCreatorControl.prototype._stateActiveObjectChanged = function (
     model,
-    activeObjectId
+    activeObjectId,
   ) {
     if (this._currentNodeId === activeObjectId) {
       // The same node selected as before - do not trigger
@@ -355,14 +356,14 @@ define([
     WebGMEGlobal.State.on(
       "change:" + CONSTANTS.STATE_ACTIVE_OBJECT,
       this._stateActiveObjectChanged,
-      this
+      this,
     );
   };
 
   TagCreatorControl.prototype._detachClientEventListeners = function () {
     WebGMEGlobal.State.off(
       "change:" + CONSTANTS.STATE_ACTIVE_OBJECT,
-      this._stateActiveObjectChanged
+      this._stateActiveObjectChanged,
     );
   };
 
@@ -385,7 +386,7 @@ define([
   /* * * * * * * * * * Updating the toolbar * * * * * * * * * */
   TagCreatorControl.prototype._displayToolbarItems = function () {
     if (this._toolbarInitialized === true) {
-      for (var i = this._toolbarItems.length; i--; ) {
+      for (var i = this._toolbarItems.length; i--;) {
         this._toolbarItems[i].show();
       }
     } else {
@@ -395,7 +396,7 @@ define([
 
   TagCreatorControl.prototype._hideToolbarItems = function () {
     if (this._toolbarInitialized === true) {
-      for (var i = this._toolbarItems.length; i--; ) {
+      for (var i = this._toolbarItems.length; i--;) {
         this._toolbarItems[i].hide();
       }
     }
@@ -403,7 +404,7 @@ define([
 
   TagCreatorControl.prototype._removeToolbarItems = function () {
     if (this._toolbarInitialized === true) {
-      for (var i = this._toolbarItems.length; i--; ) {
+      for (var i = this._toolbarItems.length; i--;) {
         this._toolbarItems[i].destroy();
       }
     }

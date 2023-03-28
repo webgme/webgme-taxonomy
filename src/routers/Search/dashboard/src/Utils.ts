@@ -4,8 +4,8 @@
  * occurred) or return the parsed result from the request.
  */
 export class Result<V, E> {
-  _value: V|null;
-  _error: E|null;
+  _value: V | null;
+  _error: E | null;
 
   constructor(value: V, error: E) {
     this._value = value;
@@ -48,13 +48,17 @@ export class Result<V, E> {
  * @param [options] Options for the comparison. If `ignoreOrder` is `true`, then both arrays are sorted before comparison.
  * @return `true` if the arrays are equal, `false` otherwise.
  */
-export function arraysEqual<T>(array1: T[], array2: T[], options?: { ignoreOrder?: boolean, equals?: (a: T, b: T) => boolean }) {
+export function arraysEqual<T>(
+  array1: T[],
+  array2: T[],
+  options?: { ignoreOrder?: boolean; equals?: (a: T, b: T) => boolean },
+) {
   if (array1 === array2) return true;
   if (array1.length !== array2.length) return false;
-  
-  const [arr1, arr2] = options?.ignoreOrder ?
-    [[...array1].sort(), [...array2].sort()] :
-    [array1, array2];
+
+  const [arr1, arr2] = options?.ignoreOrder
+    ? [[...array1].sort(), [...array2].sort()]
+    : [array1, array2];
 
   const equals = options?.equals ?? Object.is;
   return !arr1.some((elem, index) => !equals(elem, arr2[index]));
@@ -85,17 +89,22 @@ export function capitalize(word: string): string {
 }
 
 export function openUrl(url: string) {
-  return window.open(url, '_blank');
+  return window.open(url, "_blank");
 }
 
-export function encodeQueryParams(dict: {[key: string]: string}) {
+export function encodeQueryParams(dict: { [key: string]: string }) {
   return Object.entries(dict)
     .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
-    .join('&');
+    .join("&");
 }
 
-export function isObject<T>(thing: T): thing is Exclude<T, undefined | string | number | boolean | Array<any> | Function> {
-  return typeof thing === 'object' && !Array.isArray(thing);
+export function isObject<T>(
+  thing: T,
+): thing is Exclude<
+  T,
+  undefined | string | number | boolean | Array<any> | Function
+> {
+  return typeof thing === "object" && !Array.isArray(thing);
 }
 
 export function isDefined<T>(thing: T): thing is Exclude<T, undefined> {
@@ -124,5 +133,5 @@ export function filterMap<I, O>(list: I[], fn: (x: I) => O | undefined): O[] {
       items.push(mapped);
     }
     return items;
-  }, <Array<O>>[]);
+  }, <Array<O>> []);
 }

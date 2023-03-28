@@ -16,16 +16,16 @@ function factory() {
             className: "btn btn-secondary",
             onClick: async () => {
               const formData = deepCopy(
-                this.setMissingDefaults(data.schema, data.formData)
+                this.setMissingDefaults(data.schema, data.formData),
               );
               this.downloadJSON(Object.assign({}, data.downloadData, formData));
             },
           },
-          "Download"
+          "Download",
         ),
       ]);
       this.root.render(
-        React.createElement(JSONSchemaForm, data.getProperties(), children)
+        React.createElement(JSONSchemaForm, data.getProperties(), children),
       );
     }
 
@@ -40,7 +40,7 @@ function factory() {
       const defaults = this._setMissingDefaults(
         schema,
         schema.definitions,
-        metadata
+        metadata,
       );
       // We need to mutate the original for form validation to
       // validate the correct version of the object.
@@ -163,7 +163,7 @@ function factory() {
         const defaults = Object.fromEntries(
           Object.entries(schema.properties).map(([id, def]) => {
             return [id, this._getDefaultValue(def, definitions)];
-          })
+          }),
         );
         return defaults;
       } else if (schema.type === "array") {

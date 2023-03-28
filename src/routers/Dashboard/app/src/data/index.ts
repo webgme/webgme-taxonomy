@@ -1,1 +1,1 @@
-export { default as getProjectInfo } from "./get-project-info"
+export { default as getProjectInfo } from "./get-project-info";

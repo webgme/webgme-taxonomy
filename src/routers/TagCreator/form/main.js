@@ -30,7 +30,7 @@ async function renderForm() {
     schema,
     uiSchema,
     {},
-    { taxonomyVersion }
+    { taxonomyVersion },
   );
   form.render(formData);
 }

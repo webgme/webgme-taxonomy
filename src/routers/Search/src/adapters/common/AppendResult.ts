@@ -18,7 +18,7 @@ export class UploadRequest {
   }
 }
 
-type StringDict = {[key: string]: string};
+type StringDict = { [key: string]: string };
 export class UploadParams {
   url: string;
   method: string;

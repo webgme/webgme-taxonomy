@@ -1,7 +1,8 @@
-import {Newtype, iso } from 'newtype-ts';
+import { iso, Newtype } from "newtype-ts";
 import type { ArtifactMetadata } from "../common/types";
 
-export interface ProcessID extends Newtype<{ readonly ProcessID: unique symbol }, string> {}
+export interface ProcessID
+  extends Newtype<{ readonly ProcessID: unique symbol }, string> {}
 
 export function newtype<T extends Newtype<any, any>>(value: any): T {
   const factory = iso<T>();
@@ -32,7 +33,7 @@ export interface Observation {
 export interface AppendObservationResponse extends Observation {
   uploadDataFiles: {
     files: UploadDataFile[];
-  }
+  };
 }
 
 export interface UploadDataFile {

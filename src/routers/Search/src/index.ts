@@ -15,11 +15,17 @@
 
 // http://expressjs.com/en/guide/routing.html
 import * as express from "express";
-import type { Request, Response, Router, RequestHandler, NextFunction } from "express";
+import type {
+  NextFunction,
+  Request,
+  RequestHandler,
+  Response,
+  Router,
+} from "express";
 const router = express.Router();
 
 import RouterUtils from "../../../common/routers/Utils";
-import type {MiddlewareOptions, WebgmeRequest } from '../../../common/types';
+import type { MiddlewareOptions, WebgmeRequest } from "../../../common/types";
 import Utils from "../../../common/Utils";
 import { isString } from "./Utils";
 import DashboardConfiguration from "../../../common/SearchFilterDataExporter";
@@ -27,7 +33,7 @@ import TagFormatter from "../../../common/TagFormatter";
 import path from "path";
 const staticPath = path.join(__dirname, "..", "dashboard", "public");
 import os from "os";
-import { zip, COMPRESSION_LEVEL } from "zip-a-folder";
+import { COMPRESSION_LEVEL, zip } from "zip-a-folder";
 import fsp from "fs/promises";
 import fs from "fs";
 import StorageAdapter from "./adapters";
@@ -45,7 +51,7 @@ import StorageAdapter from "./adapters";
  * @param {object} middlewareOpts.workerManager - Spawns and keeps track of "worker" sub-processes.
  */
 function initialize(middlewareOpts: MiddlewareOptions) {
-  const {ensureAuthenticated} = middlewareOpts;
+  const { ensureAuthenticated } = middlewareOpts;
   const logger = middlewareOpts.logger.fork("Search");
   logger.debug("initializing ...");
 
@@ -65,7 +71,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
 
   router.use(
     RouterUtils.getContentTypeRoutes("static/"),
-    express.static(staticPath)
+    express.static(staticPath),
   );
 
   // Perhaps the path should include the node ID, too...
@@ -77,12 +83,12 @@ function initialize(middlewareOpts: MiddlewareOptions) {
       const { core, contentType } = req.webgmeContext;
       const configuration = await DashboardConfiguration.from(
         core,
-        contentType
+        contentType,
       );
       configuration.project = req.webgmeContext.projectVersion;
       configuration.contentTypePath = core.getPath(contentType);
       res.json(configuration);
-    })
+    }),
   );
 
   // Accessing and updating data via the storage adapter
@@ -93,11 +99,11 @@ function initialize(middlewareOpts: MiddlewareOptions) {
       const storage = await StorageAdapter.from(
         req.webgmeContext,
         req,
-        mainConfig
+        mainConfig,
       );
       const artifacts = await storage.listArtifacts();
       res.status(200).json(artifacts).end();
-    })
+    }),
   );
 
   router.post(
@@ -113,12 +119,12 @@ function initialize(middlewareOpts: MiddlewareOptions) {
       const storage = await StorageAdapter.from(
         req.webgmeContext,
         req,
-        mainConfig
+        mainConfig,
       );
 
       const status = await storage.createArtifact(metadata);
       res.json(status);
-    })
+    }),
   );
 
   router.post(
@@ -129,12 +135,12 @@ function initialize(middlewareOpts: MiddlewareOptions) {
       const storage = await StorageAdapter.from(
         req.webgmeContext,
         req,
-        mainConfig
+        mainConfig,
       );
       const appendResult = await storage.appendArtifact(
         parentId,
         req.body.metadata,
-        req.body.filenames
+        req.body.filenames,
       );
       appendResult.files.forEach((file) => {
         const isRelative = file.params.url.startsWith("./");
@@ -146,28 +152,27 @@ function initialize(middlewareOpts: MiddlewareOptions) {
         }
       });
       res.json(appendResult);
-    })
+    }),
   );
 
   router.post(
     RouterUtils.getContentTypeRoutes(
-      "artifacts/:parentId/:index/:fileId/upload"
+      "artifacts/:parentId/:index/:fileId/upload",
     ),
     RouterUtils.handleUserErrors(logger, async function (req, res) {
       const { parentId, index, fileId } = req.params;
       const storage = await StorageAdapter.from(
         req.webgmeContext,
         req,
-        mainConfig
+        mainConfig,
       );
       if (storage.uploadFile) {
         const status = await storage.uploadFile(parentId, index, fileId, req);
         res.json(status);
-      }
-      else {
+      } else {
         res.sendStatus(400);
       }
-    })
+    }),
   );
 
   router.get(
@@ -176,10 +181,9 @@ function initialize(middlewareOpts: MiddlewareOptions) {
       const { parentId } = req.params;
       // TODO: get the IDs for the specific observations to get
       let ids;
-      if (isString(req.query.ids)){
+      if (isString(req.query.ids)) {
         ids = JSON.parse(req.query.ids);
-      }
-      else {
+      } else {
         res.status(400).send("List of artifact IDs required");
         return;
       }
@@ -194,11 +198,11 @@ function initialize(middlewareOpts: MiddlewareOptions) {
       const storage = await StorageAdapter.from(
         req.webgmeContext,
         req,
-        mainConfig
+        mainConfig,
       );
 
       const tmpDir = await fsp.mkdtemp(
-        path.join(os.tmpdir(), "webgme-taxonomy-")
+        path.join(os.tmpdir(), "webgme-taxonomy-"),
       );
       const downloadDir = path.join(tmpDir, "download");
       const zipPath = path.join(tmpDir, `${parentId}.zip`);
@@ -210,8 +214,10 @@ function initialize(middlewareOpts: MiddlewareOptions) {
 
       try {
         await fsp.access(zipPath, fs.constants.R_OK);
-        res.download(zipPath, path.basename(zipPath), () =>
-          fsp.rm(tmpDir, { recursive: true })
+        res.download(
+          zipPath,
+          path.basename(zipPath),
+          () => fsp.rm(tmpDir, { recursive: true }),
         );
         return false;
       } catch (err) {
@@ -219,14 +225,18 @@ function initialize(middlewareOpts: MiddlewareOptions) {
         logger.error(`${err}`);
         res.sendStatus(204);
       }
-    })
+    }),
   );
 
   logger.debug("ready");
 }
 
-async function convertTaxonomyTags(req: Request, res: Response, next: NextFunction) {
-  const { root, core } = (<WebgmeRequest>req).webgmeContext;
+async function convertTaxonomyTags(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  const { root, core } = (<WebgmeRequest> req).webgmeContext;
   const node = await Utils.findTaxonomyNode(core, root);
   if (node == null) return res.status(400).send("No taxonomy node found");
   const formatter = await TagFormatter.from(core, node);

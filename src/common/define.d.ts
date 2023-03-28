@@ -1,1 +1,1 @@
-declare var define: undefined | Function
+declare var define: undefined | Function;

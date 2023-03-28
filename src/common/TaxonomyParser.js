@@ -131,7 +131,7 @@ function factory() {
     // Remove the empty columns
     const baseDepth = cells.reduce(
       (depth, cell) => Math.min(cell.depth, depth),
-      Infinity
+      Infinity,
     );
     cells.forEach((cell) => (cell.depth -= baseDepth));
 
@@ -156,7 +156,7 @@ function factory() {
         parentStack.splice(
           cells[i].depth,
           parentStack.length - cells[i].depth,
-          node
+          node,
         );
       }
     }

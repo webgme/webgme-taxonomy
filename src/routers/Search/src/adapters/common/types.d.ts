@@ -1,18 +1,37 @@
-import type {AppendResult} from './AppendResult';
-import type TagFormatter from '../../../../../common/TagFormatter';
-import type { WebgmeContext, WebgmeRequest } from '../../../../../common/types';
+import type { AppendResult } from "./AppendResult";
+import type TagFormatter from "../../../../../common/TagFormatter";
+import type { WebgmeContext, WebgmeRequest } from "../../../../../common/types";
 
 export interface Adapter {
   listArtifacts(): Promise<Repository[]>;
   createArtifact(metadata: ArtifactMetadata): Promise<string>;
-  appendArtifact(repoId: string, metadata: ArtifactMetadata, filenames: string[]): Promise<AppendResult>;
-    // returns fileUploadInfo
-  download(repoId: string, ids: string[], formatter: TagFormatter, downloadDir: string): Promise<void>;
-  uploadFile?(repoId: string, index: string, fileId: string, req: WebgmeRequest): Promise<void>;
+  appendArtifact(
+    repoId: string,
+    metadata: ArtifactMetadata,
+    filenames: string[],
+  ): Promise<AppendResult>;
+  // returns fileUploadInfo
+  download(
+    repoId: string,
+    ids: string[],
+    formatter: TagFormatter,
+    downloadDir: string,
+  ): Promise<void>;
+  uploadFile?(
+    repoId: string,
+    index: string,
+    fileId: string,
+    req: WebgmeRequest,
+  ): Promise<void>;
 }
 
 export interface AdapterStatic {
-  from(gmeContext: WebgmeContext, storageNode: Core.Node, request: WebgmeRequest, config: any): Adapter;
+  from(
+    gmeContext: WebgmeContext,
+    storageNode: Core.Node,
+    request: WebgmeRequest,
+    config: any,
+  ): Adapter;
 }
 
 export interface Artifact {

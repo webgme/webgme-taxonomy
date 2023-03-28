@@ -1,7 +1,7 @@
 import TaxonomyReference from "./TaxonomyReference";
-import {assert, Result} from './Utils';
-import {filterMap} from './Utils';
-import { writable, Readable } from 'svelte/store';
+import { assert, Result } from "./Utils";
+import { filterMap } from "./Utils";
+import { Readable, writable } from "svelte/store";
 
 type UploadParams = {
   method: string;
@@ -17,16 +17,16 @@ export type UploadPromise = Promise<boolean> & Readable<number> & {
 class Storage {
   baseUrl: string;
   constructor() {
-    const chunks = window.location.href.split('/'); // TODO:
+    const chunks = window.location.href.split("/"); // TODO:
     chunks.pop();
     chunks.pop();
-    this.baseUrl = chunks.join('/') + '/artifacts/';
+    this.baseUrl = chunks.join("/") + "/artifacts/";
   }
 
   async listArtifacts(): Promise<ArtifactSet[]> {
     const result = await this._fetchJson(this.baseUrl, null, ListError);
     const items: any[] = await result.unwrap();
-    return filterMap(items, item => ArtifactSet.tryFrom(item));
+    return filterMap(items, (item) => ArtifactSet.tryFrom(item));
   }
 
   async getDownloadUrl(parentId, ...ids) {
@@ -39,7 +39,7 @@ class Storage {
     const { subscribe, set } = writable(0);
     const request = new XMLHttpRequest();
     request.upload.addEventListener("progress", (ev) => {
-        set(ev.loaded / ev.total);
+      set(ev.loaded / ev.total);
     }, false);
     const promise = new Promise<boolean>(function (resolve, reject) {
       request.addEventListener("load", () => {
@@ -47,73 +47,88 @@ class Storage {
         resolve(true);
       }, false);
       request.addEventListener("error", () => {
-        const error = new AppendDataError(request.statusText || "Upload failed");
+        const error = new AppendDataError(
+          request.statusText || "Upload failed",
+        );
         reject(error);
       }, false);
       request.addEventListener("abort", () => resolve(false), false);
     });
     request.open(method, url);
     Object.entries(headers || {})
-      .forEach(([name, value]: [string, string]) => request.setRequestHeader(name, value));
+      .forEach(([name, value]: [string, string]) =>
+        request.setRequestHeader(name, value)
+      );
     request.send(file);
     return Object.assign(promise, {
       file,
       subscribe,
-      abort() { request.abort(); }
+      abort() {
+        request.abort();
+      },
     }) as UploadPromise;
   }
 
   async appendArtifact(artifactSet, metadata, files: File[]) {
-    console.log({action : 'append', metadata, files});
-    const url = this.baseUrl + artifactSet.id + '/append';
+    console.log({ action: "append", metadata, files });
+    const url = this.baseUrl + artifactSet.id + "/append";
     const filenames = files.map((file: File) => file.name);
 
     const opts = {
-      method : 'post',
-      headers : {
-        'Content-Type' : 'application/json',
+      method: "post",
+      headers: {
+        "Content-Type": "application/json",
       },
-      body : JSON.stringify({
+      body: JSON.stringify({
         metadata,
         filenames,
-      })
+      }),
     };
 
-    const appendResult = await (await this._fetchJson(url, opts, AppendDataError))
-      .unwrap() as { files: any[] };
+    const appendResult =
+      await (await this._fetchJson(url, opts, AppendDataError))
+        .unwrap() as { files: any[] };
 
-    return appendResult.files.map(({ name, params }: { name: string, params: UploadParams}) => {
-      const targetFile = files.find(a => a.name == name);
-      assert(!!targetFile, new AppendDataError('Could not find upload info for ' + name));
-      return this._uploadFile(params, targetFile);
-    });
+    return appendResult.files.map(
+      ({ name, params }: { name: string; params: UploadParams }) => {
+        const targetFile = files.find((a) => a.name == name);
+        assert(
+          !!targetFile,
+          new AppendDataError("Could not find upload info for " + name),
+        );
+        return this._uploadFile(params, targetFile);
+      },
+    );
   }
 
   async updateArtifact(metadata, newContent) {
-    console.log('Updating artifact:', metadata, newContent);
+    console.log("Updating artifact:", metadata, newContent);
   }
 
   async createArtifact(metadata, files) {
-    console.log('Creating artifact:', metadata, files);
+    console.log("Creating artifact:", metadata, files);
     metadata.taxonomyTags = metadata.taxonomyTags || [];
     const opts = {
-      method : 'POST',
-      headers : {'Content-Type' : 'application/json'},
-      body : JSON.stringify({
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
         metadata,
-      })
+      }),
     };
     return (await this._fetchJson(this.baseUrl, opts, CreateError))
-        .unwrap();
+      .unwrap();
   }
 
-  async _fetch(url: string, opts = null, ErrorClass=RequestError) {
+  async _fetch(url: string, opts = null, ErrorClass = RequestError) {
     const response = await fetch(url, opts);
     let error = null;
     if (response.status === 422) {
       const data = await response.json();
       const context = new ModelContext(
-          data.context.projectId, data.context.branch, data.context.nodeId);
+        data.context.projectId,
+        data.context.branch,
+        data.context.nodeId,
+      );
       error = new ModelError(data.message, context);
     } else if (response.status > 399) {
       error = new ErrorClass(await response.text());
@@ -121,13 +136,17 @@ class Storage {
     return new Result(response, error);
   }
 
-  async _fetchJson(url: string, opts = null, ErrorClass=RequestError) {
-    return (await this._fetch(url, opts, ErrorClass)).map(response => response.json());
+  async _fetchJson(url: string, opts = null, ErrorClass = RequestError) {
+    return (await this._fetch(url, opts, ErrorClass)).map((response) =>
+      response.json()
+    );
   }
 }
 
 export class RequestError extends Error {
-  constructor(msg: string) { super(msg); }
+  constructor(msg: string) {
+    super(msg);
+  }
 }
 
 class ModelContext {
@@ -143,9 +162,9 @@ class ModelContext {
 
   toQueryParams(): string {
     const params = new URLSearchParams({
-      project : this.projectId,
-      branch : this.branch,
-      node : this.nodeId,
+      project: this.projectId,
+      branch: this.branch,
+      node: this.nodeId,
     });
     return params.toString();
   }
@@ -168,20 +187,26 @@ class StorageError extends RequestError {
 
 class ListError extends StorageError {
   constructor(msg: string) {
-    super('list artifacts', msg); // FIXME: rename "artifact"?
+    super("list artifacts", msg); // FIXME: rename "artifact"?
   }
 }
 
 class DownloadError extends StorageError {
-  constructor(msg: string) { super('download', msg); }
+  constructor(msg: string) {
+    super("download", msg);
+  }
 }
 
 class CreateError extends StorageError {
-  constructor(msg: string) { super('create', msg); }
+  constructor(msg: string) {
+    super("create", msg);
+  }
 }
 
 class AppendDataError extends StorageError {
-  constructor(msg: string) { super('append', msg); }
+  constructor(msg: string) {
+    super("append", msg);
+  }
 }
 
 class ArtifactSet {
@@ -189,10 +214,10 @@ class ArtifactSet {
     if (!item.displayName) {
       console.log("Found malformed data. Filtering out. Data:", item);
     } else {
-      const hash =
-          [ item.id, ...item.children.map(child => child.id).sort() ].join('/');
+      const hash = [item.id, ...item.children.map((child) => child.id).sort()]
+        .join("/");
       item.hash = hash;
-      item.children = item.children.map(child => {
+      item.children = item.children.map((child) => {
         if (child.taxonomy) {
           child.taxonomy = TaxonomyReference.from(child.taxonomy);
         }
