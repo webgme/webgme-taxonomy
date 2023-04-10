@@ -403,7 +403,12 @@ export default class PDP implements Adapter {
     const observation = this._createObservationData(processId, type, data);
     observation.index = index;
     observation.version = version;
-    observation.dataFiles = files;
+
+    // All files for a process share the same directory so we need to scope them
+    // to an index/version
+    const uploadDir = `${index}/${version}/`;
+    observation.dataFiles = files
+      .map((filename: string) => uploadDir + filename);
 
     return await this._fetchJson(
       `v3/Process/AppendObservation?processId=${processId}&uploadExpiresInMins=180`,
