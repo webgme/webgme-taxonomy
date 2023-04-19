@@ -4,14 +4,12 @@
 
 var config = require("webgme/config/config.default"),
   validateConfig = require("webgme/config/validator");
-const path = require("path");
-const jsonImporterDir = path.dirname(
-  require.resolve("webgme-json-importer/app.js"),
-);
 
 // The paths can be loaded from the webgme-setup.json
 config.plugin.basePaths.push(__dirname + "/../src/plugins");
-config.plugin.basePaths.push(path.join(jsonImporterDir, "src/plugins"));
+config.plugin.basePaths.push(
+  __dirname + "/../node_modules/webgme-json-importer/src/plugins",
+);
 config.seedProjects.basePaths.push(__dirname + "/../src/seeds/taxonomy");
 config.seedProjects.basePaths.push(__dirname + "/../src/seeds/TaxonomyProject");
 
@@ -49,13 +47,11 @@ config.visualization.visualizerDescriptors.push(
 );
 // Add requirejs paths
 config.requirejsPaths = {
-  "SetStateFromJSON": path.join(
-    jsonImporterDir,
-    "src/plugins/SetStateFromJSON",
-  ),
+  "SetStateFromJSON":
+    "node_modules/webgme-json-importer/src/plugins/SetStateFromJSON",
   "panels": "./src/visualizers/panels",
   "widgets": "./src/visualizers/widgets",
-  "webgme-json-importer": path.join(jsonImporterDir, "src/common"),
+  "webgme-json-importer": "./node_modules/webgme-json-importer/src/common",
   "webgme-taxonomy": "./src/common",
 };
 
