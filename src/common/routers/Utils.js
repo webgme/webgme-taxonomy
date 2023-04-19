@@ -2,6 +2,10 @@ const webgme = require("webgme-engine");
 const assert = require("assert");
 const Core = webgme.requirejs("common/core/coreQ");
 const jwt = require("jsonwebtoken");
+const { filterMap } = require("../../routers/Search/build/Utils");
+const {
+  SemanticVersion,
+} = require("../../routers/Search/dashboard/dist/TaxonomyReference");
 
 const Utils = {
   async getWebGMEContext(middlewareOpts, req) {
@@ -11,7 +15,7 @@ const Utils = {
     return await Utils.getWebGMEContextUnsafe(
       middlewareOpts,
       userId,
-      projectContext,
+      projectContext
     );
   },
   // This is unsafe since it bypasses permissions
@@ -62,13 +66,13 @@ const Utils = {
       if (tags.hasOwnProperty(tag)) {
         context.commitObject = await context.project.getCommitObject(tags[tag]);
       } else {
-        throw new Error("No tag [" + tag + "] exists!");
+        throw new TagNotFoundError(tag);
       }
     } else {
       context.branchName = branch || "master";
       context.projectVersion.branch = branch;
       context.commitObject = await context.project.getCommitObject(
-        context.branchName,
+        context.branchName
       );
     }
 
@@ -114,7 +118,7 @@ const Utils = {
         assert(contentType, new ContentTypeNotFoundError(contentTypePath));
         req.webgmeContext.contentType = contentType;
         console.log("CTX received:", req.originalUrl);
-      }),
+      })
     );
   },
 
@@ -124,18 +128,30 @@ const Utils = {
     const contextFn = !unsafe
       ? (request) => Utils.getWebGMEContext(middlewareOpts, request)
       : (request) => {
-        const userId = request.params.projectId.split("+").shift();
-        return Utils.getWebGMEContextUnsafe(
-          middlewareOpts,
-          userId,
-          request.params,
-        );
-      };
+          const userId = request.params.projectId.split("+").shift();
+          return Utils.getWebGMEContextUnsafe(
+            middlewareOpts,
+            userId,
+            request.params
+          );
+        };
 
-    // add redirect for /tag/latest to actual tag
+    Utils.addLatestVersionRedirect(middlewareOpts, router);
+
+    return router.use(
+      Utils.getProjectScopedRoutes(),
+      handleUserErrors(
+        logger,
+        async (req) => (req.webgmeContext = await contextFn(req))
+      )
+    );
+  },
+
+  addLatestVersionRedirect(middlewareOpts, router) {
+    const { logger } = middlewareOpts;
     router.use(
       Utils.getProjectScopedRoutes(),
-      async (req, res, next) => {
+      handleUserErrors(logger, async (req, res, next) => {
         const { projectId, tag } = req.params;
         if (tag === "latest") {
           const { safeStorage } = middlewareOpts;
@@ -145,32 +161,38 @@ const Utils = {
             projectId,
           });
           const tagDict = await project.getTags();
-          const tags = filterMap(
-            Object.keys(tagDict),
-            tagName => SemanticVersion.parse(tagName).ok()
-          );
+          const tags = filterMap(Object.keys(tagDict), (tagName) => {
+            try {
+              const version = SemanticVersion.parse(tagName);
+              return {
+                name: tagName,
+                version,
+              };
+            } catch (_err) {
+              return undefined;
+            }
+          });
 
           if (tags.length === 0) {
-            return res.status(404);  // FIXME
+            throw new TagNotFoundError("latest");
           }
-          const latestTag = tags.reduce(
-            (latest: SemanticVersion, v: SemanticVersion) => latest.gte(v) ? latest : v
+
+          const latestTag = tags.reduce((latest, other) =>
+            latest.version.gte(other.version) ? latest : v
           );
 
-          const url = req.url.replace("/tag/latest", `/tag/${latestTag.toString()}`);
+          const url = req.originalUrl.replace(
+            "/tag/latest",
+            `/tag/${latestTag.name}`
+          );
           res.redirect(url);
+          return false;
         } else {
-          next();
+          return true;
         }
-      },
+      })
     );
-    return router.use(
-      Utils.getProjectScopedRoutes(),
-      handleUserErrors(
-        logger,
-        async (req) => (req.webgmeContext = await contextFn(req)),
-      ),
-    );
+    return router;
   },
 };
 
@@ -218,6 +240,12 @@ class ContentTypeNotFoundError extends UserError {
 class VocabScopeNotFoundError extends UserError {
   constructor(path, scope) {
     super(`No ${scope} vocabularies defined for ${path}`, 404);
+  }
+}
+
+class TagNotFoundError extends UserError {
+  constructor(tag) {
+    super(`Tag not found: ${tag}`, 404);
   }
 }
 
