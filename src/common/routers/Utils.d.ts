@@ -32,6 +32,10 @@ export function addProjectScopeMiddleware(
   middlewareOpts: MiddlewareOptions,
   router: Router,
 ): Router;
+export function addLatestVersionRedirect(
+  middlewareOpts: MiddlewareOptions,
+  router: Router,
+): Router;
 export function getObserverIdFromToken(token: string): string;
 export function getContentTypeRoutes(path?: string): string[];
 export function getContentTypeVocabRoutes(path?: string): string[];

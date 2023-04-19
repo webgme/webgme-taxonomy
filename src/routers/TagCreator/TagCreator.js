@@ -57,10 +57,12 @@ function initialize(middlewareOpts) {
   // Use ensureAuthenticated if the routes require authentication. (Can be set explicitly for each route.)
   router.use("*", ensureAuthenticated);
 
+  RouterUtils.addLatestVersionRedirect(middlewareOpts, router);
+
   const staticPath = path.join(__dirname, "form");
   router.use(
     RouterUtils.getContentTypeVocabRoutes("static/"),
-    express.static(staticPath),
+    express.static(staticPath)
   );
 
   RouterUtils.addContentTypeMiddleware(middlewareOpts, router);
@@ -75,13 +77,13 @@ function initialize(middlewareOpts) {
       const vocabularies = await Utils.getVocabulariesFor(
         core,
         contentType,
-        vocabScope,
+        vocabScope
       );
       const config = await exporter.getVocabSchemas(vocabularies);
       config.taxonomyVersion = req.webgmeContext.projectVersion;
       config.taxonomyVersion.url = getHostUrl(req);
       return res.json(config);
-    },
+    }
   );
 
   logger.debug("ready");
@@ -113,12 +115,12 @@ function stop(callback) {
  */
 async function generateFormHtml(gmeConfig) {
   const formTemplate = _.template(
-    fs.readFileSync(path.join(__dirname, "form", "index.html.ejs"), "utf8"),
+    fs.readFileSync(path.join(__dirname, "form", "index.html.ejs"), "utf8")
   );
   const { requirejsPaths } = gmeConfig;
   const commonPath = requirejsPaths["webgme-taxonomy"].replace(
     /^\./,
-    "/extlib",
+    "/extlib"
   );
   const opts = {
     commonPath,
@@ -126,7 +128,7 @@ async function generateFormHtml(gmeConfig) {
   };
   await fsp.writeFile(
     path.join(__dirname, "form", "index.html"),
-    formTemplate(opts),
+    formTemplate(opts)
   );
 }
 

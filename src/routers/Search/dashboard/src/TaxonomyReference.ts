@@ -106,12 +106,16 @@ export class SemanticVersion {
     this.patch = patch;
   }
 
-  gte(other: SemanticVersion) {
+  gte(other: SemanticVersion): boolean {
     if (this.major < other.major) return false;
     if (this.minor < other.minor) return false;
     if (this.patch < other.patch) return false;
 
     return true;
+  }
+
+  toString(): string {
+    return [this.major, this.minor, this.patch].join(".");
   }
 
   static parse(versionString: string): SemanticVersion {

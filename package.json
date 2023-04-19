@@ -17,7 +17,7 @@
     "prepublish": "husky install",
     "prepare": "npm run build && cd src/routers/Dashboard/app && npm install && cd ../../Search/dashboard && npm install"
   },
-  "version": "1.2.1",
+  "version": "1.2.2",
   "devDependencies": {
     "@smui/icon-button": "^6.1.0",
     "@smui/linear-progress": "^6.1.0",
@@ -42,9 +42,9 @@
     "node-fetch": "^2.6.6",
     "svelte": "^3.50.0",
     "webgme": "github:webgme/webgme#azure",
-    "webgme-json-importer": "github:deepforge-dev/webgme-json-importer",
     "webgme-transformations": "^0.2.0",
     "webgme-tree-viz": "^0.1.0",
+    "webgme-json-importer": "^1.4.1",
     "zip-a-folder": "^1.1.5"
   },
   "lint-staged": {
