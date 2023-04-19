@@ -144,12 +144,21 @@ const Utils = {
             username: userId,
             projectId,
           });
-          const tags = await project.getTags();
-          // TODO: get the latest tag
-          console.log("which tag is the latest version number?", tags);
+          const tagDict = await project.getTags();
+          const tags = filterMap(
+            Object.keys(tagDict),
+            tagName => SemanticVersion.parse(tagName).ok()
+          );
 
-          //const url = req.url.replace("/tag/latest", `/tag/${latestTag}`);
-          //res.redirect(url);
+          if (tags.length === 0) {
+            return res.status(404);  // FIXME
+          }
+          const latestTag = tags.reduce(
+            (latest: SemanticVersion, v: SemanticVersion) => latest.gte(v) ? latest : v
+          );
+
+          const url = req.url.replace("/tag/latest", `/tag/${latestTag.toString()}`);
+          res.redirect(url);
         } else {
           next();
         }
