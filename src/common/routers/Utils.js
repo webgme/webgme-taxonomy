@@ -131,6 +131,30 @@ const Utils = {
           request.params,
         );
       };
+
+    // add redirect for /tag/latest to actual tag
+    router.use(
+      Utils.getProjectScopedRoutes(),
+      async (req, res, next) => {
+        const { projectId, tag } = req.params;
+        if (tag === "latest") {
+          const { safeStorage } = middlewareOpts;
+          const userId = projectId.split("+").shift();
+          const project = await safeStorage.openProject({
+            username: userId,
+            projectId,
+          });
+          const tags = await project.getTags();
+          // TODO: get the latest tag
+          console.log("which tag is the latest version number?", tags);
+
+          //const url = req.url.replace("/tag/latest", `/tag/${latestTag}`);
+          //res.redirect(url);
+        } else {
+          next();
+        }
+      },
+    );
     return router.use(
       Utils.getProjectScopedRoutes(),
       handleUserErrors(
