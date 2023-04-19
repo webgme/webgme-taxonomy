@@ -2,6 +2,10 @@ const webgme = require("webgme-engine");
 const assert = require("assert");
 const Core = webgme.requirejs("common/core/coreQ");
 const jwt = require("jsonwebtoken");
+const { filterMap } = require("../../routers/Search/build/Utils");
+const {
+  SemanticVersion,
+} = require("../../routers/Search/dashboard/dist/TaxonomyReference");
 
 const Utils = {
   async getWebGMEContext(middlewareOpts, req) {
@@ -62,7 +66,7 @@ const Utils = {
       if (tags.hasOwnProperty(tag)) {
         context.commitObject = await context.project.getCommitObject(tags[tag]);
       } else {
-        throw new Error("No tag [" + tag + "] exists!");
+        throw new TagNotFoundError(tag);
       }
     } else {
       context.branchName = branch || "master";
@@ -131,6 +135,9 @@ const Utils = {
           request.params,
         );
       };
+
+    Utils.addLatestVersionRedirect(middlewareOpts, router);
+
     return router.use(
       Utils.getProjectScopedRoutes(),
       handleUserErrors(
@@ -138,6 +145,54 @@ const Utils = {
         async (req) => (req.webgmeContext = await contextFn(req)),
       ),
     );
+  },
+
+  addLatestVersionRedirect(middlewareOpts, router) {
+    const { logger } = middlewareOpts;
+    router.use(
+      Utils.getProjectScopedRoutes(),
+      handleUserErrors(logger, async (req, res, next) => {
+        const { projectId, tag } = req.params;
+        if (tag === "latest") {
+          const { safeStorage } = middlewareOpts;
+          const userId = projectId.split("+").shift();
+          const project = await safeStorage.openProject({
+            username: userId,
+            projectId,
+          });
+          const tagDict = await project.getTags();
+          const tags = filterMap(Object.keys(tagDict), (tagName) => {
+            try {
+              const version = SemanticVersion.parse(tagName);
+              return {
+                name: tagName,
+                version,
+              };
+            } catch (_err) {
+              return undefined;
+            }
+          });
+
+          if (tags.length === 0) {
+            throw new TagNotFoundError("latest");
+          }
+
+          const latestTag = tags.reduce((latest, other) =>
+            latest.version.gte(other.version) ? latest : v
+          );
+
+          const url = req.originalUrl.replace(
+            "/tag/latest",
+            `/tag/${latestTag.name}`,
+          );
+          res.redirect(url);
+          return false;
+        } else {
+          return true;
+        }
+      }),
+    );
+    return router;
   },
 };
 
@@ -185,6 +240,12 @@ class ContentTypeNotFoundError extends UserError {
 class VocabScopeNotFoundError extends UserError {
   constructor(path, scope) {
     super(`No ${scope} vocabularies defined for ${path}`, 404);
+  }
+}
+
+class TagNotFoundError extends UserError {
+  constructor(tag) {
+    super(`Tag not found: ${tag}`, 404);
   }
 }
 

@@ -69,6 +69,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
   // Use ensureAuthenticated if the routes require authentication. (Can be set explicitly for each route.)
   router.use("*", ensureAuthenticated);
 
+  RouterUtils.addLatestVersionRedirect(middlewareOpts, router);
   router.use(
     RouterUtils.getContentTypeRoutes("static/"),
     express.static(staticPath),

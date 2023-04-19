@@ -39,6 +39,7 @@ function initialize(middlewareOpts) {
 
   // Skipping authentication here as data is not easy to determine from these routes.
   // The GUID/display name (and fields) need to be guessed exactly.
+  RouterUtils.addLatestVersionRedirect(middlewareOpts, router);
   RouterUtils.addProjectScopeMiddleware(middlewareOpts, router, {
     unsafe: true,
   });
