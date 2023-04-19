@@ -74,14 +74,14 @@ function initialize(middlewareOpts) {
           res.status(400).send(err.message);
         } else {
           logger.error(
-            `Error occurred during tag format conversion: ${err.stack}`
+            `Error occurred during tag format conversion: ${err.stack}`,
           );
           res
             .status(500)
             .send("Internal error occurred. Please try again later.");
         }
       }
-    }
+    },
   );
 
   logger.debug("ready");

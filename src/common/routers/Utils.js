@@ -15,7 +15,7 @@ const Utils = {
     return await Utils.getWebGMEContextUnsafe(
       middlewareOpts,
       userId,
-      projectContext
+      projectContext,
     );
   },
   // This is unsafe since it bypasses permissions
@@ -72,7 +72,7 @@ const Utils = {
       context.branchName = branch || "master";
       context.projectVersion.branch = branch;
       context.commitObject = await context.project.getCommitObject(
-        context.branchName
+        context.branchName,
       );
     }
 
@@ -118,7 +118,7 @@ const Utils = {
         assert(contentType, new ContentTypeNotFoundError(contentTypePath));
         req.webgmeContext.contentType = contentType;
         console.log("CTX received:", req.originalUrl);
-      })
+      }),
     );
   },
 
@@ -128,13 +128,13 @@ const Utils = {
     const contextFn = !unsafe
       ? (request) => Utils.getWebGMEContext(middlewareOpts, request)
       : (request) => {
-          const userId = request.params.projectId.split("+").shift();
-          return Utils.getWebGMEContextUnsafe(
-            middlewareOpts,
-            userId,
-            request.params
-          );
-        };
+        const userId = request.params.projectId.split("+").shift();
+        return Utils.getWebGMEContextUnsafe(
+          middlewareOpts,
+          userId,
+          request.params,
+        );
+      };
 
     Utils.addLatestVersionRedirect(middlewareOpts, router);
 
@@ -142,8 +142,8 @@ const Utils = {
       Utils.getProjectScopedRoutes(),
       handleUserErrors(
         logger,
-        async (req) => (req.webgmeContext = await contextFn(req))
-      )
+        async (req) => (req.webgmeContext = await contextFn(req)),
+      ),
     );
   },
 
@@ -183,14 +183,14 @@ const Utils = {
 
           const url = req.originalUrl.replace(
             "/tag/latest",
-            `/tag/${latestTag.name}`
+            `/tag/${latestTag.name}`,
           );
           res.redirect(url);
           return false;
         } else {
           return true;
         }
-      })
+      }),
     );
     return router;
   },
