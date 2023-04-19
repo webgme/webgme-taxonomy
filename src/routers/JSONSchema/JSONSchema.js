@@ -53,6 +53,7 @@ function initialize(middlewareOpts) {
   // Use ensureAuthenticated if the routes require authentication. (Can be set explicitly for each route.)
   // router.use('*', ensureAuthenticated);
   // Authentication not needed since actual data isn't shared, just taxonomy used to label data (as JSON schema).
+  RouterUtils.addLatestVersionRedirect(middlewareOpts, router);
   RouterUtils.addContentTypeMiddleware(middlewareOpts, router, {
     unsafe: true,
   });
@@ -67,11 +68,11 @@ function initialize(middlewareOpts) {
       const vocabularies = await Utils.getVocabulariesFor(
         core,
         contentType,
-        vocabScope,
+        vocabScope
       );
       const { schema } = await exporter.getVocabSchemas(vocabularies);
       return response.json(schema);
-    },
+    }
   );
 
   logger.debug("ready");
