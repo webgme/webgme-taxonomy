@@ -69,7 +69,10 @@
         "test": "test/routers/Dashboard",
         "mount": "routers/Dashboard"
       }
-    }
+    },
+    "addons": {},
+    "layouts": {},
+    "decorators": {}
   },
   "dependencies": {
     "seeds": {},
@@ -79,7 +82,19 @@
         "path": "node_modules/webgme-json-importer/src/plugins/SetStateFromJSON"
       }
     },
-    "visualizers": {},
-    "routers": {}
+    "visualizers": {
+      "TreeViz": {
+        "src": "panels/TreeViz/TreeVizPanel",
+        "title": "TreeViz",
+        "panel": "src/visualizers/panels/TreeViz",
+        "secondary": false,
+        "widget": "src/visualizers/widgets/TreeViz",
+        "project": "webgme-tree-viz"
+      }
+    },
+    "routers": {},
+    "addons": {},
+    "layouts": {},
+    "decorators": {}
   }
 }

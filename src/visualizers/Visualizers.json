@@ -4,5 +4,11 @@
     "title": "Taxonomy Tags",
     "panel": "panels/TagCreator/TagCreatorPanel",
     "DEBUG_ONLY": false
+  },
+  {
+    "id": "TreeViz",
+    "title": "TreeViz",
+    "panel": "panels/TreeViz/TreeVizPanel",
+    "DEBUG_ONLY": false
   }
 ]

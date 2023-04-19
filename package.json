@@ -43,6 +43,8 @@
     "svelte": "^3.50.0",
     "webgme": "github:webgme/webgme#azure",
     "webgme-json-importer": "github:deepforge-dev/webgme-json-importer",
+    "webgme-transformations": "^0.2.0",
+    "webgme-tree-viz": "^0.1.0",
     "zip-a-folder": "^1.1.5"
   },
   "lint-staged": {
