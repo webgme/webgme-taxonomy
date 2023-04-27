@@ -13,6 +13,9 @@ config.plugin.basePaths.push(
 config.seedProjects.basePaths.push(__dirname + "/../src/seeds/taxonomy");
 config.seedProjects.basePaths.push(__dirname + "/../src/seeds/TaxonomyProject");
 
+config.visualization.panelPaths.push(
+  __dirname + "/../node_modules/webgme-tree-viz/src/visualizers/panels",
+);
 config.visualization.panelPaths.push(__dirname + "/../src/visualizers/panels");
 
 config.rest.components["Search"] = {
@@ -47,11 +50,17 @@ config.visualization.visualizerDescriptors.push(
 );
 // Add requirejs paths
 config.requirejsPaths = {
+  "TreeViz": "panels/TreeViz/TreeVizPanel",
   "SetStateFromJSON":
     "node_modules/webgme-json-importer/src/plugins/SetStateFromJSON",
   "panels": "./src/visualizers/panels",
   "widgets": "./src/visualizers/widgets",
+  "panels/TreeViz":
+    "./node_modules/webgme-tree-viz/src/visualizers/panels/TreeViz",
+  "widgets/TreeViz":
+    "./node_modules/webgme-tree-viz/src/visualizers/widgets/TreeViz",
   "webgme-json-importer": "./node_modules/webgme-json-importer/src/common",
+  "webgme-tree-viz": "./node_modules/webgme-tree-viz/src/common",
   "webgme-taxonomy": "./src/common",
 };
 
