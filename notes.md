@@ -40,7 +40,21 @@
       - [x] update tag form link to open correct content type
       - [x] use the correct type field
       - [x] update TaxonomyData.fromDict
-        - 
+      - [ ] show data
+        - is it being uploaded?
+          - yep, and returned to the browser
+        - everything looks kosher in the db
+        - it appears that the taxonomy field is missing
+          - maybe we shouldn't hide them but should show it as deprecated or something?
+          - this might hurt reproducibility and such...
+          - maybe make this a toggleable option...
+      - [x] inconsistent use of `taxonomy` vs `taxonomyVersion`
+        - switch to `taxonomy`?
+      - [ ] check that filters still work
+        - [ ] it doesn't seem to show all the repos with matches...
+
+      - [ ] how does this affect the others
+
     - [ ] update the UI to support other levels of hierarchy
     - [ ] throw errors if hierarchy depth != 2
 
