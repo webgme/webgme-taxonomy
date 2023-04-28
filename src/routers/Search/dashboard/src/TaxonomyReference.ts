@@ -21,7 +21,7 @@ export default class TaxonomyReference {
   }
 
   static from(taxonomy: TaxonomyVersionData): TaxonomyReference {
-    let version;
+    let version: Version;
     if (taxonomy.tag) {
       version = new Tag(taxonomy.commit, taxonomy.tag);
     } else if (taxonomy.branch) {
@@ -90,7 +90,7 @@ export class Branch extends Commit {
 }
 
 export class ParseError extends Error {
-  constructor(input) {
+  constructor(input: string) {
     super(`Unable to parse: ${input}`);
   }
 }
