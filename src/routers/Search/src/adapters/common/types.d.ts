@@ -55,7 +55,7 @@ export interface Repository {
 export interface ArtifactMetadata {
   displayName: string;
   taxonomyTags: any[];
-  taxonomyVersion: TaxonomyVersion;
+  taxonomy: TaxonomyVersion;
   time: string;
 }
 

@@ -20,20 +20,20 @@ export default class TaxonomyReference {
       this.version.supports(otherVersion.version);
   }
 
-  static from(taxonomyVersion: TaxonomyVersionData): TaxonomyReference {
+  static from(taxonomy: TaxonomyVersionData): TaxonomyReference {
     let version;
-    if (taxonomyVersion.tag) {
-      version = new Tag(taxonomyVersion.commit, taxonomyVersion.tag);
-    } else if (taxonomyVersion.branch) {
-      version = new Branch(taxonomyVersion.commit, taxonomyVersion.branch);
-    } else if (taxonomyVersion.commit) {
-      version = new Commit(taxonomyVersion.commit);
+    if (taxonomy.tag) {
+      version = new Tag(taxonomy.commit, taxonomy.tag);
+    } else if (taxonomy.branch) {
+      version = new Branch(taxonomy.commit, taxonomy.branch);
+    } else if (taxonomy.commit) {
+      version = new Commit(taxonomy.commit);
     } else {
-      const taxVersion = JSON.stringify(taxonomyVersion);
+      const taxVersion = JSON.stringify(taxonomy);
       throw new Error(`Could not find tag, branch, or commit in ${taxVersion}`);
     }
 
-    return new TaxonomyReference(taxonomyVersion.id, version);
+    return new TaxonomyReference(taxonomy.id, version);
   }
 }
 
