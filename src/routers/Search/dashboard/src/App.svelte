@@ -156,8 +156,7 @@
     }
   }
 
-  function trimTaxonomy(taxonomy: TaxonomyData) {
-    let vocabs = [taxonomy];
+  function trimTaxonomy(vocabs: TaxonomyData[]) {
     while (vocabs.length === 1) {
       vocabs = vocabs[0].children;
     }
@@ -212,8 +211,11 @@
   async function initialize() {
     configuration = await fetchConfiguration();
     currentTaxonomy = TaxonomyReference.from(configuration.project);
-    const taxonomy = TaxonomyData.fromDict(configuration.taxonomy);
-    vocabularies = trimTaxonomy(taxonomy);
+    // FIXME: update this when we support arbitrary depth. Just grabbing the data vocabs for now
+    const dataVocabs = configuration.content.content.vocabularies.map(
+      TaxonomyData.fromDict
+    );
+    vocabularies = trimTaxonomy(dataVocabs);
     filterTags = parseTagParams(params.get("filterTags"));
     contentType = configuration.name;
     fetchData();
@@ -398,13 +400,16 @@
   <title>{title}</title>
 </svelte:head>
 
-<AppendArtifactDialog
-  {contentType}
-  bind:set={appendItem}
-  on:upload={() => (appendMsgId = displayProgressMessage("Upload in progress"))}
-  on:complete={onAppendFinish}
-  on:error={onAppendFinish}
-/>
+{#if configuration && configuration.content.content}
+  <AppendArtifactDialog
+    contentType={configuration.content.content}
+    bind:set={appendItem}
+    on:upload={() =>
+      (appendMsgId = displayProgressMessage("Upload in progress"))}
+    on:complete={onAppendFinish}
+    on:error={onAppendFinish}
+  />
+{/if}
 
 <!-- Artifact creation dialog -->
 <Dialog

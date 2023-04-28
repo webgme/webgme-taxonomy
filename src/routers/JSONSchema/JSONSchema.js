@@ -64,15 +64,15 @@ function initialize(middlewareOpts) {
       const { vocabScope } = request.params;
       const { root, core, contentType } = request.webgmeContext;
       const exporter = JSONSchemaExporter.from(core, root);
-      // FIXME: Doesn't this need to know if it is for the repository or an individual artifact?
+      // FIXME: remove this
       const vocabularies = await Utils.getVocabulariesFor(
         core,
         contentType,
-        vocabScope,
+        vocabScope
       );
       const { schema } = await exporter.getVocabSchemas(vocabularies);
       return response.json(schema);
-    },
+    }
   );
 
   logger.debug("ready");
