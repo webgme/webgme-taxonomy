@@ -15,7 +15,7 @@ function factory(Utils) {
     }
 
     async toSchema(node) {
-      const base = this.core.getBase(node);
+      const base = this.core.getBaseType(node);
       const children = await this.core.loadChildren(node);
 
       return {
