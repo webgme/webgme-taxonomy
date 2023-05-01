@@ -6,6 +6,9 @@
       },
       "TaxonomyProject": {
         "src": "src/seeds/TaxonomyProject"
+      },
+      "profile": {
+        "src": "src/seeds/profile"
       }
     },
     "plugins": {
