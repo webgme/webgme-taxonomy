@@ -1,7 +1,6 @@
 const FormRenderData = TagCreatorForm.FormRenderData;
 let form;
-class RequestError extends Error {
-}
+class RequestError extends Error {}
 
 window.onload = async function () {
   const { Form, validator } = JSONSchemaForm;
@@ -16,8 +15,7 @@ window.onload = async function () {
     const prefix = "Unable to render form";
     if (err instanceof RequestError) {
       // TODO: clean this code up (better style and remove html in string)
-      container.innerHTML =
-        `<h5>${prefix}: ${err.message}<br/><br/>Is the URL correct?<h5>`;
+      container.innerHTML = `<h5>${prefix}: ${err.message}<br/><br/>Is the URL correct?<h5>`;
     } else {
       container.innerText = `${prefix}: ${err.message}`;
     }
@@ -25,13 +23,8 @@ window.onload = async function () {
 };
 
 async function renderForm() {
-  const { schema, uiSchema, taxonomyVersion } = await fetchConfig();
-  const formData = new FormRenderData(
-    schema,
-    uiSchema,
-    {},
-    { taxonomyVersion },
-  );
+  const { schema, uiSchema, taxonomy } = await fetchConfig();
+  const formData = new FormRenderData(schema, uiSchema, {}, { taxonomy });
   form.render(formData);
 }
 
