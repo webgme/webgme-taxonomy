@@ -1,9 +1,43 @@
 /* eslint-env mocha */
 
-import { EnumFilterTag, fromDict } from "../src/tags";
+import { EnumFilterTag, FilterTag, fromDict } from "../src/tags";
 import assert from "assert";
 
 describe("FilterTag", function () {
+  describe("text field", function () {
+    it("should match if values are equal", function () {
+      const filter = new FilterTag(
+        "textID",
+        "Test Field",
+        "StringField",
+        "someValue",
+        [],
+      );
+      const tag = {
+        vocabID: {
+          textID: "someValue",
+        },
+      };
+      assert(filter.isMatch(tag));
+    });
+
+    it("should not match if values are not equal", function () {
+      const filter = new FilterTag(
+        "textID",
+        "Test Field",
+        "StringField",
+        "someValue",
+        [],
+      );
+      const tag = {
+        vocabID: {
+          textID: "someOtherValue",
+        },
+      };
+      assert(!filter.isMatch(tag));
+    });
+  });
+
   describe("enum field", function () {
     it("should match if values are equal", function () {
       const filter = new EnumFilterTag(
