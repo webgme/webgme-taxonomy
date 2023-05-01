@@ -9,7 +9,7 @@
 
 define(["text!./metadata.json", "plugin/PluginBase"], function (
   pluginMetadata,
-  PluginBase,
+  PluginBase
 ) {
   "use strict";
 
@@ -24,16 +24,14 @@ define(["text!./metadata.json", "plugin/PluginBase"], function (
     async main() {
       const baseUrl = window.location.href.replace(/\?.*$/, "");
       const versionString = await this.getVersionString();
-      const { vocabScope } = this.getCurrentConfig();
-      const url = baseUrl +
+      const url =
+        baseUrl +
         "routers/TagCreator/" +
         encodeURIComponent(this.project.projectId) +
         "/" +
         versionString +
         "/" +
         encodeURIComponent(this.core.getPath(this.activeNode)) +
-        "/" +
-        vocabScope +
         "/static/index.html";
 
       window.open(url, "TagForm");
@@ -50,7 +48,7 @@ define(["text!./metadata.json", "plugin/PluginBase"], function (
       const versionInfo = {};
       const tags = await this.project.getTags();
       const currentTag = Object.entries(tags).find(
-        ([tag, commit]) => commit === this.commitHash,
+        ([tag, commit]) => commit === this.commitHash
       );
 
       if (currentTag) {
