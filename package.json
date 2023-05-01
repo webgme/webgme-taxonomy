@@ -3,7 +3,9 @@
   "scripts": {
     "start": "node app.js",
     "debug": "NODE_ENV=azure node --inspect app.js",
-    "test": "node ./node_modules/mocha/bin/mocha --recursive test",
+    "test-tax": "npx mocha --recursive test",
+    "test": "npm run test-tax && npm run test-dash",
+    "test-dash": "cd src/routers/Search/dashboard && npm t",
     "apply": "node ./node_modules/webgme-engine/src/bin/apply.js",
     "diff": "node ./node_modules/webgme-engine/src/bin/diff.js",
     "export": "node ./node_modules/webgme-engine/src/bin/export.js",
