@@ -16,16 +16,27 @@ function factory(Utils) {
 
     async toSchema(node) {
       const base = this.core.getBaseType(node);
+      const prototype = this.getPrototype(node);
       const children = await this.core.loadChildren(node);
 
       return {
-        id: this.core.getGuid(node),
+        id: this.core.getGuid(prototype),
         name: this.core.getAttribute(node, "name"),
         type: this.core.getAttribute(base, "name"),
         children: await Promise.all(
           children.map((child) => this.toSchema(child))
         ),
       };
+    }
+
+    getPrototype(node) {
+      const base = this.core.getBaseType(node);
+
+      while (this.core.getBase(node) !== base) {
+        node = this.core.getBase(node);
+      }
+
+      return node;
     }
   }
 
