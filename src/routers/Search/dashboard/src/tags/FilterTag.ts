@@ -53,7 +53,7 @@ export default class FilterTag<T extends string = string> {
     const value = ItemTag.valueForKey(itemTag, this.id);
     const foundTag = isDefined(value);
     const tagValuesMatch = this.value === value;
-    return this.isLabel ? foundTag : tagValuesMatch;
+    return this.isLabel() ? foundTag : tagValuesMatch;
   }
 
   lean(): LeanTag {
