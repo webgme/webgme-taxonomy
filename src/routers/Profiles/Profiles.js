@@ -37,7 +37,6 @@ var express = require("express"),
 function initialize(middlewareOpts) {
   var logger = middlewareOpts.logger.fork("Profiles"),
     ensureAuthenticated = middlewareOpts.ensureAuthenticated;
-  console.log(Object.keys(middlewareOpts));
 
   const { gmeAuth, safeStorage } = middlewareOpts;
 
@@ -70,10 +69,10 @@ function initialize(middlewareOpts) {
     const owners = await Promise.all(
       _.uniq(profiles.map((project) => project.owner)).map((name) =>
         gmeAuth.getUser(name)
-      ),
+      )
     );
     const trustedOwners = new Set(
-      owners.filter((owner) => owner.siteAdmin).map((user) => user._id),
+      owners.filter((owner) => owner.siteAdmin).map((user) => user._id)
     );
     trustedOwners.add(userId);
 
@@ -86,7 +85,7 @@ function initialize(middlewareOpts) {
     const profileDict = Object.fromEntries(
       profileJSONs
         .flat()
-        .map((profile) => [profile.name, _.omit(profile, "name")]),
+        .map((profile) => [profile.name, _.omit(profile, "name")])
     );
 
     res.json(profileDict);
@@ -112,12 +111,19 @@ function initialize(middlewareOpts) {
     });
 
     // convert the nodes to JSON
-    return profiles.map((node) => ({
-      name: core.getAttribute(node, "name"),
-      URL: core.getAttribute(node, "URL"),
-      project: core.getAttribute(node, "project"),
-      version: core.getAttribute(node, "version"),
-    }));
+    return profiles.map((node) => {
+      // TODO: remove empty strings
+      const profileData = {
+        name: core.getAttribute(node, "name"),
+        project: core.getAttribute(node, "project"),
+        version: core.getAttribute(node, "version"),
+      };
+      const url = core.getAttribute(node, "URL");
+      if (url && url !== "") {
+        profileData.URL = url;
+      }
+      return profileData;
+    });
   }
 
   logger.debug("ready");
