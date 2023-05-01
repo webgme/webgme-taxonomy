@@ -71,6 +71,11 @@
         "src": "src/routers/Dashboard",
         "test": "test/routers/Dashboard",
         "mount": "routers/Dashboard"
+      },
+      "Profiles": {
+        "src": "src/routers/Profiles",
+        "test": "test/routers/Profiles",
+        "mount": "routers/Profiles"
       }
     }
   },

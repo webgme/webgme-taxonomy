@@ -41,6 +41,11 @@ config.rest.components["Dashboard"] = {
   mount: "routers/Dashboard",
   options: {},
 };
+config.rest.components['Profiles'] = {
+  src: __dirname + '/../src/routers/Profiles/Profiles.js',
+  mount: 'routers/Profiles',
+  options: {}
+};
 
 // Visualizer descriptors
 config.visualization.visualizerDescriptors.push(
