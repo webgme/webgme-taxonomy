@@ -24,7 +24,7 @@ function factory(Utils) {
         name: this.core.getAttribute(node, "name"),
         type: this.core.getAttribute(base, "name"),
         children: await Promise.all(
-          children.map((child) => this.toSchema(child))
+          children.map((child) => this.toSchema(child)),
         ),
       };
     }
@@ -54,7 +54,7 @@ function factory(Utils) {
       // FIXME: remove this
       const vocabNodes = await Utils.getVocabulariesFor(core, contentTypeNode);
       const vocabularies = await Promise.all(
-        vocabNodes.map((node) => exporter.toSchema(node))
+        vocabNodes.map((node) => exporter.toSchema(node)),
       );
 
       // TODO: check for a content type

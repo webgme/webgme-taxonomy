@@ -3,12 +3,14 @@
 - [ ] add support for hierarchical content types
   - [x] what exactly would this look like?
     - it seems to make sense
-  - I should be able to add support for this without supporting webgme storage (and transformations)
+  - I should be able to add support for this without supporting webgme storage
+    (and transformations)
   - [x] make a simple test project
   - [ ] does anything else need to be updated?
     - [ ] content type dashboard
       - show all content types with storage
-      - the content type dashboard could be the data dashboard updated to be viewing the content type listing
+      - the content type dashboard could be the data dashboard updated to be
+        viewing the content type listing
   - [ ] update data dashboard
     - [ ] how to handle the differences btwn repo & data in the dashboard?
       - presence of files, for example
@@ -34,7 +36,6 @@
           - tags
           - files
 
-
     - [ ] ensure everything works with 2-level hierarchy?
       - [x] update configuration
       - [x] update tag form link to open correct content type
@@ -45,7 +46,8 @@
           - yep, and returned to the browser
         - everything looks kosher in the db
         - it appears that the taxonomy field is missing
-          - maybe we shouldn't hide them but should show it as deprecated or something?
+          - maybe we shouldn't hide them but should show it as deprecated or
+            something?
           - this might hurt reproducibility and such...
           - maybe make this a toggleable option...
       - [x] inconsistent use of `taxonomy` vs `taxonomyVersion`
@@ -69,11 +71,13 @@
       - is this restricted to a specific level?
 
   - the UI can be like ranger: up to 3 columns at a time
-    - small screens will hide the previous columns and only show 1 or 2 at a time
+    - small screens will hide the previous columns and only show 1 or 2 at a
+      time
     - how to go up a directory?
     - what if we select multiple?
       - hide the subsequent panes
-      - add download all button? Or make the download button download all of them?
+      - add download all button? Or make the download button download all of
+        them?
     - paginate/filter each column like currently done
       - top level has a higher default threshold (maybe paginate?)
 
@@ -82,14 +86,17 @@
     - repositories are represented by index 0
     - so, depth of 1 could simply be editing index 0
     - depth of 2 is handled like currently done
-    - depth of 3+ is a little tricky since we need to edit observations to add children
+    - depth of 3+ is a little tricky since we need to edit observations to add
+      children
       - each observation contains additional data elements
       - we will need to bump the version of an observation to add new elements
-      - however, bumping the version also is used to update the tags for an individual element in the observation
+      - however, bumping the version also is used to update the tags for an
+        individual element in the observation
         - I think this should be fine...
 
 - [ ] add support for WebGME storage
-  - this should really define a mapping from the contained WebGME nodes to the expected format for the data dashboard
+  - this should really define a mapping from the contained WebGME nodes to the
+    expected format for the data dashboard
   - what is the format expected by the data dashboard?
     - name (or use base vocabulary?)
     - additional tags (human or guid?)
@@ -97,12 +104,12 @@
   - [ ] define the data dashboard format in the metamodel
 
 - [ ] add support for webgme storage across time?
-    - fetch across versions
-    - probably should have a transformation, too
-    - Run the transformation on each commit?
-      - diff the outputs?
-      - cache the outputs in mongodb?
-    - use the latest version of the transformation?
+  - fetch across versions
+  - probably should have a transformation, too
+  - Run the transformation on each commit?
+    - diff the outputs?
+    - cache the outputs in mongodb?
+  - use the latest version of the transformation?
 
 - [ ] Tag set support
 
@@ -115,7 +122,8 @@
     - require it to be made by an admin?
     - or requested by name
     - can a profile refer to other profiles?
-  - the CLI can just bake it in for now (the same way the deployment URL is handled)
+  - the CLI can just bake it in for now (the same way the deployment URL is
+    handled)
 
 - [ ] dependency management
   - how do you query (following links)?
@@ -478,4 +486,3 @@
 
 - [x] import semanticversion
   - build it as a library?
-
