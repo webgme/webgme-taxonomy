@@ -47,7 +47,7 @@
   let vocabularies: TaxonomyData[] = [];
 
   import TagFormatter, { FormatError } from "./Formatter";
-  import Storage, { ModelError, RequestError } from "./Storage";
+  import Storage, { ModelError, RequestError, ModelContext } from "./Storage";
   const storage = setContext("storage", new Storage());
 
   let allItems = [];
@@ -211,6 +211,26 @@
   async function initialize() {
     configuration = await fetchConfiguration();
     currentTaxonomy = TaxonomyReference.from(configuration.project);
+    // FIXME: Only 2-level depth is currently supported
+    let depth = 1;
+    let contentType = configuration.content;
+    while (contentType.content) {
+      contentType = contentType.content;
+      depth++;
+    }
+    if (depth !== 2) {
+      const context = new ModelContext(
+        configuration.project.id,
+        configuration.project.branch,
+        configuration.content.nodePath
+      );
+      const error = new ModelError(
+        `Depth of ${depth} not supported. Please update your content type to have depth of 2.`,
+        context
+      );
+      return displayError(error);
+    }
+
     // FIXME: update this when we support arbitrary depth. Just grabbing the data vocabs for now
     const dataVocabs = configuration.content.content.vocabularies.map(
       TaxonomyData.fromDict
