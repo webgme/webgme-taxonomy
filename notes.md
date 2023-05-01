@@ -40,7 +40,7 @@
       - [x] update tag form link to open correct content type
       - [x] use the correct type field
       - [x] update TaxonomyData.fromDict
-      - [ ] show data
+      - [x] show data
         - is it being uploaded?
           - yep, and returned to the browser
         - everything looks kosher in the db
@@ -50,8 +50,10 @@
           - maybe make this a toggleable option...
       - [x] inconsistent use of `taxonomy` vs `taxonomyVersion`
         - switch to `taxonomy`?
-      - [ ] check that filters still work
-        - [ ] it doesn't seem to show all the repos with matches...
+        - update the tag form?
+      - [x] check that filters still work
+        - [x] it doesn't seem to show all the repos with matches...
+        - [x] add tests for filter tag checking
 
       - [ ] how does this affect the others
 
