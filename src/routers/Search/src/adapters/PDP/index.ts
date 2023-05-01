@@ -493,7 +493,7 @@ function parseArtifact(obs: Observation): Artifact | undefined {
       id: obs.index + "_" + obs.version,
       displayName: metadata.displayName,
       taxonomyTags: metadata.taxonomyTags,
-      taxonomy: metadata.taxonomyVersion,
+      taxonomy: metadata.taxonomy,
       time: obs.startTime,
     };
   }

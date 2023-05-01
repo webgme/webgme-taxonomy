@@ -1,7 +1,6 @@
 const FormRenderData = TagCreatorForm.FormRenderData;
 let form;
-class RequestError extends Error {
-}
+class RequestError extends Error {}
 
 window.onload = async function () {
   const { Form, validator } = JSONSchemaForm;
@@ -25,13 +24,8 @@ window.onload = async function () {
 };
 
 async function renderForm() {
-  const { schema, uiSchema, taxonomyVersion } = await fetchConfig();
-  const formData = new FormRenderData(
-    schema,
-    uiSchema,
-    {},
-    { taxonomyVersion },
-  );
+  const { schema, uiSchema, taxonomy } = await fetchConfig();
+  const formData = new FormRenderData(schema, uiSchema, {}, { taxonomy });
   form.render(formData);
 }
 

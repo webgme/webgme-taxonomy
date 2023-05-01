@@ -61,27 +61,21 @@ function initialize(middlewareOpts) {
 
   const staticPath = path.join(__dirname, "form");
   router.use(
-    RouterUtils.getContentTypeVocabRoutes("static/"),
+    RouterUtils.getContentTypeRoutes("static/"),
     express.static(staticPath),
   );
 
   RouterUtils.addContentTypeMiddleware(middlewareOpts, router);
 
   router.get(
-    RouterUtils.getContentTypeVocabRoutes("configuration.json"),
+    RouterUtils.getContentTypeRoutes("configuration.json"),
     async function (req, res) {
-      const { vocabScope } = req.params;
       const { root, core, contentType } = req.webgmeContext;
       const exporter = JSONSchemaExporter.from(core, root);
-      // TODO: better error handling when scope not defined in model
-      const vocabularies = await Utils.getVocabulariesFor(
-        core,
-        contentType,
-        vocabScope,
-      );
+      const vocabularies = await Utils.getVocabulariesFor(core, contentType);
       const config = await exporter.getVocabSchemas(vocabularies);
-      config.taxonomyVersion = req.webgmeContext.projectVersion;
-      config.taxonomyVersion.url = getHostUrl(req);
+      config.taxonomy = req.webgmeContext.projectVersion;
+      config.taxonomy.url = getHostUrl(req);
       return res.json(config);
     },
   );

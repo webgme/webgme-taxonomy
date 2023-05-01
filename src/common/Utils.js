@@ -25,20 +25,27 @@ function factory() {
         return children.find(isTaxonomyNode);
       }, Promise.resolve(null));
     },
-    async getVocabulariesFor(core, contentType, scope = "data") {
-      const metaType = scope === "repo"
-        ? "RepositoryVocabularies"
-        : "DataVocabularies";
+    async getVocabulariesFor(core, contentType) {
       const children = await core.loadChildren(contentType);
       const container = children.find((node) => {
         const typeNode = core.getBase(node);
-        return core.getAttribute(typeNode, "name") === metaType;
+        return core.getAttribute(typeNode, "name") === "Vocabularies";
       });
       if (container) {
         return await core.loadChildren(container);
       } else {
         return [];
       }
+    },
+    isTypeNamed(core, node, typeName) {
+      node = core.getBase(node);
+      while (node) {
+        if (core.getAttribute(node, "name") === typeName) {
+          return true;
+        }
+        node = core.getBase(node);
+      }
+      return false;
     },
   };
 

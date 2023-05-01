@@ -1,5 +1,6 @@
 import FilterTag from "./FilterTag";
 import SetFilterTag from "./SetFilterTag";
+import EnumFilterTag from "./EnumFilterTag";
 
 namespace fromDict {
   export interface Data<T extends string = string> {
@@ -28,6 +29,7 @@ type FilterTagConstructor = new (
  */
 fromDict.types = {
   "SetField": SetFilterTag,
+  "EnumField": EnumFilterTag,
 } as { [name: string]: FilterTagConstructor };
 
 export default fromDict;

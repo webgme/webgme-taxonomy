@@ -149,7 +149,7 @@ export class RequestError extends Error {
   }
 }
 
-class ModelContext {
+export class ModelContext {
   projectId: string;
   nodeId: string;
   branch: string; // FIXME: this could be a commit or something instead

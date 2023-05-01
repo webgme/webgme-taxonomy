@@ -93,6 +93,7 @@ const Utils = {
     return Utils.getProjectScopedRoutes(contentTypeRoute);
   },
 
+  // FIXME: remove this
   getContentTypeVocabRoutes(route = "") {
     const vocabRoute = `:vocabScope(data|repo)/${route}`;
     return Utils.getContentTypeRoutes(vocabRoute);
@@ -237,6 +238,7 @@ class ContentTypeNotFoundError extends UserError {
   }
 }
 
+// FIXME: remove this
 class VocabScopeNotFoundError extends UserError {
   constructor(path, scope) {
     super(`No ${scope} vocabularies defined for ${path}`, 404);

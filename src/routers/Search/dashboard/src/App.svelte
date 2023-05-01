@@ -47,7 +47,7 @@
   let vocabularies: TaxonomyData[] = [];
 
   import TagFormatter, { FormatError } from "./Formatter";
-  import Storage, { ModelError, RequestError } from "./Storage";
+  import Storage, { ModelError, RequestError, ModelContext } from "./Storage";
   const storage = setContext("storage", new Storage());
 
   let allItems = [];
@@ -156,8 +156,7 @@
     }
   }
 
-  function trimTaxonomy(taxonomy: TaxonomyData) {
-    let vocabs = [taxonomy];
+  function trimTaxonomy(vocabs: TaxonomyData[]) {
     while (vocabs.length === 1) {
       vocabs = vocabs[0].children;
     }
@@ -212,8 +211,31 @@
   async function initialize() {
     configuration = await fetchConfiguration();
     currentTaxonomy = TaxonomyReference.from(configuration.project);
-    const taxonomy = TaxonomyData.fromDict(configuration.taxonomy);
-    vocabularies = trimTaxonomy(taxonomy);
+    // FIXME: Only 2-level depth is currently supported
+    let depth = 1;
+    let contentType = configuration.content;
+    while (contentType.content) {
+      contentType = contentType.content;
+      depth++;
+    }
+    if (depth !== 2) {
+      const context = new ModelContext(
+        configuration.project.id,
+        configuration.project.branch,
+        configuration.content.nodePath
+      );
+      const error = new ModelError(
+        `Depth of ${depth} not supported. Please update your content type to have depth of 2.`,
+        context
+      );
+      return displayError(error);
+    }
+
+    // FIXME: update this when we support arbitrary depth. Just grabbing the data vocabs for now
+    const dataVocabs = configuration.content.content.vocabularies.map(
+      TaxonomyData.fromDict
+    );
+    vocabularies = trimTaxonomy(dataVocabs);
     filterTags = parseTagParams(params.get("filterTags"));
     contentType = configuration.name;
     fetchData();
@@ -398,13 +420,16 @@
   <title>{title}</title>
 </svelte:head>
 
-<AppendArtifactDialog
-  {contentType}
-  bind:set={appendItem}
-  on:upload={() => (appendMsgId = displayProgressMessage("Upload in progress"))}
-  on:complete={onAppendFinish}
-  on:error={onAppendFinish}
-/>
+{#if configuration && configuration.content.content}
+  <AppendArtifactDialog
+    contentType={configuration.content.content}
+    bind:set={appendItem}
+    on:upload={() =>
+      (appendMsgId = displayProgressMessage("Upload in progress"))}
+    on:complete={onAppendFinish}
+    on:error={onAppendFinish}
+  />
+{/if}
 
 <!-- Artifact creation dialog -->
 <Dialog

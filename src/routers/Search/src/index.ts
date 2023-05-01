@@ -15,13 +15,7 @@
 
 // http://expressjs.com/en/guide/routing.html
 import * as express from "express";
-import type {
-  NextFunction,
-  Request,
-  RequestHandler,
-  Response,
-  Router,
-} from "express";
+import type { NextFunction, Request, Response } from "express";
 const router = express.Router();
 
 import RouterUtils from "../../../common/routers/Utils";

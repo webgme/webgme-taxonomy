@@ -1,12 +1,6 @@
 import FilterTag from "./tags/FilterTag";
 import type fromDict from "./tags/fromDict";
-
-export enum TaxonomyType {
-  Term = "Term",
-  IntegerField = "IntegerField",
-  TextField = "TextField",
-  // TODO
-}
+import type { TaxonomyType } from "./ContentType";
 
 export default class TaxonomyData extends FilterTag<TaxonomyType> {
   children: TaxonomyData[];

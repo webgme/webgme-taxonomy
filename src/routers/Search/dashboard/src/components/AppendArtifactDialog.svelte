@@ -16,6 +16,7 @@
   import { isObject, readFile } from "../Utils";
   import TagFormatter, { FormatError } from "../Formatter";
   import type { default as Storage, UploadPromise } from "../Storage";
+  import type { default as ContentType } from "../ContentType";
 
   /** Event type for dropping files onto a dropzone. */
   type DropEvent = CustomEvent<{ acceptedFiles: File[] }>;
@@ -27,7 +28,7 @@
   /** The artifact set to append a new artifact to. Null to hide dialog.*/
   export let set: { displayName: string; taxonomyTags: any[] } | null = null;
   /** The content type name for the artifact set to append to. */
-  export let contentType: string;
+  export let contentType: ContentType;
 
   /** The files to append as an artifact to this artifact set. */
   let files: File[] = [];
@@ -78,7 +79,7 @@
 
   async function onAppendClicked() {
     if (!files.length) {
-      dispatchError(`${contentType} file required.`);
+      dispatchError(`${contentType.name} file required.`);
     }
 
     metadata.displayName = appendName;
@@ -148,7 +149,7 @@
   <Title id="append-artifact-title">Append data to {displayName}</Title>
   <Content id="append-artifact-content">
     <Textfield label="Name" bind:value={appendName} disabled={!!uploading} />
-    <p>{contentType} file(s):</p>
+    <p>{contentType.name} file(s):</p>
 
     <ul class="append-files">
       {#each files as file, index (file.name + "-" + file.lastModified)}
@@ -216,9 +217,11 @@
     <a
       target="_blank"
       href={window.location.href
-        .replace("/Search/", "/TagCreator/")
-        .replace("static/", "data/static/")}
-      >Click to select tags for your dataset.</a
+        .replace("/Search/", "/TagCreator/") // FIXME: use the correct content type
+        .replace(
+          /[^\/]*\/static\//,
+          `${encodeURIComponent(contentType.nodePath)}/static/`
+        )}>Click to select tags for your dataset.</a
     >
   </Content>
   <div class="dialog-actions">
