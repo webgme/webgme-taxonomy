@@ -1,67 +1,5 @@
 # To Do
 
-- [ ] add support for hierarchical content types
-  - [x] what exactly would this look like?
-    - it seems to make sense
-  - I should be able to add support for this without supporting webgme storage
-    (and transformations)
-  - [x] make a simple test project
-  - [ ] does anything else need to be updated?
-    - [ ] content type dashboard
-      - show all content types with storage
-      - the content type dashboard could be the data dashboard updated to be
-        viewing the content type listing
-  - [ ] update data dashboard
-    - [ ] how to handle the differences btwn repo & data in the dashboard?
-      - presence of files, for example
-    - [ ] make one without nested children
-    - how do we add new data?
-      - atomic is pretty easy
-      - what about compound?
-        - for repositories, we also want to be able to restrict creation
-        - should compounds support file uploads?
-
-      - can we define files as part of the content type?
-        - we could have a flag to restore the current support
-        - would we want to specify that files are required
-        - we could also just assume there are data files only for atomic data
-          - in the future, we could represent this explicitly
-
-      - how does it currently work?
-        - repo creation:
-          - name
-          - tags (to add)
-        - data upload/creation:
-          - name
-          - tags
-          - files
-
-    - [ ] ensure everything works with 2-level hierarchy?
-      - [x] update configuration
-      - [x] update tag form link to open correct content type
-      - [x] use the correct type field
-      - [x] update TaxonomyData.fromDict
-      - [x] show data
-        - is it being uploaded?
-          - yep, and returned to the browser
-        - everything looks kosher in the db
-        - it appears that the taxonomy field is missing
-          - maybe we shouldn't hide them but should show it as deprecated or
-            something?
-          - this might hurt reproducibility and such...
-          - maybe make this a toggleable option...
-      - [x] inconsistent use of `taxonomy` vs `taxonomyVersion`
-        - switch to `taxonomy`?
-        - update the tag form?
-      - [x] check that filters still work
-        - [x] it doesn't seem to show all the repos with matches...
-        - [x] add tests for filter tag checking
-
-      - [ ] how does this affect the others
-
-    - [ ] update the UI to support other levels of hierarchy
-    - [ ] throw errors if hierarchy depth != 2
-
 - [ ] update UI to support arbitrary depth?
   - or maybe just up to depth 2 for now
   - what actions/buttons need to be available for items/repos/etc?
@@ -153,59 +91,9 @@
     - Sean took care of this
   - [x] add github action to publish
 
-- [ ] add explicit tags for repositories and for data uploads
-  - I think this is mostly configured...
-  - [-] We need to add support for tagging repositories
-    - this can be a later PR...
-  - [ ] change this to allow content types to have other content types
-
-- [ ] We need to add support for tagging repositories
-
-- [ ] Can we just add content types in content types?
-  - this could mean that the content type contains some other type
-    - could we have multiple child content types?
-
-- [ ] default values for content type, repository, artifact
-  - how can we model this?
-    - what if we add children to a content type representing repositories and
-      artifacts?
-      - ContentType
-        - Repository
-        - Artifacts
-    - [ ] we could define vocabularies on the repositories and artifacts
-          individually
-      - for now, this wouldn't really affect the repos since there isn't yet a
-        mechanism for setting tags on a repo
-
-    - [ ] how can we represent default values?
-      - [ ] defaults can be defined on the terms themselves
-      - [ ] defaults for a content type (ie, repo or artifact)?
-        - member attribute seems like the only option...
-          - reuse the attribute meta from the term itself?
-          - this would need a new visualizer...
-
-          - this approach could be used for optional/mandatory terms, too
-          - basically, the member attribute would be an option to
-            shadow/override attributes for the terms themselves
-
-        - the problem with a member attribute is that it would be owned by the
-          vocabulary node and not the arbitrary child...
-        - another option would be to create an instance instead of using a set
-          member
-          - would we still inherit children as expected (ie, added after the
-            vocab is added?)
-            - editing the defaults would be a little clunky
-
-        - this should work...
-
-- [ ] update the graph viz code?
-  - can we make a new visualizer for this, too?
-
 - how would tags for repos vs artifacts affect search filters?
   - they can consist of the union of the vocabularies defined for the repos and
     artifacts
-
-- [ ] change the card to a modal if screen is small?
 
 - [ ] metadata for process
   - name
@@ -486,3 +374,115 @@
 
 - [x] import semanticversion
   - build it as a library?
+- [x] add explicit tags for repositories and for data uploads
+  - I think this is mostly configured...
+  - [-] We need to add support for tagging repositories
+    - this can be a later PR...
+  - [ ] change this to allow content types to have other content types
+
+- [x] We need to add support for tagging repositories
+
+- [x] Can we just add content types in content types?
+  - this could mean that the content type contains some other type
+    - could we have multiple child content types?
+
+- [x] default values for content type, repository, artifact
+  - how can we model this?
+    - what if we add children to a content type representing repositories and
+      artifacts?
+      - ContentType
+        - Repository
+        - Artifacts
+    - [ ] we could define vocabularies on the repositories and artifacts
+          individually
+      - for now, this wouldn't really affect the repos since there isn't yet a
+        mechanism for setting tags on a repo
+
+    - [ ] how can we represent default values?
+      - [ ] defaults can be defined on the terms themselves
+      - [ ] defaults for a content type (ie, repo or artifact)?
+        - member attribute seems like the only option...
+          - reuse the attribute meta from the term itself?
+          - this would need a new visualizer...
+
+          - this approach could be used for optional/mandatory terms, too
+          - basically, the member attribute would be an option to
+            shadow/override attributes for the terms themselves
+
+        - the problem with a member attribute is that it would be owned by the
+          vocabulary node and not the arbitrary child...
+        - another option would be to create an instance instead of using a set
+          member
+          - would we still inherit children as expected (ie, added after the
+            vocab is added?)
+            - editing the defaults would be a little clunky
+
+        - this should work...
+
+- [x] update the graph viz code?
+  - can we make a new visualizer for this, too?
+
+- [-] change the card to a modal if screen is small?
+
+- [x] add support for hierarchical content types
+  - [x] what exactly would this look like?
+    - it seems to make sense
+  - I should be able to add support for this without supporting webgme storage
+    (and transformations)
+  - [x] make a simple test project
+  - [ ] does anything else need to be updated?
+    - [ ] content type dashboard
+      - show all content types with storage
+      - the content type dashboard could be the data dashboard updated to be
+        viewing the content type listing
+  - [ ] update data dashboard
+    - [ ] how to handle the differences btwn repo & data in the dashboard?
+      - presence of files, for example
+    - [ ] make one without nested children
+    - how do we add new data?
+      - atomic is pretty easy
+      - what about compound?
+        - for repositories, we also want to be able to restrict creation
+        - should compounds support file uploads?
+
+      - can we define files as part of the content type?
+        - we could have a flag to restore the current support
+        - would we want to specify that files are required
+        - we could also just assume there are data files only for atomic data
+          - in the future, we could represent this explicitly
+
+      - how does it currently work?
+        - repo creation:
+          - name
+          - tags (to add)
+        - data upload/creation:
+          - name
+          - tags
+          - files
+
+    - [ ] ensure everything works with 2-level hierarchy?
+      - [x] update configuration
+      - [x] update tag form link to open correct content type
+      - [x] use the correct type field
+      - [x] update TaxonomyData.fromDict
+      - [x] show data
+        - is it being uploaded?
+          - yep, and returned to the browser
+        - everything looks kosher in the db
+        - it appears that the taxonomy field is missing
+          - maybe we shouldn't hide them but should show it as deprecated or
+            something?
+          - this might hurt reproducibility and such...
+          - maybe make this a toggleable option...
+      - [x] inconsistent use of `taxonomy` vs `taxonomyVersion`
+        - switch to `taxonomy`?
+        - update the tag form?
+      - [x] check that filters still work
+        - [x] it doesn't seem to show all the repos with matches...
+        - [x] add tests for filter tag checking
+
+      - [ ] how does this affect the others
+
+    - [ ] update the UI to support other levels of hierarchy
+    - [ ] throw errors if hierarchy depth != 2
+
