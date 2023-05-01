@@ -69,10 +69,10 @@ function initialize(middlewareOpts) {
     const owners = await Promise.all(
       _.uniq(profiles.map((project) => project.owner)).map((name) =>
         gmeAuth.getUser(name)
-      )
+      ),
     );
     const trustedOwners = new Set(
-      owners.filter((owner) => owner.siteAdmin).map((user) => user._id)
+      owners.filter((owner) => owner.siteAdmin).map((user) => user._id),
     );
     trustedOwners.add(userId);
 
@@ -85,7 +85,7 @@ function initialize(middlewareOpts) {
     const profileDict = Object.fromEntries(
       profileJSONs
         .flat()
-        .map((profile) => [profile.name, _.omit(profile, "name")])
+        .map((profile) => [profile.name, _.omit(profile, "name")]),
     );
 
     res.json(profileDict);
