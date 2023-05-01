@@ -1,5 +1,23 @@
 # To Do
 
+- [ ] selection constraint support
+
+- [ ] support for profiles
+  - how do we know the project to use for the profiles?
+    - require it to be made by an admin?
+    - or requested by name
+    - can a profile refer to other profiles?
+  - the CLI can just bake it in for now (the same way the deployment URL is
+    handled)
+  - this is somewhat generic and could be moved out at some point...
+  - [x] create the metamodel
+  - [ ] add router for querying profiles
+    - only share the projects created by admins?
+      - there isn't any other trust mechanism built in...
+    - [ ] how to check if user is an admin
+    - [ ] how to load a project?
+  - [-] create plugin for generating the JSON
+
 - [ ] update UI to support arbitrary depth?
   - or maybe just up to depth 2 for now
   - what actions/buttons need to be available for items/repos/etc?
@@ -51,17 +69,7 @@
 
 - [ ] Tag set support
 
-- [ ] selection constraint support
-
 - [ ] required file fields
-
-- [ ] support for profiles
-  - how do we know the project to use for the profiles?
-    - require it to be made by an admin?
-    - or requested by name
-    - can a profile refer to other profiles?
-  - the CLI can just bake it in for now (the same way the deployment URL is
-    handled)
 
 - [ ] dependency management
   - how do you query (following links)?
@@ -485,4 +493,3 @@
 
     - [ ] update the UI to support other levels of hierarchy
     - [ ] throw errors if hierarchy depth != 2
-
