@@ -10,7 +10,13 @@
     - optional
   - check with the tag form:
     - [ ] required terms
+      - prefixItems?
+        - this would be problematic since it would enforce an order
+      - add "contains" with the required tags
     - [ ] recommended terms
+      - how can I populate the form?
+      - I should be able to set the form data to the defaults
+      - why isn't the dropdown in the form set correctly?
     - [ ] optional terms
     - [ ] required fields
       - [ ] don't allow download on error

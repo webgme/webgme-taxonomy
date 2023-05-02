@@ -28,6 +28,9 @@ function factory() {
         await Promise.all(vocabs.map((node) => this.getTermNodes(node)))
       ).flat();
 
+      const terms = await Promise.all(
+        termNodes.map((node) => this.getTermFromNode(node))
+      );
       const properties = {
         taxonomyTags: {
           title: taxonomyName,
@@ -36,9 +39,7 @@ function factory() {
           minItems: 1,
           items: {
             type: "object",
-            anyOf: await Promise.all(
-              termNodes.map((node) => this.getTermSchema(node))
-            ),
+            anyOf: terms.map((term) => term.schema),
           },
         },
       };
@@ -52,30 +53,36 @@ function factory() {
           items: {},
         },
       };
-      return { schema, uiSchema };
+      const formData = {
+        taxonomyTags: terms
+          .filter((term) => term.selectionConstraint !== "optional")
+          .map((term) => term.getInstance()),
+      };
+      console.log(schema);
+      // TODO: add data here?
+      return { schema, uiSchema, formData };
     }
 
-    async getTermSchema(node) {
+    async getTermFromNode(node) {
       const parentTerms = this.getAncestorTerms(node);
+      const name = this.core.getAttribute(node, "name");
       const schema = {
         type: "object",
         // FIXME: we need to figure out how to hide the top title...
-        title: this.core.getAttribute(node, "name"),
+        title: name,
         properties: {},
         additionalProperties: false,
       };
       const termFields = await Promise.all(
         parentTerms.map((n) => this.getDefinition(n))
       );
-      const properties = zip(parentTerms, termFields).reduce(
-        (schema, [parent, fields]) => {
-          const name = this.core.getAttribute(parent, "name");
-          return (schema.properties[name] = fields);
-        },
-        schema
-      );
+      zip(parentTerms, termFields).reduce((schema, [parent, fields]) => {
+        const name = this.core.getAttribute(parent, "name");
+        return (schema.properties[name] = fields);
+      }, schema);
 
-      return schema;
+      const selection = this.core.getAttribute(node, "selection");
+      return new Term(name, schema, selection);
     }
 
     getAncestorTerms(node) {
@@ -278,18 +285,23 @@ function factory() {
       let fieldSchema = {
         title: name,
       };
+      let isPrimitive = false;
       switch (baseName) {
         case "IntegerField":
           fieldSchema.type = "integer";
+          isPrimitive = true;
           break;
         case "FloatField":
           fieldSchema.type = "number";
+          isPrimitive = true;
           break;
         case "BooleanField":
           fieldSchema.type = "boolean";
+          isPrimitive = true;
           break;
         case "TextField":
           fieldSchema.type = "string";
+          isPrimitive = true;
           break;
         case "EnumField":
           Object.assign(fieldSchema, await this._getAnyOfSchema(node));
@@ -309,6 +321,13 @@ function factory() {
             uniqueItems: true,
             items: await this._getAnyOfSchema(node),
           });
+      }
+
+      if (isPrimitive) {
+        const value = this.core.getAttribute(node, "value");
+        if (value) {
+          fieldSchema.default = value;
+        }
       }
       return fieldSchema;
     }
@@ -381,6 +400,35 @@ function factory() {
       const name = core.getAttribute(node, "name");
       const required = core.getAttribute(node, "required");
       return new Property(name, schema, required);
+    }
+  }
+
+  class Term {
+    constructor(name, schema, selectionConstraint) {
+      this.name = name;
+      this.schema = schema;
+      this.selectionConstraint = selectionConstraint;
+    }
+
+    getInstance(schema = this.schema) {
+      console.log("getInstance", schema);
+      if (schema.type === "object") {
+        const entries = Object.entries(schema.properties).map(([k, v]) => [
+          k,
+          this.getInstance(v),
+        ]);
+
+        return Object.fromEntries(entries);
+      } else if (schema.default) {
+        return schema.default;
+      } else if (schema.type === "array") {
+        return [];
+        // } else if (schema.type === "string") {
+        //   return ";
+        // } else if (schema.type === "integer") {
+        //   return null;
+      }
+      return null;
     }
   }
 

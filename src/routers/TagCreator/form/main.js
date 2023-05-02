@@ -15,8 +15,7 @@ window.onload = async function () {
     const prefix = "Unable to render form";
     if (err instanceof RequestError) {
       // TODO: clean this code up (better style and remove html in string)
-      container.innerHTML =
-        `<h5>${prefix}: ${err.message}<br/><br/>Is the URL correct?<h5>`;
+      container.innerHTML = `<h5>${prefix}: ${err.message}<br/><br/>Is the URL correct?<h5>`;
     } else {
       container.innerText = `${prefix}: ${err.message}`;
     }
@@ -24,8 +23,14 @@ window.onload = async function () {
 };
 
 async function renderForm() {
-  const { schema, uiSchema, taxonomy } = await fetchConfig();
-  const formData = new FormRenderData(schema, uiSchema, {}, { taxonomy });
+  const {
+    schema,
+    uiSchema,
+    taxonomy,
+    formData: initData,
+  } = await fetchConfig();
+  console.log({ initData });
+  const formData = new FormRenderData(schema, uiSchema, initData, { taxonomy });
   form.render(formData);
 }
 
