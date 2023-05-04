@@ -15,7 +15,8 @@ window.onload = async function () {
     const prefix = "Unable to render form";
     if (err instanceof RequestError) {
       // TODO: clean this code up (better style and remove html in string)
-      container.innerHTML = `<h5>${prefix}: ${err.message}<br/><br/>Is the URL correct?<h5>`;
+      container.innerHTML =
+        `<h5>${prefix}: ${err.message}<br/><br/>Is the URL correct?<h5>`;
     } else {
       container.innerText = `${prefix}: ${err.message}`;
     }
