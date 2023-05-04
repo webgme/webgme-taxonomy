@@ -29,7 +29,7 @@ function factory() {
       ).flat();
 
       const terms = await Promise.all(
-        termNodes.map((node) => this.getTermFromNode(node))
+        termNodes.map((node) => this.getTermFromNode(node)),
       );
       const properties = {
         taxonomyTags: {
@@ -43,6 +43,15 @@ function factory() {
           },
         },
       };
+
+      // add constraint for all required terms
+      const requiredTerms = terms.filter((term) => term.isRequired());
+      if (requiredTerms.length) {
+        properties.taxonomyTags.allOf = requiredTerms.map((term) => ({
+          contains: term.schema,
+        }));
+      }
+
       const schema = {
         type: "object",
         properties,
@@ -55,7 +64,7 @@ function factory() {
       };
       const formData = {
         taxonomyTags: terms
-          .filter((term) => term.selectionConstraint !== "optional")
+          .filter((term) => !term.isOptional())
           .map((term) => term.getInstance()),
       };
       console.log(schema);
@@ -74,7 +83,7 @@ function factory() {
         additionalProperties: false,
       };
       const termFields = await Promise.all(
-        parentTerms.map((n) => this.getDefinition(n))
+        parentTerms.map((n) => this.getDefinition(n)),
       );
       zip(parentTerms, termFields).reduce((schema, [parent, fields]) => {
         const name = this.core.getAttribute(parent, "name");
@@ -97,7 +106,7 @@ function factory() {
 
     async getTermFields(node) {
       const fieldNodes = (await this.core.loadChildren(node)).filter(
-        (n) => !this.isTerm(n)
+        (n) => !this.isTerm(n),
       );
     }
 
@@ -196,7 +205,7 @@ function factory() {
         return children.filter(
           (child) =>
             this.core.isTypeOf(child, this.META.Term) ||
-            this.core.isTypeOf(child, this.META.CompoundField)
+            this.core.isTypeOf(child, this.META.CompoundField),
         );
       }
     }
@@ -207,14 +216,14 @@ function factory() {
 
       const childDefs = (
         await Promise.all(
-          children.map((node) => this.getDefinitionEntries(node))
+          children.map((node) => this.getDefinitionEntries(node)),
         )
       ).flat();
       const myDefs = await Promise.all(
         dependentDefs.map(async (node) => [
           this.core.getGuid(node),
           await this.getDefinition(node),
-        ])
+        ]),
       );
       return myDefs.concat(childDefs);
     }
@@ -237,7 +246,7 @@ function factory() {
           .map((prop) => prop.name);
 
         const propDict = Object.fromEntries(
-          properties.map((prop) => [prop.name, prop.schema])
+          properties.map((prop) => [prop.name, prop.schema]),
         );
 
         return {
@@ -346,7 +355,7 @@ function factory() {
       }
 
       const childSchemas = await Promise.all(
-        children.map((c) => this.getFieldSchema(c))
+        children.map((c) => this.getFieldSchema(c)),
       );
       return {
         anyOf: childSchemas,
@@ -364,7 +373,7 @@ function factory() {
           Object.entries(fieldSchema.properties).map(([k, v]) => [
             k,
             this._getDefault(v),
-          ])
+          ]),
         );
       }
     }
@@ -372,7 +381,7 @@ function factory() {
     static from(core, node) {
       const metanodes = Object.values(core.getAllMetaNodes(node));
       const meta = Object.fromEntries(
-        metanodes.map((n) => [core.getAttribute(n, "name"), n])
+        metanodes.map((n) => [core.getAttribute(n, "name"), n]),
       );
       return new JSONSchemaExporter(core, meta);
     }
@@ -408,6 +417,18 @@ function factory() {
       this.name = name;
       this.schema = schema;
       this.selectionConstraint = selectionConstraint;
+    }
+
+    isRequired() {
+      return this.selectionConstraint === "required";
+    }
+
+    isRecommended() {
+      return this.selectionConstraint === "recommended";
+    }
+
+    isOptional() {
+      return !this.isRecommended() && !this.isRequired();
     }
 
     getInstance(schema = this.schema) {
