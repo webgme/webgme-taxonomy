@@ -67,8 +67,6 @@ function factory() {
           .filter((term) => !term.isOptional())
           .map((term) => term.getInstance()),
       };
-      console.log(schema);
-      // TODO: add data here?
       return { schema, uiSchema, formData };
     }
 
@@ -432,7 +430,6 @@ function factory() {
     }
 
     getInstance(schema = this.schema) {
-      console.log("getInstance", schema);
       if (schema.type === "object") {
         const entries = Object.entries(schema.properties).map(([k, v]) => [
           k,
