@@ -513,4 +513,3 @@
     - [ ] how to check if user is an admin
     - [ ] how to load a project?
   - [-] create plugin for generating the JSON
-
