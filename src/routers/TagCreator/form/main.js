@@ -28,9 +28,9 @@ async function renderForm() {
     schema,
     uiSchema,
     taxonomy,
-    formData: initData,
+    //formData: initData,
   } = await fetchConfig();
-  console.log({ initData });
+  const initData = {};
   const formData = new FormRenderData(schema, uiSchema, initData, { taxonomy });
   form.render(formData);
 }
