@@ -28,6 +28,9 @@ function factory() {
         await Promise.all(vocabs.map((node) => this.getTermNodes(node)))
       ).flat();
 
+      const terms = await Promise.all(
+        termNodes.map((node) => this.getTermFromNode(node)),
+      );
       const properties = {
         taxonomyTags: {
           title: taxonomyName,
@@ -36,12 +39,19 @@ function factory() {
           minItems: 1,
           items: {
             type: "object",
-            anyOf: await Promise.all(
-              termNodes.map((node) => this.getTermSchema(node)),
-            ),
+            anyOf: terms.map((term) => term.schema),
           },
         },
       };
+
+      // add constraint for all required terms
+      const requiredTerms = terms.filter((term) => term.isRequired());
+      if (requiredTerms.length) {
+        properties.taxonomyTags.allOf = requiredTerms.map((term) => ({
+          contains: term.schema,
+        }));
+      }
+
       const schema = {
         type: "object",
         properties,
@@ -52,30 +62,34 @@ function factory() {
           items: {},
         },
       };
-      return { schema, uiSchema };
+      const formData = {
+        taxonomyTags: terms
+          .filter((term) => !term.isOptional())
+          .map((term) => term.getInstance()),
+      };
+      return { schema, uiSchema, formData };
     }
 
-    async getTermSchema(node) {
+    async getTermFromNode(node) {
       const parentTerms = this.getAncestorTerms(node);
+      const name = this.core.getAttribute(node, "name");
       const schema = {
         type: "object",
         // FIXME: we need to figure out how to hide the top title...
-        title: this.core.getAttribute(node, "name"),
+        title: name,
         properties: {},
         additionalProperties: false,
       };
       const termFields = await Promise.all(
         parentTerms.map((n) => this.getDefinition(n)),
       );
-      const properties = zip(parentTerms, termFields).reduce(
-        (schema, [parent, fields]) => {
-          const name = this.core.getAttribute(parent, "name");
-          return (schema.properties[name] = fields);
-        },
-        schema,
-      );
+      zip(parentTerms, termFields).reduce((schema, [parent, fields]) => {
+        const name = this.core.getAttribute(parent, "name");
+        return (schema.properties[name] = fields);
+      }, schema);
 
-      return schema;
+      const selection = this.core.getAttribute(node, "selection");
+      return new Term(name, schema, selection);
     }
 
     getAncestorTerms(node) {
@@ -225,11 +239,19 @@ function factory() {
 
       if (this.hasProperties(node)) {
         const properties = await this.getProperties(node);
+        const required = properties
+          .filter((prop) => prop.required)
+          .map((prop) => prop.name);
+
+        const propDict = Object.fromEntries(
+          properties.map((prop) => [prop.name, prop.schema]),
+        );
+
         return {
           title: this.core.getAttribute(node, "name"),
           type: "object",
-          properties,
-          required: Object.keys(properties),
+          properties: propDict,
+          required,
           additionalProperties: false,
         };
       } else if (isFieldOpt) {
@@ -251,14 +273,7 @@ function factory() {
       const fieldNodes = (await this.core.loadChildren(node)).filter((child) =>
         this.core.isTypeOf(child, this.META.Field)
       );
-      const fieldSchemas = await Promise.all(
-        fieldNodes.map((node) => this.getFieldSchema(node)),
-      );
-      const fieldNames = fieldNodes.map((n) =>
-        this.core.getAttribute(n, "name")
-      );
-      const properties = Object.fromEntries(zip(fieldNames, fieldSchemas));
-      return properties;
+      return await Promise.all(fieldNodes.map((n) => Property.from(this, n)));
     }
 
     /**
@@ -277,18 +292,23 @@ function factory() {
       let fieldSchema = {
         title: name,
       };
+      let isPrimitive = false;
       switch (baseName) {
         case "IntegerField":
           fieldSchema.type = "integer";
+          isPrimitive = true;
           break;
         case "FloatField":
           fieldSchema.type = "number";
+          isPrimitive = true;
           break;
         case "BooleanField":
           fieldSchema.type = "boolean";
+          isPrimitive = true;
           break;
         case "TextField":
           fieldSchema.type = "string";
+          isPrimitive = true;
           break;
         case "EnumField":
           Object.assign(fieldSchema, await this._getAnyOfSchema(node));
@@ -308,6 +328,13 @@ function factory() {
             uniqueItems: true,
             items: await this._getAnyOfSchema(node),
           });
+      }
+
+      if (isPrimitive) {
+        const value = this.core.getAttribute(node, "value");
+        if (value) {
+          fieldSchema.default = value;
+        }
       }
       return fieldSchema;
     }
@@ -365,6 +392,62 @@ function factory() {
   function zip(...lists) {
     const maxIndex = Math.min(...lists.map((l) => l.length));
     return range(maxIndex).map((i) => lists.map((l) => l[i]));
+  }
+
+  class Property {
+    constructor(name, schema, required = false) {
+      this.name = name;
+      this.schema = schema;
+      this.required = required;
+    }
+
+    static async from(exporter, node) {
+      const core = exporter.core;
+      const schema = await exporter.getFieldSchema(node);
+      const name = core.getAttribute(node, "name");
+      const required = core.getAttribute(node, "required");
+      return new Property(name, schema, required);
+    }
+  }
+
+  class Term {
+    constructor(name, schema, selectionConstraint) {
+      this.name = name;
+      this.schema = schema;
+      this.selectionConstraint = selectionConstraint;
+    }
+
+    isRequired() {
+      return this.selectionConstraint === "required";
+    }
+
+    isRecommended() {
+      return this.selectionConstraint === "recommended";
+    }
+
+    isOptional() {
+      return !this.isRecommended() && !this.isRequired();
+    }
+
+    getInstance(schema = this.schema) {
+      if (schema.type === "object") {
+        const entries = Object.entries(schema.properties).map(([k, v]) => [
+          k,
+          this.getInstance(v),
+        ]);
+
+        return Object.fromEntries(entries);
+      } else if (schema.default) {
+        return schema.default;
+      } else if (schema.type === "array") {
+        return [];
+        // } else if (schema.type === "string") {
+        //   return ";
+        // } else if (schema.type === "integer") {
+        //   return null;
+      }
+      return null;
+    }
   }
 
   return JSONSchemaExporter;

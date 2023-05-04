@@ -24,8 +24,14 @@ window.onload = async function () {
 };
 
 async function renderForm() {
-  const { schema, uiSchema, taxonomy } = await fetchConfig();
-  const formData = new FormRenderData(schema, uiSchema, {}, { taxonomy });
+  const {
+    schema,
+    uiSchema,
+    taxonomy,
+    //formData: initData,
+  } = await fetchConfig();
+  const initData = {};
+  const formData = new FormRenderData(schema, uiSchema, initData, { taxonomy });
   form.render(formData);
 }
 

@@ -50,6 +50,112 @@ describe("JSONSchemaExporter", function () {
     };
   }
 
+  describe("required terms", function () {
+    let schemaDict;
+    before(async () => {
+      const root = await Utils.getNewRootNode(project, commitHash, core);
+      const taxonomyJson = {
+        pointers: { base: "@meta:Taxonomy" },
+        children: [
+          {
+            pointers: { base: "@meta:Vocabulary" },
+            children: [
+              {
+                pointers: { base: "@meta:Term" },
+                attributes: {
+                  name: "RequiredTerm",
+                  selection: "required",
+                },
+              },
+            ],
+          },
+        ],
+      };
+      const importer = new Importer(core, root);
+      const taxonomy = await importer.import(root, taxonomyJson);
+      const exporter = JSONSchemaExporter.from(core, taxonomy);
+      schemaDict = await exporter.getSchemas(taxonomy);
+    });
+
+    it("should add constraint for required terms", async function () {
+      const isRequired = schemaDict.schema.properties.taxonomyTags.allOf.find(
+        (constraint) => constraint.contains?.title === "RequiredTerm",
+      );
+      assert(isRequired);
+    });
+
+    it("should include terms in initial form data", async function () {
+      const { formData } = schemaDict;
+      const [initTag] = formData.taxonomyTags;
+      assert(initTag.Vocabulary.RequiredTerm);
+    });
+  });
+
+  describe("recommended terms", function () {
+    it("should include terms in initial form data", async function () {
+      const root = await Utils.getNewRootNode(project, commitHash, core);
+      const taxonomyJson = {
+        pointers: { base: "@meta:Taxonomy" },
+        children: [
+          {
+            pointers: { base: "@meta:Vocabulary" },
+            children: [
+              {
+                pointers: { base: "@meta:Term" },
+                attributes: {
+                  name: "RecTerm",
+                  selection: "recommended",
+                },
+              },
+            ],
+          },
+        ],
+      };
+      const importer = new Importer(core, root);
+      const taxonomy = await importer.import(root, taxonomyJson);
+      const exporter = JSONSchemaExporter.from(core, taxonomy);
+      const { formData } = await exporter.getSchemas(taxonomy);
+      const [initTag] = formData.taxonomyTags;
+      assert(initTag.Vocabulary.RecTerm);
+    });
+  });
+
+  describe("required properties", function () {
+    it("should set property as required in schema", async () => {
+      const root = await Utils.getNewRootNode(project, commitHash, core);
+      const taxonomyJson = {
+        pointers: { base: "@meta:Taxonomy" },
+        children: [
+          {
+            pointers: { base: "@meta:Vocabulary" },
+            children: [
+              {
+                pointers: { base: "@meta:Term" },
+                attributes: {
+                  name: "RecTerm",
+                },
+                children: [
+                  {
+                    pointers: { base: "@meta:TextField" },
+                    attributes: { name: "testAttr", required: true },
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      };
+      const importer = new Importer(core, root);
+      const taxonomy = await importer.import(root, taxonomyJson);
+      const exporter = JSONSchemaExporter.from(core, taxonomy);
+      const { schema } = await exporter.getSchemas(taxonomy);
+      const termSchema = schema.properties.taxonomyTags.items.anyOf[0];
+      const reqProps =
+        termSchema.properties.Vocabulary.properties.RecTerm.required;
+      assert(reqProps.includes("testAttr"));
+    });
+  });
+
   describe("enum", function () {
     let root;
     beforeEach(async () => {

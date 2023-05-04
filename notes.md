@@ -1,22 +1,26 @@
 # To Do
 
 - [ ] selection constraint support
-
-- [ ] support for profiles
-  - how do we know the project to use for the profiles?
-    - require it to be made by an admin?
-    - or requested by name
-    - can a profile refer to other profiles?
-  - the CLI can just bake it in for now (the same way the deployment URL is
-    handled)
-  - this is somewhat generic and could be moved out at some point...
-  - [x] create the metamodel
-  - [ ] add router for querying profiles
-    - only share the projects created by admins?
-      - there isn't any other trust mechanism built in...
-    - [ ] how to check if user is an admin
-    - [ ] how to load a project?
-  - [-] create plugin for generating the JSON
+  - for terms:
+    - required: cannot download without it. Populate the form with it.
+    - recommended: populate the form with it
+    - optional
+  - for fields:
+    - required: cannot download without it
+    - optional
+  - check with the tag form:
+    - [ ] required terms
+      - prefixItems?
+        - this would be problematic since it would enforce an order
+      - add "contains" with the required tags
+    - [ ] recommended terms
+      - how can I populate the form?
+      - I should be able to set the form data to the defaults
+      - why isn't the dropdown in the form set correctly?
+    - [ ] optional terms
+    - [ ] required fields
+      - [ ] don't allow download on error
+    - [x] optional fields
 
 - [ ] update UI to support arbitrary depth?
   - or maybe just up to depth 2 for now
@@ -493,3 +497,19 @@
 
     - [ ] update the UI to support other levels of hierarchy
     - [ ] throw errors if hierarchy depth != 2
+
+- [x] support for profiles
+  - how do we know the project to use for the profiles?
+    - require it to be made by an admin?
+    - or requested by name
+    - can a profile refer to other profiles?
+  - the CLI can just bake it in for now (the same way the deployment URL is
+    handled)
+  - this is somewhat generic and could be moved out at some point...
+  - [x] create the metamodel
+  - [ ] add router for querying profiles
+    - only share the projects created by admins?
+      - there isn't any other trust mechanism built in...
+    - [ ] how to check if user is an admin
+    - [ ] how to load a project?
+  - [-] create plugin for generating the JSON

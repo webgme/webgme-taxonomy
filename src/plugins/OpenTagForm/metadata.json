@@ -11,18 +11,5 @@
   "disableBrowserSideExecution": false,
   "dependencies": [],
   "writeAccessRequired": false,
-  "configStructure": [
-    {
-      "name": "vocabScope",
-      "displayName": "Tag target",
-      "description": "Would you like a form for tagging new repositories or data uploads?",
-      "value": "data",
-      "valueType": "string",
-      "readOnly": false,
-      "valueItems": [
-        "data",
-        "repo"
-      ]
-    }
-  ]
+  "configStructure": []
 }
