@@ -84,7 +84,7 @@ export type WebgmeContext = {
     id: string;
     branch?: string;
     tag?: string;
-    commitHash?: string;
+    commit: string;
   };
 };
 
