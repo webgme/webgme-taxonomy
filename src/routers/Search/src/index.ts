@@ -18,6 +18,7 @@ import * as express from "express";
 import type { NextFunction, Request, Response } from "express";
 const router = express.Router();
 
+import { default as SystemTerm, UploadContext } from "./SystemTerm";
 import RouterUtils from "../../../common/routers/Utils";
 import type { MiddlewareOptions, WebgmeRequest } from "../../../common/types";
 import Utils from "../../../common/Utils";
@@ -103,14 +104,15 @@ function initialize(middlewareOpts: MiddlewareOptions) {
 
   router.post(
     RouterUtils.getContentTypeRoutes("artifacts/"),
+    addSystemTags,
     convertTaxonomyTags,
     RouterUtils.handleUserErrors(logger, async function (req, res) {
       const { metadata } = req.body;
       // FIXME: what if it isn't using the branch in the URL?
-      metadata.taxonomy = {
-        projectId: req.params.projectId,
-        branch: req.params.branch,
-      };
+      const projectVersion = req.webgmeContext.projectVersion;
+      metadata.taxonomy = projectVersion;
+
+      // Upload to the storage backend
       const storage = await StorageAdapter.from(
         req.webgmeContext,
         req,
@@ -118,12 +120,13 @@ function initialize(middlewareOpts: MiddlewareOptions) {
       );
 
       const status = await storage.createArtifact(metadata);
-      res.json(status);
+      res.json("status: " + status);
     }),
   );
 
   router.post(
     RouterUtils.getContentTypeRoutes("artifacts/:parentId/append"),
+    addSystemTags,
     convertTaxonomyTags,
     RouterUtils.handleUserErrors(logger, async function (req, res) {
       const { parentId } = req.params;
@@ -132,6 +135,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
         req,
         mainConfig,
       );
+      // TODO: add the system tags
       const appendResult = await storage.appendArtifact(
         parentId,
         req.body.metadata,
@@ -224,6 +228,52 @@ function initialize(middlewareOpts: MiddlewareOptions) {
   );
 
   logger.debug("ready");
+}
+
+async function addSystemTags(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  // Add any system tags
+  console.log("about to create system tags");
+  const { metadata } = req.body;
+  const gmeContext = (<WebgmeRequest> req).webgmeContext;
+  const { core, contentType } = gmeContext;
+  const projectVersion = gmeContext.projectVersion;
+  const vocabs = (await core.loadChildren(contentType))
+    .find((node: Core.Node) =>
+      core.getAttribute(core.getBaseType(node), "name") === "Vocabularies"
+    );
+  console.log("vocabs", vocabs);
+  if (vocabs) {
+    const systemTerms = await SystemTerm.findAll(core, vocabs);
+    console.log("found", systemTerms.length, "system terms");
+    const commitHash = projectVersion.commit;
+    const branch = projectVersion.branch;
+    const tag = projectVersion.tag;
+    const desc = ""; // TODO: add description
+    const files: any[] = []; // TODO: add files
+
+    const context = UploadContext.builder()
+      .withContent(
+        metadata.displayName,
+        desc,
+        metadata.taxonomyTags,
+        files,
+      )
+      .withContentType(core, contentType)
+      .withProject(projectVersion.id, commitHash, branch, tag)
+      .build();
+    const systemTags = (await Promise.all(systemTerms.map((t) =>
+      t.instantiate(context)
+    )))
+      .filter((tag) => !!tag);
+
+    metadata.taxonomyTags.push(...systemTags);
+    console.log({ systemTags });
+  }
+  next();
 }
 
 async function convertTaxonomyTags(
