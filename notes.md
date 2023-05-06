@@ -1,26 +1,128 @@
 # To Do
 
-- [ ] selection constraint support
-  - for terms:
-    - required: cannot download without it. Populate the form with it.
-    - recommended: populate the form with it
-    - optional
-  - for fields:
-    - required: cannot download without it
-    - optional
-  - check with the tag form:
-    - [ ] required terms
-      - prefixItems?
-        - this would be problematic since it would enforce an order
-      - add "contains" with the required tags
-    - [ ] recommended terms
-      - how can I populate the form?
-      - I should be able to set the form data to the defaults
-      - why isn't the dropdown in the form set correctly?
-    - [ ] optional terms
-    - [ ] required fields
-      - [ ] don't allow download on error
-    - [x] optional fields
+- [ ] publish plugin
+
+- [ ] tag form bug for determining the tag from the data
+  - issue has been created
+
+- [ ] disable download if validation fails...
+  - how do we get the validation results?
+
+- [ ] Tag set support
+  - what is the exact structure here?
+
+- [ ] required file fields
+
+- what if we used transformations to define auto assignment of the base
+  vocabulary?
+  - this would avoid a tight coupling btwn the code and the model
+  - [x] Can we represent all the data for the base vocab as a transformation?
+    - what is the base vocab again?
+      - name
+      - description
+      - content
+        - content type name/ID
+      - taxonomy
+        - project
+        - commit
+        - branch
+        - tag
+      - upload time
+      - validity
+      - files
+    - what needs to be in the input metamodel?
+      - upload content:
+        - name
+        - description
+        - files
+        - tags
+      - context:
+        - content type node
+        - webgme project
+      - general/system:
+        - time
+    - how would we update the taxonomy metamodel to specify this?
+      - we could add a field for if the data is set using a transformation...
+        - or we could simply add a child (with a pointer) for how to set the
+          data
+
+  - how do auto-set properties relate to selection constraints?
+    - we don't want them to show up on the form
+    - Do we want another selection constraint for terms?
+    - Would we want to add properties only if the term is set?
+    - There are different approaches to how you might want to set props:
+      - add the term and set the props
+        - Almost like another option for selectionConstraint: `automatic`
+          - requires all properties to be automatic
+          - does not show in the tag form
+          - set during artifact creation/upload time
+      - set props only if the term exists already
+
+    - should we only set terms automatically?
+      - this would probably simplify things... It's not clear how the
+        transformation would be set for an attribute
+      - we can also conditionally set tags
+        - we may need negation though...
+      - yeah, we should probably do this...
+    - what if we made a new type of tag instead? Like an AutomaticTag or
+      SystemTag?
+    - we can set enums, too
+    - we will need to validate the terms, too
+      - what do we do if there is an error in the system term transform?
+        Probably just drop it, I guess
+    - Conclusion:
+      - add `SystemTerm` containing a transformation.
+      - System terms are not shown in tag form.
+      - when a data element is created, all system terms are instantiated using
+        the model transformation
+    - To Do:
+      - [x] define the metamodel for the uploaded data
+        - it might be good to consider the data dashboard metamodel, too, in
+          case there is overlap
+
+          - UploadContext
+            - UploadContent
+              - name
+              - description
+              - content type (ref?)
+                - id (path)
+                - name
+              - tags (child)
+              - files (child)
+            - ProjectMetadata
+              - ID
+              - name
+              - owner
+              - branch (optional)
+              - tag (optional)
+              - commit
+            - System
+              - timestamp (ISO)
+
+      - [x] add `SystemTerm` to the metamodel
+      - [ ] implement `SystemTerm`
+        - [x] find all from relevant vocabs
+        - [x] move to search router common so it can be TS?
+          - does anything else need it?
+        - [x] fix errors
+        - [ ] fix type import webgme-transformations
+      - [ ] instantiate `SystemTerm`s on repo creation and data append
+        - [x] create upload context
+        - [ ] the server code doesn't seem to be updating...
+          - why?
+        - [ ] update the webgme-transformations code
+          - [ ] allow apply to be called with `GMENode`/`GMEContext`
+            - how does it use core in steps for apply?
+              - it uses it when resolving pointers and such
+                - these can probably use
+            - this will be a bit involved
+            - we will need to
+      - [ ] validate the new terms
+      - [ ] update the base vocab
+      - [ ] filter out from the tag form
+        - shouldn't be a problem since SystemTerm doesn't inherit from Term
+
+      - [ ] update pattern matching engine for inheritance?
 
 - [ ] update UI to support arbitrary depth?
   - or maybe just up to depth 2 for now
@@ -59,8 +161,10 @@
     expected format for the data dashboard
   - what is the format expected by the data dashboard?
     - name (or use base vocabulary?)
-    - additional tags (human or guid?)
+    - tags (human or guid?)
+      - guid?
     - files
+    - link?
   - [ ] define the data dashboard format in the metamodel
 
 - [ ] add support for webgme storage across time?
@@ -70,10 +174,6 @@
     - diff the outputs?
     - cache the outputs in mongodb?
   - use the latest version of the transformation?
-
-- [ ] Tag set support
-
-- [ ] required file fields
 
 - [ ] dependency management
   - how do you query (following links)?
@@ -106,10 +206,6 @@
 - how would tags for repos vs artifacts affect search filters?
   - they can consist of the union of the vocabularies defined for the repos and
     artifacts
-
-- [ ] metadata for process
-  - name
-  - TaxonomyURL (let's just add this to each)
 
 - [ ] add support for Base taxonomy (let's call it **General**)
   - how do we handle required tags?
@@ -173,14 +269,28 @@
     - we can add another field, like `metadata` or `base` and store the tags
       there
 
-  - [ ] add it to the metamodel
-    - [ ] Make a SystemVocabulary type?
-  - [ ] Implement the tags themselves
-    - [ ] ignore the tags when generating the JSON schema
-    - [ ] ignore the tags when generating the dashboard config
-    - [ ] add autogenerated tags when appending data
-    - [ ] update dashboard to set these on the artifacts?
-  - [ ]
+  - [-] add it to the metamodel
+    - [-] Make a SystemVocabulary type?
+  - [-] Implement the tags themselves
+    - [-] ignore the tags when generating the JSON schema
+    - [-] ignore the tags when generating the dashboard config
+    - [-] add autogenerated tags when appending data
+    - [-] update dashboard to set these on the artifacts?
+  - [-]
+
+  - [ ] move the Base vocabulary to the taxonomy seed?
+    - [ ] add it to Vocabularies
+    - [ ] add Vocabularies to be a child of Content Type
+  - [ ] populate vocabulary on submit
+    - [ ] define terms in code
+    - [ ] look up the terms by name
+    - [ ] add tagging method to add base vocabulary terms
+    - [x] where should this happen? Probably in the search router for now...
+
+  - the extra redundancy isn't really ideal (if we store these by GUID...)
+    - or should we store these as special terms?
+    - we could change these to be stored by name...
+    - taxonomy info can probably just be stored redundantly...
 
 # Done
 
@@ -513,3 +623,38 @@
     - [ ] how to check if user is an admin
     - [ ] how to load a project?
   - [-] create plugin for generating the JSON
+
+- [x] selection constraint support
+  - for terms:
+    - required: cannot download without it. Populate the form with it.
+    - recommended: populate the form with it
+    - optional
+  - for fields:
+    - required: cannot download without it
+    - optional
+  - check with the tag form:
+    - [x] required terms
+      - prefixItems?
+        - this would be problematic since it would enforce an order
+      - add "contains" with the required tags
+        - only needs to match against one
+        - suppose we want 1 and 3
+          - 1, 2, 3
+          - contains 1 and 3
+        - `allOf: [ {contains: 1}, {contains: 3}]`
+
+    - [x] recommended terms
+      - how can I populate the form?
+      - I should be able to set the form data to the defaults
+      - why isn't the dropdown in the form set correctly?
+      - should we scrap react json-schema? It has been a little bit of a pain
+        recently... Most recently, not detecting tags unless they have props set
+        (null is ignored)
+    - [x] optional terms
+    - [ ] required fields
+      - [ ] don't allow download on error
+    - [x] optional fields
+
+- [-] metadata for process
+  - name
+  - TaxonomyURL (let's just add this to each)
