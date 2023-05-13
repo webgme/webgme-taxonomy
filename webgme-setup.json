@@ -9,6 +9,9 @@
       },
       "profile": {
         "src": "src/seeds/profile"
+      },
+      "test": {
+        "src": "src/seeds/test"
       }
     },
     "plugins": {
