@@ -3,14 +3,16 @@ describe.only("SystemTerm", function () {
   const Utils = require("../../Utils");
   const Importer = testFixture.requirejs("webgme-json-importer/JSONImporter");
   const assert = require("assert");
-  const SystemTerm = require("../../../src/routers/Search/build/SystemTerm");
+  const { default: SystemTerm, UploadContext } = require(
+    "../../../src/routers/Search/build/SystemTerm",
+  );
   let project, gmeAuth, storage, commitHash, core;
 
   before(async function () {
     this.timeout(7500);
     const params = await Utils.initializeProject(
       "SystemTermTest",
-      "taxonomy",
+      "test",
     );
     gmeAuth = params.gmeAuth;
     storage = params.storage;
@@ -40,6 +42,7 @@ describe.only("SystemTerm", function () {
           },
         ],
       };
+
       const importer = new Importer(core, root);
       const taxonomy = await importer.import(root, taxonomyJson);
       const terms = await SystemTerm.findAll(core, taxonomy);
@@ -68,68 +71,33 @@ describe.only("SystemTerm", function () {
     });
   });
 
+  async function getNodeByName(root, name) {
+    return (await core.loadChildren(root))
+      .find((node) => core.getAttribute(node, "name") === name);
+  }
+
   describe("instantiate", function () {
     it.only("should make tag using upload's name", async function () {
-      const taxonomyJson = {
-        attributes: { name: "TestTaxonomy" },
-        pointers: { base: "@meta:Taxonomy" }, // TODO: taxonomy type appears to be incorrect
-        children: [
-          {
-            pointers: { base: "@meta:Vocabulary" },
-            children: [
-              {
-                pointers: { base: "@meta:SystemTerm" },
-              },
-            ],
-          },
-        ],
-      };
-      // TODO: define transformation
-      // match the UploadContent's name attribute
-      //   - node (in active node)
-      //   - attribute node
-      //   - name constant
-      //
+      console.log({ SystemTerm });
+      const root = await Utils.getNewRootNode(project, commitHash, core);
+      const taxonomy = await getNodeByName(root, "UploadNameTaxonomy");
+      const contentType = await getNodeByName(root, "ExampleContentType");
+      console.log(
+        (await core.loadChildren(root)).map((n) =>
+          core.getAttribute(n, "name")
+        ),
+      );
 
-      // create term
-      //   - set "value" attribute to name
-      //   - set "name" attribute? Maybe do this by default
-      //   - connection between value and value of name attribute
-
-      const inputPattern = [
-        {
-          id: "@id:content_node",
-          pointers: {
-            base: "@meta:transformation.Node",
-            type: "@meta:UploadContent",
-          },
-        },
-        {
-          id: "@id:input_attr",
-          pointers: {
-            base: "@meta:transformation.Attribute",
-          },
-        },
-        // TODO: get a reference to the inherited child
-        {
-          id: "@id:input_name",
-          pointers: {
-            base: "@meta:transformation.Constant",
-          },
-          attributes: {
-            value: "name",
-          },
-        },
-      ];
-      const outputPattern = [
-        {
-          id: "@id",
-        },
-      ];
-
-      const taxonomy = await importTaxonomy(taxonomyJson);
       const [term] = await SystemTerm.findAll(core, taxonomy);
-      const tag = await term.instantiate();
+
+      // create the upload context
+      const context = UploadContext.builder()
+        .withContent("TestUploadName", "someDesc", [], [])
+        .withContentType(core, contentType)
+        .withProject(project.projectId, commitHash)
+        .build();
+
+      const tag = await term.instantiate(context);
       const vocabName = Object.keys(tag).shift();
       assert.equal(vocabName, "Vocabulary");
     });

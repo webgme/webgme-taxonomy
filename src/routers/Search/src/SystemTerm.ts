@@ -2,7 +2,8 @@ import { filterMap } from "./Utils";
 // import type {
 //   ModelTransformation,
 // } from "webgme-transformations/dist/common/index";
-import { GMEContext, GMENode } from "webgme-transformations/dist/common/index";
+
+import { GMEContext, GMENode } from "webgme-transformations";
 
 type ModelTransformation = any;
 export default class SystemTerm {
@@ -143,8 +144,20 @@ class UploadContextBuilder {
 
   build(): UploadContext {
     if (!this.core || !this.contentType || !this.content || !this.project) {
-      // TODO:
-      throw new Error();
+      console.log("error! missing data");
+      const missingFields = filterMap(
+        Object.entries({
+          contentType: this.contentType,
+          content: this.content,
+          project: this.project,
+        }),
+        ([name, value]) => {
+          if (!value) {
+            return name;
+          }
+        },
+      );
+      throw new Error("Missing fields " + missingFields.join(" "));
     }
 
     return new UploadContext(
@@ -174,7 +187,7 @@ export class UploadContext {
     this.project = project;
   }
 
-  async toGMEContext(): GMEContext {
+  async toGMEContext(): Promise<GMEContext> {
     // Create a dictionary of metanodes by name for later
     const metaEntries = filterMap(
       Object.values(this.core.getAllMetaNodes(this.contentType)),
@@ -203,7 +216,7 @@ export class UploadContext {
     const addChild = async (
       child: GMENode,
       typeName: string,
-      parent = context,
+      parent: GMENode = context,
     ) => {
       const index = nodes.length;
       nodes.push(child);
@@ -233,7 +246,7 @@ export class UploadContext {
     const system = new GMENode("@id:system", { time: date.toISOString() });
     await addChild(system, "System");
 
-    return context;
+    return new GMEContext(nodes);
   }
 
   static builder(): UploadContextBuilder {
