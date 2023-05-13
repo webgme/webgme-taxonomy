@@ -111,16 +111,21 @@
         - [ ] the server code doesn't seem to be updating...
           - why?
         - [ ] update the webgme-transformations code
-          - [ ] allow apply to be called with `GMENode`/`GMEContext`
+          - [x] allow apply to be called with `GMENode`/`GMEContext`
             - how does it use core in steps for apply?
               - it uses it when resolving pointers and such
                 - these can probably use
             - this will be a bit involved
             - we will need to
+          - [ ] make a new release
+            - make sure there aren't any issues with nodes not in the pattern
+      - [ ] add tests
       - [ ] validate the new terms
       - [ ] update the base vocab
       - [ ] filter out from the tag form
         - shouldn't be a problem since SystemTerm doesn't inherit from Term
+
+      - [ ] ensure included for validation
 
       - [ ] update pattern matching engine for inheritance?
 
