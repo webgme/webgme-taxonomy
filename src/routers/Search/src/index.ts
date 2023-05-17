@@ -236,7 +236,6 @@ async function addSystemTags(
   next: NextFunction,
 ) {
   // Add any system tags
-  console.log("about to create system tags");
   const { metadata } = req.body;
   const gmeContext = (<WebgmeRequest> req).webgmeContext;
   const { core, contentType } = gmeContext;
@@ -247,7 +246,6 @@ async function addSystemTags(
     );
   if (vocabs) {
     const systemTerms = await SystemTerm.findAll(core, vocabs);
-    console.log("found", systemTerms.length, "system terms");
     const commitHash = projectVersion.commit;
     const branch = projectVersion.branch;
     const tag = projectVersion.tag;
@@ -269,7 +267,6 @@ async function addSystemTags(
     ))).flat();
 
     metadata.taxonomyTags.push(...systemTags);
-    console.log(JSON.stringify(systemTags, null, 2));
   }
   next();
 }
