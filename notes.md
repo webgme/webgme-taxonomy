@@ -14,7 +14,7 @@
 - [ ] required file fields
 
 - [x] what if we used transformations to define auto assignment of the base
-  vocabulary?
+      vocabulary?
   - this would avoid a tight coupling btwn the code and the model
   - [x] Can we represent all the data for the base vocab as a transformation?
     - what is the base vocab again?
@@ -125,10 +125,10 @@
           - [x] add test for union
           - [x] failing test in transformation lib
           - [x] need to check this out
-            - it looks like it should work. Can I recreate this in the rust side?
+            - it looks like it should work. Can I recreate this in the rust
+              side?
             - it looks pretty similar to the existing test...
-      - [x] why aren't we matching the content type name?
-        - 
+      - [x] ## why aren't we matching the content type name?
       - [-] validate the new terms
 
       - [x] filter out from the tag form
