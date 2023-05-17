@@ -77,17 +77,10 @@ describe.only("SystemTerm", function () {
   }
 
   describe("instantiate", function () {
-    it.only("should make tag using upload's name", async function () {
-      console.log({ SystemTerm });
+    it("should make tag using upload's name", async function () {
       const root = await Utils.getNewRootNode(project, commitHash, core);
       const taxonomy = await getNodeByName(root, "UploadNameTaxonomy");
       const contentType = await getNodeByName(root, "ExampleContentType");
-      console.log(
-        (await core.loadChildren(root)).map((n) =>
-          core.getAttribute(n, "name")
-        ),
-      );
-
       const [term] = await SystemTerm.findAll(core, taxonomy);
 
       // create the upload context
@@ -97,12 +90,16 @@ describe.only("SystemTerm", function () {
         .withProject(project.projectId, commitHash)
         .build();
 
-      const tag = await term.instantiate(context);
+      const tags = await term.instantiate(context);
+      assert.equal(tags.length, 1);
+      const [tag] = tags;
+
       const vocabName = Object.keys(tag).shift();
-      assert.equal(vocabName, "Vocabulary");
+      assert.equal(vocabName, "SystemTerms");
+      assert.equal(tag.SystemTerms.UploadName.value, "TestUploadName");
     });
 
-    it("should make tag using timestamp", async function () {
+    it.only("should make tag using timestamp", async function () {
       const taxonomyJson = {
         attributes: { name: "TestTaxonomy" },
         pointers: { base: "@meta:Taxonomy" },

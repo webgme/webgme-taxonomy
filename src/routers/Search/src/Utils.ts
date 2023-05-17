@@ -20,3 +20,18 @@ export function filterMap<I, O>(list: I[], fn: (x: I) => O | undefined): O[] {
 export function isString<T>(possibleStr: T): possibleStr is Extract<T, string> {
   return typeof possibleStr === "string";
 }
+
+export function assert(cond: boolean, msg: string) {
+  if (!cond) {
+    throw new Error(msg);
+  }
+}
+
+export function mapObject<T, O>(
+  obj: { [key: string]: T },
+  fn: (value: T) => O,
+): { [key: string]: O } {
+  return Object.fromEntries(
+    Object.entries(obj).map(([k, v]) => [k, fn(v)]),
+  );
+}
