@@ -66,7 +66,7 @@ function initialize(middlewareOpts) {
       const vocabularies = await Utils.getVocabulariesFor(core, contentType);
       const { schema } = await exporter.getVocabSchemas(vocabularies);
       return response.json(schema);
-    }
+    },
   );
 
   logger.debug("ready");
