@@ -14,6 +14,7 @@ import {
 type TypeDict = { [path: string]: string };
 type Tag = { [path: string]: any };
 export default class SystemTerm {
+  name: string;
   private namePath: string[];
   private transformation: ModelTransformation | undefined;
 
@@ -22,6 +23,7 @@ export default class SystemTerm {
     transformation: ModelTransformation | undefined,
   ) {
     this.namePath = namePath;
+    this.name = this.namePath[this.namePath.length - 1];
     this.transformation = transformation;
   }
 
@@ -39,7 +41,6 @@ export default class SystemTerm {
       const tag: object = {};
       tags.push(tag);
     }
-    console.log(tags);
     return tags.map((innerTag) =>
       SystemTerm.fullyQualify(this.namePath, innerTag)
     );
@@ -55,41 +56,37 @@ export default class SystemTerm {
 
   static createTag(typeDict: TypeDict, nodeJson: JsonNode): object {
     const tag = {};
-    // TODO: should I support a "short-hand" where the attributes are just added directly to the node?
-    console.log("creating tag from", nodeJson);
-    nodeJson.children.forEach((child) =>
-      SystemTerm.addFieldToTag(typeDict, tag, child)
-    );
-
-    // Support a sort of shorthand for primitive fields; ie, convert all non-name attributes
-    // set on the node to fields on the tag
-    const defaultFieldPath = Object.keys(typeDict).find((k) =>
-      typeDict[k] === "TextField"
-    );
-    assert(
-      defaultFieldPath !== undefined,
-      "Could not find TextField in the metamodel",
-    );
-    Object.entries(nodeJson.attributes).forEach(([name, wrappedValue]) => {
-      if (name !== "name") {
+    const isShortHand = nodeJson.children.length === 0;
+    if (isShortHand) {
+      // Support a sort of shorthand for primitive fields; ie, convert all non-name attributes
+      // set on the node to fields on the tag
+      const defaultFieldPath = Object.keys(typeDict).find((k) =>
+        typeDict[k] === "TextField"
+      );
+      assert(
+        defaultFieldPath !== undefined,
+        "Could not find TextField in the metamodel",
+      );
+      Object.entries(nodeJson.attributes).forEach(([name, wrappedValue]) => {
         const fieldJson = new JsonNode(`attr:${name}`);
-        fieldJson.attributes.name = Primitive.from(name);
+        fieldJson.attributes.name = name;
         fieldJson.attributes.value = wrappedValue;
         if (defaultFieldPath) {
           fieldJson.pointers.base = defaultFieldPath;
         }
-        console.log("base", defaultFieldPath);
         SystemTerm.addFieldToTag(typeDict, tag, fieldJson);
-      }
-    });
-    console.log("tag!!", tag);
+      });
+    } else {
+      nodeJson.children.forEach((child) =>
+        SystemTerm.addFieldToTag(typeDict, tag, child)
+      );
+    }
+
     return tag;
   }
 
   static addFieldToTag(typeDict: TypeDict, tag: Tag, nodeJson: JsonNode) {
-    console.log("base", nodeJson.pointers.base);
     const typeName = typeDict[nodeJson.pointers.base];
-    console.log("getting name of", nodeJson, typeName);
     const name = unwrapPrimitive(nodeJson.attributes.name);
     const isPrimitiveField = [
       "TextField",
@@ -99,12 +96,28 @@ export default class SystemTerm {
     ].includes(typeName);
 
     if (isPrimitiveField) {
-      console.log("getting value of", nodeJson, typeName);
       tag[name] = unwrapPrimitive(nodeJson.attributes.value);
     } else if (typeName === "EnumField") {
-      throw new Error("todo");
+      const enumOpt = nodeJson.children[0];
+      if (enumOpt) {
+        const optName = unwrapPrimitive(enumOpt.attributes.name);
+        tag[name] = {};
+        tag[name][optName] = SystemTerm.createTag(
+          typeDict,
+          enumOpt,
+        );
+      }
     } else if (typeName === "SetField") {
-      throw new Error("todo");
+      const members = nodeJson.children;
+      tag[name] = members.map((member: JsonNode) => {
+        const name = unwrapPrimitive(member.attributes.name);
+        const tag: Tag = {};
+        tag[name] = SystemTerm.createTag(
+          typeDict,
+          member,
+        );
+        return tag;
+      });
     } else if (typeName === "CompoundField") {
       const value = SystemTerm.createTag(typeDict, nodeJson);
       tag[name] = value;
@@ -121,10 +134,6 @@ export default class SystemTerm {
     let baseType = core.getBaseType(node);
 
     while (baseType && core.getAttribute(baseType, "name") !== "Taxonomy") {
-      console.log(
-        core.getAttribute(node, "name"),
-        core.getAttribute(baseType, "name"),
-      );
       path.unshift(node);
       const parent = core.getParent(node);
       if (!parent) break;
@@ -138,7 +147,6 @@ export default class SystemTerm {
     core: GmeClasses.Core,
     node: Core.Node,
   ): Promise<SystemTerm> {
-    console.log(core.getPath(node));
     const namePath: string[] = filterMap(
       SystemTerm.getPathToTaxRoot(core, node),
       (node) => core.getAttribute(node, "name")?.toString(),
@@ -234,7 +242,6 @@ class UploadContextBuilder {
 
   build(): UploadContext {
     if (!this.core || !this.contentType || !this.content || !this.project) {
-      console.log("error! missing data");
       const missingFields = filterMap(
         Object.entries({
           contentType: this.contentType,
@@ -336,8 +343,7 @@ export class UploadContext {
         nodes,
       );
     }
-    // FIXME: uncomment the following line
-    //this.content.pointers.someType = contentTypeIdx;
+    this.content.pointers.type = contentTypeIdx;
     // TODO: add tags
     // TODO: add files
 
@@ -347,7 +353,7 @@ export class UploadContext {
     // Add extra system info
     const date = new Date();
     const system = new GMENode("@tmp/system", {
-      time: Primitive.from(date.toISOString()),
+      isoDateTime: Primitive.from(date.toISOString()),
     });
     await addChild(system, "System");
 
@@ -381,6 +387,9 @@ export class UploadContext {
 
 // FIXME: move this to the webgme-transformations lib
 function unwrapPrimitive(primitive: Primitive.Primitive) {
-  console.log("prim:", primitive);
-  return Object.values(primitive).pop();
+  if (typeof primitive === "object") {
+    return Object.values(primitive).pop();
+  } else { // FIXME: constants in the pattern are not wrapped currently..
+    return primitive;
+  }
 }

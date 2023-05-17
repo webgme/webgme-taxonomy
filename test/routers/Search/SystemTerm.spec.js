@@ -1,4 +1,4 @@
-describe.only("SystemTerm", function () {
+describe("SystemTerm", function () {
   const testFixture = require("../../globals");
   const Utils = require("../../Utils");
   const Importer = testFixture.requirejs("webgme-json-importer/JSONImporter");
@@ -77,11 +77,36 @@ describe.only("SystemTerm", function () {
   }
 
   describe("instantiate", function () {
+    it("should empty tag if no transformation", async function () {
+      const root = await Utils.getNewRootNode(project, commitHash, core);
+      const taxonomy = await getNodeByName(root, "UploadNameTaxonomy");
+      const contentType = await getNodeByName(root, "ExampleContentType");
+      const term = (await SystemTerm.findAll(core, taxonomy))
+        .find((term) => term.name === "NoTransform");
+
+      // create the upload context
+      const context = UploadContext.builder()
+        .withContent("TestUploadName", "someDesc", [], [])
+        .withContentType(core, contentType)
+        .withProject(project.projectId, commitHash)
+        .build();
+
+      const tags = await term.instantiate(context);
+      assert.equal(tags.length, 1);
+      const [tag] = tags;
+
+      const vocabName = Object.keys(tag).shift();
+      assert.equal(vocabName, "SystemTerms");
+      assert(tag.SystemTerms.NoTransform);
+      assert.equal(Object.keys(tag.SystemTerms.NoTransform), 0);
+    });
+
     it("should make tag using upload's name", async function () {
       const root = await Utils.getNewRootNode(project, commitHash, core);
       const taxonomy = await getNodeByName(root, "UploadNameTaxonomy");
       const contentType = await getNodeByName(root, "ExampleContentType");
-      const [term] = await SystemTerm.findAll(core, taxonomy);
+      const term = (await SystemTerm.findAll(core, taxonomy))
+        .find((term) => term.name === "UploadName");
 
       // create the upload context
       const context = UploadContext.builder()
@@ -99,43 +124,137 @@ describe.only("SystemTerm", function () {
       assert.equal(tag.SystemTerms.UploadName.value, "TestUploadName");
     });
 
-    it.only("should make tag using timestamp", async function () {
-      const taxonomyJson = {
-        attributes: { name: "TestTaxonomy" },
-        pointers: { base: "@meta:Taxonomy" },
-        children: [
-          {
-            pointers: { base: "@meta:Vocabulary" },
-            children: [
-              {
-                pointers: { base: "@meta:SystemTerm" },
-              },
-            ],
-          },
-        ],
-      };
-      const taxonomy = await importTaxonomy(taxonomyJson);
+    it("should make tag using timestamp", async function () {
+      const root = await Utils.getNewRootNode(project, commitHash, core);
+      const taxonomy = await getNodeByName(root, "UploadNameTaxonomy");
+      const contentType = await getNodeByName(root, "ExampleContentType");
+      const term = (await SystemTerm.findAll(core, taxonomy))
+        .find((term) => term.name === "UploadTime");
+
+      // create the upload context
+      const context = UploadContext.builder()
+        .withContent("TestUploadName", "someDesc", [], [])
+        .withContentType(core, contentType)
+        .withProject(project.projectId, commitHash)
+        .build();
+
+      const tags = await term.instantiate(context);
+      assert.equal(tags.length, 1);
+      const [tag] = tags;
+
+      const vocabName = Object.keys(tag).shift();
+      assert.equal(vocabName, "SystemTerms");
+      assert(!!tag.SystemTerms.UploadTime.timestamp);
     });
 
-    it("should make tag using content type", function () {
+    it("should make tag using content type", async function () {
+      const root = await Utils.getNewRootNode(project, commitHash, core);
+      const taxonomy = await getNodeByName(root, "UploadNameTaxonomy");
+      const contentType = await getNodeByName(root, "ExampleContentType");
+      const term = (await SystemTerm.findAll(core, taxonomy))
+        .find((term) => term.name === "ContentTypeName");
+
+      // create the upload context
+      const context = UploadContext.builder()
+        .withContent("TestUploadContentType", "someDesc", [], [])
+        .withContentType(core, contentType)
+        .withProject(project.projectId, commitHash)
+        .build();
+
+      const tags = await term.instantiate(context);
+      assert.equal(tags.length, 1);
+      const [tag] = tags;
+
+      const vocabName = Object.keys(tag).shift();
+      assert.equal(vocabName, "SystemTerms");
+      assert.equal(tag.SystemTerms.ContentTypeName.type, "ExampleContentType");
     });
 
-    it("should make tag using files", function () {
+    it("should make tag with enum field", async function () {
+      const root = await Utils.getNewRootNode(project, commitHash, core);
+      const taxonomy = await getNodeByName(root, "UploadNameTaxonomy");
+      const contentType = await getNodeByName(root, "ExampleContentType");
+      const term = (await SystemTerm.findAll(core, taxonomy))
+        .find((term) => term.name === "EnumTest");
+
+      // create the upload context
+      const context = UploadContext.builder()
+        .withContent("TestEnum", "someDesc", [], [])
+        .withContentType(core, contentType)
+        .withProject(project.projectId, commitHash)
+        .build();
+
+      const tags = await term.instantiate(context);
+      assert.equal(tags.length, 1);
+      const [tag] = tags;
+
+      const vocabName = Object.keys(tag).shift();
+      assert.equal(vocabName, "SystemTerms");
+      assert.equal(
+        tag.SystemTerms.EnumTest.enumField.enumOption.value,
+        "TestEnum",
+      );
     });
 
-    it("should make tag using project", function () {
+    it("should make tag with set field", async function () {
+      const root = await Utils.getNewRootNode(project, commitHash, core);
+      const taxonomy = await getNodeByName(root, "UploadNameTaxonomy");
+      const contentType = await getNodeByName(root, "ExampleContentType");
+      const term = (await SystemTerm.findAll(core, taxonomy))
+        .find((term) => term.name === "SetTest");
+
+      // create the upload context
+      const context = UploadContext.builder()
+        .withContent("TestSet", "someDesc", [], [])
+        .withContentType(core, contentType)
+        .withProject(project.projectId, commitHash)
+        .build();
+
+      const tags = await term.instantiate(context);
+      assert.equal(tags.length, 1);
+      const [tag] = tags;
+
+      const vocabName = Object.keys(tag).shift();
+      assert.equal(vocabName, "SystemTerms");
+
+      const members = tag.SystemTerms.SetTest.TestSet;
+      assert(Array.isArray(members));
+      assert(members.find((member) => Object.keys(member).shift() === "name"));
+      assert(
+        members.find((member) => Object.keys(member).shift() === "isoDateTime"),
+      );
+    });
+
+    it("should make tag with compound field", async function () {
+      const root = await Utils.getNewRootNode(project, commitHash, core);
+      const taxonomy = await getNodeByName(root, "UploadNameTaxonomy");
+      const contentType = await getNodeByName(root, "ExampleContentType");
+      const term = (await SystemTerm.findAll(core, taxonomy))
+        .find((term) => term.name === "CompoundTest");
+
+      // create the upload context
+      const context = UploadContext.builder()
+        .withContent("TestCompound", "someDesc", [], [])
+        .withContentType(core, contentType)
+        .withProject(project.projectId, commitHash)
+        .build();
+
+      const tags = await term.instantiate(context);
+      assert.equal(tags.length, 1);
+      const [tag] = tags;
+
+      const tagData = tag.SystemTerms.CompoundTest.project;
+      assert(tagData, "No tag data found.");
+      assert(tagData.name, 'Missing "name" field.');
+      assert(tagData.ID, 'Missing "ID" field.');
+      assert(tagData.owner, 'Missing "owner" field.');
+      assert(tagData.commit, 'Missing "commit" field.');
+    });
+
+    it.skip("should make tag using files", function () {
+    });
+
+    it.skip("should make tag using project", function () {
     });
   });
-
-  async function importTaxonomy(taxonomyJson) {
-    const root = await Utils.getNewRootNode(project, commitHash, core);
-    const importer = new Importer(core, root);
-    const fco = (await core.loadChildren(root)).find((node) =>
-      core.getPath(node) === "/1"
-    );
-    // FIXME: there seems to be a bug with the base for the top-level node
-    const containedJson = { children: [taxonomyJson] };
-    const node = await importer.import(root, containedJson);
-    return (await core.loadChildren(node)).pop();
-  }
 });
