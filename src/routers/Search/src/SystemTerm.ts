@@ -143,12 +143,26 @@ export default class SystemTerm {
     return path;
   }
 
+  static getPrototype(core: GmeClasses.Core, node: Core.Node): Core.Node {
+    const metaNode = core.getBaseType(node);
+    let proto = node;
+    let next = proto;
+    while (next !== metaNode) {
+      const base = core.getBase(proto);
+      if (!base) break;
+      proto = next;
+      next = base;
+    }
+
+    return proto;
+  }
+
   static async from(
     core: GmeClasses.Core,
     node: Core.Node,
   ): Promise<SystemTerm> {
     const namePath: string[] = filterMap(
-      SystemTerm.getPathToTaxRoot(core, node),
+      SystemTerm.getPathToTaxRoot(core, SystemTerm.getPrototype(core, node)),
       (node) => core.getAttribute(node, "name")?.toString(),
     );
 

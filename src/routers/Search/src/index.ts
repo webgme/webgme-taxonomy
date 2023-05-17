@@ -232,7 +232,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
 
 async function addSystemTags(
   req: Request,
-  res: Response,
+  _res: Response,
   next: NextFunction,
 ) {
   // Add any system tags
@@ -245,7 +245,6 @@ async function addSystemTags(
     .find((node: Core.Node) =>
       core.getAttribute(core.getBaseType(node), "name") === "Vocabularies"
     );
-  console.log("vocabs", vocabs);
   if (vocabs) {
     const systemTerms = await SystemTerm.findAll(core, vocabs);
     console.log("found", systemTerms.length, "system terms");
@@ -267,11 +266,10 @@ async function addSystemTags(
       .build();
     const systemTags = (await Promise.all(systemTerms.map((t) =>
       t.instantiate(context)
-    )))
-      .filter((tag) => !!tag);
+    ))).flat();
 
     metadata.taxonomyTags.push(...systemTags);
-    console.log({ systemTags });
+    console.log(JSON.stringify(systemTags, null, 2));
   }
   next();
 }

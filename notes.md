@@ -13,7 +13,7 @@
 
 - [ ] required file fields
 
-- what if we used transformations to define auto assignment of the base
+- [x] what if we used transformations to define auto assignment of the base
   vocabulary?
   - this would avoid a tight coupling btwn the code and the model
   - [x] Can we represent all the data for the base vocab as a transformation?
@@ -108,9 +108,9 @@
         - [ ] fix type import webgme-transformations
       - [ ] instantiate `SystemTerm`s on repo creation and data append
         - [x] create upload context
-        - [ ] the server code doesn't seem to be updating...
+        - [x] the server code doesn't seem to be updating...
           - why?
-        - [ ] update the webgme-transformations code
+        - [x] update the webgme-transformations code
           - [x] allow apply to be called with `GMENode`/`GMEContext`
             - how does it use core in steps for apply?
               - it uses it when resolving pointers and such
@@ -119,15 +119,26 @@
             - we will need to
           - [ ] make a new release
             - make sure there aren't any issues with nodes not in the pattern
-      - [ ] add tests
-      - [ ] validate the new terms
-      - [ ] update the base vocab
-      - [ ] filter out from the tag form
+      - [x] add tests
+        - [x] check out the pattern
+        - [x] why aren't any matches found?
+          - [x] add test for union
+          - [x] failing test in transformation lib
+          - [x] need to check this out
+            - it looks like it should work. Can I recreate this in the rust side?
+            - it looks pretty similar to the existing test...
+      - [x] why aren't we matching the content type name?
+        - 
+      - [-] validate the new terms
+
+      - [x] filter out from the tag form
         - shouldn't be a problem since SystemTerm doesn't inherit from Term
 
-      - [ ] ensure included for validation
+- [ ] update the base vocab
 
-      - [ ] update pattern matching engine for inheritance?
+- [ ] ensure included for validation?
+
+- [ ] update pattern matching engine for inheritance?
 
 - [ ] update UI to support arbitrary depth?
   - or maybe just up to depth 2 for now
