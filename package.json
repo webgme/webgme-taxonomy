@@ -43,9 +43,9 @@
     "mongodb": "^4.11.0",
     "node-fetch": "^2.6.6",
     "svelte": "^3.50.0",
-    "webgme": "github:webgme/webgme#azure",
+    "webgme": "^2.43.0",
     "webgme-json-importer": "^1.4.1",
-    "webgme-transformations": "^0.3.1",
+    "webgme-transformations": "^0.4.0",
     "zip-a-folder": "^1.1.5"
   },
   "lint-staged": {
