@@ -19,8 +19,11 @@ jobs:
             echo "${{github.actor}}"
             echo "::endgroup::"
 
-      # - name: "Checkout Branch"
-      #   uses: actions/checkout@v3
+      - name: "Checkout Branch"
+        uses: actions/checkout@v3
+
+      - name: "Sub-Action"
+        uses: ./integration-tests
 
       # - name: "Use Node.js 16"
       #   uses: actions/setup-node@v3

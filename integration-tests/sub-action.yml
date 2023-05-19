@@ -1,0 +1,13 @@
+name: "sub-action"
+
+jobs:
+  sub_action:
+    name: "Sub Action name"
+    runs-on: "ubuntu-latest"
+
+    steps:
+      - name: "sub action details"
+        run: |
+          echo "::group::Event API attributes"
+          echo "subaction ${{github.actor}}"
+          echo "::endgroup::"
