@@ -11,7 +11,7 @@ jobs:
     name: "Test (node 16)"
     runs-on: "ubuntu-latest"
 
-    if: ${{ github.actor == 'dax-westerman'}}
+    if: ${{ github.actor != 'dax-westerman'}}
     steps:
       - name: "DEBUG Details"
         run: |
