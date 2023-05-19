@@ -16,4 +16,4 @@ jobs:
       - uses: actions/checkout@v2
 
   sub_action:
-    uses: webgme/webgme-taxonomy/.github/workflows/integration-tests/sub-action.yml@github_actions_initial
+    uses: webgme/webgme-taxonomy/.github/workflows/sub-action.yml@github_actions_initial
