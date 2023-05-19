@@ -1,36 +1,11 @@
-name: "CI"
+name: "Integrated Testing"
 
 on:
-  workflow_call:
-  
   pull_request:
     branches: [github_actions_initial]
   push:
     branches: [github_actions_initial]
- 
+
 jobs:
-  call-subactions:
-    name: "test"
-    runs-on: "ubuntu-latest"
-
-    steps:
-      - name: "checkout"
-        uses: actions/checkout@v3
-      
-      - name: "subaction"
-        uses: ./.github/integration-tests/sub-action.yml
-
-  # name: "sub actions"
-  # uses: ./.github/integration-tests/sub-action.yml
-
-  # if: ${{ github.actor != 'dax-westerman'}}
-  #   steps:
-
-  # actions:
-  #   name: "Test (node 16)"
-  #   runs-on: "ubuntu-latest"
-  #   steps:
-  #     - uses: actions/labeler@v4
-  #       with:
-  #         repo-token: ${{ secrets.envPAT }}
-  #         configuration-path: ${{ inputs.config-path }}
+  action:
+    uses: webgme/webgme-taxonomy/.github/integration-tests/sub-action.yml@github_actions_initial

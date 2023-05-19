@@ -20,3 +20,12 @@ Notes:
 
 _\* Primary Items_<br/>
 _\*\* Secondary Items_
+
+## GitHub Actions Steps
+
+### Conditional on user interaction wtih github
+
+<pre>
+# if: ${{ github.actor != 'dax-westerman'}}
+  #   steps:
+</pre>
