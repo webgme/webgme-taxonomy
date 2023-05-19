@@ -15,7 +15,7 @@ jobs:
       - name: "Details"
         run: |
             echo "::group::debug data"
-            echo "{actor.login}"
+            echo "${{github.actor.login}}"
             echo "::endgroup::"
       - name: "Checkout Branch"
         uses: actions/checkout@v3
