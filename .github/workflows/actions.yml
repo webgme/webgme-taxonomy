@@ -13,4 +13,5 @@ jobs:
 
     if: ${{ github.actor == 'dax-westerman'}}
     steps:
+      - uses: actions/checkout@v1
       - uses: ./.github/workflows/integration-tests/sub-action.yml@github_actions_initial
