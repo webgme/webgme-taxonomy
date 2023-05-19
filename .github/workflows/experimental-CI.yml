@@ -1,44 +1,33 @@
 name: "CI"
 
 on:
+  workflow_call:
+  
   pull_request:
     branches: [github_actions_initial]
   push:
     branches: [github_actions_initial]
-
+ 
 jobs:
-  test:
-    name: "Test (node 16)"
+  call-subactions:
+    name: "test"
     runs-on: "ubuntu-latest"
 
-    if: ${{ github.actor == 'dax-westerman'}}
     steps:
+      - name: "subaction"
+        uses: ./.github/integration-tests/sub-action.yml
 
-      - name: "Checkout Branch"
-        uses: actions/checkout@v3
+  # name: "sub actions"
+  # uses: ./.github/integration-tests/sub-action.yml
 
-      - name: "DEBUG Details"
-        run: |
-            echo "::group::Event API attributes"
-            echo "${{github.actor}}"
-            echo "::endgroup::"
+  # if: ${{ github.actor != 'dax-westerman'}}
+  #   steps:
 
-      - name: "Sub-Action"
-        uses: ./integration-tests
-
-      # - name: "Use Node.js 16"
-      #   uses: actions/setup-node@v3
-      #   with:
-      #     node-version: "16.x"
-      #     cache: 'npm'
-
-      # - name: "Start MongoDB"
-      #   uses: supercharge/mongodb-github-action@1.8.0
-      #   with:
-      #     mongodb-version: "5.0"
-
-      # - name: "Install Dependencies"
-      #   run: npm install -g npm && npm install && npm run build
-
-      # - name: "Run Tests"
-      #   run: npm test
+  # actions:
+  #   name: "Test (node 16)"
+  #   runs-on: "ubuntu-latest"
+  #   steps:
+  #     - uses: actions/labeler@v4
+  #       with:
+  #         repo-token: ${{ secrets.envPAT }}
+  #         configuration-path: ${{ inputs.config-path }}
