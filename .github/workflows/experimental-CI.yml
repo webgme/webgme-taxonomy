@@ -12,10 +12,10 @@ jobs:
     runs-on: "ubuntu-latest"
 
     steps:
-      - name: "Details"
+      - name: "DEBUG Details"
         run: |
             echo "::group::debug data"
-            echo "${{github.actor.login}}"
+            echo "${{github.actor}}"
             echo "::endgroup::"
       - name: "Checkout Branch"
         uses: actions/checkout@v3
