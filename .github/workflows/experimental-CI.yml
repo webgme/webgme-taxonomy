@@ -13,14 +13,15 @@ jobs:
 
     if: ${{ github.actor == 'dax-westerman'}}
     steps:
+
+      - name: "Checkout Branch"
+        uses: actions/checkout@v3
+
       - name: "DEBUG Details"
         run: |
             echo "::group::Event API attributes"
             echo "${{github.actor}}"
             echo "::endgroup::"
-
-      - name: "Checkout Branch"
-        uses: actions/checkout@v3
 
       - name: "Sub-Action"
         uses: ./integration-tests
