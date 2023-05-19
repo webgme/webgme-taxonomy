@@ -1,5 +1,21 @@
 name: "sub-action"
 
+on:
+  workflow_call:
+    inputs:
+      image_name:
+        required: true
+        type: string
+      tag:
+        type: string
+      runs-on:
+        type: string
+    secrets:
+      registry_username:
+        required: true
+      registry_password:
+        required: true
+
 jobs:
   sub_action:
     name: "Sub Action name"

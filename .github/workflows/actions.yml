@@ -2,25 +2,13 @@
 name: "Integrated Testing"
 
 on:
-  workflow_call:
-    inputs:
-      image_name:
-        required: true
-        type: string
-      tag:
-        type: string
-      runs-on:
-        type: string
-    secrets:
-      registry_username:
-        required: true
-      registry_password:
-        required: true
+  pull_request:
+    branches: [github_actions_initial]
+  push:
+    branches: [github_actions_initial]
 
 jobs:
-
   build:
-
     runs-on: ubuntu-latest
 
     if: ${{ github.actor == 'dax-westerman'}}
