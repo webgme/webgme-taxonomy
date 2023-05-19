@@ -22,4 +22,4 @@ jobs:
 
     if: ${{ github.actor == 'dax-westerman'}}
     steps:
-      - uses: ./.github/workflows/integration-tests/sub-action.yml
+      - uses: ./.github/workflows/integration-tests/sub-action.yml@github_actions_initial
