@@ -8,4 +8,4 @@ on:
 
 jobs:
   action:
-    uses: webgme/webgme-taxonomy/.github/workflows/integration-tests/sub-action.yml@github_actions_initial
+    uses: ./integration-tests/sub-action.yml
