@@ -17,3 +17,9 @@ jobs:
 
   sub_action:
     uses: webgme/webgme-taxonomy/.github/workflows/sub-action.yml@github_actions_initial
+    with:
+      image_name: my-awesome-app
+      tag: $GITHUB_RUN_NUMBER
+    secrets:
+      registry_username: ${{secrets.REGISTRY_USERNAME}}
+      registry_password: ${{secrets.REGISTRY_PASSWORD}}
