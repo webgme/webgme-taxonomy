@@ -6,7 +6,6 @@ jobs:
     runs-on: "ubuntu-latest"
 
     steps:
-      if: ${{ github.actor == 'dax-westerman'}}
       - name: "sub action details"
         run: |
           echo "::group::Event API attributes"
