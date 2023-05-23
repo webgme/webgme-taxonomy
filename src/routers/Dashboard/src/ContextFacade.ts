@@ -17,10 +17,10 @@ export default class ContextFacade {
   getScopedUrl(node: Core.Node) {
     const { projectVersion, core } = this.context;
     const path = node ? [core.getPath(node)] : [];
-    const { id, branch, tag, commitHash } = projectVersion;
-    const version = !commitHash
+    const { id, branch, tag, commit } = projectVersion;
+    const version = !commit
       ? !tag ? ["branch", branch!] : ["tag", tag]
-      : ["commit", commitHash];
+      : ["commit", commit];
     const scope = [id, ...version, ...path].map(encodeURIComponent);
     return ["/routers/Search", ...scope, "static/"].join("/");
   }
