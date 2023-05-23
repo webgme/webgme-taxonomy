@@ -3,7 +3,7 @@
 
 define(["text!./metadata.json", "plugin/PluginBase"], function (
   pluginMetadata,
-  PluginBase
+  PluginBase,
 ) {
   "use strict";
 
