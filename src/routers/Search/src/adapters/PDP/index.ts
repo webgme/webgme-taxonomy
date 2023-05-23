@@ -137,6 +137,7 @@ export default class PDP implements Adapter {
       obsIndex: obsIndex.toString(),
       version: version.toString(),
       endObsIndex: obsIndex.toString(),
+      filePattern: "**/*",
     };
     const url = PDP._addQueryParams("v3/Files/GetObservationFiles", queryDict);
     const opts = {
