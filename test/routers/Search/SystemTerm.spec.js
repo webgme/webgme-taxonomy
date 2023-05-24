@@ -106,7 +106,7 @@ describe("SystemTerm", function () {
       const taxonomy = await getNodeByName(root, "UploadNameTaxonomy");
       const contentType = await getNodeByName(root, "ExampleContentType");
       const term = (await SystemTerm.findAll(core, taxonomy))
-        .find((term) => term.name === "UploadName");
+        .find((term) => term.name === "name");
 
       // create the upload context
       const context = UploadContext.builder()
@@ -120,8 +120,8 @@ describe("SystemTerm", function () {
       const [tag] = tags;
 
       const vocabName = Object.keys(tag).shift();
-      assert.equal(vocabName, "SystemTerms");
-      assert.equal(tag.SystemTerms.UploadName.value, "TestUploadName");
+      assert.equal(vocabName, "Base");
+      assert.equal(tag.Base.name.value, "TestUploadName");
     });
 
     it("should make tag using timestamp", async function () {
