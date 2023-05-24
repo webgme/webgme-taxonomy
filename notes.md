@@ -693,4 +693,3 @@
 
           - leap base:
             - validity
-
