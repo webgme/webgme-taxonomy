@@ -1,7 +1,4 @@
 import { assert, filterMap, mapObject } from "./Utils";
-// import type {
-//   ModelTransformation,
-// } from "webgme-transformations/dist/common/index";
 
 import {
   GMEContext,

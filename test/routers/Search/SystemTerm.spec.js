@@ -77,7 +77,7 @@ describe("SystemTerm", function () {
   }
 
   describe("instantiate", function () {
-    it("should empty tag if no transformation", async function () {
+    it("should make empty tag if no transformation", async function () {
       const root = await Utils.getNewRootNode(project, commitHash, core);
       const taxonomy = await getNodeByName(root, "UploadNameTaxonomy");
       const contentType = await getNodeByName(root, "ExampleContentType");
