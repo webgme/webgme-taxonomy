@@ -35,6 +35,10 @@
       "OpenTagForm": {
         "src": "src/plugins/OpenTagForm",
         "test": "test/plugins/OpenTagForm"
+      },
+      "PublishTaxonomy": {
+        "src": "src/plugins/PublishTaxonomy",
+        "test": "test/plugins/PublishTaxonomy"
       }
     },
     "visualizers": {
