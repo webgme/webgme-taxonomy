@@ -24,7 +24,7 @@ export default class SystemTerm {
     this.transformation = transformation;
   }
 
-  async instantiate(uploadContext: UploadContext): Promise<any[]> {
+  async instantiate(uploadContext: UploadContext): Promise<Tag[]> {
     let tags = [];
 
     if (this.transformation) {
@@ -35,7 +35,7 @@ export default class SystemTerm {
         ...outputs.map((output) => SystemTerm.createTag(typeDict, output)),
       );
     } else {
-      const tag: object = {};
+      const tag: Tag = {};
       tags.push(tag);
     }
     return tags.map((innerTag) =>
@@ -43,9 +43,9 @@ export default class SystemTerm {
     );
   }
 
-  static fullyQualify(namePath: string[], data: object) {
+  static fullyQualify(namePath: string[], data: Tag): Tag {
     return namePath.reverse().reduce((data, name) => {
-      const tag: { [key: string]: object } = {};
+      const tag: Tag = {};
       tag[name] = data;
       return tag;
     }, data);
