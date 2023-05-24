@@ -2,6 +2,8 @@
 
 - [ ] publish plugin
 
+- [ ] graphql support (Janus Graph)
+
 - [ ] tag form bug for determining the tag from the data
   - issue has been created
 
@@ -12,127 +14,6 @@
   - what is the exact structure here?
 
 - [ ] required file fields
-
-- [x] what if we used transformations to define auto assignment of the base
-      vocabulary?
-  - this would avoid a tight coupling btwn the code and the model
-  - [x] Can we represent all the data for the base vocab as a transformation?
-    - what is the base vocab again?
-      - name
-      - description
-      - content
-        - content type name/ID
-      - taxonomy
-        - project
-        - commit
-        - branch
-        - tag
-      - upload time
-      - validity
-      - files
-    - what needs to be in the input metamodel?
-      - upload content:
-        - name
-        - description
-        - files
-        - tags
-      - context:
-        - content type node
-        - webgme project
-      - general/system:
-        - time
-    - how would we update the taxonomy metamodel to specify this?
-      - we could add a field for if the data is set using a transformation...
-        - or we could simply add a child (with a pointer) for how to set the
-          data
-
-  - how do auto-set properties relate to selection constraints?
-    - we don't want them to show up on the form
-    - Do we want another selection constraint for terms?
-    - Would we want to add properties only if the term is set?
-    - There are different approaches to how you might want to set props:
-      - add the term and set the props
-        - Almost like another option for selectionConstraint: `automatic`
-          - requires all properties to be automatic
-          - does not show in the tag form
-          - set during artifact creation/upload time
-      - set props only if the term exists already
-
-    - should we only set terms automatically?
-      - this would probably simplify things... It's not clear how the
-        transformation would be set for an attribute
-      - we can also conditionally set tags
-        - we may need negation though...
-      - yeah, we should probably do this...
-    - what if we made a new type of tag instead? Like an AutomaticTag or
-      SystemTag?
-    - we can set enums, too
-    - we will need to validate the terms, too
-      - what do we do if there is an error in the system term transform?
-        Probably just drop it, I guess
-    - Conclusion:
-      - add `SystemTerm` containing a transformation.
-      - System terms are not shown in tag form.
-      - when a data element is created, all system terms are instantiated using
-        the model transformation
-    - To Do:
-      - [x] define the metamodel for the uploaded data
-        - it might be good to consider the data dashboard metamodel, too, in
-          case there is overlap
-
-          - UploadContext
-            - UploadContent
-              - name
-              - description
-              - content type (ref?)
-                - id (path)
-                - name
-              - tags (child)
-              - files (child)
-            - ProjectMetadata
-              - ID
-              - name
-              - owner
-              - branch (optional)
-              - tag (optional)
-              - commit
-            - System
-              - timestamp (ISO)
-
-      - [x] add `SystemTerm` to the metamodel
-      - [ ] implement `SystemTerm`
-        - [x] find all from relevant vocabs
-        - [x] move to search router common so it can be TS?
-          - does anything else need it?
-        - [x] fix errors
-        - [ ] fix type import webgme-transformations
-      - [ ] instantiate `SystemTerm`s on repo creation and data append
-        - [x] create upload context
-        - [x] the server code doesn't seem to be updating...
-          - why?
-        - [x] update the webgme-transformations code
-          - [x] allow apply to be called with `GMENode`/`GMEContext`
-            - how does it use core in steps for apply?
-              - it uses it when resolving pointers and such
-                - these can probably use
-            - this will be a bit involved
-            - we will need to
-          - [ ] make a new release
-            - make sure there aren't any issues with nodes not in the pattern
-      - [x] add tests
-        - [x] check out the pattern
-        - [x] why aren't any matches found?
-          - [x] add test for union
-          - [x] failing test in transformation lib
-          - [x] need to check this out
-            - it looks like it should work. Can I recreate this in the rust
-              side?
-            - it looks pretty similar to the existing test...
-      - [x] ## why aren't we matching the content type name?
-      - [-] validate the new terms
-
-      - [x] filter out from the tag form
-        - shouldn't be a problem since SystemTerm doesn't inherit from Term
 
 - [ ] update the base vocab
 
@@ -674,3 +555,142 @@
 - [-] metadata for process
   - name
   - TaxonomyURL (let's just add this to each)
+- [x] what if we used transformations to define auto assignment of the base
+      vocabulary?
+  - this would avoid a tight coupling btwn the code and the model
+  - [x] Can we represent all the data for the base vocab as a transformation?
+    - what is the base vocab again?
+      - name
+      - description
+      - content
+        - content type name/ID
+      - taxonomy
+        - project
+        - commit
+        - branch
+        - tag
+      - upload time
+      - validity
+      - files
+    - what needs to be in the input metamodel?
+      - upload content:
+        - name
+        - description
+        - files
+        - tags
+      - context:
+        - content type node
+        - webgme project
+      - general/system:
+        - time
+    - how would we update the taxonomy metamodel to specify this?
+      - we could add a field for if the data is set using a transformation...
+        - or we could simply add a child (with a pointer) for how to set the
+          data
+
+  - how do auto-set properties relate to selection constraints?
+    - we don't want them to show up on the form
+    - Do we want another selection constraint for terms?
+    - Would we want to add properties only if the term is set?
+    - There are different approaches to how you might want to set props:
+      - add the term and set the props
+        - Almost like another option for selectionConstraint: `automatic`
+          - requires all properties to be automatic
+          - does not show in the tag form
+          - set during artifact creation/upload time
+      - set props only if the term exists already
+
+    - should we only set terms automatically?
+      - this would probably simplify things... It's not clear how the
+        transformation would be set for an attribute
+      - we can also conditionally set tags
+        - we may need negation though...
+      - yeah, we should probably do this...
+    - what if we made a new type of tag instead? Like an AutomaticTag or
+      SystemTag?
+    - we can set enums, too
+    - we will need to validate the terms, too
+      - what do we do if there is an error in the system term transform?
+        Probably just drop it, I guess
+    - Conclusion:
+      - add `SystemTerm` containing a transformation.
+      - System terms are not shown in tag form.
+      - when a data element is created, all system terms are instantiated using
+        the model transformation
+    - To Do:
+      - [x] define the metamodel for the uploaded data
+        - it might be good to consider the data dashboard metamodel, too, in
+          case there is overlap
+
+          - UploadContext
+            - UploadContent
+              - name
+              - description
+              - content type (ref?)
+                - id (path)
+                - name
+              - tags (child)
+              - files (child)
+            - ProjectMetadata
+              - ID
+              - name
+              - owner
+              - branch (optional)
+              - tag (optional)
+              - commit
+            - System
+              - timestamp (ISO)
+
+      - [x] add `SystemTerm` to the metamodel
+      - [ ] implement `SystemTerm`
+        - [x] find all from relevant vocabs
+        - [x] move to search router common so it can be TS?
+          - does anything else need it?
+        - [x] fix errors
+        - [ ] fix type import webgme-transformations
+      - [ ] instantiate `SystemTerm`s on repo creation and data append
+        - [x] create upload context
+        - [x] the server code doesn't seem to be updating...
+          - why?
+        - [x] update the webgme-transformations code
+          - [x] allow apply to be called with `GMENode`/`GMEContext`
+            - how does it use core in steps for apply?
+              - it uses it when resolving pointers and such
+                - these can probably use
+            - this will be a bit involved
+            - we will need to
+          - [ ] make a new release
+            - make sure there aren't any issues with nodes not in the pattern
+      - [x] add tests
+        - [x] check out the pattern
+        - [x] why aren't any matches found?
+          - [x] add test for union
+          - [x] failing test in transformation lib
+          - [x] need to check this out
+            - it looks like it should work. Can I recreate this in the rust
+              side?
+            - it looks pretty similar to the existing test...
+      - [x] ## why aren't we matching the content type name?
+      - [-] validate the new terms
+
+      - [x] filter out from the tag form
+        - shouldn't be a problem since SystemTerm doesn't inherit from Term
+  - [ ] get this merged
+    - [x] fix the webgme version issue
+    - [x] fix the build
+  - [ ] update the base vocabulary
+    - let's start implementing all these...
+      - should I make the distinction btwn the "base" and "leap base"?
+        - how hard would this be to do?
+          - base:
+            - name
+            - description
+            - content
+            - taxonomy
+            - uploadTime
+              - waiting for DateTime field
+            - files?
+
+          - leap base:
+            - validity
+
