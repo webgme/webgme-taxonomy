@@ -30,7 +30,7 @@ export default class SystemTerm {
     if (this.transformation) {
       const gmeContext = await uploadContext.toGMEContext();
       const outputs = await this.transformation.apply(gmeContext);
-      const typeDict = uploadContext.getMetaDict();
+      const typeDict = uploadContext.getTypeDict();
       tags.push(
         ...outputs.map((output) => SystemTerm.createTag(typeDict, output)),
       );
@@ -283,7 +283,7 @@ export class UploadContext {
   private contentType: Core.Node;
   private content: GMENode;
   private project: GMENode;
-  private metaDict: TypeDict | undefined;
+  private typeDict: TypeDict | undefined; // Node path to type name
 
   constructor(
     core: GmeClasses.Core,
@@ -374,9 +374,9 @@ export class UploadContext {
     return gmeContext;
   }
 
-  getMetaDict(): TypeDict {
-    if (!this.metaDict) {
-      this.metaDict = mapObject(
+  getTypeDict(): TypeDict {
+    if (!this.typeDict) {
+      this.typeDict = mapObject(
         this.core.getAllMetaNodes(this.contentType),
         (node: Core.Node) => {
           const name = this.core.getAttribute(node, "name");
@@ -388,7 +388,7 @@ export class UploadContext {
       );
     }
 
-    return this.metaDict;
+    return this.typeDict;
   }
 
   static builder(): UploadContextBuilder {
