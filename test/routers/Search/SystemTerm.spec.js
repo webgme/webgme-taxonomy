@@ -80,23 +80,24 @@ describe("SystemTerm", function () {
   describe("instantiate", function () {
     let systemTerms;
     let contentType;
+    let context;
 
     before(async () => {
       const root = await Utils.getNewRootNode(project, commitHash, core);
       const taxonomy = await getNodeByName(root, "UploadNameTaxonomy");
       contentType = await getNodeByName(root, "ExampleContentType");
       systemTerms = await SystemTerm.findAll(core, taxonomy);
-    });
-
-    it("should make empty tag if no transformation", async function () {
-      const term = systemTerms.find((term) => term.name === "NoTransform");
 
       // create the upload context
-      const context = UploadContext.builder()
+      context = UploadContext.builder()
         .withContent("TestUploadName", "someDesc", [], [])
         .withContentType(core, contentType)
         .withProject(project.projectId, commitHash)
         .build();
+    });
+
+    it("should make empty tag if no transformation", async function () {
+      const term = systemTerms.find((term) => term.name === "NoTransform");
 
       const tags = await term.instantiate(context);
       assert.equal(tags.length, 1);
@@ -111,13 +112,6 @@ describe("SystemTerm", function () {
     it("should make tag using upload's name", async function () {
       const term = systemTerms.find((term) => term.name === "name");
 
-      // create the upload context
-      const context = UploadContext.builder()
-        .withContent("TestUploadName", "someDesc", [], [])
-        .withContentType(core, contentType)
-        .withProject(project.projectId, commitHash)
-        .build();
-
       const tags = await term.instantiate(context);
       assert.equal(tags.length, 1);
       const [tag] = tags;
@@ -129,12 +123,6 @@ describe("SystemTerm", function () {
 
     it("should make tag using upload's description", async function () {
       const term = systemTerms.find((term) => term.name === "description");
-      // create the upload context
-      const context = UploadContext.builder()
-        .withContent("TestUploadName", "someDesc", [], [])
-        .withContentType(core, contentType)
-        .withProject(project.projectId, commitHash)
-        .build();
 
       const tags = await term.instantiate(context);
       assert.equal(tags.length, 1);
@@ -149,13 +137,6 @@ describe("SystemTerm", function () {
       const term = systemTerms
         .find((term) => term.name === "UploadTime");
 
-      // create the upload context
-      const context = UploadContext.builder()
-        .withContent("TestUploadName", "someDesc", [], [])
-        .withContentType(core, contentType)
-        .withProject(project.projectId, commitHash)
-        .build();
-
       const tags = await term.instantiate(context);
       assert.equal(tags.length, 1);
       const [tag] = tags;
@@ -166,22 +147,16 @@ describe("SystemTerm", function () {
     });
 
     it("should make tag using content type", async function () {
-      const term = systemTerms.find((term) => term.name === "ContentTypeName");
-
-      // create the upload context
-      const context = UploadContext.builder()
-        .withContent("TestUploadContentType", "someDesc", [], [])
-        .withContentType(core, contentType)
-        .withProject(project.projectId, commitHash)
-        .build();
+      const term = systemTerms.find((term) => term.name === "content");
 
       const tags = await term.instantiate(context);
       assert.equal(tags.length, 1);
       const [tag] = tags;
 
       const vocabName = Object.keys(tag).shift();
-      assert.equal(vocabName, "SystemTerms");
-      assert.equal(tag.SystemTerms.ContentTypeName.type, "ExampleContentType");
+      assert.equal(vocabName, "Base");
+      console.log(JSON.stringify(tag));
+      assert.equal(tag.Base.content.name, "ExampleContentType");
     });
 
     it("should make tag with enum field", async function () {
