@@ -262,8 +262,9 @@ async function addSystemTags(
       .withContentType(core, contentType)
       .withProject(projectVersion.id, commitHash, branch, tag)
       .build();
+
     const systemTags = (await Promise.all(systemTerms.map((t) =>
-      t.instantiate(context)
+      t.createTags(context)
     ))).flat();
 
     metadata.taxonomyTags.push(...systemTags);

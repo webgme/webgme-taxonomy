@@ -24,7 +24,7 @@ export default class SystemTerm {
     this.transformation = transformation;
   }
 
-  async instantiate(uploadContext: UploadContext): Promise<Tag[]> {
+  async createTags(uploadContext: UploadContext): Promise<Tag[]> {
     let tags = [];
 
     if (this.transformation) {
