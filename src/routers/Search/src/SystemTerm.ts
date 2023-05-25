@@ -164,7 +164,7 @@ export default class SystemTerm {
     );
 
     // Get the transformation
-    let transformation;
+    let transformation: ModelTransformation;
     const children = await core.loadChildren(node);
     const transformNode = children.find((node) => {
       const base = core.getBase(node);
