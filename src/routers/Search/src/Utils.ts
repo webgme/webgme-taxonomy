@@ -29,9 +29,9 @@ export function assert(cond: boolean, msg: string) {
 
 export function mapObject<T, O>(
   obj: { [key: string]: T },
-  fn: (value: T) => O,
+  fn: (value: T, key: string) => O,
 ): { [key: string]: O } {
   return Object.fromEntries(
-    Object.entries(obj).map(([k, v]) => [k, fn(v)]),
+    Object.entries(obj).map(([k, v]) => [k, fn(v, k)]),
   );
 }
