@@ -30,9 +30,10 @@ export default class SystemTerm {
     if (this.transformation) {
       const gmeContext = await uploadContext.toGMEContext();
       const outputs = await this.transformation.apply(gmeContext);
-      const typeDict = uploadContext.getTypeDict();
       tags.push(
-        ...outputs.map((output) => SystemTerm.createTag(typeDict, output)),
+        ...outputs.map((output) =>
+          SystemTerm.createTag(uploadContext.typeDict, output)
+        ),
       );
     } else {
       const tag: Tag = {};
@@ -283,7 +284,7 @@ export class UploadContext {
   private contentType: Core.Node;
   private content: GMENode;
   private project: GMENode;
-  private typeDict: TypeDict | undefined; // Node path to type name
+  readonly typeDict: TypeDict; // Node path to type name
 
   constructor(
     core: GmeClasses.Core,
@@ -295,6 +296,17 @@ export class UploadContext {
     this.contentType = contentType;
     this.content = content;
     this.project = project;
+
+    this.typeDict = mapObject(
+      this.core.getAllMetaNodes(this.contentType),
+      (node: Core.Node) => {
+        const name = this.core.getAttribute(node, "name");
+        if (name) {
+          return name.toString();
+        }
+        return "";
+      },
+    );
   }
 
   async toGMEContext(): Promise<GMEContext> {
@@ -372,23 +384,6 @@ export class UploadContext {
     gmeContext.validate();
 
     return gmeContext;
-  }
-
-  getTypeDict(): TypeDict {
-    if (!this.typeDict) {
-      this.typeDict = mapObject(
-        this.core.getAllMetaNodes(this.contentType),
-        (node: Core.Node) => {
-          const name = this.core.getAttribute(node, "name");
-          if (name) {
-            return name.toString();
-          }
-          return "";
-        },
-      );
-    }
-
-    return this.typeDict;
   }
 
   static builder(): UploadContextBuilder {
