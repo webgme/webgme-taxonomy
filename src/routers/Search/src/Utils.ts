@@ -27,6 +27,13 @@ export function assert(cond: boolean, msg: string) {
   }
 }
 
+/**
+ * Given an object and a function, return a new object where the values are `fn(value)`.
+ *
+ * @param obj - The object to map over
+ * @param fn - The function mapping the `obj` values to the output values
+ * @returns A new object with the same keys but new values
+ */
 export function mapObject<T, O>(
   obj: { [key: string]: T },
   fn: (value: T, key: string) => O,

@@ -272,10 +272,10 @@ class UploadContextBuilder {
 }
 
 export class UploadContext {
-  private core: GmeClasses.Core;
-  private contentType: Core.Node;
-  private content: GMENode;
-  private project: GMENode;
+  private readonly core: GmeClasses.Core;
+  private readonly contentType: Core.Node;
+  private readonly content: GMENode;
+  private readonly project: GMENode;
   readonly typeDict: TypeDict; // Node path to type name
 
   constructor(
