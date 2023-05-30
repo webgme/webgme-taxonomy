@@ -77,7 +77,7 @@ describe("SystemTerm", function () {
       .find((node) => core.getAttribute(node, "name") === name);
   }
 
-  describe("instantiate", function () {
+  describe("createTags", function () {
     let systemTerms;
     let contentType;
     let context;
@@ -99,7 +99,7 @@ describe("SystemTerm", function () {
     it("should make empty tag if no transformation", async function () {
       const term = systemTerms.find((term) => term.name === "NoTransform");
 
-      const tags = await term.instantiate(context);
+      const tags = await term.createTags(context);
       assert.equal(tags.length, 1);
       const [tag] = tags;
 
@@ -112,7 +112,7 @@ describe("SystemTerm", function () {
     it("should make tag using upload's name", async function () {
       const term = systemTerms.find((term) => term.name === "name");
 
-      const tags = await term.instantiate(context);
+      const tags = await term.createTags(context);
       assert.equal(tags.length, 1);
       const [tag] = tags;
 
@@ -124,7 +124,7 @@ describe("SystemTerm", function () {
     it("should make tag using upload's description", async function () {
       const term = systemTerms.find((term) => term.name === "description");
 
-      const tags = await term.instantiate(context);
+      const tags = await term.createTags(context);
       assert.equal(tags.length, 1);
       const [tag] = tags;
 
@@ -137,7 +137,7 @@ describe("SystemTerm", function () {
       const term = systemTerms
         .find((term) => term.name === "UploadTime");
 
-      const tags = await term.instantiate(context);
+      const tags = await term.createTags(context);
       assert.equal(tags.length, 1);
       const [tag] = tags;
 
@@ -149,14 +149,14 @@ describe("SystemTerm", function () {
     it("should make tag using content type", async function () {
       const term = systemTerms.find((term) => term.name === "content");
 
-      const tags = await term.instantiate(context);
+      const tags = await term.createTags(context);
       assert.equal(tags.length, 1);
       const [tag] = tags;
 
       const vocabName = Object.keys(tag).shift();
       assert.equal(vocabName, "Base");
       console.log(JSON.stringify(tag));
-      assert.equal(tag.Base.content.name, "ExampleContentType");
+      assert.equal(tag.Base.content.type.name, "ExampleContentType");
     });
 
     it("should make tag with enum field", async function () {
@@ -169,7 +169,7 @@ describe("SystemTerm", function () {
         .withProject(project.projectId, commitHash)
         .build();
 
-      const tags = await term.instantiate(context);
+      const tags = await term.createTags(context);
       assert.equal(tags.length, 1);
       const [tag] = tags;
 
@@ -191,7 +191,7 @@ describe("SystemTerm", function () {
         .withProject(project.projectId, commitHash)
         .build();
 
-      const tags = await term.instantiate(context);
+      const tags = await term.createTags(context);
       assert.equal(tags.length, 1);
       const [tag] = tags;
 
@@ -216,7 +216,7 @@ describe("SystemTerm", function () {
         .withProject(project.projectId, commitHash)
         .build();
 
-      const tags = await term.instantiate(context);
+      const tags = await term.createTags(context);
       assert.equal(tags.length, 1);
       const [tag] = tags;
 
