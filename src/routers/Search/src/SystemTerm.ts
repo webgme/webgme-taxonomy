@@ -1,4 +1,4 @@
-import { assert, filterMap, mapObject } from "./Utils";
+import { assert, filterMap, mapObject, StrictDict } from "./Utils";
 
 import {
   GMEContext,
@@ -301,8 +301,10 @@ export class UploadContext {
     );
   }
 
-  async toGMEContext(): Promise<GMEContext> {
-    // Create a dictionary of metanodes by name for later
+  /**
+   * Create a dictionary of metanodes by name
+   */
+  private getMetaNodeDict(): StrictDict<Core.Node> {
     const metaEntries = filterMap(
       Object.values(this.core.getAllMetaNodes(this.contentType)),
       (node) => {
@@ -312,43 +314,52 @@ export class UploadContext {
         }
       },
     );
-    const metaDict = Object.fromEntries(metaEntries);
+    return new StrictDict(
+      Object.fromEntries(metaEntries),
+      (key: string) => `Could not find definition for ${key}`,
+    );
+  }
+
+  private async addChildToContext(
+    nodes: GMENode[],
+    child: GMENode,
+    baseType: Core.Node,
+    parent: GMENode,
+  ) {
+    const index = nodes.length;
+    nodes.push(child);
+    parent.children.push(index);
+
+    let baseTypeIndex = nodes.findIndex((node) =>
+      node.id === this.core.getPath(baseType)
+    );
+    if (baseTypeIndex === -1) {
+      baseTypeIndex = await GMEContext.addNode(this.core, baseType, nodes);
+    }
+    child.pointers.base = baseTypeIndex;
+  }
+
+  async toGMEContext(): Promise<GMEContext> {
+    const metaDict = this.getMetaNodeDict();
 
     // Add UploadContext node (active node)
+    // This doesn't use the helper method since it doesn't actually
+    // have a parent node (hence the "@tmp" path)
     const context = new GMENode("@tmp");
     context.setActiveNode();
     const nodes: GMENode[] = [context];
     context.pointers.base = 1;
 
-    if (!metaDict.UploadContext) {
-      // TODO:
-    }
-
-    await GMEContext.addNode(this.core, metaDict.UploadContext, nodes);
-
-    // helper for adding children
-    const addChild = async (
-      child: GMENode,
-      typeName: string,
-      parent: GMENode = context,
-    ) => {
-      const index = nodes.length;
-      nodes.push(child);
-      parent.children.push(index);
-
-      const baseType = metaDict[typeName];
-      if (!baseType) {
-        throw new Error("Could not find " + baseType); // FIXME: better errors
-      }
-      let baseTypeIndex = nodes.findIndex((node) => node === baseType);
-      if (baseTypeIndex === -1) {
-        baseTypeIndex = await GMEContext.addNode(this.core, baseType, nodes);
-      }
-      child.pointers.base = baseTypeIndex;
-    };
+    await GMEContext.addNode(this.core, metaDict.get("UploadContext"), nodes);
 
     // Add content
-    await addChild(this.content, "UploadContent");
+    await this.addChildToContext(
+      nodes,
+      this.content,
+      metaDict.get("UploadContent"),
+      context,
+    );
+
     const contentTypePath = this.core.getPath(this.contentType);
     let contentTypeIdx = nodes.findIndex((node) => node.id === contentTypePath);
     if (contentTypeIdx === -1) {
@@ -363,14 +374,24 @@ export class UploadContext {
     // TODO: add files
 
     // Add project metadata
-    await addChild(this.project, "ProjectMetadata");
+    await this.addChildToContext(
+      nodes,
+      this.project,
+      metaDict.get("ProjectMetadata"),
+      context,
+    );
 
     // Add extra system info
     const date = new Date();
     const system = new GMENode("@tmp/system", {
       isoDateTime: Primitive.from(date.toISOString()),
     });
-    await addChild(system, "System");
+    await this.addChildToContext(
+      nodes,
+      system,
+      metaDict.get("System"),
+      context,
+    );
 
     const gmeContext = new GMEContext(nodes);
     gmeContext.validate();

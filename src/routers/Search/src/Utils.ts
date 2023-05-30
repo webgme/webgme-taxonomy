@@ -21,9 +21,10 @@ export function isString<T>(possibleStr: T): possibleStr is Extract<T, string> {
   return typeof possibleStr === "string";
 }
 
-export function assert(cond: boolean, msg: string) {
+export function assert(cond: boolean, msg: string | Error) {
   if (!cond) {
-    throw new Error(msg);
+    const error = msg instanceof Error ? msg : new Error(msg);
+    throw error;
   }
 }
 
@@ -41,4 +42,22 @@ export function mapObject<T, O>(
   return Object.fromEntries(
     Object.entries(obj).map(([k, v]) => [k, fn(v, k)]),
   );
+}
+
+const defaultErrorFn = (key: string) => `Key not found: ${key}`;
+export class StrictDict<V> {
+  private readonly dict: { [key: string]: V };
+  private readonly errorFn: (key: string) => string;
+
+  constructor(dict: { [key: string]: V }, errorFn?: (k: string) => string) {
+    this.dict = dict;
+    this.errorFn = errorFn || defaultErrorFn;
+  }
+
+  get(key: string): V {
+    if (this.dict.hasOwnProperty(key)) {
+      return this.dict[key];
+    }
+    throw new Error(this.errorFn(key));
+  }
 }
