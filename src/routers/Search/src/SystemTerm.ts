@@ -320,6 +320,9 @@ export class UploadContext {
     );
   }
 
+  /**
+   * Helper method to add a node of a given type to a GME context (list of nodes).
+   */
   private async addChildToContext(
     nodes: GMENode[],
     child: GMENode,
@@ -360,16 +363,32 @@ export class UploadContext {
       context,
     );
 
-    const contentTypePath = this.core.getPath(this.contentType);
-    let contentTypeIdx = nodes.findIndex((node) => node.id === contentTypePath);
-    if (contentTypeIdx === -1) {
-      contentTypeIdx = await GMEContext.addNode(
-        this.core,
-        this.contentType,
-        nodes,
-      );
-    }
+    // Next, we will add the reference to the content type. Since content types
+    // contain the vocabularies which in turn contain transformations, etc, this
+    // ends up adding many nodes (1400+ w/ simple models). Realistically, the
+    // transformation currently doesn't need to reference children of content types
+    // so we will optimize things by simply excluding all these extra nodes.
+    //
+    // This next section is the old code which captures everything but isn't very
+    // performant.
+
+    // const contentTypePath = this.core.getPath(this.contentType);
+    // let contentTypeIdx = nodes.findIndex((node) => node.id === contentTypePath);
+    // if (contentTypeIdx === -1) {
+    //   contentTypeIdx = await GMEContext.addNode(
+    //     this.core,
+    //     this.contentType,
+    //     nodes,
+    //   );
+    // }
+
+    // Create a shallow copy of the content type node (no children or pointer targets)
+    const contentTypeCopy = await GMENode.fromNode(this.core, this.contentType);
+    const contentTypeIdx = nodes.length;
+    nodes.push(contentTypeCopy);
+
     this.content.pointers.type = contentTypeIdx;
+
     // TODO: add tags
     // TODO: add files
 

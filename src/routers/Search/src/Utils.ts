@@ -45,6 +45,9 @@ export function mapObject<T, O>(
 }
 
 const defaultErrorFn = (key: string) => `Key not found: ${key}`;
+/**
+ * A dictionary that throws an error if a key is not found.
+ */
 export class StrictDict<V> {
   private readonly dict: { [key: string]: V };
   private readonly errorFn: (key: string) => string;
