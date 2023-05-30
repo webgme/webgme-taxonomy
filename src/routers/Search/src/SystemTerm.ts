@@ -39,17 +39,7 @@ export default class SystemTerm {
       const tag: Tag = {};
       tags.push(tag);
     }
-    return tags.map((innerTag) =>
-      SystemTerm.fullyQualify(this.namePath, innerTag)
-    );
-  }
-
-  static fullyQualify(namePath: string[], data: Tag): Tag {
-    return namePath.reverse().reduce((data, name) => {
-      const tag: Tag = {};
-      tag[name] = data;
-      return tag;
-    }, data);
+    return tags.map((innerTag) => Term.fullyQualify(this.namePath, innerTag));
   }
 
   static createTag(typeDict: TypeDict, nodeJson: JsonNode): object {
@@ -165,18 +155,20 @@ export default class SystemTerm {
     );
 
     // Get the transformation
-    let transformation: ModelTransformation;
+    let transformation: ModelTransformation | undefined;
     const children = await core.loadChildren(node);
     const transformNode = children.find((node) => {
       const base = core.getBase(node);
       return base && core.getAttribute(base, "name") === "Transformation";
     });
+
     if (transformNode) {
       transformation = await ModelTransformation.fromNode(
         core,
         transformNode,
       );
     }
+
     return new SystemTerm(namePath, transformation);
   }
 
@@ -388,6 +380,16 @@ export class UploadContext {
 
   static builder(): UploadContextBuilder {
     return new UploadContextBuilder();
+  }
+}
+
+namespace Term {
+  export function fullyQualify(namePath: string[], data: Tag): Tag {
+    return namePath.reverse().reduce((data, name) => {
+      const tag: Tag = {};
+      tag[name] = data;
+      return tag;
+    }, data);
   }
 }
 
