@@ -4,10 +4,13 @@ describe("SystemTerm", function () {
   const Utils = require("../../Utils");
   const Importer = testFixture.requirejs("webgme-json-importer/JSONImporter");
   const assert = require("assert");
-  const { default: SystemTerm, UploadContext } = require(
+  const { default: SystemTerm } = require(
     "../../../src/routers/Search/build/SystemTerm",
   );
-  let project, gmeAuth, storage, commitHash, core;
+  const { default: UploadContext } = require(
+    "../../../src/routers/Search/build/UploadContext",
+  );
+  let project, gmeAuth, storage, commitHash, core, projectVersion;
 
   before(async function () {
     this.timeout(7500);
@@ -20,6 +23,10 @@ describe("SystemTerm", function () {
     commitHash = params.commitHash;
     core = params.core;
     project = params.project;
+    projectVersion = {
+      id: project.projectId,
+      commit: commitHash,
+    };
   });
 
   after(async function () {
@@ -89,11 +96,15 @@ describe("SystemTerm", function () {
       systemTerms = await SystemTerm.findAll(core, taxonomy);
 
       // create the upload context
-      context = UploadContext.builder()
-        .withContent("TestUploadName", "someDesc", [], [])
-        .withContentType(core, contentType)
-        .withProject(project.projectId, commitHash)
-        .build();
+      context = await UploadContext.from({
+        name: "TestUploadName",
+        description: "someDesc",
+        tags: [],
+        files: [],
+        core,
+        contentType,
+        project: projectVersion,
+      });
     });
 
     it("should make empty tag if no transformation", async function () {
@@ -161,14 +172,6 @@ describe("SystemTerm", function () {
 
     it("should make tag with enum field", async function () {
       const term = systemTerms.find((term) => term.name === "EnumTest");
-
-      // create the upload context
-      const context = UploadContext.builder()
-        .withContent("TestEnum", "someDesc", [], [])
-        .withContentType(core, contentType)
-        .withProject(project.projectId, commitHash)
-        .build();
-
       const tags = await term.createTags(context);
       assert.equal(tags.length, 1);
       const [tag] = tags;
@@ -177,19 +180,12 @@ describe("SystemTerm", function () {
       assert.equal(vocabName, "SystemTerms");
       assert.equal(
         tag.SystemTerms.EnumTest.enumField.enumOption.value,
-        "TestEnum",
+        "TestUploadName",
       );
     });
 
     it("should make tag with set field", async function () {
       const term = systemTerms.find((term) => term.name === "SetTest");
-
-      // create the upload context
-      const context = UploadContext.builder()
-        .withContent("TestSet", "someDesc", [], [])
-        .withContentType(core, contentType)
-        .withProject(project.projectId, commitHash)
-        .build();
 
       const tags = await term.createTags(context);
       assert.equal(tags.length, 1);
@@ -198,7 +194,7 @@ describe("SystemTerm", function () {
       const vocabName = Object.keys(tag).shift();
       assert.equal(vocabName, "SystemTerms");
 
-      const members = tag.SystemTerms.SetTest.TestSet;
+      const members = tag.SystemTerms.SetTest.TestUploadName;
       assert(Array.isArray(members));
       assert(members.find((member) => Object.keys(member).shift() === "name"));
       assert(
@@ -208,13 +204,6 @@ describe("SystemTerm", function () {
 
     it("should make tag with compound field", async function () {
       const term = systemTerms.find((term) => term.name === "CompoundTest");
-
-      // create the upload context
-      const context = UploadContext.builder()
-        .withContent("TestCompound", "someDesc", [], [])
-        .withContentType(core, contentType)
-        .withProject(project.projectId, commitHash)
-        .build();
 
       const tags = await term.createTags(context);
       assert.equal(tags.length, 1);

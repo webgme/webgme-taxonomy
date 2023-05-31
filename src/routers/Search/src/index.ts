@@ -18,7 +18,8 @@ import * as express from "express";
 import type { NextFunction, Request, Response } from "express";
 const router = express.Router();
 
-import { default as SystemTerm, UploadContext } from "./SystemTerm";
+import SystemTerm from "./SystemTerm";
+import UploadContext from "./UploadContext";
 import RouterUtils from "../../../common/routers/Utils";
 import type { MiddlewareOptions, WebgmeRequest } from "../../../common/types";
 import Utils from "../../../common/Utils";
@@ -246,22 +247,18 @@ async function addSystemTags(
     );
   if (vocabs) {
     const systemTerms = await SystemTerm.findAll(core, vocabs);
-    const commitHash = projectVersion.commit;
-    const branch = projectVersion.branch;
-    const tag = projectVersion.tag;
     const desc = ""; // TODO: add description
     const files: any[] = []; // TODO: add files
 
-    const context = UploadContext.builder()
-      .withContent(
-        metadata.displayName,
-        desc,
-        metadata.taxonomyTags,
-        files,
-      )
-      .withContentType(core, contentType)
-      .withProject(projectVersion.id, commitHash, branch, tag)
-      .build();
+    const context = await UploadContext.from({
+      name: metadata.displayName,
+      description: desc,
+      tags: metadata.taxonomyTags,
+      files,
+      core,
+      contentType,
+      project: projectVersion,
+    });
 
     const systemTags = (await Promise.all(systemTerms.map((t) =>
       t.createTags(context)
