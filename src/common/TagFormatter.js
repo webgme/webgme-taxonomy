@@ -3,8 +3,8 @@
  */
 function factory(Importer) {
   class TagFormatter {
-    constructor(taxonomyWJI) {
-      this.taxonomy = taxonomyWJI;
+    constructor(taxonomy) {
+      this.taxonomy = taxonomy;
     }
 
     /**
@@ -60,10 +60,25 @@ function factory(Importer) {
     }
 
     static async from(core, taxonomyRoot) {
-      const root = core.getRoot(taxonomyRoot);
-      const importer = new Importer(core, root);
-      const taxonomyWJI = await importer.toJSON(taxonomyRoot);
-      return new TagFormatter(taxonomyWJI);
+      const load = async (node) => {
+        const metaType = core.getBaseType(node);
+        const base = core.getBase(node);
+        if (base !== metaType) { // ensure we export the prototype
+          return await load(base);
+        }
+
+        const children = await core.loadChildren(node);
+        return {
+          guid: core.getGuid(node),
+          attributes: {
+            name: core.getAttribute(node, "name"),
+          },
+          children: await Promise.all(children.map(load)),
+        };
+      };
+
+      const taxonomy = await load(taxonomyRoot);
+      return new TagFormatter(taxonomy);
     }
   }
 

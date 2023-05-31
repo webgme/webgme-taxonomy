@@ -80,12 +80,14 @@ export type WebgmeContext = {
     projectName: string;
     projectId: string;
   };
-  projectVersion: {
-    id: string;
-    branch?: string;
-    tag?: string;
-    commitHash?: string;
-  };
+  projectVersion: ProjectVersion;
 };
+
+export interface ProjectVersion {
+  id: string;
+  branch?: string;
+  tag?: string;
+  commit: string;
+}
 
 export type WebgmeRequest = Request & { webgmeContext: WebgmeContext };
