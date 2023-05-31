@@ -61,15 +61,9 @@ function initialize(middlewareOpts) {
   router.get(
     RouterUtils.getContentTypeVocabRoutes("schema.json"),
     async (request, response) => {
-      const { vocabScope } = request.params;
       const { root, core, contentType } = request.webgmeContext;
       const exporter = JSONSchemaExporter.from(core, root);
-      // FIXME: remove this
-      const vocabularies = await Utils.getVocabulariesFor(
-        core,
-        contentType,
-        vocabScope,
-      );
+      const vocabularies = await Utils.getVocabulariesFor(core, contentType);
       const { schema } = await exporter.getVocabSchemas(vocabularies);
       return response.json(schema);
     },
