@@ -36,5 +36,5 @@ jobs:
         with:
           name: webgme/taxonomy
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
-          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+          password: ${{ secrets.DOCKER_HUB_PASSWORD }}
           tags: "${{ env.TAG }},${{ env.RELEASE_TAG }}"
