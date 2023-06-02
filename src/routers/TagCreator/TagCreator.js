@@ -23,6 +23,7 @@ const _ = require("underscore");
 const JSONSchemaExporter = require("../../common/JSONSchemaExporter");
 const RouterUtils = require("../../common/routers/Utils");
 const Utils = require("../../common/Utils");
+const webgmeVersion = require("webgme/package.json").version;
 
 /**
  * Called when the server is created but before it starts to listening to incoming requests.
@@ -119,6 +120,7 @@ async function generateFormHtml(gmeConfig) {
   const opts = {
     commonPath,
     widgetPath: commonPath.replace(/common$/, "visualizers/widgets/TagCreator"),
+    webgmeVersion,
   };
   await fsp.writeFile(
     path.join(__dirname, "form", "index.html"),
