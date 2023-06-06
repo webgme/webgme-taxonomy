@@ -24,9 +24,24 @@ function factory(Utils) {
         name: this.core.getAttribute(node, "name"),
         type: this.core.getAttribute(base, "name"),
         children: await Promise.all(
-          children.map((child) => this.toSchema(child)),
+          children
+            .filter((child) => !this.isTransformation(child))
+            .map((child) => this.toSchema(child)),
         ),
       };
+    }
+
+    isTransformation(node) {
+      const base = this.core.getBaseType(node);
+      node = base;
+
+      while (node) {
+        if (this.core.getAttribute(node, "name") === "Transformation") {
+          return true;
+        }
+        node = this.core.getBase(node);
+      }
+      return false;
     }
 
     getPrototype(node) {
