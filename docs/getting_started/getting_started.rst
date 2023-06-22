@@ -2,7 +2,7 @@ Getting Started
 ===============
 
 What is the Taxonomy Design Studio?
-------------------
+-----------------------------------
 At a high-level, the taxonomy design studio is a generic tool for organizing complex heterogenous (series) data. It provides a few tools for both defining taxonomies and browsing data tagged using the defined taxonomies. This tool was designed as part of a broader integration platform, the Unified Data and Compute Platform (UDCP), for the `MCpsych project <https://wellcomeleap.org/mcpsych/>`_.
 
 Motivation
