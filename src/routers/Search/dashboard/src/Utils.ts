@@ -135,3 +135,21 @@ export function filterMap<I, O>(list: I[], fn: (x: I) => O | undefined): O[] {
     return items;
   }, <Array<O>> []);
 }
+
+export function getNestedValue(
+  obj: { [key: string]: any },
+  keys: string[],
+): any {
+  const key = keys.unshift();
+  const value = obj[key];
+
+  if (keys.length === 0) {
+    return value;
+  }
+
+  if (typeof value === "object") {
+    return getNestedValue(value, keys);
+  } else {
+    return undefined;
+  }
+}
