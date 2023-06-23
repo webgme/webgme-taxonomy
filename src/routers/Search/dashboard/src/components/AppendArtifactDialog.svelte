@@ -46,7 +46,12 @@
     if (value !== open) open = value;
   }
 
+  let lastTags = set?.taxonomyTags ?? [];
   async function setMetadata(tags: any[]) {
+    if (tags === lastTags) {
+      return;
+    }
+
     try {
       const taxonomyTags = await formatter.toHumanFormat(tags);
       metadata = { taxonomyTags };
@@ -60,6 +65,8 @@
         );
       }
     }
+
+    lastTags = tags;
   }
 
   function onAppendFileDrop(event: DropEvent) {
