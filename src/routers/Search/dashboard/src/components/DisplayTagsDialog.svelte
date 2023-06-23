@@ -13,15 +13,21 @@
     Meta,
     Graphic,
   } from "@smui/list";
-  import {getNestedValue} from '../Utils';
+  import {downloadJSON} from '../Utils';
   import TagItem from './TagItem.svelte';
 
   export let displayName: string = '';
   export let taxonomyTags: any[] = [];
+  export let open = true;
 
-  let open = true;
+  $: taxonomyTags.sort((a, b) => getVocabName(a) < getVocabName(b) ? -1 : 1)
+
   function close() {
     open = false;
+  }
+
+  function getVocabName(tag) {
+    return Object.keys(tag).pop();
   }
 
   // TODO: notify when it is closed
@@ -43,6 +49,9 @@
   <div class="dialog-actions">
     <Button on:click={close}>
       <Label>Close</Label>
+    </Button>
+    <Button on:click={downloadJSON(`${displayName}_metadata.json`, taxonomyTags)}>
+      <Label>Download</Label>
     </Button>
   </div>
 </Dialog>

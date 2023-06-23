@@ -38,10 +38,11 @@
 
   let displayedTags = null;
   let displayedName = null;
+  let displayTags = false;
   async function showTags(artifact) {
     displayedTags = await formatter.toHumanFormat(artifact.taxonomyTags);
     displayedName = artifact.displayName;
-    console.log(displayedTags, artifact);
+    displayTags = true;
   }
 
   async function onCopyIdClicked() {
@@ -103,7 +104,10 @@
 
 <svelte:window bind:scrollY />
 {#if displayedTags}
-  <DisplayTagsDialog displayName={displayedName} taxonomyTags={displayedTags}/>
+  <DisplayTagsDialog
+    bind:open={displayTags}
+    displayName={displayedName}
+    bind:taxonomyTags={displayedTags}/>
 {/if}
 <div
   bind:this={panel}

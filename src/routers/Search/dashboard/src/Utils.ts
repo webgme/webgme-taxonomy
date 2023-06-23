@@ -153,3 +153,14 @@ export function getNestedValue(
     return undefined;
   }
 }
+
+export function downloadJSON(name: string, object: any) {
+  const dataStr = "data:text/json;charset=utf-8," +
+    encodeURIComponent(JSON.stringify(object));
+  const element = document.createElement("a");
+  element.setAttribute("href", dataStr);
+  element.setAttribute("download", name + ".json");
+  document.body.appendChild(element);
+  element.click();
+  element.remove();
+}
