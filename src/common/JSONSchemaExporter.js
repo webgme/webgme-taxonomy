@@ -17,15 +17,17 @@ function factory() {
       this.META = META;
     }
 
-    async getSchemas(taxonomyNode) {
+    async getSchemas(taxonomyNode, includeDeprecated = true) {
       const taxonomyName = this.core.getAttribute(taxonomyNode, "name");
       const vocabs = await this.core.loadChildren(taxonomyNode);
-      return this.getVocabSchemas(vocabs, taxonomyName);
+      return this.getVocabSchemas(vocabs, taxonomyName, includeDeprecated);
     }
 
-    async getVocabSchemas(vocabs, taxonomyName) {
+    async getVocabSchemas(vocabs, taxonomyName, includeDeprecated = true) {
       const termNodes = (
-        await Promise.all(vocabs.map((node) => this.getTermNodes(node)))
+        await Promise.all(
+          vocabs.map((node) => this.getTermNodes(node, includeDeprecated)),
+        )
       ).flat();
 
       const terms = await Promise.all(
@@ -108,9 +110,9 @@ function factory() {
       );
     }
 
-    async getTermNodes(node) {
+    async getTermNodes(node, includeDeprecated) {
       return (await this.core.loadSubTree(node)).filter((node) =>
-        this.isTerm(node)
+        this.isTerm(node) && (includeDeprecated || this.isCurrentTerm(node))
       );
     }
 
@@ -182,6 +184,26 @@ function factory() {
      */
     isTerm(node) {
       return node != null && this.core.isTypeOf(node, this.META.Term);
+    }
+
+    /**
+     * Gets whether the given term node is deprecated.
+     *
+     * @param {Core.Node | null} node The node to check the type of
+     * @return {boolean} Whether or not the `node` is deprecated
+     * @memberof JSONSchemaExporter
+     */
+    isCurrentTerm(node) {
+      if (node === null) {
+        return false;
+      }
+      if (this.core.getAttribute(node, "deprecated")) {
+        return false;
+      }
+
+      const parent = this.core.getParent(node);
+      const hasDeprecatedParent = parent && !this.isCurrentTerm(parent);
+      return !hasDeprecatedParent;
     }
 
     /**

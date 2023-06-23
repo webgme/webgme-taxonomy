@@ -273,4 +273,50 @@ describe("JSONSchemaExporter", function () {
       });
     });
   });
+
+  describe("deprecate", function () {
+    let root;
+    beforeEach(async () => {
+      root = await Utils.getNewRootNode(project, commitHash, core);
+    });
+
+    it("should omit deprecated terms", async function () {
+      const taxCsv = `vocab,,,
+        ,term,,
+        ,term2,,
+        ,depTerm,,`;
+      const taxonomy = await Utils.createTaxonomyFromCsv(core, root, taxCsv);
+      const termNode = (await core.loadSubTree(taxonomy))
+        .find((node) => core.getAttribute(node, "name") === "depTerm");
+      core.setAttribute(termNode, "deprecated", true);
+
+      const exporter = JSONSchemaExporter.from(core, root);
+      const { schema } = await exporter.getSchemas(taxonomy, false);
+      const termSchemas = schema.properties.taxonomyTags.items.anyOf;
+      assert.equal(termSchemas.length, 2);
+      assert(!termSchemas.find((schema) => schema.title === "depTerm"));
+    });
+
+    it("should omit terms in deprecated vocabs", async function () {
+      const taxCsv = `vocab,,,
+        ,term,,
+        ,term2,,
+        ,term3,,
+        depVocab,,,
+        ,depTerm,,
+        ,depTerm2,,
+        ,depTerm3,,
+      `;
+      const taxonomy = await Utils.createTaxonomyFromCsv(core, root, taxCsv);
+      const vocabNode = (await core.loadChildren(taxonomy))
+        .find((node) => core.getAttribute(node, "name") === "depVocab");
+      core.setAttribute(vocabNode, "deprecated", true);
+
+      const exporter = JSONSchemaExporter.from(core, root);
+      const { schema } = await exporter.getSchemas(taxonomy, false);
+      const termSchemas = schema.properties.taxonomyTags.items.anyOf;
+      assert.equal(termSchemas.length, 3);
+      assert(!termSchemas.find((schema) => schema.title.startsWith("dep")));
+    });
+  });
 });
