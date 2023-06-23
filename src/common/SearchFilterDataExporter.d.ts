@@ -1,14 +1,23 @@
 import { WebgmeContext } from "./types";
 
 declare namespace DashboardConfiguration {
+  interface VocabularyTermSchema {
+    id: string;
+    name: string;
+    type: string;
+    children: VocabularyTermSchema;
+  }
+
+  interface ContentTypeConfiguration {
+    nodePath: string;
+    name: string;
+    vocabularies: VocabularyTermSchema[];
+    content: ContentTypeConfiguration;
+  }
+
   type DashboardConfiguration = {
     name: any;
-    storage: any;
-    taxonomy: {
-      id: any;
-      name: any;
-      children: any;
-    };
+    content: ContentTypeConfiguration;
     project?: WebgmeContext["projectVersion"];
     contentTypePath?: string;
   };
@@ -17,11 +26,6 @@ declare namespace DashboardConfiguration {
     core: GmeClasses.Core,
     contentType: Core.Node,
   ): Promise<DashboardConfiguration>;
-
-  export class ContentTypeExporter {
-    constructor(name: any, vocabularies: any);
-    static from(core: any, contentTypeNode: any): Promise<ContentTypeExporter>;
-  }
 }
 
 export default DashboardConfiguration;

@@ -95,12 +95,12 @@ export default class PDP implements Adapter {
       artifacts.sort((a1, a2) => (a1.time < a2.time ? -1 : 1));
       const { displayName } = artifacts[0];
       const lastIndex = artifacts.length - 1;
-      const { taxonomyTags, taxonomy } = artifacts[lastIndex];
+      const { taxonomyTags, taxonomyVersion } = artifacts[lastIndex];
       return {
         id: parentId,
         displayName,
         taxonomyTags,
-        taxonomy,
+        taxonomyVersion,
         children: artifacts,
       };
     });
@@ -505,7 +505,7 @@ function parseArtifact(obs: Observation): Artifact | undefined {
       id: obs.index + "_" + obs.version,
       displayName: metadata.displayName,
       taxonomyTags: metadata.taxonomyTags,
-      taxonomy: metadata.taxonomy,
+      taxonomyVersion: metadata.taxonomyVersion,
       time: obs.startTime,
     };
   }

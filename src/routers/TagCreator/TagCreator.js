@@ -81,8 +81,8 @@ function initialize(middlewareOpts) {
         title,
         false,
       );
-      config.taxonomy = req.webgmeContext.projectVersion;
-      config.taxonomy.url = getHostUrl(req);
+      config.taxonomyVersion = req.webgmeContext.projectVersion;
+      config.taxonomyVersion.url = getHostUrl(req);
       return res.json(config);
     },
   );

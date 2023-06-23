@@ -39,7 +39,7 @@ export interface Artifact {
   id?: string;
   displayName: string;
   taxonomyTags: any[];
-  taxonomy: TaxonomyVersion;
+  taxonomyVersion: TaxonomyVersion;
   time: string;
   files?: string[];
 }
@@ -48,14 +48,14 @@ export interface Repository {
   id: string;
   displayName: string;
   taxonomyTags: any[];
-  taxonomy: TaxonomyVersion;
+  taxonomyVersion: TaxonomyVersion;
   children: Artifact[];
 }
 
 export interface ArtifactMetadata {
   displayName: string;
   taxonomyTags: any[];
-  taxonomy: TaxonomyVersion;
+  taxonomyVersion: TaxonomyVersion;
   time: string;
 }
 
