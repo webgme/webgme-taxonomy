@@ -169,7 +169,7 @@
             </Text>
             <Meta>
               <Checkbox bind:group={selected} value={artifact.id} />
-              <Graphic on:click={() => showTags(artifact)} class="material-icons">info</Graphic>
+              <Graphic on:click$stopPropagation={() => showTags(artifact)} class="material-icons">info</Graphic>
             </Meta>
           </Item>
         {/each}
