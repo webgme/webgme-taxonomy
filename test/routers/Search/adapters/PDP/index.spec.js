@@ -5,15 +5,14 @@ describe("PDP", function () {
   const sinon = require("sinon");
 
   describe("appendArtifact", function () {
-    // TODO: should we make these work for all of them?
-    it.only("should preserve upload file names", async function () {
-      console.log(PDP);
+    it("should preserve upload file names", async function () {
       const repoId = "someRepo";
       const metadata = null; // only used by the mocked method
       const filenames = ["a.txt", "b.csv"];
       const storage = new PDP("http://someUrl", "someToken", "someProcess");
-      storage._getObserverId = sinon.fake.returns("observer");
 
+      // Add mocks to make the request succeed
+      storage._getObserverId = sinon.fake.returns("observer");
       storage._getProcessState = sinon.fake.resolves(
         { numObservations: 1 },
       );
@@ -28,12 +27,11 @@ describe("PDP", function () {
         return obs;
       };
 
+      // append the artifact and check the result
       const result = await storage.appendArtifact(repoId, metadata, filenames);
-      console.log(result.files);
       const missingFile = filenames.find((name) =>
         !result.files.find((file) => file.name === name)
       );
-      console.log({ missingFile });
       assert(!missingFile);
     });
   });
