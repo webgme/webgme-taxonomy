@@ -20,7 +20,7 @@ describe("PDP", function () {
       storage._appendObservation = async (_processId, obs) => {
         obs.uploadDataFiles = {
           files: obs.dataFiles.map((name) => ({
-            name,
+            name: `dat/${name}`, // PDP prepends "dat/" to the filenames
             sasUrl: `http://sasUrl/${name}`,
           })),
         };
