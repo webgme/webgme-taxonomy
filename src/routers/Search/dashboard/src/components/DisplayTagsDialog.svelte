@@ -29,8 +29,6 @@
   function getVocabName(tag) {
     return Object.keys(tag).pop();
   }
-
-  // TODO: notify when it is closed
 </script>
 
 <Dialog
