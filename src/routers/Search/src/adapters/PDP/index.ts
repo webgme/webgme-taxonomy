@@ -333,7 +333,6 @@ export default class PDP implements Adapter {
 
     const files = result.uploadDataFiles.files.map((file) => {
       // name is prefixed with dat/index/version/<rest of path>
-      console.log({ file });
       const name = file.name.split("/").slice(3).join("/");
       const params = new UploadParams(file.sasUrl, "PUT", UPLOAD_HEADERS);
       return new UploadRequest(name, params);
