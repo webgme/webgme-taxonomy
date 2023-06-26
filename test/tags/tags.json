@@ -1,0 +1,32 @@
+{
+  "taxonomy": {
+    "id": "guest+p2",
+    "branch": "master",
+    "commit": "#55cbee4a4b91bf92de0ddf15222f87d29e5c0683",
+    "url": "127.0.0.1"
+  },
+  "taxonomyTags": [
+    {
+      "Subject": {
+        "Handedness": {
+          "value": {
+            "Left": {
+
+            }
+          }
+        }
+      }
+    },
+    {
+      "Subject": {
+        "Handedness1": {
+          "value": {
+            "Left": {
+              
+            }
+          }
+        }
+      }
+    }
+  ]
+}
