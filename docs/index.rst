@@ -19,6 +19,7 @@ Welcome to documentation for the Taxonomy Design Studio!
    fundamentals/concepts.rst
    fundamentals/tax-design.rst
    fundamentals/versioning.rst
+   fundamentals/advanced-topics.rst
 
 .. toctree::
    :maxdepth: 1
