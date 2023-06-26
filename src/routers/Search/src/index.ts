@@ -111,7 +111,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
       const { metadata } = req.body;
       // FIXME: what if it isn't using the branch in the URL?
       const projectVersion = req.webgmeContext.projectVersion;
-      metadata.taxonomy = projectVersion;
+      metadata.taxonomyVersion = projectVersion;
 
       // Upload to the storage backend
       const storage = await StorageAdapter.from(

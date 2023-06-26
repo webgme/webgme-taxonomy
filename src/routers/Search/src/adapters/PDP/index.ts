@@ -95,12 +95,12 @@ export default class PDP implements Adapter {
       artifacts.sort((a1, a2) => (a1.time < a2.time ? -1 : 1));
       const { displayName } = artifacts[0];
       const lastIndex = artifacts.length - 1;
-      const { taxonomyTags, taxonomy } = artifacts[lastIndex];
+      const { taxonomyTags, taxonomyVersion } = artifacts[lastIndex];
       return {
         id: parentId,
         displayName,
         taxonomyTags,
-        taxonomy,
+        taxonomyVersion,
         children: artifacts,
       };
     });
@@ -177,9 +177,12 @@ export default class PDP implements Adapter {
     return await this._fetchJson(`v2/Process/GetProcessState?processId=${pid}`);
   }
 
+  _getObserverId(): string {
+    return RouterUtils.getObserverIdFromToken(this._token);
+  }
+
   async createArtifact(metadata: ArtifactMetadata): Promise<string> {
-    const observerId = RouterUtils.getObserverIdFromToken(this._token);
-    reqLogger.log(observerId, metadata);
+    reqLogger.log(this._getObserverId(), metadata);
 
     // TODO: update this to actually create the processes
     //const newProc = await this._createProcess(type);
@@ -329,7 +332,8 @@ export default class PDP implements Adapter {
     );
 
     const files = result.uploadDataFiles.files.map((file) => {
-      const name = file.name.substring(4);
+      // name is prefixed with dat/index/version/<rest of path>
+      const name = file.name.split("/").slice(3).join("/");
       const params = new UploadParams(file.sasUrl, "PUT", UPLOAD_HEADERS);
       return new UploadRequest(name, params);
     });
@@ -380,7 +384,7 @@ export default class PDP implements Adapter {
       isFunction: false,
       processType: type,
       processId,
-      observerId: RouterUtils.getObserverIdFromToken(this._token),
+      observerId: this._getObserverId(),
       isMeasure: true,
       index: 0,
       version: 0,
@@ -411,6 +415,13 @@ export default class PDP implements Adapter {
     observation.dataFiles = files
       .map((filename: string) => uploadDir + filename);
 
+    return await this._appendObservation(processId, observation);
+  }
+
+  async _appendObservation(
+    processId: ProcessID,
+    observation: Observation,
+  ): Promise<AppendObservationResponse> {
     return await this._fetchJson(
       `v3/Process/AppendObservation?processId=${processId}&uploadExpiresInMins=180`,
       {
@@ -494,7 +505,7 @@ function parseArtifact(obs: Observation): Artifact | undefined {
       id: obs.index + "_" + obs.version,
       displayName: metadata.displayName,
       taxonomyTags: metadata.taxonomyTags,
-      taxonomy: metadata.taxonomy,
+      taxonomyVersion: metadata.taxonomyVersion,
       time: obs.startTime,
     };
   }

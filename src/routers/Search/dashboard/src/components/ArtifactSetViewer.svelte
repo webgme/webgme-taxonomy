@@ -1,5 +1,6 @@
 <script lang="ts">
   import { capitalize } from "../Utils";
+  import TagFormatter from "../Formatter";
   import Card, { Content, Actions } from "@smui/card";
   import Button, { Label } from "@smui/button";
   import type { ButtonComponentDev } from "@smui/button";
@@ -12,9 +13,10 @@
     PrimaryText,
     SecondaryText,
     Meta,
+    Graphic,
   } from "@smui/list";
   import Checkbox from "@smui/checkbox";
-  import type Storage from "../Storage";
+  import DisplayTagsDialog from "./DisplayTagsDialog.svelte";
 
   export let artifactSet;
   export let contentType = "artifact";
@@ -22,6 +24,7 @@
   let shownArtifacts = [];
   let selected = [];
   let menu: MenuComponentDev;
+  const formatter = new TagFormatter();
 
   import { createEventDispatcher } from "svelte";
   const dispatch = createEventDispatcher();
@@ -31,6 +34,15 @@
       artifactSet: artifactSet,
       artifactIds: [...selected],
     });
+  }
+
+  let displayedTags = null;
+  let displayedName = null;
+  let displayTags = false;
+  async function showTags(artifact) {
+    displayedTags = await formatter.toHumanFormat(artifact.taxonomyTags);
+    displayedName = artifact.displayName;
+    displayTags = true;
   }
 
   async function onCopyIdClicked() {
@@ -91,6 +103,12 @@
 </script>
 
 <svelte:window bind:scrollY />
+{#if displayedTags}
+  <DisplayTagsDialog
+    bind:open={displayTags}
+    displayName={displayedName}
+    bind:taxonomyTags={displayedTags}/>
+{/if}
 <div
   bind:this={panel}
   class="card-container"
@@ -151,6 +169,7 @@
             </Text>
             <Meta>
               <Checkbox bind:group={selected} value={artifact.id} />
+              <Graphic on:click$stopPropagation={() => showTags(artifact)} class="material-icons">info</Graphic>
             </Meta>
           </Item>
         {/each}

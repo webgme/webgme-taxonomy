@@ -74,9 +74,15 @@ function initialize(middlewareOpts) {
       const { root, core, contentType } = req.webgmeContext;
       const exporter = JSONSchemaExporter.from(core, root);
       const vocabularies = await Utils.getVocabulariesFor(core, contentType);
-      const config = await exporter.getVocabSchemas(vocabularies);
-      config.taxonomy = req.webgmeContext.projectVersion;
-      config.taxonomy.url = getHostUrl(req);
+      const contentName = core.getAttribute(contentType, "name").toString();
+      const title = `${contentName} Terms`;
+      const config = await exporter.getVocabSchemas(
+        vocabularies,
+        title,
+        false,
+      );
+      config.taxonomyVersion = req.webgmeContext.projectVersion;
+      config.taxonomyVersion.url = getHostUrl(req);
       return res.json(config);
     },
   );

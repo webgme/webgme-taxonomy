@@ -55,7 +55,7 @@ function factory(Utils) {
     }
   }
 
-  class ContentTypeExporter {
+  class ContentTypeConfiguration {
     constructor(nodePath, name, vocabularies, childContent) {
       this.nodePath = nodePath;
       this.name = name;
@@ -78,11 +78,16 @@ function factory(Utils) {
         Utils.isTypeNamed(core, node, "Content Type")
       );
       const childType = !!childTypeNode
-        ? await ContentTypeExporter.from(core, childTypeNode)
+        ? await ContentTypeConfiguration.from(core, childTypeNode)
         : undefined;
 
       const nodePath = core.getPath(contentTypeNode);
-      return new ContentTypeExporter(nodePath, name, vocabularies, childType);
+      return new ContentTypeConfiguration(
+        nodePath,
+        name,
+        vocabularies,
+        childType,
+      );
     }
   }
 
@@ -92,7 +97,10 @@ function factory(Utils) {
     //  - nested content type
     //  - vocabularies
     static async from(core, contentTypeNode) {
-      const content = await ContentTypeExporter.from(core, contentTypeNode);
+      const content = await ContentTypeConfiguration.from(
+        core,
+        contentTypeNode,
+      );
 
       return {
         name: content.name, // TODO: allow other names?
@@ -101,7 +109,7 @@ function factory(Utils) {
     }
   }
 
-  DashboardConfiguration.ContentTypeExporter = ContentTypeExporter;
+  DashboardConfiguration.ContentTypeConfiguration = ContentTypeConfiguration;
 
   return DashboardConfiguration;
 }

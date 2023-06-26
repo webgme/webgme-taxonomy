@@ -27,11 +27,13 @@ async function renderForm() {
   const {
     schema,
     uiSchema,
-    taxonomy,
+    taxonomyVersion,
     //formData: initData,
   } = await fetchConfig();
   const initData = {};
-  const formData = new FormRenderData(schema, uiSchema, initData, { taxonomy });
+  const formData = new FormRenderData(schema, uiSchema, initData, {
+    taxonomyVersion,
+  });
   form.render(formData);
 }
 
