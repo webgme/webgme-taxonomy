@@ -52,7 +52,7 @@ export default class MongoAdapter implements Adapter {
           id: index.toString(),
           displayName: data.displayName,
           taxonomyTags: data.taxonomyTags,
-          taxonomy: data.taxonomy,
+          taxonomyVersion: data.taxonomyVersion,
           time: data.time,
         }),
       );
@@ -61,7 +61,7 @@ export default class MongoAdapter implements Adapter {
         id: docId,
         displayName: doc.displayName,
         taxonomyTags: doc.taxonomyTags,
-        taxonomy: doc.taxonomy,
+        taxonomyVersion: doc.taxonomyVersion,
         children: artifacts,
       };
     });
@@ -72,7 +72,7 @@ export default class MongoAdapter implements Adapter {
   async createArtifact(metadata: ArtifactMetadata) {
     const artifactSet = {
       displayName: metadata.displayName,
-      taxonomy: metadata.taxonomy,
+      taxonomyVersion: metadata.taxonomyVersion,
       taxonomyTags: [],
       artifacts: [],
     };
@@ -94,7 +94,7 @@ export default class MongoAdapter implements Adapter {
     const artifact: Artifact = {
       displayName: metadata.displayName,
       taxonomyTags: metadata.taxonomyTags,
-      taxonomy: metadata.taxonomy,
+      taxonomyVersion: metadata.taxonomyVersion,
       time: (new Date()).toString(),
       files: fileIds.map((id) => id.toString()),
     };

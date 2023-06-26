@@ -218,8 +218,8 @@ class ArtifactSet {
         .join("/");
       item.hash = hash;
       item.children = item.children.map((child) => {
-        if (child.taxonomy) {
-          child.taxonomy = TaxonomyReference.from(child.taxonomy);
+        if (child.taxonomyVersion) {
+          child.taxonomyVersion = TaxonomyReference.from(child.taxonomyVersion);
         }
         return child;
       });
