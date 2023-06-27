@@ -33,6 +33,10 @@ import { COMPRESSION_LEVEL, zip } from "zip-a-folder";
 import fsp from "fs/promises";
 import fs from "fs";
 import StorageAdapter from "./adapters";
+import {
+  ChildContentTypeNotFoundError,
+  MetaNodeNotFoundError,
+} from "./adapters/common/ModelError";
 
 /* N.B. gmeAuth, safeStorage and workerManager are not ready to use until the start function is called.
  * (However inside an incoming request they are all ensured to have been initialized.)
@@ -105,7 +109,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
 
   router.post(
     RouterUtils.getContentTypeRoutes("artifacts/"),
-    addSystemTags,
+    RouterUtils.handleUserErrors(logger, addSystemTags),
     convertTaxonomyTags,
     RouterUtils.handleUserErrors(logger, async function (req, res) {
       const { metadata } = req.body;
@@ -127,7 +131,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
 
   router.post(
     RouterUtils.getContentTypeRoutes("artifacts/:parentId/append"),
-    addSystemTags,
+    RouterUtils.handleUserErrors(logger, addChildSystemTags),
     convertTaxonomyTags,
     RouterUtils.handleUserErrors(logger, async function (req, res) {
       const { parentId } = req.params;
@@ -231,42 +235,97 @@ function initialize(middlewareOpts: MiddlewareOptions) {
   logger.debug("ready");
 }
 
+/**
+ * Add the system terms using the child of the content type defined in the
+ * URL. Useful when appending data to an existing content type as the
+ * content type from the URL is the parent (ie, repo) rather than the
+ * content in the repo.
+ */
+async function addChildSystemTags(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  const gmeContext = (<WebgmeRequest> req).webgmeContext;
+  const { core, contentType } = gmeContext;
+  const childContentType = (await core.loadChildren(contentType))
+    .find((n) =>
+      core.getAttribute(core.getBaseType(n), "name") === "Content Type"
+    );
+
+  if (!childContentType) {
+    throw new ChildContentTypeNotFoundError(gmeContext, contentType);
+  }
+
+  return addContentTypeSystemTags(childContentType, req, res, next);
+}
+
 async function addSystemTags(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  const gmeContext = (<WebgmeRequest> req).webgmeContext;
+  const { contentType } = gmeContext;
+
+  return addContentTypeSystemTags(contentType, req, res, next);
+}
+
+async function addContentTypeSystemTags(
+  contentType: Core.Node,
   req: Request,
   _res: Response,
   next: NextFunction,
 ) {
-  // Add any system tags
   const { metadata } = req.body;
   const gmeContext = (<WebgmeRequest> req).webgmeContext;
-  const { core, contentType } = gmeContext;
-  const projectVersion = gmeContext.projectVersion;
-  const vocabs = (await core.loadChildren(contentType))
+
+  const { core, projectVersion } = gmeContext;
+  const children = await core.loadChildren(contentType);
+  const vocabs = children
     .find((node: Core.Node) =>
       core.getAttribute(core.getBaseType(node), "name") === "Vocabularies"
-    );
-  if (vocabs) {
-    const systemTerms = await SystemTerm.findAll(core, vocabs);
-    const desc = ""; // TODO: add description
-    const files: any[] = []; // TODO: add files
+    ) || getVocabulariesMetaNode(core, contentType);
 
-    const context = await UploadContext.from({
-      name: metadata.displayName,
-      description: desc,
-      tags: metadata.taxonomyTags,
-      files,
-      core,
-      contentType,
-      project: projectVersion,
-    });
-
-    const systemTags = (await Promise.all(systemTerms.map((t) =>
-      t.createTags(context)
-    ))).flat();
-
-    metadata.taxonomyTags.push(...systemTags);
+  if (!vocabs) {
+    throw new MetaNodeNotFoundError(gmeContext, "Vocabularies");
   }
+
+  const systemTerms = await SystemTerm.findAll(core, vocabs);
+  const desc = ""; // TODO: add description
+  const files: any[] = []; // TODO: add files
+
+  const context = await UploadContext.from({
+    name: metadata.displayName,
+    description: desc,
+    tags: metadata.taxonomyTags,
+    files,
+    core,
+    contentType,
+    project: projectVersion,
+  });
+
+  const systemTags =
+    (await Promise.all(systemTerms.map((t) => t.createTags(context)))).flat();
+
+  metadata.taxonomyTags.push(...systemTags);
   next();
+}
+
+/**
+ * Get the "Vocabularies" node from the metamodel as it contains the default vocabularies
+ * defined for every content type.
+ */
+function getVocabulariesMetaNode(
+  core: GmeClasses.Core,
+  someNode: Core.Node,
+): Core.Node | undefined {
+  const metanodes = Object.values(core.getAllMetaNodes(someNode));
+  const vocabNode = metanodes.find((node) =>
+    core.getAttribute(node, "name") === "Vocabularies"
+  );
+
+  return vocabNode;
 }
 
 async function convertTaxonomyTags(
