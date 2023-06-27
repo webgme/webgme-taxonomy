@@ -80,23 +80,26 @@ function initialize(middlewareOpts: MiddlewareOptions) {
 
   router.get(
     RouterUtils.getContentTypeRoutes("configuration.json"),
-    RouterUtils.handleUserErrors(logger, async function (req, res) {
-      const { core, contentType } = req.webgmeContext;
-      const configuration = await DashboardConfiguration.from(
-        core,
-        contentType,
-      );
-      configuration.project = req.webgmeContext.projectVersion;
-      configuration.contentTypePath = core.getPath(contentType);
-      res.json(configuration);
-    }),
+    RouterUtils.handleUserErrors(
+      logger,
+      async function getConfiguration(req, res) {
+        const { core, contentType } = req.webgmeContext;
+        const configuration = await DashboardConfiguration.from(
+          core,
+          contentType,
+        );
+        configuration.project = req.webgmeContext.projectVersion;
+        configuration.contentTypePath = core.getPath(contentType);
+        res.json(configuration);
+      },
+    ),
   );
 
   // Accessing and updating data via the storage adapter
   router.get(
     RouterUtils.getContentTypeRoutes("artifacts/"),
     // TODO: add the artifact ID...
-    RouterUtils.handleUserErrors(logger, async function (req, res) {
+    RouterUtils.handleUserErrors(logger, async function listContent(req, res) {
       const storage = await StorageAdapter.from(
         req.webgmeContext,
         req,
@@ -111,59 +114,64 @@ function initialize(middlewareOpts: MiddlewareOptions) {
     RouterUtils.getContentTypeRoutes("artifacts/"),
     RouterUtils.handleUserErrors(logger, addSystemTags),
     convertTaxonomyTags,
-    RouterUtils.handleUserErrors(logger, async function (req, res) {
-      const { metadata } = req.body;
-      // FIXME: what if it isn't using the branch in the URL?
-      const projectVersion = req.webgmeContext.projectVersion;
-      metadata.taxonomyVersion = projectVersion;
+    RouterUtils.handleUserErrors(
+      logger,
+      async function createArtifact(req, res) {
+        const { metadata } = req.body;
+        // FIXME: what if it isn't using the branch in the URL?
+        const projectVersion = req.webgmeContext.projectVersion;
+        metadata.taxonomyVersion = projectVersion;
 
-      // Upload to the storage backend
-      const storage = await StorageAdapter.from(
-        req.webgmeContext,
-        req,
-        mainConfig,
-      );
+        // Upload to the storage backend
+        const storage = await StorageAdapter.from(
+          req.webgmeContext,
+          req,
+          mainConfig,
+        );
 
-      const status = await storage.createArtifact(metadata);
-      res.json("status: " + status);
-    }),
+        const status = await storage.createArtifact(metadata);
+        res.json("status: " + status);
+      },
+    ),
   );
 
   router.post(
     RouterUtils.getContentTypeRoutes("artifacts/:parentId/append"),
     RouterUtils.handleUserErrors(logger, addChildSystemTags),
     convertTaxonomyTags,
-    RouterUtils.handleUserErrors(logger, async function (req, res) {
-      const { parentId } = req.params;
-      const storage = await StorageAdapter.from(
-        req.webgmeContext,
-        req,
-        mainConfig,
-      );
-      // TODO: add the system tags
-      const appendResult = await storage.appendArtifact(
-        parentId,
-        req.body.metadata,
-        req.body.filenames,
-      );
-      appendResult.files.forEach((file) => {
-        const isRelative = file.params.url.startsWith("./");
-        if (isRelative) {
-          const baseUrl = req.originalUrl
-            .split(`artifacts/${parentId}/append`)
-            .shift();
-          file.params.url = baseUrl + file.params.url.substring(2);
-        }
-      });
-      res.json(appendResult);
-    }),
+    RouterUtils.handleUserErrors(
+      logger,
+      async function appendContent(req, res) {
+        const { parentId } = req.params;
+        const storage = await StorageAdapter.from(
+          req.webgmeContext,
+          req,
+          mainConfig,
+        );
+        const appendResult = await storage.appendArtifact(
+          parentId,
+          req.body.metadata,
+          req.body.filenames,
+        );
+        appendResult.files.forEach((file) => {
+          const isRelative = file.params.url.startsWith("./");
+          if (isRelative) {
+            const baseUrl = req.originalUrl
+              .split(`artifacts/${parentId}/append`)
+              .shift();
+            file.params.url = baseUrl + file.params.url.substring(2);
+          }
+        });
+        res.json(appendResult);
+      },
+    ),
   );
 
   router.post(
     RouterUtils.getContentTypeRoutes(
       "artifacts/:parentId/:index/:fileId/upload",
     ),
-    RouterUtils.handleUserErrors(logger, async function (req, res) {
+    RouterUtils.handleUserErrors(logger, async function uploadFile(req, res) {
       const { parentId, index, fileId } = req.params;
       const storage = await StorageAdapter.from(
         req.webgmeContext,
@@ -181,55 +189,58 @@ function initialize(middlewareOpts: MiddlewareOptions) {
 
   router.get(
     RouterUtils.getContentTypeRoutes("artifacts/:parentId/download"),
-    RouterUtils.handleUserErrors(logger, async function (req, res) {
-      const { parentId } = req.params;
-      // TODO: get the IDs for the specific observations to get
-      let ids;
-      if (isString(req.query.ids)) {
-        ids = JSON.parse(req.query.ids);
-      } else {
-        res.status(400).send("List of artifact IDs required");
-        return;
-      }
+    RouterUtils.handleUserErrors(
+      logger,
+      async function downloadContent(req, res) {
+        const { parentId } = req.params;
+        // TODO: get the IDs for the specific observations to get
+        let ids;
+        if (isString(req.query.ids)) {
+          ids = JSON.parse(req.query.ids);
+        } else {
+          res.status(400).send("List of artifact IDs required");
+          return;
+        }
 
-      const { root, core } = req.webgmeContext;
-      const node = await Utils.findTaxonomyNode(core, root);
-      if (node == null) {
-        res.status(400).send("No taxonomy node found");
-        return;
-      }
-      const formatter = await TagFormatter.from(core, node);
-      const storage = await StorageAdapter.from(
-        req.webgmeContext,
-        req,
-        mainConfig,
-      );
-
-      const tmpDir = await fsp.mkdtemp(
-        path.join(os.tmpdir(), "webgme-taxonomy-"),
-      );
-      const downloadDir = path.join(tmpDir, "download");
-      const zipPath = path.join(tmpDir, `${parentId}.zip`);
-      await storage.download(parentId, ids, formatter, downloadDir);
-      await zip(downloadDir, zipPath, {
-        compression: COMPRESSION_LEVEL.medium,
-      });
-      await fsp.rm(downloadDir, { recursive: true });
-
-      try {
-        await fsp.access(zipPath, fs.constants.R_OK);
-        res.download(
-          zipPath,
-          path.basename(zipPath),
-          () => fsp.rm(tmpDir, { recursive: true }),
+        const { root, core } = req.webgmeContext;
+        const node = await Utils.findTaxonomyNode(core, root);
+        if (node == null) {
+          res.status(400).send("No taxonomy node found");
+          return;
+        }
+        const formatter = await TagFormatter.from(core, node);
+        const storage = await StorageAdapter.from(
+          req.webgmeContext,
+          req,
+          mainConfig,
         );
-        return false;
-      } catch (err) {
-        // no files associated with the artifact
-        logger.error(`${err}`);
-        res.sendStatus(204);
-      }
-    }),
+
+        const tmpDir = await fsp.mkdtemp(
+          path.join(os.tmpdir(), "webgme-taxonomy-"),
+        );
+        const downloadDir = path.join(tmpDir, "download");
+        const zipPath = path.join(tmpDir, `${parentId}.zip`);
+        await storage.download(parentId, ids, formatter, downloadDir);
+        await zip(downloadDir, zipPath, {
+          compression: COMPRESSION_LEVEL.medium,
+        });
+        await fsp.rm(downloadDir, { recursive: true });
+
+        try {
+          await fsp.access(zipPath, fs.constants.R_OK);
+          res.download(
+            zipPath,
+            path.basename(zipPath),
+            () => fsp.rm(tmpDir, { recursive: true }),
+          );
+          return false;
+        } catch (err) {
+          // no files associated with the artifact
+          logger.error(`${err}`);
+          res.sendStatus(204);
+        }
+      },
+    ),
   );
 
   logger.debug("ready");
@@ -244,7 +255,6 @@ function initialize(middlewareOpts: MiddlewareOptions) {
 async function addChildSystemTags(
   req: Request,
   res: Response,
-  next: NextFunction,
 ) {
   const gmeContext = (<WebgmeRequest> req).webgmeContext;
   const { core, contentType } = gmeContext;
@@ -257,25 +267,23 @@ async function addChildSystemTags(
     throw new ChildContentTypeNotFoundError(gmeContext, contentType);
   }
 
-  return addContentTypeSystemTags(childContentType, req, res, next);
+  return addContentTypeSystemTags(childContentType, req, res);
 }
 
 async function addSystemTags(
   req: Request,
   res: Response,
-  next: NextFunction,
 ) {
   const gmeContext = (<WebgmeRequest> req).webgmeContext;
   const { contentType } = gmeContext;
 
-  return addContentTypeSystemTags(contentType, req, res, next);
+  return addContentTypeSystemTags(contentType, req, res);
 }
 
 async function addContentTypeSystemTags(
   contentType: Core.Node,
   req: Request,
   _res: Response,
-  next: NextFunction,
 ) {
   const { metadata } = req.body;
   const gmeContext = (<WebgmeRequest> req).webgmeContext;
@@ -309,7 +317,6 @@ async function addContentTypeSystemTags(
     (await Promise.all(systemTerms.map((t) => t.createTags(context)))).flat();
 
   metadata.taxonomyTags.push(...systemTags);
-  next();
 }
 
 /**
