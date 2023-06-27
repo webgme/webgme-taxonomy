@@ -247,7 +247,7 @@
       allItems = await storage.listArtifacts();
       allItems.forEach((set) => {
         const validArtifacts = set.children.filter(
-          (item) => item.taxonomy && currentTaxonomy.supports(item.taxonomy)
+          (item) => item.taxonomyVersion && currentTaxonomy.supports(item.taxonomyVersion)
         );
         set.children = validArtifacts;
       });
