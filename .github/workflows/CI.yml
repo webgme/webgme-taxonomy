@@ -33,10 +33,20 @@ jobs:
       - name: "Unit Tests"
         run: npm test
 
+      # Setup integration tests
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps
 
-      - name: "Integration Tests"
+      - name: Start server
+        run: npm start &
+      - name: Wait for server to accept connections
+        id: waitForCloud
+        uses: ifaxity/wait-on-action@v1
+        with:
+          resource: http-get://localhost:8080
+          timeout: 30000 # 30 seconds
+
+      - name: Integration Tests
         run: npm run setup-e2e && npm run test-e2e
 
       - uses: actions/upload-artifact@v3
@@ -45,3 +55,7 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 30
+
+      - name: Stop the server
+        run: kill %1
+
