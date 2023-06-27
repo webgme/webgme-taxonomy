@@ -10,17 +10,17 @@ on:
 
 jobs:
   test:
-    name: "Test (node 16)"
+    timeout-minutes: 60
+    name: "Test"
     runs-on: "ubuntu-latest"
 
     steps:
       - name: "Checkout Branch"
         uses: actions/checkout@v3
 
-      - name: "Use Node.js 16"
-        uses: actions/setup-node@v3
+      - uses: actions/setup-node@v3
         with:
-          node-version: "16.x"
+          node-version: 18
 
       - name: "Start MongoDB"
         uses: supercharge/mongodb-github-action@1.8.0
@@ -28,7 +28,20 @@ jobs:
           mongodb-version: "5.0"
 
       - name: "Install Dependencies"
-        run: npm install -g npm && npm install --legacy-peer-deps && npm run build
+        run: npm ci --legacy-peer-deps
 
-      - name: "Run Tests"
+      - name: "Unit Tests"
         run: npm test
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
+
+      - name: "Integration Tests"
+        run: npm run setup-e2e && npm run test-e2e
+
+      - uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 30
