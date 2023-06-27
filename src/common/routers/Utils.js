@@ -202,7 +202,8 @@ function handleUserErrors(logger, fn) {
     try {
       const cont = (await fn(req, res, next)) ?? true;
       if (cont && !res.headersSent) {
-        next();
+        // TODO: be more intelligent if the fn calls next
+        await next();
       }
     } catch (e) {
       if (e instanceof UserError) {
@@ -235,13 +236,6 @@ class ProjectNotFoundError extends UserError {
 class ContentTypeNotFoundError extends UserError {
   constructor(path) {
     super(`Content type not found: ${path}`, 404);
-  }
-}
-
-// FIXME: remove this
-class VocabScopeNotFoundError extends UserError {
-  constructor(path, scope) {
-    super(`No ${scope} vocabularies defined for ${path}`, 404);
   }
 }
 
