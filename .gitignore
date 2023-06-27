@@ -134,3 +134,6 @@ config/config.azure.js
 
 #Search dashboard ignore components
 src/routers/Search/dashboard/src/Bearer.ts
+/test-results/
+/playwright-report/
+/playwright/.cache/
