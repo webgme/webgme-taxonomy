@@ -33,6 +33,7 @@ import { COMPRESSION_LEVEL, zip } from "zip-a-folder";
 import fsp from "fs/promises";
 import fs from "fs";
 import StorageAdapter from "./adapters";
+import { MetaNodeNotFoundError } from "./adapters/common/ModelError";
 
 /* N.B. gmeAuth, safeStorage and workerManager are not ready to use until the start function is called.
  * (However inside an incoming request they are all ensured to have been initialized.)
@@ -105,7 +106,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
 
   router.post(
     RouterUtils.getContentTypeRoutes("artifacts/"),
-    addSystemTags,
+    RouterUtils.handleUserErrors(logger, addSystemTags),
     convertTaxonomyTags,
     RouterUtils.handleUserErrors(logger, async function (req, res) {
       const { metadata } = req.body;
@@ -127,7 +128,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
 
   router.post(
     RouterUtils.getContentTypeRoutes("artifacts/:parentId/append"),
-    addSystemTags,
+    RouterUtils.handleUserErrors(logger, addSystemTags),
     convertTaxonomyTags,
     RouterUtils.handleUserErrors(logger, async function (req, res) {
       const { parentId } = req.params;
@@ -241,32 +242,51 @@ async function addSystemTags(
   const gmeContext = (<WebgmeRequest> req).webgmeContext;
   const { core, contentType } = gmeContext;
   const projectVersion = gmeContext.projectVersion;
-  const vocabs = (await core.loadChildren(contentType))
+  const children = await core.loadChildren(contentType);
+  const vocabs = children
     .find((node: Core.Node) =>
       core.getAttribute(core.getBaseType(node), "name") === "Vocabularies"
-    );
-  if (vocabs) {
-    const systemTerms = await SystemTerm.findAll(core, vocabs);
-    const desc = ""; // TODO: add description
-    const files: any[] = []; // TODO: add files
+    ) || getVocabulariesMetaNode(core, contentType);
 
-    const context = await UploadContext.from({
-      name: metadata.displayName,
-      description: desc,
-      tags: metadata.taxonomyTags,
-      files,
-      core,
-      contentType,
-      project: projectVersion,
-    });
-
-    const systemTags = (await Promise.all(systemTerms.map((t) =>
-      t.createTags(context)
-    ))).flat();
-
-    metadata.taxonomyTags.push(...systemTags);
+  if (!vocabs) {
+    throw new MetaNodeNotFoundError(gmeContext, "Vocabularies");
   }
+
+  const systemTerms = await SystemTerm.findAll(core, vocabs);
+  const desc = ""; // TODO: add description
+  const files: any[] = []; // TODO: add files
+
+  const context = await UploadContext.from({
+    name: metadata.displayName,
+    description: desc,
+    tags: metadata.taxonomyTags,
+    files,
+    core,
+    contentType,
+    project: projectVersion,
+  });
+
+  const systemTags =
+    (await Promise.all(systemTerms.map((t) => t.createTags(context)))).flat();
+
+  metadata.taxonomyTags.push(...systemTags);
   next();
+}
+
+/**
+ * Get the "Vocabularies" node from the metamodel as it contains the default vocabularies
+ * defined for every content type.
+ */
+function getVocabulariesMetaNode(
+  core: GmeClasses.Core,
+  someNode: Core.Node,
+): Core.Node | undefined {
+  const metanodes = Object.values(core.getAllMetaNodes(someNode));
+  const vocabNode = metanodes.find((node) =>
+    core.getAttribute(node, "name") === "Vocabularies"
+  );
+
+  return vocabNode;
 }
 
 async function convertTaxonomyTags(

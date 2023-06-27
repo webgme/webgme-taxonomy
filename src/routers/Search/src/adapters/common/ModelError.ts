@@ -54,3 +54,12 @@ export class StorageNotFoundError extends ModelError {
     super(context, msg);
   }
 }
+
+export class MetaNodeNotFoundError extends ModelError {
+  constructor(gmeContext: WebgmeContext, name: string) {
+    const msg =
+      `Could not find "${name}" in the metamodel. Is this a taxonomy project?`;
+    const context = ModelError.getContext(gmeContext, gmeContext.root);
+    super(context, msg);
+  }
+}
