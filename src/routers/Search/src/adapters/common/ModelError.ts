@@ -55,6 +55,16 @@ export class StorageNotFoundError extends ModelError {
   }
 }
 
+export class ChildContentTypeNotFoundError extends ModelError {
+  constructor(gmeContext: WebgmeContext, contentTypeNode: Core.Node) {
+    const { core } = gmeContext;
+    const name = core.getAttribute(contentTypeNode, "name");
+    const msg = `No content defined within ${name}`;
+    const context = ModelError.getContext(gmeContext, contentTypeNode);
+    super(context, msg);
+  }
+}
+
 export class MetaNodeNotFoundError extends ModelError {
   constructor(gmeContext: WebgmeContext, name: string) {
     const msg =

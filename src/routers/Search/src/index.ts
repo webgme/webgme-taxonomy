@@ -33,7 +33,10 @@ import { COMPRESSION_LEVEL, zip } from "zip-a-folder";
 import fsp from "fs/promises";
 import fs from "fs";
 import StorageAdapter from "./adapters";
-import { MetaNodeNotFoundError } from "./adapters/common/ModelError";
+import {
+  ChildContentTypeNotFoundError,
+  MetaNodeNotFoundError,
+} from "./adapters/common/ModelError";
 
 /* N.B. gmeAuth, safeStorage and workerManager are not ready to use until the start function is called.
  * (However inside an incoming request they are all ensured to have been initialized.)
@@ -128,7 +131,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
 
   router.post(
     RouterUtils.getContentTypeRoutes("artifacts/:parentId/append"),
-    RouterUtils.handleUserErrors(logger, addSystemTags),
+    RouterUtils.handleUserErrors(logger, addChildSystemTags),
     convertTaxonomyTags,
     RouterUtils.handleUserErrors(logger, async function (req, res) {
       const { parentId } = req.params;
@@ -232,16 +235,52 @@ function initialize(middlewareOpts: MiddlewareOptions) {
   logger.debug("ready");
 }
 
+/**
+ * Add the system terms using the child of the content type defined in the
+ * URL. Useful when appending data to an existing content type as the
+ * content type from the URL is the parent (ie, repo) rather than the
+ * content in the repo.
+ */
+async function addChildSystemTags(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  const gmeContext = (<WebgmeRequest> req).webgmeContext;
+  const { core, contentType } = gmeContext;
+  const childContentType = (await core.loadChildren(contentType))
+    .find((n) =>
+      core.getAttribute(core.getBaseType(n), "name") === "Content Type"
+    );
+
+  if (!childContentType) {
+    throw new ChildContentTypeNotFoundError(gmeContext, contentType);
+  }
+
+  return addContentTypeSystemTags(childContentType, req, res, next);
+}
+
 async function addSystemTags(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  const gmeContext = (<WebgmeRequest> req).webgmeContext;
+  const { contentType } = gmeContext;
+
+  return addContentTypeSystemTags(contentType, req, res, next);
+}
+
+async function addContentTypeSystemTags(
+  contentType: Core.Node,
   req: Request,
   _res: Response,
   next: NextFunction,
 ) {
-  // Add any system tags
   const { metadata } = req.body;
   const gmeContext = (<WebgmeRequest> req).webgmeContext;
-  const { core, contentType } = gmeContext;
-  const projectVersion = gmeContext.projectVersion;
+
+  const { core, projectVersion } = gmeContext;
   const children = await core.loadChildren(contentType);
   const vocabs = children
     .find((node: Core.Node) =>
