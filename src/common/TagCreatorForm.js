@@ -121,7 +121,7 @@ function factory() {
 
       if (schema.type === "array") {
         return !Array.isArray(metadata) || metadata.some(
-          (md) => this._hasConflictingProp(schema.items, definitions, md)
+          (md) => this._hasConflictingProp(schema.items, definitions, md),
         );
       }
 
