@@ -119,11 +119,17 @@ function factory() {
         return schema?.type !== mdType; // has a conflict is types mismatch
       }
 
+      if (schema.type === "array") {
+        return !Array.isArray(metadata) || metadata.some(
+          (md) => this._hasConflictingProp(schema.items, definitions, md)
+        );
+      }
+
       const propDict = this._getObjectProperties(
         schema,
         definitions,
         metadata,
-      );
+      ) ?? [];
       const validProps = Object.keys(propDict);
       const properties = Object.keys(metadata);
       const invalidProp = properties.find((prop) => {
