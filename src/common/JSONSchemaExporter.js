@@ -377,7 +377,12 @@ function factory() {
       const childSchemas = await Promise.all(
         children.map((c) => this.getFieldSchema(c)),
       );
+      let type = unique(childSchemas.map((s) => s.type));
+      if (type.length < 2) {
+        type = type[0];
+      }
       return {
+        type,
         anyOf: childSchemas,
         default: this._getDefault(childSchemas[0]),
       };
@@ -414,6 +419,10 @@ function factory() {
   function zip(...lists) {
     const maxIndex = Math.min(...lists.map((l) => l.length));
     return range(maxIndex).map((i) => lists.map((l) => l[i]));
+  }
+
+  function unique(arr) {
+    return [...new Set(arr)];
   }
 
   class Property {
