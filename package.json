@@ -6,6 +6,8 @@
     "test-tax": "npx mocha --recursive test",
     "test": "npm run test-tax && npm run test-dash",
     "test-dash": "cd src/routers/Search/dashboard && npm t",
+    "setup-e2e": "npm run import -- src/seeds/test/test.webgmex -p e2e_tests",
+    "test-e2e": "playwright test",
     "apply": "node ./node_modules/webgme-engine/src/bin/apply.js",
     "diff": "node ./node_modules/webgme-engine/src/bin/diff.js",
     "export": "node ./node_modules/webgme-engine/src/bin/export.js",
@@ -21,6 +23,7 @@
   },
   "version": "1.2.2",
   "devDependencies": {
+    "@playwright/test": "^1.35.1",
     "@smui/icon-button": "^6.1.0",
     "@smui/linear-progress": "^6.1.0",
     "@types/express": "^4.17.17",
