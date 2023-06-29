@@ -7,26 +7,33 @@
   },
   "taxonomyTags": [
     {
-      "Subject": {
-        "Handedness": {
-          "value": {
-            "Left": {
-
-            }
-          }
+      "CompoundTest": {
+        "iron_scan_MRI": {
+          "iron_scan_MRI_output_image": true,
+          "Processing Pipeline": { "None": {} },
+          "iron_scan_MRI_output_tabular": true
         }
       }
     },
     {
-      "Subject": {
-        "Handedness1": {
-          "value": {
-            "Left": {
-              
-            }
-          }
+      "SetTest": {
+        "Risk factors?": {
+          "Stressful life events": "y",
+          "Parental bonding": "y",
+          "Personality": "y",
+          "Social life": "y",
+          "Childhood sexual abuse": "y",
+          "Childhood physical abuse": "y",
+          "Childhood trauma": "y",
+          "Positive Family History": "y"
         }
       }
-    }
+    },
+    { "EnumTest": { "EnumData": { "value": { "C": {} } } } },
+    { "TextTest": { "TextData": { "value": "hewrwerew" } } },
+    { "BoolTest": { "BoolData": { "value": true } } },
+    { "FloatTest": { "FloatData": { "value": 222.3 } } },
+    { "IntTest": { "IntData": { "value": 5 } } }
+    
   ]
 }
