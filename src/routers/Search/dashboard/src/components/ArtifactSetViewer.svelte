@@ -47,8 +47,13 @@
 
   async function onCopyIdClicked() {
     const id = selected.length === 1 ? artifactSet.id + '_' + selected[0] : artifactSet.id;
-    await navigator.clipboard.writeText(id);
-    parent.postMessage({type:'selectArtifact', value:id}, window.location.origin);
+    parent.postMessage({type:'selectArtifact', value:id}, "*");
+    try {
+      await navigator.clipboard.writeText(id);
+    } catch (e) {
+      //TODO - we should probably limit the clipboard to regular use
+    }
+
   }
 
   async function onUploadClicked() {
@@ -182,8 +187,8 @@
       <Button on:click={onDownloadClicked} disabled={selected.length == 0}>
         <Label>Download</Label>
       </Button>
-      <Button on:click={onCopyIdClicked} disabled={selected.length > 1}>
-        <Label>Copy Id</Label>
+      <Button on:click={onCopyIdClicked} disabled={window.self !== window.top ? selected.length != 1 : selected.length > 1}>
+        <Label>{window.self !== window.top ? "Select" : "Copy Id"}</Label>
       </Button>
     </Actions>
   </Card>
