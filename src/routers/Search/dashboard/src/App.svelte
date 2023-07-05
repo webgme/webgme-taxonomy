@@ -476,76 +476,79 @@
   </Actions>
 </Dialog>
 <!-- Main app -->
-<AppHeader
-  {title}
-  on:createArtifact={() => (creatingArtifact = true)}
-  on:openEditor={onOpenInEditor} />
-{#if isLoading}
-  <LinearProgress indeterminate />
-{/if}
-<SvelteToast options={{ classes: ["log"] }} />
-<!-- TODO: make the drawer collapsible? -->
-<div class="drawer-container">
-  <Drawer style="width: 360px">
-    <Content>
-      <Textfield label="Search..." bind:value={searchQuery} />
-      <span class="filter-header">Advanced Filters</span>
-      <TaxonomyFilter
-        trees={vocabularies}
-        tags={itemTags}
-        on:change={(event) =>
-          (filterTags = event.detail.filterTags.map(fromDict))}
-      />
-    </Content>
-  </Drawer>
-  <AppContent>
-    <main style="display: inline-block; vertical-align: top">
-      <!-- Artifact list -->
-      {#if items.length}
-        <List twoLine avatarList>
-          {#each items as item (item.hash)}
-            <Item
-              selected={item === selectedArtifactSet}
-              on:SMUI:action={() => onItemClicked(item)}
-            >
-              <Text>
-                <PrimaryText>{item.displayName}</PrimaryText>
-                <SecondaryText />
-              </Text>
-              {#each item.taxonomyTags as tag}
-                <!--
-                                                          <Chip chip={tag.id}>
-                  {#if tag.type === 'EnumField'}
-              <Text>{tag.name}</Text>
-                                          {:else if tag.value}
-              <Text>{tag.name}: {tag.value}</Text>
-                  {:else}
-              <Text>{tag.name}</Text>
-                  {/if}
-                                                          </Chip>
-                -->
-              {/each}
-            </Item>
-          {/each}
-        </List>
-      {:else if !isLoading}
-        <Paper variant="unelevated" class="empty">
-          <PaperContent>
-            <p>No results found</p>
-          </PaperContent>
-        </Paper>
+<main id="app">
+  <AppHeader
+    {title}
+    on:createArtifact={() => (creatingArtifact = true)}
+    on:openEditor={onOpenInEditor}
+  />
+  {#if isLoading}
+    <LinearProgress indeterminate />
+  {/if}
+  <SvelteToast options={{ classes: ["log"] }} />
+  <!-- TODO: make the drawer collapsible? -->
+  <div class="drawer-container">
+    <Drawer style="width: 360px">
+      <Content>
+        <Textfield label="Search..." bind:value={searchQuery} />
+        <span class="filter-header">Advanced Filters</span>
+        <TaxonomyFilter
+          trees={vocabularies}
+          tags={itemTags}
+          on:change={(event) =>
+            (filterTags = event.detail.filterTags.map(fromDict))}
+        />
+      </Content>
+    </Drawer>
+    <AppContent>
+      <main style="display: inline-block; vertical-align: top">
+        <!-- Artifact list -->
+        {#if items.length}
+          <List twoLine avatarList>
+            {#each items as item (item.hash)}
+              <Item
+                selected={item === selectedArtifactSet}
+                on:SMUI:action={() => onItemClicked(item)}
+              >
+                <Text>
+                  <PrimaryText>{item.displayName}</PrimaryText>
+                  <SecondaryText />
+                </Text>
+                {#each item.taxonomyTags as tag}
+                  <!--
+                                                            <Chip chip={tag.id}>
+                    {#if tag.type === 'EnumField'}
+                <Text>{tag.name}</Text>
+                                            {:else if tag.value}
+                <Text>{tag.name}: {tag.value}</Text>
+                    {:else}
+                <Text>{tag.name}</Text>
+                    {/if}
+                                                            </Chip>
+                  -->
+                {/each}
+              </Item>
+            {/each}
+          </List>
+        {:else if !isLoading}
+          <Paper variant="unelevated" class="empty">
+            <PaperContent>
+              <p>No results found</p>
+            </PaperContent>
+          </Paper>
+        {/if}
+      </main>
+      {#if selectedArtifactSet}
+        <ArtifactSetViewer
+          bind:artifactSet={selectedArtifactSet}
+          bind:contentType
+          on:download={(event) => onDownload(event.detail)}
+          on:upload={(event) => (appendItem = event.detail.artifactSet)}
+        />
       {/if}
-    </main>
-    {#if selectedArtifactSet}
-      <ArtifactSetViewer
-        bind:artifactSet={selectedArtifactSet}
-        bind:contentType
-        on:download={(event) => onDownload(event.detail)}
-        on:upload={(event) => (appendItem = event.detail.artifactSet)}
-      />
-    {/if}
-  </AppContent>
-</div>
+    </AppContent>
+  </div>
+</main>
 
 <!-- Material Icons -->
 <link
@@ -571,6 +574,12 @@
     }
   }
 
+  main#app {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+
   .filter-header {
     display: block;
     padding-top: 10px;
@@ -579,8 +588,10 @@
   /* FIXME: this is an annoying hack to get the placement/size right*/
   .drawer-container {
     position: relative;
+    padding: 0 8px;
+    flex: 1;
+    /* min-height: 0; */
     display: flex;
-    height: 100%;
   }
 
   * :global(.app-content),
