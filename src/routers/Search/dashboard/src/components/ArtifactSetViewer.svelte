@@ -142,7 +142,7 @@
         </Menu>
       </h4>
       <!-- add show more button, select all -->
-      <List checkList>
+      <List checkList twoLine>
         <!-- TODO: check if they have permissions to append to it -->
         {#each shownArtifacts as artifact (artifact.id)}
           <Item>
