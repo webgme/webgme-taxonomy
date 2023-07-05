@@ -94,31 +94,15 @@
     } as const;
     return date.toLocaleDateString("en-us", formatOpts);
   }
-
-  // Ensure the window always stays at the top of the screen
-  let scrollY;
-  let panel;
-  let panelOffset = 0;
-  $: {
-    if (panel) {
-      const parentRect = panel.offsetParent.getBoundingClientRect();
-      panelOffset = parentRect.top + panel.offsetTop;
-    }
-  }
 </script>
 
-<svelte:window bind:scrollY />
 {#if displayedTags}
   <DisplayTagsDialog
     bind:open={displayTags}
     displayName={displayedName}
     bind:taxonomyTags={displayedTags}/>
 {/if}
-<div
-  bind:this={panel}
-  class="card-container"
-  class:sticky={scrollY > panelOffset}
->
+<div class="card-container">
   <!-- TODO: add a header for the observation -->
   <!-- TODO: upload times -->
   <!-- Artifact list -->
@@ -137,8 +121,8 @@
           class="material-icons"
           style="vertical-align: middle; margin: 0; padding: 0;"
           on:click={() => menu.setOpen(true)}
-          title="Options">more_vert</IconButton
-        >
+          title="Options">more_vert
+        </IconButton>
         <Menu bind:this={menu} anchorCorner="BOTTOM_RIGHT">
           <List>
             <Item
