@@ -601,11 +601,11 @@
     height: 100%;
   }
 
-  * :global(.app-content) {
-    flex: auto;
+  * :global(.app-content),
+  * :global(.mdc-drawer-app-content) {
+    flex: 1;
     overflow: auto;
-    position: relative;
-    flex-grow: 1;
+    display: flex;
   }
 
   :global(.log.info) {

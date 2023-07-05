@@ -180,12 +180,24 @@
 
 <style>
   .card-container {
-    display: inline-block;
+    display: inline-flex;
     vertical-align: top;
   }
 
-  .sticky {
-    position: fixed;
-    top: 0;
+  .card-container > :global(.mdc-card) {
+    flex: 1;
+  }
+
+  .card-container > :global(.mdc-card .smui-card__content) {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    flex: 0 1 auto;
+    min-height: 0;
+  }
+
+  .card-container > :global(.mdc-card .smui-card__content .mdc-deprecated-list) {
+    flex: 0 1 auto;
+    overflow-y: scroll;
   }
 </style>
