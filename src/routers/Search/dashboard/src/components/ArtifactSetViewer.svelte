@@ -3,9 +3,7 @@
   import TagFormatter from "../Formatter";
   import Card, { Content, Actions } from "@smui/card";
   import Button, { Label } from "@smui/button";
-  import type { ButtonComponentDev } from "@smui/button";
   import Menu from "@smui/menu";
-  import type { MenuComponentDev } from "@smui/menu";
   import IconButton from "@smui/icon-button";
   import List, {
     Item,
@@ -23,7 +21,7 @@
   let numArtifacts = 10;
   let shownArtifacts = [];
   let selected = [];
-  let menu: MenuComponentDev;
+  let menu: Menu;
   const formatter = new TagFormatter();
 
   import { createEventDispatcher } from "svelte";
