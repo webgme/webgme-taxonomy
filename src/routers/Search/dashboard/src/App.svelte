@@ -1,7 +1,6 @@
 <script lang="ts">
   import { setContext } from "svelte";
   import { FilterTag, LeanTag, fromDict } from "./tags";
-  import TopAppBar, { Row, Section, Title } from "@smui/top-app-bar";
   import { filterMap } from "./Utils";
   import {
     getLatestArtifact,
@@ -10,7 +9,6 @@
     readFile,
   } from "./Utils";
   import Textfield from "@smui/textfield";
-  import IconButton from "@smui/icon-button";
   import { SvelteToast, toast } from "@zerodevx/svelte-toast";
   /*import Chip from "@smui/chips";*/
   import List, {
@@ -33,6 +31,7 @@
   import Button, { Label } from "@smui/button";
   import Paper, { Content as PaperContent } from "@smui/paper";
   import {
+    AppHeader,
     AppendArtifactDialog,
     ArtifactSetViewer,
     TaxonomyFilter,
@@ -477,27 +476,10 @@
   </Actions>
 </Dialog>
 <!-- Main app -->
-<TopAppBar variant="static">
-  <Row>
-    <Section>
-      <Title>{title}</Title>
-    </Section>
-    <Section align="end" toolbar>
-      <IconButton
-        class="material-icons"
-        aria-label="Upload dataset"
-        ripple={false}
-        on:click={() => (creatingArtifact = true)}>file_upload</IconButton
-      >
-      <IconButton
-        class="material-icons"
-        aria-label="Edit taxonomy"
-        ripple={false}
-        on:click={onOpenInEditor}>open_in_new</IconButton
-      >
-    </Section>
-  </Row>
-</TopAppBar>
+<AppHeader
+  {title}
+  on:createArtifact={() => (creatingArtifact = true)}
+  on:openEditor={onOpenInEditor} />
 {#if isLoading}
   <LinearProgress indeterminate />
 {/if}
