@@ -590,7 +590,7 @@
     position: relative;
     padding: 0 8px;
     flex: 1;
-    /* min-height: 0; */
+    min-height: 0;
     display: flex;
   }
 
@@ -599,6 +599,11 @@
     flex: 1;
     overflow: auto;
     display: flex;
+  }
+
+  :global(.mdc-drawer-app-content) > main {
+    min-height: 0;
+    overflow-y: scroll;
   }
 
   :global(.log.info) {
