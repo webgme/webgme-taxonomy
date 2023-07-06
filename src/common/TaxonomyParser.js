@@ -26,7 +26,8 @@ function factory() {
     }
 
     /// Convert to webgme-json-importer format
-    toWJI(nextCell) {
+    toWJI(parentType, hasChildren) {
+      const metaType = this.getMetaType(parentType, hasChildren);
       return {
         id: `@name:${this.name}`,
         attributes: {
@@ -34,7 +35,7 @@ function factory() {
           description: this.description,
         },
         pointers: {
-          base: `@meta:${this.getMetaType(nextCell)}`,
+          base: `@meta:${metaType}`,
         },
         children: [],
       };
@@ -56,11 +57,16 @@ function factory() {
       }
     }
 
-    getMetaType(nextCell) {
+    getMetaType(parentType, hasChildren) {
+      // Force options to be compound fields
+      if (OptionFieldTypes.includes(parentType)) {
+        return "CompoundField";
+      }
+
+      // Use the explicit type
       const explicitType = this.getExplicitType();
       if (explicitType) {
         if (explicitType === UNKNOWN_FIELD_TYPE) {
-          const hasChildren = nextCell && nextCell.depth > this.depth;
           if (hasChildren) {
             return "EnumField";
           } else {
@@ -70,12 +76,9 @@ function factory() {
         return explicitType;
       }
 
-      const hasChild = nextCell && nextCell.depth > this.depth;
-      if (hasChild) {
-        const childIsField = nextCell.getExplicitType()?.endsWith("Field");
-        if (!childIsField) {
-          return CATEGORY_TYPE;
-        }
+      // Guess the type using the context
+      if (!parentType) {
+        return "Vocabulary";
       }
 
       return DEFAULT_TYPE;
@@ -135,101 +138,59 @@ function factory() {
     );
     cells.forEach((cell) => (cell.depth -= baseDepth));
 
-    // Create the taxonomy nodes
-    const parentStack = [];
-    const nodes = [];
-    const tags = [];
-    let lastDepth = baseDepth;
-    for (let i = 0; i < cells.length; i++) {
-      let cell = cells[i];
-      // TODO: refactor this so it can be called from addFieldOptions
-      const node = cell.toWJI(cells[i + 1]);
-      const parent = parentStack[cell.depth - 1];
-      if (parent) {
-        parent.children.push(node);
-      } else {
-        nodes.push(node);
-      }
-      i = addChildCells(node, cells, i);
-
-      if (i < cells.length) {
-        parentStack.splice(
-          cells[i].depth,
-          parentStack.length - cells[i].depth,
-          node,
-        );
-      }
-    }
-    return nodes;
+    // Create the taxonomy nodes (recursively)
+    const hcell = HierarchicalCell.fromCells(cells);
+    return hcell.toWJI();
   };
 
-  function hasChildren(cells, i) {
-    const cell = cells[i];
-    const nextCell = cells[i + 1];
-    return !!nextCell && nextCell.depth === cell.depth + 1;
-  }
-
-  // skip any fields indented further than 1 additional indent
-  function skipOverIndentedRows(cells, i) {
-    const cell = cells[i];
-    let nextCell = cells[i + 1];
-    while (nextCell && nextCell.depth > cell.depth + 1) {
-      i++;
-      nextCell = cells[i + 1];
-    }
-    return i;
-  }
-
-  function addChildCells(node, cells, i) {
-    const cell = cells[i];
-    i = skipOverIndentedRows(cells, i);
-    if (!hasChildren(cells, i)) {
-      return i;
+  class HierarchicalCell {
+    constructor(data, child, next) {
+      this.data = data;
+      this.child = child;
+      this.next = next;
     }
 
-    const cellType = cell.getMetaType(cells[i + 1]);
-    if (OptionFieldTypes.includes(cellType)) {
-      i = addFieldOptions(node, cells, i);
-    } else if (cellType === "Term") {
-      i = addCompoundFields(node, cells, i);
-    }
-    return i;
-  }
-
-  function addFieldOptions(node, cells, i) {
-    const childOptDepth = cells[i].depth + 1;
-    let j;
-    for (j = i + 1; j < cells.length; j++) {
-      if (cells[j].depth < childOptDepth) {
-        j--;
-        break;
+    toWJI(parentType) {
+      const wjiData = this.data.toWJI(parentType, !!this.child);
+      if (this.child) {
+        const metaType = wjiData.pointers.base.replace("@meta:", "");
+        const children = this.child.toWJI(metaType);
+        wjiData.children = children;
       }
-      const child = cells[j].toWJI(cells[j + 1]);
-      node.children.push(child);
-      j = addChildCells(child, cells, j);
-      child.pointers.base = "@meta:CompoundField";
-    }
-    return j;
-  }
 
-  function addCompoundFields(node, cells, i) {
-    // any children that would be a tag are now a CompoundField
-    const cell = cells[i];
-    const currentDepth = cell.depth;
-    let j;
-    for (j = i + 1; j < cells.length; j++) {
-      if (cells[j].depth <= currentDepth) {
-        j--;
-        break;
+      if (this.next) {
+        const wjiNodes = this.next.toWJI(parentType);
+        wjiNodes.unshift(wjiData);
+        return wjiNodes;
       }
-      const child = cells[j].toWJI(cells[j + 1]);
-      j = addChildCells(child, cells, j);
-      //if (child.pointers.base === '@meta:Term') {
-      //child.pointers.base = '@meta:CompoundField';
-      //}
-      node.children.push(child);
+
+      return [wjiData];
     }
-    return Math.min(j, cells.length - 1);
+
+    static fromCells(cells) {
+      let child;
+      let next;
+      let i = 0;
+
+      if (cells.length > 1) {
+        const currentDepth = cells[0].depth;
+        if (cells[1].depth > currentDepth) {
+          child = HierarchicalCell.fromCells(cells.slice(1));
+
+          let prev = child;
+          next = prev.next;
+          while (next && next.data.depth > currentDepth) {
+            prev = next;
+            next = prev.next;
+          }
+          prev.next = null;
+        } else {
+          next = HierarchicalCell.fromCells(cells.slice(1));
+        }
+      }
+
+      return new HierarchicalCell(cells[0], child, next);
+    }
   }
 
   return TaxonomyParser;
