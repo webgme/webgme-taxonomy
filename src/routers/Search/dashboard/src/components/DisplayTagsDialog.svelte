@@ -20,7 +20,8 @@
   export let taxonomyTags: any[] = [];
   export let open = true;
 
-  $: taxonomyTags.sort((a, b) => getVocabName(a) < getVocabName(b) ? -1 : 1)
+  let sortedTags;
+  $: sortedTags = taxonomyTags.sort((a, b) => getVocabName(a) < getVocabName(b) ? -1 : 1)
 
   function close() {
     open = false;
@@ -39,7 +40,7 @@
   <Title id="display-tags-title">Metadata for {displayName}</Title>
   <Content id="display-tags-content">
     <List>
-      {#each taxonomyTags as tag}
+      {#each sortedTags as tag}
         <TagItem tag={tag}/>
       {/each}
     </List>
@@ -48,7 +49,7 @@
     <Button on:click={close}>
       <Label>Close</Label>
     </Button>
-    <Button on:click={downloadJSON(`${displayName}_metadata.json`, taxonomyTags)}>
+    <Button on:click={downloadJSON(`${displayName}_metadata.json`, sortedTags)}>
       <Label>Download</Label>
     </Button>
   </div>

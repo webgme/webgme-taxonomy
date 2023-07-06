@@ -108,7 +108,7 @@
 </script>
 
 <svelte:window bind:scrollY />
-{#if displayedTags}
+{#if displayTags}
   <DisplayTagsDialog
     bind:open={displayTags}
     displayName={displayedName}
