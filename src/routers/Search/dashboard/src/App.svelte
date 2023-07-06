@@ -86,14 +86,10 @@
     const filter = (item) => {
       const { displayName, taxonomyTags = [] } = item;
 
-      const matchingTags = filterTags.every(
-        (filterTag) => !!taxonomyTags.find((tag) => filterTag.isMatch(tag))
-      );
+      const matchingTags = FilterTag.applyFilters(taxonomyTags, filterTags);
       const hasMatchingArtifact = item.children.find((child) => {
         const { displayName, taxonomyTags = [] } = child;
-        return filterTags.every(
-          (filterTag) => !!taxonomyTags.find((tag) => filterTag.isMatch(tag))
-        );
+        return FilterTag.applyFilters(taxonomyTags, filterTags);
       });
 
       if (matchingTags || hasMatchingArtifact) {
