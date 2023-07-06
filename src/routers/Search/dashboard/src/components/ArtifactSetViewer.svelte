@@ -94,7 +94,7 @@
   }
 </script>
 
-{#if displayedTags}
+{#if displayTags}
   <DisplayTagsDialog
     bind:open={displayTags}
     displayName={displayedName}
