@@ -162,23 +162,20 @@ describe("JSONSchemaExporter", function () {
       root = await Utils.getNewRootNode(project, commitHash, core);
     });
 
-    it("should support string enums", async function () {
+    it("should support simple enums", async function () {
       const taxCsv = `vocab,,,
         ,enumTerm,,
         ,,enumProp (enum),
-        ,,,enumItem1 (text)
-        ,,,,itemField (int)
-        ,,,enumItem2 (text)
-        ,enumTerm2,,
-        ,,name (text),
-        ,,enumSubTerm2,
-        ,,,child_name (text)
-        ,enumTerm3,,
-        ,,enumItem3 (text)`;
+        ,,,Option1
+        ,,,Option2
+        ,,,Option3
+        `;
       const tag = {
         vocab: {
           enumTerm: {
-            enumProp: { enumItem1: {} },
+            enumProp: {
+              Option1: {},
+            },
           },
         },
       };
