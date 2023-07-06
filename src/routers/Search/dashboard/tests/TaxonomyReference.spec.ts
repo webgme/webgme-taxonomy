@@ -52,6 +52,31 @@ describe("TaxonomyReference", function () {
     it("should throw ParseError on 1.x.2", function () {
       assert.throws(() => SemanticVersion.parse("1.x.2"));
     });
+
+    it("should parse v1_0_2", function () {
+      const version = SemanticVersion.parse("v1_0_2");
+      assert.equal(version.major, 1);
+      assert.equal(version.minor, 0);
+      assert.equal(version.patch, 2);
+    });
+
+    it("should parse 1_0_2", function () {
+      const version = SemanticVersion.parse("1_0_2");
+      assert.equal(version.major, 1);
+      assert.equal(version.minor, 0);
+      assert.equal(version.patch, 2);
+    });
+
+    it("should parse 1_2", function () {
+      const version = SemanticVersion.parse("1_2");
+      assert.equal(version.major, 1);
+      assert.equal(version.minor, 2);
+      assert.equal(version.patch, 0);
+    });
+
+    it("should throw ParseError on 1.x.2", function () {
+      assert.throws(() => SemanticVersion.parse("1_x_2"));
+    });
   });
 
   describe("Tag", function () {

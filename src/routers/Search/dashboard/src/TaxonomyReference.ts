@@ -120,7 +120,7 @@ export class SemanticVersion {
 
   static parse(versionString: string): SemanticVersion {
     versionString = versionString.replace(/^v?/, "");
-    const [major, minor = 0, patch = 0] = versionString.split(".")
+    const [major, minor = 0, patch = 0] = versionString.split(/[._]/)
       .map((str) => {
         if (!/\d+/.test(str)) {
           throw new ParseError(versionString);
