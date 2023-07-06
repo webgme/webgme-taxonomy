@@ -58,6 +58,12 @@ function factory() {
     }
 
     getMetaType(parentType, hasChildren) {
+      // Force options to be compound fields
+      if (OptionFieldTypes.includes(parentType)) {
+        return "CompoundField";
+      }
+
+      // Use the explicit type
       const explicitType = this.getExplicitType();
       if (explicitType) {
         if (explicitType === UNKNOWN_FIELD_TYPE) {
@@ -73,10 +79,6 @@ function factory() {
       // Guess the type using the context
       if (!parentType) {
         return "Vocabulary";
-      }
-
-      if (OptionFieldTypes.includes(parentType)) {
-        return "CompoundField";
       }
 
       return DEFAULT_TYPE;
