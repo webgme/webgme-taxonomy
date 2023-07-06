@@ -49,7 +49,7 @@
     <Button on:click={close}>
       <Label>Close</Label>
     </Button>
-    <Button on:click={downloadJSON(`${displayName}_metadata.json`, sortedTags)}>
+    <Button on:click={downloadJSON(`${displayName}_metadata`, sortedTags)}>
       <Label>Download</Label>
     </Button>
   </div>
