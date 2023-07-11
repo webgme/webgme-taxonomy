@@ -9,7 +9,7 @@ describe("PDP", function () {
       const repoId = "someRepo";
       const metadata = null; // only used by the mocked method
       const filenames = ["a.txt", "b.csv"];
-      const storage = new PDP("http://someUrl", "someToken", "someProcess");
+      const storage = new PDP("http://someUrl", "someProcess", "someToken");
 
       // Add mocks to make the request succeed
       storage._getObserverId = sinon.fake.returns("observer");
@@ -33,6 +33,85 @@ describe("PDP", function () {
         !result.files.find((file) => file.name === name)
       );
       assert(!missingFile);
+    });
+  });
+
+  describe("readToken", function () {
+    let storage;
+    beforeEach(() =>
+      storage = new PDP(
+        "http://someUrl",
+        "someProcess",
+        "userToken",
+        "readToken",
+      )
+    );
+
+    it("should use read token on listArtifacts", async function () {
+      storage._getObserverId = sinon.fake.returns("observer");
+      storage._fetchJson = (url, opts) => {
+        const isReadToken = opts.headers.Authorization.includes("readToken");
+        assert(isReadToken);
+
+        if (url.includes("ListProcesses")) {
+          const ids = [...new Array(10)].map((_, i) => `process_${i}`);
+          return ids.map((processId) => ({
+            processId,
+            processType: storage.processType,
+          }));
+        } else if (url.includes("GetProcessState")) {
+          return { numObservations: 1 };
+        } else if (url.includes("GetObservation")) {
+          const processId = url.split("processId=")[1].split("&").shift();
+          const taxonomyVersion = {
+            commit: "someCommit",
+            tag: "v1.0.0",
+          };
+          const taxonomyTags = [];
+          const displayName = `Artifact for ${processId}`;
+          const data = { taxonomyTags, taxonomyVersion, displayName };
+
+          return storage._createObservationData(
+            processId,
+            storage.processType,
+            data,
+          );
+        } else {
+          throw new Error(`Unknown request: ${url}`);
+        }
+      };
+      const repos = await storage.listArtifacts();
+      assert.equal(repos.length, 10);
+    });
+
+    it("should use user token on createArtifact", async function () {
+      storage._fetchJson = (_url, opts) => {
+        const isReadToken = opts.headers.Authorization.includes("readToken");
+        assert(!isReadToken);
+      };
+      storage._getObserverId = sinon.fake.returns("observer");
+
+      const metadata = {
+        displayName: "example artifact",
+        taxonomyTags: [],
+        taxonomyVersion: { commit: "commithash", tag: "v1.0.2" },
+        time: new Date().toString(),
+      };
+      await storage.createArtifact(metadata);
+    });
+
+    // The following are trickier to mock and are likely to change
+    it.skip("should use user token on download", function () {
+    });
+
+    it("should use user token on appendArtifact", async function () {
+      storage._fetchJson = async (_url, opts) => {
+        const isReadToken = opts.headers.Authorization?.includes("readToken");
+        assert(!isReadToken);
+      };
+      const processId = "processId";
+      const obs = {};
+      await storage._appendObservation(processId, obs);
     });
   });
 });

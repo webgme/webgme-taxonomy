@@ -1,0 +1,24 @@
+{
+  "id": "SetPdpReadToken",
+  "name": "SetPdpReadToken",
+  "version": "0.1.0",
+  "description": "",
+  "icon": {
+    "class": "glyphicon glyphicon-cog",
+    "src": ""
+  },
+  "disableServerSideExecution": false,
+  "disableBrowserSideExecution": true,
+  "dependencies": [],
+  "writeAccessRequired": false,
+  "configStructure": [
+    {
+      "name": "token",
+      "displayName": "Shared Read Token",
+      "description": "If defined, this token will be used for reading from PDP. Used to make all metadata visible to others.",
+      "value": "",
+      "valueType": "string",
+      "readOnly": false
+    }
+  ]
+}

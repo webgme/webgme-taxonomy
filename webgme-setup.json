@@ -38,6 +38,10 @@
       "OpenTagForm": {
         "src": "src/plugins/OpenTagForm",
         "test": "test/plugins/OpenTagForm"
+      },
+      "SetPdpReadToken": {
+        "src": "src/plugins/SetPdpReadToken",
+        "test": "test/plugins/SetPdpReadToken"
       }
     },
     "visualizers": {
