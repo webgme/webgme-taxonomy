@@ -17,23 +17,28 @@
     },
     {
       "SetTest": {
-        "Risk factors?": {
-          "Stressful life events": "y",
-          "Parental bonding": "y",
-          "Personality": "y",
-          "Social life": "y",
-          "Childhood sexual abuse": "y",
-          "Childhood physical abuse": "y",
-          "Childhood trauma": "y",
-          "Positive Family History": "y"
+        "CurrentTreatment": {
+            "TreatmentType": [
+                {
+                    "SAINT ": {}
+                },
+                {
+                    "TMS ": {}
+                },
+                {
+                    "Ultrasound Pulsation": {}
+                }
+            ]
         }
       }
     },
+
     { "EnumTest": { "EnumData": { "value": { "C": {} } } } },
     { "TextTest": { "TextData": { "value": "hewrwerew" } } },
     { "BoolTest": { "BoolData": { "value": true } } },
     { "FloatTest": { "FloatData": { "value": 222.3 } } },
     { "IntTest": { "IntData": { "value": 5 } } }
+
     
   ]
 }

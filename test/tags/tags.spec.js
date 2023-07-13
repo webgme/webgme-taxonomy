@@ -32,11 +32,11 @@ describe('taxonomyTag tests', function () {
     }
     assert(result, true)
   })
-  it('taxonomyTag setTest tag should be valid (contain no objects)', function () {
-    const setTest = data.taxonomyTags[1].SetTest['Risk factors?']
+  it('taxonomyTag setTest tag should be valid (contain nested array)', function () {
+    const setTest = data.taxonomyTags[1].SetTest['CurrentTreatment']
     let result = true
     for(const prop in setTest){
-        if (typeof setTest[prop] === 'object'){
+        if (prop == 'TreatmentType' && !Array.isArray(setTest[prop])){
             result = false
             break
         }
