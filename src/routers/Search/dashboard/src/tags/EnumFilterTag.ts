@@ -13,6 +13,6 @@ export default class EnumFilterTag extends FilterTag<"EnumField"> {
    */
   override isMatch(itemTag: ItemTag): boolean {
     const value = ItemTag.valueForKey(itemTag, this.id);
-    return value[this.value];
+    return !!(value && value[this.value]);
   }
 }

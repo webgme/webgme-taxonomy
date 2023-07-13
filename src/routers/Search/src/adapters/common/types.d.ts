@@ -31,7 +31,7 @@ export interface AdapterStatic {
     storageNode: Core.Node,
     request: WebgmeRequest,
     config: any,
-  ): Adapter;
+  ): Promise<Adapter>;
 }
 
 export interface Artifact {

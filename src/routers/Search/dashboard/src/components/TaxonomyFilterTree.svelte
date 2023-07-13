@@ -25,7 +25,13 @@
     children.length && !["EnumField", "SetField"].includes(tree.type);
 
   let checked = tree.selected === undefined ? false : tree.selected;
-  let value = tree.value || null;
+
+  // null is treated as explicitly nothing/unset/etc in the filter tags
+  // if the tree node does not contain a value (ie, isn't a field at all),
+  // we will set it to undefined so it is treated as a label and the
+  // value will be ignored.
+  const defaultValue = tree.type.includes('Field') ? null : undefined;
+  let value = tree.value || defaultValue;
 
   // TODO: select checkbox -> select all children; partial select all parents (if false)
   // TODO: unselect checkbox -> unselect all children

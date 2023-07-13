@@ -3,9 +3,7 @@
   import TagFormatter from "../Formatter";
   import Card, { Content, Actions } from "@smui/card";
   import Button, { Label } from "@smui/button";
-  import type { ButtonComponentDev } from "@smui/button";
   import Menu from "@smui/menu";
-  import type { MenuComponentDev } from "@smui/menu";
   import IconButton from "@smui/icon-button";
   import List, {
     Item,
@@ -23,7 +21,7 @@
   let numArtifacts = 10;
   let shownArtifacts = [];
   let selected = [];
-  let menu: MenuComponentDev;
+  let menu: Menu;
   const formatter = new TagFormatter();
 
   import { createEventDispatcher } from "svelte";
@@ -47,8 +45,13 @@
 
   async function onCopyIdClicked() {
     const id = selected.length === 1 ? artifactSet.id + '_' + selected[0] : artifactSet.id;
-    await navigator.clipboard.writeText(id);
-    parent.postMessage({type:'selectArtifact', value:id}, window.location.origin);
+    parent.postMessage({type:'selectArtifact', value:id}, "*");
+    try {
+      await navigator.clipboard.writeText(id);
+    } catch (e) {
+      //TODO - we should probably limit the clipboard to regular use
+    }
+
   }
 
   async function onUploadClicked() {
@@ -89,31 +92,15 @@
     } as const;
     return date.toLocaleDateString("en-us", formatOpts);
   }
-
-  // Ensure the window always stays at the top of the screen
-  let scrollY;
-  let panel;
-  let panelOffset = 0;
-  $: {
-    if (panel) {
-      const parentRect = panel.offsetParent.getBoundingClientRect();
-      panelOffset = parentRect.top + panel.offsetTop;
-    }
-  }
 </script>
 
-<svelte:window bind:scrollY />
-{#if displayedTags}
+{#if displayTags}
   <DisplayTagsDialog
     bind:open={displayTags}
     displayName={displayedName}
     bind:taxonomyTags={displayedTags}/>
 {/if}
-<div
-  bind:this={panel}
-  class="card-container"
-  class:sticky={scrollY > panelOffset}
->
+<div class="card-container">
   <!-- TODO: add a header for the observation -->
   <!-- TODO: upload times -->
   <!-- Artifact list -->
@@ -132,8 +119,8 @@
           class="material-icons"
           style="vertical-align: middle; margin: 0; padding: 0;"
           on:click={() => menu.setOpen(true)}
-          title="Options">more_vert</IconButton
-        >
+          title="Options">more_vert
+        </IconButton>
         <Menu bind:this={menu} anchorCorner="BOTTOM_RIGHT">
           <List>
             <Item
@@ -155,7 +142,7 @@
         </Menu>
       </h4>
       <!-- add show more button, select all -->
-      <List checkList>
+      <List checkList twoLine>
         <!-- TODO: check if they have permissions to append to it -->
         {#each shownArtifacts as artifact (artifact.id)}
           <Item>
@@ -182,8 +169,8 @@
       <Button on:click={onDownloadClicked} disabled={selected.length == 0}>
         <Label>Download</Label>
       </Button>
-      <Button on:click={onCopyIdClicked} disabled={selected.length > 1}>
-        <Label>Copy Id</Label>
+      <Button on:click={onCopyIdClicked} disabled={window.self !== window.top ? selected.length != 1 : selected.length > 1}>
+        <Label>{window.self !== window.top ? "Select" : "Copy Id"}</Label>
       </Button>
     </Actions>
   </Card>
@@ -191,12 +178,24 @@
 
 <style>
   .card-container {
-    display: inline-block;
+    display: inline-flex;
     vertical-align: top;
   }
 
-  .sticky {
-    position: fixed;
-    top: 0;
+  .card-container > :global(.mdc-card) {
+    flex: 1;
+  }
+
+  .card-container > :global(.mdc-card .smui-card__content) {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    flex: 0 1 auto;
+    min-height: 0;
+  }
+
+  .card-container > :global(.mdc-card .smui-card__content .mdc-deprecated-list) {
+    flex: 0 1 auto;
+    overflow-y: scroll;
   }
 </style>

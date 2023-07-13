@@ -13,6 +13,7 @@ config.plugin.basePaths.push(
 config.seedProjects.basePaths.push(__dirname + "/../src/seeds/taxonomy");
 config.seedProjects.basePaths.push(__dirname + "/../src/seeds/TaxonomyProject");
 config.seedProjects.basePaths.push(__dirname + "/../src/seeds/profile");
+config.seedProjects.basePaths.push(__dirname + "/../src/seeds/test");
 
 config.visualization.panelPaths.push(__dirname + "/../src/visualizers/panels");
 

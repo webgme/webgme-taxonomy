@@ -19,6 +19,7 @@ import type {
   ProcessID,
 } from "./types";
 import RouterUtils from "../../../../../common/routers/Utils";
+import withTokens from "./tokens";
 import type { AuthenticatedRequest } from "../../../../../common/routers/Utils";
 import type TagFormatter from "../../../../../common/TagFormatter";
 import { FormatError } from "../../../../../common/TagFormatter";
@@ -63,20 +64,36 @@ const DefaultFetchOpts = () => ({
   method: "GET",
 });
 
+function setAuthToken(opts: FetchOpts, token: string): FetchOpts {
+  opts.headers = opts.headers || {};
+  opts.headers.Authorization = opts.headers.Authorization ||
+    "Bearer " + token;
+
+  return opts;
+}
+
 export default class PDP implements Adapter {
   private _baseUrl: string;
   private _token: string;
+  private _readToken: string;
   processType: string;
 
-  constructor(baseUrl: string, token: string, processType: string) {
+  constructor(
+    baseUrl: string,
+    processType: string,
+    token: string,
+    readToken: string | undefined,
+  ) {
     this._baseUrl = baseUrl;
     this._token = token;
     this.processType = processType;
+    this._readToken = readToken || token;
   }
 
   async listArtifacts(): Promise<Repository[]> {
     const allProcesses: Process[] = await this._fetchJson(
       "v2/Process/ListProcesses?permission=read",
+      setAuthToken(DefaultFetchOpts(), this._readToken),
     );
 
     const processObservations = await Promise.all(
@@ -104,12 +121,14 @@ export default class PDP implements Adapter {
         children: artifacts,
       };
     });
+
     return repos;
   }
 
   async getProcessObservations(pid: ProcessID): Promise<Observation[]> {
     const obsInfo = await this._fetchJson(
       `v2/Process/GetProcessState?processId=${pid}`,
+      setAuthToken(DefaultFetchOpts(), this._readToken),
     );
 
     if (obsInfo.numObservations === 0) {
@@ -120,6 +139,7 @@ export default class PDP implements Adapter {
       range(0, obsInfo.numObservations).map((i) =>
         this._fetchJson(
           "v2/Process/GetObservation?processId=" + pid + "&obsIndex=" + i,
+          setAuthToken(DefaultFetchOpts(), this._readToken),
         )
       ),
     );
@@ -461,9 +481,9 @@ export default class PDP implements Adapter {
   async _fetch(url: string, opts: FetchOpts = DefaultFetchOpts()) {
     url = this._baseUrl + url;
     opts.headers = opts.headers || {};
-    opts.headers.Authorization = "Bearer " + this._token;
+    opts.headers.Authorization = opts.headers.Authorization ||
+      "Bearer " + this._token;
     opts.headers.accept = opts.headers.accept || "application/json";
-    // TODO: Check response status code
     return await fetch(url, opts);
   }
 
@@ -472,18 +492,13 @@ export default class PDP implements Adapter {
     return await response.json();
   }
 
-  static from(
+  static async from(
     gmeContext: WebgmeContext,
     storageNode: Core.Node,
     req: AuthenticatedRequest,
     gmeConfig: AzureGmeConfig,
   ) {
     const { core } = gmeContext;
-    // TODO: create the storage adapter from the content type
-    // const token = require("./token");
-    const token =
-      req.cookies[gmeConfig.authentication.azureActiveDirectory.cookieId];
-
     const baseUrl = core.getAttribute(storageNode, "URL");
     const processType = core.getAttribute(storageNode, "processType");
 
@@ -493,7 +508,24 @@ export default class PDP implements Adapter {
     if (!processType) {
       throw new MissingAttributeError(gmeContext, storageNode, "processType");
     }
-    return new PDP(baseUrl.toString(), token, processType.toString());
+
+    const userToken =
+      req.cookies[gmeConfig.authentication.azureActiveDirectory.cookieId];
+
+    // We currently allow setting a different token used only for read operations.
+    // This is a temporary workaround for the lack of read-only permissions in PDP.
+    const projectId = gmeContext.project.projectId;
+    const readToken = await withTokens(
+      gmeConfig,
+      (tokens) => tokens.get(projectId),
+    );
+
+    return new PDP(
+      baseUrl.toString(),
+      processType.toString(),
+      userToken,
+      readToken,
+    );
   }
 }
 
