@@ -1,3 +1,4 @@
+//npx mocha test/tags/tags.spec.js
 describe('taxonomyTag tests', function () {
   let assert = require('assert')
   let data = require('./tags.json')
