@@ -1,5 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const FULLY_PARALLEL = true
+
 /**
  * Read environment variables from file.
  * https://github.com/motdotla/dotenv
@@ -12,7 +14,12 @@ import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
   testDir: './e2e',
   /* Run tests in files in parallel */
-  fullyParallel: false,
+  fullyParallel: FULLY_PARALLEL,
+
+  globalSetup: require.resolve('./global.setup'),
+
+  globalTeardown: require.resolve('./global.teardown'),
+
   /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
   /* Retry on CI only */
@@ -23,7 +30,7 @@ export default defineConfig({
   reporter: "html",
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
-      
+
     /* Base URL to use in actions like `await page.goto('/')`. */
     baseURL: "http://localhost:8080/",
 
@@ -38,6 +45,7 @@ export default defineConfig({
 
   /* Configure projects for major browsers */
   projects: [
+
     {
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
