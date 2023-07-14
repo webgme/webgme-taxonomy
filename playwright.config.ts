@@ -1,6 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const FULLY_PARALLEL = true
+const FULLY_PARALLEL: boolean = true
+const DEFAULT_HOST: string = "127.0.0.1"
+const DEFAULT_PORT: string = "8080"
 
 /**
  * Read environment variables from file.
@@ -12,13 +14,15 @@ const FULLY_PARALLEL = true
  * See https://playwright.dev/docs/test-configuration.
  */
 export default defineConfig({
-  testDir: './e2e',
+  testDir: 'e2e',
+  // testIgnore: 'test-*.spec-ts',
+  testMatch: '*.spec.ts',
   /* Run tests in files in parallel */
   fullyParallel: FULLY_PARALLEL,
 
-  globalSetup: require.resolve('./global.setup'),
+  globalSetup: require.resolve('./e2e/common/global.setup'),
 
-  globalTeardown: require.resolve('./global.teardown'),
+  globalTeardown: require.resolve('./e2e/common/global.teardown'),
 
   /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
@@ -32,7 +36,7 @@ export default defineConfig({
   use: {
 
     /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: "http://localhost:8080/",
+    baseURL: `http://${DEFAULT_HOST}:${DEFAULT_PORT}/`,
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: "on-first-retry",
