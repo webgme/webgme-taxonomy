@@ -9,6 +9,7 @@ function factory() {
     "FloatField",
     "BooleanField",
     "CompoundField",
+    "ReferenceField",
     ...OptionFieldTypes,
   ];
   const Types = FieldTypes.concat([DEFAULT_TYPE, CATEGORY_TYPE]);

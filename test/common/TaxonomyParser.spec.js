@@ -22,6 +22,15 @@ describe("TaxonomyParser", function () {
     assert.equal(taxonomy.attributes.description, "");
   });
 
+  it("should parse references", function () {
+    const text = `
+        someTag (ref),,
+        `;
+    const [term] = parser.fromCSV(text);
+    assert.equal(term.pointers.base, "@meta:ReferenceField");
+    assert.equal(term.attributes.description, "");
+  });
+
   describe("enums", function () {
     it("should parse enums in tags", function () {
       const text = `

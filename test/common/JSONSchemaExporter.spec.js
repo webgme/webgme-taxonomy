@@ -1,21 +1,11 @@
 describe("JSONSchemaExporter", function () {
   const testFixture = require("../globals");
-  const _ = testFixture.requirejs("underscore");
-  const Core = testFixture.requirejs("common/core/coreQ");
   const Importer = testFixture.requirejs("webgme-json-importer/JSONImporter");
-  const TaxonomyParser = require("../../src/common/TaxonomyParser");
-  const TagFormatter = require("../../src/common/TagFormatter");
   const JSONSchemaExporter = require("../../src/common/JSONSchemaExporter");
   const Ajv = require("ajv");
   const ajv = new Ajv();
-  const { OmittedProperties, NodeSelections } = Importer;
   const assert = require("assert");
-  const gmeConfig = testFixture.getGmeConfig();
   const path = testFixture.path;
-  const SEED_DIR = path.join(__dirname, "..", "..", "src", "seeds");
-  const Q = testFixture.Q;
-  const logger = testFixture.logger.fork("JSONImporter");
-  const projectName = "testProject";
   const Utils = require("../Utils");
   let project, gmeAuth, storage, commitHash, core;
 
@@ -314,6 +304,43 @@ describe("JSONSchemaExporter", function () {
       const termSchemas = schema.properties.taxonomyTags.items.anyOf;
       assert.equal(termSchemas.length, 3);
       assert(!termSchemas.find((schema) => schema.title.startsWith("dep")));
+    });
+  });
+
+  describe("references", function () {
+    let root;
+    beforeEach(async () => {
+      root = await Utils.getNewRootNode(project, commitHash, core);
+    });
+
+    it("should convert references to text fields in JSON schema", async function () {
+      const taxCsv = `vocab,,,
+        ,term,,
+        ,,myPtr (ref),
+      `;
+      const taxonomy = await Utils.createTaxonomyFromCsv(core, root, taxCsv);
+
+      const exporter = JSONSchemaExporter.from(core, root);
+      const { schema } = await exporter.getSchemas(taxonomy, false);
+
+      const [termSchema] = schema.properties.taxonomyTags.items.anyOf;
+      const fieldSchema =
+        termSchema.properties.vocab.properties.term.properties.myPtr;
+
+      assert.equal(fieldSchema.type, "string");
+    });
+
+    it.skip("should add help message for references", async function () {
+      const taxCsv = `vocab,,,
+        ,term,,
+        ,,myPtr (ref),
+      `;
+      const taxonomy = await Utils.createTaxonomyFromCsv(core, root, taxCsv);
+
+      const exporter = JSONSchemaExporter.from(core, root);
+      const { uiSchema } = await exporter.getSchemas(taxonomy, false);
+      console.log({ uiSchema });
+      assert(uiSchema);
     });
   });
 });

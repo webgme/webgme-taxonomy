@@ -232,4 +232,6 @@ describe("TagCreatorForm", function () {
       assert(!form._hasConflictingProp(schema, {}, object));
     });
   });
+
+  // TODO: add test for validating reference properties
 });
