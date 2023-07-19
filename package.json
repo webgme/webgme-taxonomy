@@ -39,15 +39,16 @@
     "monocle-ts": "^2.3.13",
     "newtype-ts": "^0.3.5",
     "oxide.ts": "^1.1.0",
+    "playwright": "^1.36.1",
     "prettier": "^2.7.1",
     "prettier-plugin-svelte": "^2.7.0",
     "sinon": "^15.2.0",
+    "tmp": "^0.2.1",
     "typescript": "^4.8.3"
   },
   "dependencies": {
     "mongodb": "^4.11.0",
     "node-fetch": "^2.6.6",
-    "playwright": "^1.36.1",
     "svelte": "^3.50.0",
     "webgme": "github:webgme/webgme#azure",
     "webgme-json-importer": "^1.4.1",
