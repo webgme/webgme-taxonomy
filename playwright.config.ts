@@ -45,6 +45,7 @@ export default defineConfig({
       mode: "on",
       size: { width: 1920, height: 1080 },
     },
+
   },
 
   /* Configure projects for major browsers */
@@ -52,7 +53,13 @@ export default defineConfig({
 
     {
       name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
+      use: {
+        ...devices["Desktop Chrome"], 
+        bypassCSP: true,
+        launchOptions: {
+          args: ['--disable-web-security']
+        }
+      },
     },
 
     // {
