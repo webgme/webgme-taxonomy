@@ -96,17 +96,11 @@ test.describe(`Data dashboard`, function () {
 
   test("Create new repo (and it shows up).", async ({ page, browser }) => {
 
-    // process.env.DEBUG = "*"
-
     const current_project_name: string = PROJECT_NAMER.next().value;
 
-    // const cookies = context.cookies();
+    // Routes to / based on baseUrl in config
+    await page.goto("/");
 
-    // Create a new page inside context.
-    // const daPage = await context.newPage();
-
-    // Initiate the page load (why isn't defaulting from config?)
-    await page.goto(BASE_URL);
     // Get access to button and fire click event
     await page.getByRole("button", { name: "Create new..." }).click();
 
