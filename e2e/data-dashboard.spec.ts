@@ -107,19 +107,17 @@ test.describe(`Data dashboard`, function () {
     await page.close();
   });
 
-  baseTest(
+  test.fixme(
     "Upload new artifact to a repo and ensure it shows up",
-    async ({ page, test_taxonomy }) => {
-      // Begin navigation
-      await page.goto("/");
-
-      const taxonomy = await test_taxonomy.get()
-      
-      console.log(taxonomy)
-    }
+    async ({ page }) => {}
   );
 
   test.fixme("Download artifact", async ({ page }) => {});
+
+  test.fixme(
+    "View/download the metadata for the artifact (ensure correct)",
+    async ({ page }) => {}
+  );
 
   test.fixme(
     "View/download the metadata for the artifact (ensure correct)",
