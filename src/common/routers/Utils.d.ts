@@ -25,7 +25,7 @@ export class UserError extends Error {
 
 export function handleUserErrors(
   logger: Global.GmeLogger,
-  fn: MiddlewareHandler,
+  ...fn: MiddlewareHandler[]
 ): RequestHandler;
 export function getProjectScopedRoutes(path: string): string[];
 export function addProjectScopeMiddleware(

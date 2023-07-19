@@ -152,7 +152,7 @@ const Utils = {
     const { logger } = middlewareOpts;
     router.use(
       Utils.getProjectScopedRoutes(),
-      handleUserErrors(logger, async (req, res, next) => {
+      handleUserErrors(logger, async function resolveLatestTag(req, res) {
         const { projectId, tag } = req.params;
         if (tag === "latest") {
           const { safeStorage } = middlewareOpts;
@@ -187,9 +187,6 @@ const Utils = {
             `/tag/${latestTag.name}`,
           );
           res.redirect(url);
-          return false;
-        } else {
-          return true;
         }
       }),
     );
@@ -197,13 +194,17 @@ const Utils = {
   },
 };
 
-function handleUserErrors(logger, fn) {
+function handleUserErrors(logger, ...fns) {
   return async function (req, res, next) {
     try {
-      const cont = (await fn(req, res, next)) ?? true;
-      if (cont && !res.headersSent) {
-        // TODO: be more intelligent if the fn calls next
-        await next();
+      await fns.reduce(async (prev, fn) => {
+        await prev;
+        if (!res.headersSent) {
+          return await fn(req, res);
+        }
+      }, Promise.resolve());
+      if (!res.headersSent) {
+        next();
       }
     } catch (e) {
       if (e instanceof UserError) {
