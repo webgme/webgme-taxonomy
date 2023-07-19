@@ -47,6 +47,7 @@
   "dependencies": {
     "mongodb": "^4.11.0",
     "node-fetch": "^2.6.6",
+    "playwright": "^1.36.1",
     "svelte": "^3.50.0",
     "webgme": "github:webgme/webgme#azure",
     "webgme-json-importer": "^1.4.1",
