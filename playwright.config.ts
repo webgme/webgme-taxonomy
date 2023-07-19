@@ -3,6 +3,8 @@ import { defineConfig, devices } from "@playwright/test";
 const FULLY_PARALLEL: boolean = true
 const DEFAULT_HOST: string = "127.0.0.1"
 const DEFAULT_PORT: string = "8080"
+const BASE_URL = `http://${DEFAULT_HOST}:${DEFAULT_PORT}/`;
+// process.env.DEBUG = "*"
 
 /**
  * Read environment variables from file.
@@ -36,7 +38,7 @@ export default defineConfig({
   use: {
 
     /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: `http://${DEFAULT_HOST}:${DEFAULT_PORT}/`,
+    baseURL: BASE_URL,
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: "on-first-retry",
