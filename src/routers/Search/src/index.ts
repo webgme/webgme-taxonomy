@@ -15,7 +15,7 @@
 
 // http://expressjs.com/en/guide/routing.html
 import * as express from "express";
-import type { NextFunction, Request, Response } from "express";
+import type { Request, Response } from "express";
 const router = express.Router();
 
 import SystemTerm from "./SystemTerm";
@@ -112,10 +112,10 @@ function initialize(middlewareOpts: MiddlewareOptions) {
 
   router.post(
     RouterUtils.getContentTypeRoutes("artifacts/"),
-    RouterUtils.handleUserErrors(logger, addSystemTags),
-    convertTaxonomyTags,
     RouterUtils.handleUserErrors(
       logger,
+      addSystemTags,
+      convertTaxonomyTags,
       async function createArtifact(req, res) {
         const { metadata } = req.body;
         // FIXME: what if it isn't using the branch in the URL?
@@ -137,10 +137,10 @@ function initialize(middlewareOpts: MiddlewareOptions) {
 
   router.post(
     RouterUtils.getContentTypeRoutes("artifacts/:parentId/append"),
-    RouterUtils.handleUserErrors(logger, addChildSystemTags),
-    convertTaxonomyTags,
     RouterUtils.handleUserErrors(
       logger,
+      addChildSystemTags,
+      convertTaxonomyTags,
       async function appendContent(req, res) {
         const { parentId } = req.params;
         const storage = await StorageAdapter.from(
@@ -338,21 +338,25 @@ function getVocabulariesMetaNode(
 async function convertTaxonomyTags(
   req: Request,
   res: Response,
-  next: NextFunction,
-) {
+): Promise<void> {
   const { root, core } = (<WebgmeRequest> req).webgmeContext;
   const node = await Utils.findTaxonomyNode(core, root);
-  if (node == null) return res.status(400).send("No taxonomy node found");
+
+  // TODO: convert the following to a model error
+  if (node == null) {
+    res.status(400).send("No taxonomy node found");
+    return;
+  }
+
   const formatter = await TagFormatter.from(core, node);
   const { metadata } = req.body;
   try {
     metadata.taxonomyTags = formatter.toGuidFormat(metadata.taxonomyTags);
-    next();
   } catch (err) {
     if (err instanceof TagFormatter.FormatError) {
       res.status(400).send(err.message);
     } else {
-      res.sendStatus(500);
+      throw err;
     }
   }
 }
