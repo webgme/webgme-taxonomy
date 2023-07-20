@@ -14,7 +14,7 @@ export default class TestMethods {
    * @memberof TestMethods
    */
   static *project_name_generator(
-    prefix: string = "Project_"
+    prefix: string = "Project"
   ): Generator<string> {
     // Global hyphen search
     const HYPEN_RE: RegExp = /\-/gi;
@@ -22,7 +22,7 @@ export default class TestMethods {
 
     let guid: string = crypto.randomUUID().toString();
     guid = guid.replace(HYPEN_RE, REPLACEMENT_TOKEN);
-    const project_name: string = `${prefix}${guid}`;
+    const project_name: string = `${prefix}_project_${guid}`;
     return project_name;
   }
 
