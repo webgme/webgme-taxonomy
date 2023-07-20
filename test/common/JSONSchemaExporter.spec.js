@@ -343,5 +343,42 @@ describe("JSONSchemaExporter", function () {
       assert.equal(termSchemas.length, 3);
       assert(!termSchemas.find((schema) => schema.title.startsWith("pre")));
     });
+
+    it("should include unreleased terms by default", async function () {
+      const taxCsv = `vocab,,,
+        ,term,,
+        ,term2,,
+        ,term3,,
+        depVocab,,,
+        ,depTerm,,
+        ,depTerm2,,
+        ,depTerm3,,
+        preVocab,,,
+        ,preTerm,,
+        ,preTerm2,,
+        ,preTerm3,,
+      `;
+      const taxonomy = await Utils.createTaxonomyFromCsv(core, root, taxCsv);
+      const depVocab = (await core.loadChildren(taxonomy))
+        .find((node) => core.getAttribute(node, "name") === "depVocab");
+      core.setAttribute(depVocab, "releaseState", "deprecated");
+      const preVocab = (await core.loadChildren(taxonomy))
+        .find((node) => core.getAttribute(node, "name") === "preVocab");
+      core.setAttribute(preVocab, "releaseState", "prerelease");
+
+      const exporter = JSONSchemaExporter.from(core, root);
+      const { schema } = await exporter.getSchemas(taxonomy);
+      const termSchemas = schema.properties.taxonomyTags.items.anyOf;
+      assert.equal(termSchemas.length, 9);
+
+      assert.equal(
+        termSchemas.filter((schema) => schema.title.startsWith("dep")).length,
+        3,
+      );
+      assert.equal(
+        termSchemas.filter((schema) => schema.title.startsWith("pre")).length,
+        3,
+      );
+    });
   });
 });
