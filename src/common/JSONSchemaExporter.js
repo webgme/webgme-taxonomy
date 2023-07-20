@@ -17,16 +17,16 @@ function factory() {
       this.META = META;
     }
 
-    async getSchemas(taxonomyNode, includeDeprecated = true) {
+    async getSchemas(taxonomyNode, onlyReleased = false) {
       const taxonomyName = this.core.getAttribute(taxonomyNode, "name");
       const vocabs = await this.core.loadChildren(taxonomyNode);
-      return this.getVocabSchemas(vocabs, taxonomyName, includeDeprecated);
+      return this.getVocabSchemas(vocabs, taxonomyName, onlyReleased);
     }
 
-    async getVocabSchemas(vocabs, taxonomyName, includeDeprecated = true) {
+    async getVocabSchemas(vocabs, taxonomyName, onlyReleased = false) {
       const termNodes = (
         await Promise.all(
-          vocabs.map((node) => this.getTermNodes(node, includeDeprecated)),
+          vocabs.map((node) => this.getTermNodes(node, onlyReleased)),
         )
       ).flat();
 
@@ -110,9 +110,9 @@ function factory() {
       );
     }
 
-    async getTermNodes(node, includeDeprecated) {
+    async getTermNodes(node, onlyReleased) {
       return (await this.core.loadSubTree(node)).filter((node) =>
-        this.isTerm(node) && (includeDeprecated || this.isCurrentTerm(node))
+        this.isTerm(node) && (!onlyReleased || this.isCurrentTerm(node))
       );
     }
 
@@ -197,13 +197,16 @@ function factory() {
       if (node === null) {
         return false;
       }
-      if (this.core.getAttribute(node, "deprecated")) {
+      const releaseState = this.core.getAttribute(node, "releaseState") ||
+        "released";
+
+      if (releaseState !== "released") {
         return false;
       }
 
       const parent = this.core.getParent(node);
-      const hasDeprecatedParent = parent && !this.isCurrentTerm(parent);
-      return !hasDeprecatedParent;
+      const hasUnreleasedParent = parent && !this.isCurrentTerm(parent);
+      return !hasUnreleasedParent;
     }
 
     /**

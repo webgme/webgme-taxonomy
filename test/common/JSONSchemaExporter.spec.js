@@ -1,21 +1,10 @@
 describe("JSONSchemaExporter", function () {
   const testFixture = require("../globals");
-  const _ = testFixture.requirejs("underscore");
-  const Core = testFixture.requirejs("common/core/coreQ");
   const Importer = testFixture.requirejs("webgme-json-importer/JSONImporter");
-  const TaxonomyParser = require("../../src/common/TaxonomyParser");
-  const TagFormatter = require("../../src/common/TagFormatter");
   const JSONSchemaExporter = require("../../src/common/JSONSchemaExporter");
   const Ajv = require("ajv");
   const ajv = new Ajv();
-  const { OmittedProperties, NodeSelections } = Importer;
   const assert = require("assert");
-  const gmeConfig = testFixture.getGmeConfig();
-  const path = testFixture.path;
-  const SEED_DIR = path.join(__dirname, "..", "..", "src", "seeds");
-  const Q = testFixture.Q;
-  const logger = testFixture.logger.fork("JSONImporter");
-  const projectName = "testProject";
   const Utils = require("../Utils");
   let project, gmeAuth, storage, commitHash, core;
 
@@ -271,7 +260,7 @@ describe("JSONSchemaExporter", function () {
     });
   });
 
-  describe("deprecate", function () {
+  describe("releaseState", function () {
     let root;
     beforeEach(async () => {
       root = await Utils.getNewRootNode(project, commitHash, core);
@@ -285,13 +274,30 @@ describe("JSONSchemaExporter", function () {
       const taxonomy = await Utils.createTaxonomyFromCsv(core, root, taxCsv);
       const termNode = (await core.loadSubTree(taxonomy))
         .find((node) => core.getAttribute(node, "name") === "depTerm");
-      core.setAttribute(termNode, "deprecated", true);
+      core.setAttribute(termNode, "releaseState", "deprecated");
 
       const exporter = JSONSchemaExporter.from(core, root);
-      const { schema } = await exporter.getSchemas(taxonomy, false);
+      const { schema } = await exporter.getSchemas(taxonomy, true);
       const termSchemas = schema.properties.taxonomyTags.items.anyOf;
       assert.equal(termSchemas.length, 2);
       assert(!termSchemas.find((schema) => schema.title === "depTerm"));
+    });
+
+    it("should omit prerelease terms", async function () {
+      const taxCsv = `vocab,,,
+        ,term,,
+        ,term2,,
+        ,preTerm,,`;
+      const taxonomy = await Utils.createTaxonomyFromCsv(core, root, taxCsv);
+      const termNode = (await core.loadSubTree(taxonomy))
+        .find((node) => core.getAttribute(node, "name") === "preTerm");
+      core.setAttribute(termNode, "releaseState", "prerelease");
+
+      const exporter = JSONSchemaExporter.from(core, root);
+      const { schema } = await exporter.getSchemas(taxonomy, true);
+      const termSchemas = schema.properties.taxonomyTags.items.anyOf;
+      assert.equal(termSchemas.length, 2);
+      assert(!termSchemas.find((schema) => schema.title === "preTerm"));
     });
 
     it("should omit terms in deprecated vocabs", async function () {
@@ -307,13 +313,35 @@ describe("JSONSchemaExporter", function () {
       const taxonomy = await Utils.createTaxonomyFromCsv(core, root, taxCsv);
       const vocabNode = (await core.loadChildren(taxonomy))
         .find((node) => core.getAttribute(node, "name") === "depVocab");
-      core.setAttribute(vocabNode, "deprecated", true);
+      core.setAttribute(vocabNode, "releaseState", "deprecated");
 
       const exporter = JSONSchemaExporter.from(core, root);
-      const { schema } = await exporter.getSchemas(taxonomy, false);
+      const { schema } = await exporter.getSchemas(taxonomy, true);
       const termSchemas = schema.properties.taxonomyTags.items.anyOf;
       assert.equal(termSchemas.length, 3);
       assert(!termSchemas.find((schema) => schema.title.startsWith("dep")));
+    });
+
+    it("should omit terms in prerelease vocabs", async function () {
+      const taxCsv = `vocab,,,
+        ,term,,
+        ,term2,,
+        ,term3,,
+        preVocab,,,
+        ,preTerm,,
+        ,preTerm2,,
+        ,preTerm3,,
+      `;
+      const taxonomy = await Utils.createTaxonomyFromCsv(core, root, taxCsv);
+      const vocabNode = (await core.loadChildren(taxonomy))
+        .find((node) => core.getAttribute(node, "name") === "preVocab");
+      core.setAttribute(vocabNode, "releaseState", "prerelease");
+
+      const exporter = JSONSchemaExporter.from(core, root);
+      const { schema } = await exporter.getSchemas(taxonomy, true);
+      const termSchemas = schema.properties.taxonomyTags.items.anyOf;
+      assert.equal(termSchemas.length, 3);
+      assert(!termSchemas.find((schema) => schema.title.startsWith("pre")));
     });
   });
 });
