@@ -1,8 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const FULLY_PARALLEL: boolean = true
-const DEFAULT_HOST: string = "127.0.0.1"
-const DEFAULT_PORT: string = "8080"
+const FULLY_PARALLEL: boolean = false;
+const DEFAULT_HOST: string = "127.0.0.1";
+const DEFAULT_PORT: string = "8080";
 const BASE_URL = `http://${DEFAULT_HOST}:${DEFAULT_PORT}/`;
 // process.env.DEBUG = "*"
 
@@ -16,15 +16,15 @@ const BASE_URL = `http://${DEFAULT_HOST}:${DEFAULT_PORT}/`;
  * See https://playwright.dev/docs/test-configuration.
  */
 export default defineConfig({
-  testDir: 'e2e',
+  testDir: "e2e",
   // testIgnore: 'test-*.spec-ts',
-  testMatch: '*.spec.ts',
+  testMatch: "*.spec.ts",
   /* Run tests in files in parallel */
   fullyParallel: FULLY_PARALLEL,
 
-  globalSetup: require.resolve('./e2e/common/global.setup'),
+  globalSetup: require.resolve("./e2e/global.setup"),
 
-  globalTeardown: require.resolve('./e2e/common/global.teardown'),
+  globalTeardown: require.resolve("./e2e/global.teardown"),
 
   /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
@@ -36,7 +36,6 @@ export default defineConfig({
   reporter: "html",
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
-
     /* Base URL to use in actions like `await page.goto('/')`. */
     baseURL: BASE_URL,
 
@@ -47,20 +46,18 @@ export default defineConfig({
       mode: "on",
       size: { width: 1920, height: 1080 },
     },
-
   },
 
   /* Configure projects for major browsers */
   projects: [
-
     {
       name: "chromium",
       use: {
-        ...devices["Desktop Chrome"], 
-        bypassCSP: true,
-        launchOptions: {
-          args: ['--disable-web-security']
-        }
+        ...devices["Desktop Chrome"],
+        // bypassCSP: true,
+        // launchOptions: {
+        //   args: ['--disable-web-security']
+        // }
       },
     },
 
@@ -98,7 +95,10 @@ export default defineConfig({
   /* Run your local dev server before starting the tests */
   webServer: {
     command: "npm run start",
-    url: "http://127.0.0.1:8080",
+    url: BASE_URL,
     reuseExistingServer: !process.env.CI,
+    stdout: "ignore", // default
+    stderr: "pipe", // default
+    timeout: 120 * 1000,
   },
 });
