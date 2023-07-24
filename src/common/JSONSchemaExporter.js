@@ -23,72 +23,78 @@ function factory() {
       return this.getVocabSchemas(vocabs, taxonomyName, onlyReleased);
     }
 
-    async getVocabSchemas(vocabs, taxonomyName, onlyReleased = false) {
-      const termNodes = (
-        await Promise.all(
-          vocabs.map((node) => this.getTermNodes(node, onlyReleased)),
-        )
-      ).flat();
-
-      const terms = await Promise.all(
-        termNodes.map((node) => this.getTermFromNode(node)),
+    async getVocabSchemas(vocabNodes, taxonomyName, onlyReleased = false) {
+      const allVocabs = await Promise.all(
+        vocabNodes
+          .filter((node) => !onlyReleased || this.isReleased(node))
+          .map(
+            (node) => this._getVocab(node, onlyReleased),
+          ),
       );
-      const properties = {
-        taxonomyTags: {
-          title: taxonomyName,
-          type: "array",
-          uniqueItems: true,
-          minItems: 1,
-          items: {
-            type: "object",
-            anyOf: terms.map((term) => term.schema),
-          },
-        },
-      };
-
-      // add constraint for all required terms
-      const requiredTerms = terms.filter((term) => term.isRequired());
-      if (requiredTerms.length) {
-        properties.taxonomyTags.allOf = requiredTerms.map((term) => ({
-          contains: term.schema,
-        }));
-      }
+      const vocabs = allVocabs.filter((v) => !v.isEmpty());
+      const properties = Object.fromEntries(
+        vocabs.map((v) => [v.name, v.schema]),
+      );
+      const required = vocabs
+        .filter((v) => v.isRequired())
+        .map((v) => v.name);
 
       const schema = {
+        title: `Metadata for ${taxonomyName}`,
         type: "object",
         properties,
+        additionalProperties: false,
+        required,
       };
+      console.log(JSON.stringify(schema, null, 2));
 
-      const uiSchema = {
-        taxonomyTags: {
-          items: {},
-        },
-      };
-      const formData = {
-        taxonomyTags: terms
-          .filter((term) => !term.isOptional())
-          .map((term) => term.getInstance()),
-      };
+      const uiSchema = {};
+      const formData = Object.assign(
+        {},
+        ...vocabs.filter((v) => v.isRequired())
+          .map((v) => v.getFormData()),
+      );
       return { schema, uiSchema, formData };
     }
 
-    async getTermFromNode(node) {
-      const parentTerms = this.getAncestorTerms(node);
-      const name = this.core.getAttribute(node, "name");
+    async _getVocab(vocabNode, onlyReleased = false) {
+      const terms = await Promise.all(
+        (await this.core.loadChildren(vocabNode))
+          .filter((node) =>
+            this.isTerm(node) && (!onlyReleased || this.isReleased(node))
+          )
+          .map((node) => this.getTermFromNode(node)),
+      );
+
+      const required = terms.filter((term) => term.isRequired())
+        .map((term) => term.name);
+
       const schema = {
         type: "object",
-        // FIXME: we need to figure out how to hide the top title...
-        title: name,
-        properties: {},
-        additionalProperties: false,
+        properties: Object.fromEntries(
+          terms.map((term) => [term.name, term.schema]),
+        ),
+        required,
       };
-      const termFields = await Promise.all(
-        parentTerms.map((n) => this.getDefinition(n)),
-      );
-      zip(parentTerms, termFields).reduce((schema, [parent, fields]) => {
-        const name = this.core.getAttribute(parent, "name");
-        return (schema.properties[name] = fields);
-      }, schema);
+
+      const name = this.core.getAttribute(vocabNode, "name");
+      return new Vocabulary(name, schema, terms);
+      // FIXME: this is assuming that it is flat atm
+      // TODO: add a test for deeper hierarchies
+    }
+
+    async getTermFromNode(node) {
+      // const parentTerms = this.getAncestorTerms(node);
+      const name = this.core.getAttribute(node, "name");
+      const schema = await this.getDefinition(node);
+      // const termFields = await Promise.all(
+      //   parentTerms.map((n) => this.getDefinition(n)),
+      // );
+      // // FIXME: remove the path to the children stuff
+      // zip(parentTerms, termFields).reduce((schema, [parent, fields]) => {
+      //   const name = this.core.getAttribute(parent, "name");
+      //   return (schema.properties[name] = fields);
+      // }, schema);
 
       const selection = this.core.getAttribute(node, "selection");
       return new Term(name, schema, selection);
@@ -112,7 +118,7 @@ function factory() {
 
     async getTermNodes(node, onlyReleased) {
       return (await this.core.loadSubTree(node)).filter((node) =>
-        this.isTerm(node) && (!onlyReleased || this.isCurrentTerm(node))
+        this.isTerm(node) && (!onlyReleased || this.isReleased(node))
       );
     }
 
@@ -193,7 +199,7 @@ function factory() {
      * @return {boolean} Whether or not the `node` is deprecated
      * @memberof JSONSchemaExporter
      */
-    isCurrentTerm(node) {
+    isReleased(node) {
       if (node === null) {
         return false;
       }
@@ -205,7 +211,7 @@ function factory() {
       }
 
       const parent = this.core.getParent(node);
-      const hasUnreleasedParent = parent && !this.isCurrentTerm(parent);
+      const hasUnreleasedParent = parent && !this.isReleased(parent);
       return !hasUnreleasedParent;
     }
 
@@ -481,6 +487,38 @@ function factory() {
         //   return null;
       }
       return null;
+    }
+  }
+
+  class Vocabulary {
+    constructor(name, schema, childTerms) {
+      this.name = name;
+      this.schema = schema;
+      this.childTerms = childTerms;
+    }
+
+    // A vocabulary is required if it contains any required child terms
+    isRequired() {
+      return this.childTerms.some((term) => term.isRequired());
+    }
+
+    // Get the initial form data (only for required terms)
+    getFormData() {
+      if (!this.isRequired()) {
+        return;
+      }
+
+      const entries = this.childTerms
+        .filter((term) => term.isRequired())
+        .map((term) => [term.name, term.getInstance()]);
+
+      const formData = {};
+      formData[this.name] = Object.fromEntries(entries);
+      return formData;
+    }
+
+    isEmpty() {
+      return this.childTerms.length === 0;
     }
   }
 
