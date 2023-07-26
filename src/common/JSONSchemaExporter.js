@@ -46,7 +46,6 @@ function factory() {
         additionalProperties: false,
         required,
       };
-      console.log(JSON.stringify(schema, null, 2));
 
       const uiSchema = {};
       const formData = Object.assign(
@@ -445,7 +444,14 @@ function factory() {
       const core = exporter.core;
       const schema = await exporter.getFieldSchema(node);
       const name = core.getAttribute(node, "name");
-      const required = core.getAttribute(node, "required");
+
+      // FIXME: Due to a limitation in the tag forms, fields can only
+      // be considered required if they are contained in a required term
+      const parentTerm = getContainmentAncestors(core, node)
+        .find((node) => exporter.isTerm(node));
+      const isTermRequired =
+        core.getAttribute(parentTerm, "selection") === "required";
+      const required = isTermRequired && core.getAttribute(node, "required");
       return new Property(name, schema, required);
     }
   }
@@ -520,6 +526,17 @@ function factory() {
     isEmpty() {
       return this.childTerms.length === 0;
     }
+  }
+
+  function getContainmentAncestors(core, node) {
+    let pathToRoot = [];
+
+    while (node) {
+      pathToRoot.push(node);
+      node = core.getParent(node);
+    }
+
+    return pathToRoot;
   }
 
   return JSONSchemaExporter;

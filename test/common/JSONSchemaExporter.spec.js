@@ -72,6 +72,52 @@ describe("JSONSchemaExporter", function () {
     });
   });
 
+  describe("required props", function () {
+    // The following test is required bc of a limitation of the tag form itself
+    it("should make all properties of optional terms optional, too", async function () {
+      const root = await Utils.getNewRootNode(project, commitHash, core);
+      const requiredPropJson = {
+        pointers: { base: "@meta:TextField" },
+        attributes: { required: true },
+      };
+      const taxonomyJson = {
+        pointers: { base: "@meta:Taxonomy" },
+        children: [
+          {
+            pointers: { base: "@meta:Vocabulary" },
+            children: [
+              {
+                pointers: { base: "@meta:Term" },
+                attributes: {
+                  name: "RequiredTerm",
+                  selection: "required",
+                },
+                children: [requiredPropJson],
+              },
+              {
+                pointers: { base: "@meta:Term" },
+                attributes: {
+                  name: "OptionalTerm",
+                  selection: "optional",
+                },
+                children: [requiredPropJson],
+              },
+            ],
+          },
+        ],
+      };
+      const importer = new Importer(core, root);
+      const taxonomy = await importer.import(root, taxonomyJson);
+      const exporter = JSONSchemaExporter.from(core, taxonomy);
+
+      const { schema } = await exporter.getSchemas(taxonomy);
+      const termDict = schema.properties.Vocabulary.properties;
+
+      assert.equal(termDict.OptionalTerm.required.length, 0);
+      assert.equal(termDict.RequiredTerm.required.pop(), "TextField");
+    });
+  });
+
   describe("recommended terms", function () {
     it.skip("should include terms in initial form data", async function () {
       const root = await Utils.getNewRootNode(project, commitHash, core);
