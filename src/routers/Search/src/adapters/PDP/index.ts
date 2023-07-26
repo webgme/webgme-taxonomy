@@ -37,7 +37,7 @@ import type {
   ArtifactMetadata,
   Repository,
 } from "../common/types";
-import { filterMap, range, sleep } from "../../Utils";
+import { deepMerge, filterMap, range, sleep } from "../../Utils";
 import CreateRequestLogger from "./CreateRequestLogger";
 const logFilePath = process.env.CREATE_LOG_PATH || "./CreateProcesses.jsonl";
 const reqLogger = new CreateRequestLogger(logFilePath);
@@ -46,6 +46,7 @@ import {
   UploadParams,
   UploadRequest,
 } from "../common/AppendResult";
+import { toArtifactMetadatav2 } from "../common/Helpers";
 const UPLOAD_HEADERS = {
   Accept: "application/xml",
   "Content-Type": "application/octet-stream",
@@ -102,7 +103,7 @@ export default class PDP implements Adapter {
         .map(({ processId }) => this.getProcessObservations(processId)),
     );
 
-    const artifacts: Artifact[] = filterMap(
+    const artifacts = filterMap(
       processObservations.flat(),
       parseArtifact,
     );
@@ -110,13 +111,11 @@ export default class PDP implements Adapter {
       _.groupBy(artifacts, (artifact) => artifact.parentId ?? ""),
     ).map(([parentId, artifacts]) => {
       artifacts.sort((a1, a2) => (a1.time < a2.time ? -1 : 1));
-      const { displayName } = artifacts[0];
-      const lastIndex = artifacts.length - 1;
-      const { taxonomyTags, taxonomyVersion } = artifacts[lastIndex];
+      const { displayName, taxonomyVersion, tags } = artifacts[0];
       return {
         id: parentId,
         displayName,
-        taxonomyTags,
+        tags,
         taxonomyVersion,
         children: artifacts,
       };
@@ -532,12 +531,13 @@ export default class PDP implements Adapter {
 function parseArtifact(obs: Observation): Artifact | undefined {
   const metadata = obs.data && obs.data[0];
   if (metadata && metadata.displayName) {
+    const md = toArtifactMetadatav2(metadata);
     return {
       parentId: obs.processId.toString(),
       id: obs.index + "_" + obs.version,
-      displayName: metadata.displayName,
-      taxonomyTags: metadata.taxonomyTags,
-      taxonomyVersion: metadata.taxonomyVersion,
+      displayName: md.displayName,
+      tags: md.tags,
+      taxonomyVersion: md.taxonomyVersion,
       time: obs.startTime,
     };
   }

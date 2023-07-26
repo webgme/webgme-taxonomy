@@ -38,21 +38,39 @@ export interface Artifact {
   parentId?: string;
   id?: string;
   displayName: string;
-  taxonomyTags: any[];
+  tags: any;
   taxonomyVersion: TaxonomyVersion;
   time: string;
   files?: string[];
 }
 
+// Tags are stored in a tag dictionary like below (example is human-readable):
+// {
+//   Base: {
+//     name: {
+//       value: "hello world!"
+//     }
+//   }
+// }
+type TagDict = { [vocab: string]: { [term: string]: any } };
 export interface Repository {
   id: string;
   displayName: string;
-  taxonomyTags: any[];
+  tags: TagDict;
   taxonomyVersion: TaxonomyVersion;
   children: Artifact[];
 }
 
-export interface ArtifactMetadata {
+export type ArtifactMetadata = ArtifactMetadatav1 | ArtifactMetadatav2;
+
+export interface ArtifactMetadatav2 {
+  displayName: string;
+  tags: any;
+  taxonomyVersion: TaxonomyVersion;
+  time: string;
+}
+
+export interface ArtifactMetadatav1 {
   displayName: string;
   taxonomyTags: any[];
   taxonomyVersion: TaxonomyVersion;

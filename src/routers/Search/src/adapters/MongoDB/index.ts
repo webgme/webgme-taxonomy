@@ -11,6 +11,7 @@ import type {
   Adapter,
   Artifact,
   ArtifactMetadata,
+  ArtifactMetadatav2,
   Repository,
 } from "../common/types";
 import type TagFormatter from "../../../../../common/TagFormatter";
@@ -25,6 +26,7 @@ import {
   UploadRequest,
 } from "../common/AppendResult";
 import { WebgmeContext } from "../../../../../common/types";
+import { toArtifactMetadatav2 } from "../common/Helpers";
 
 const mongoUri = gmeConfig.mongo.uri;
 const defaultClient = new MongoClient(mongoUri);
@@ -46,21 +48,23 @@ export default class MongoAdapter implements Adapter {
     const documents = await this._collection.find({}).toArray();
     const repos: Repository[] = documents.map((doc) => {
       const docId = doc._id.toString();
-      const artifacts = doc.artifacts.map(
-        (data: ArtifactMetadata, index: number) => ({
-          parentId: docId,
-          id: index.toString(),
-          displayName: data.displayName,
-          taxonomyTags: data.taxonomyTags,
-          taxonomyVersion: data.taxonomyVersion,
-          time: data.time,
-        }),
-      );
+      const artifacts = doc.artifacts
+        .map(toArtifactMetadatav2)
+        .map(
+          (data: ArtifactMetadatav2, index: number) => ({
+            parentId: docId,
+            id: index.toString(),
+            displayName: data.displayName,
+            tags: data.tags,
+            taxonomyVersion: data.taxonomyVersion,
+            time: data.time,
+          }),
+        );
 
       return {
         id: docId,
         displayName: doc.displayName,
-        taxonomyTags: doc.taxonomyTags,
+        tags: doc.tags,
         taxonomyVersion: doc.taxonomyVersion,
         children: artifacts,
       };
@@ -83,17 +87,13 @@ export default class MongoAdapter implements Adapter {
 
   async appendArtifact(
     repoId: string,
-    metadata: ArtifactMetadata,
+    metadata: ArtifactMetadatav2,
     filenames: string[],
   ) {
-    const repo = await this._collection.findOne({
-      _id: new ObjectId(repoId),
-    });
-
     const fileIds = _.range(filenames.length).map(() => new ObjectId());
     const artifact: Artifact = {
       displayName: metadata.displayName,
-      taxonomyTags: metadata.taxonomyTags,
+      tags: metadata.tags,
       taxonomyVersion: metadata.taxonomyVersion,
       time: (new Date()).toString(),
       files: fileIds.map((id) => id.toString()),

@@ -7,6 +7,21 @@ export function range(start: number, end: number): number[] {
   return [...new Array(len)].map((_v, index) => start + index);
 }
 
+// A pathObj is an object eg, {vocab: {term: {value: "example"}}}
+// to be merged with another eg, {vocab: {term2: {value2: "example"}}}
+// to get an object with all the values
+export function deepMerge(...pathObj: any[]): object {
+  return {};
+}
+
+export function omit(dict: object, ...keys: string[]): object {
+  const skipKeys = new Set(keys);
+  const entries = Object.entries(dict)
+    .filter(([k, _v]) => !skipKeys.has(k));
+
+  return Object.fromEntries(entries);
+}
+
 export function filterMap<I, O>(list: I[], fn: (x: I) => O | undefined): O[] {
   return list.reduce((items, input) => {
     const mapped = fn(input);
