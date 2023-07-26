@@ -10,8 +10,38 @@ export function range(start: number, end: number): number[] {
 // A pathObj is an object eg, {vocab: {term: {value: "example"}}}
 // to be merged with another eg, {vocab: {term2: {value2: "example"}}}
 // to get an object with all the values
-export function deepMerge(...pathObj: any[]): object {
-  return {};
+type StrObj = { [k: string]: any };
+export function deepMerge(...pathObjs: object[]): object {
+  const initValue: { [k: string]: any } = {};
+  return pathObjs.reduce((obj: StrObj, keyObj) => {
+    const entries = Object.entries(keyObj);
+    const mergedEntries: [string, any][] = entries.map(
+      ([k, v]: [string, any]) => {
+        const existing: any = obj[k];
+        if (isObject(existing) && isObject(v)) {
+          return [k, deepMerge(existing, v)];
+        } else {
+          return [k, v];
+        }
+      },
+    );
+
+    mergedEntries.forEach(([k, v]: [string, any]) => obj[k] = v);
+
+    return obj;
+  }, initValue);
+}
+
+export function partition<T>(list: T[], fn: (i: T) => boolean): [T[], T[]] {
+  const initValue: [T[], T[]] = [[], []];
+  return list.reduce(([ifTrue, ifFalse], item) => {
+    if (fn(item)) {
+      ifTrue.push(item);
+    } else {
+      ifFalse.push(item);
+    }
+    return [ifTrue, ifFalse];
+  }, initValue);
 }
 
 export function omit(dict: object, ...keys: string[]): object {
@@ -34,6 +64,10 @@ export function filterMap<I, O>(list: I[], fn: (x: I) => O | undefined): O[] {
 
 export function isString<T>(possibleStr: T): possibleStr is Extract<T, string> {
   return typeof possibleStr === "string";
+}
+
+export function isObject<T>(possibleObj: T): possibleObj is Extract<T, object> {
+  return typeof possibleObj === "object";
 }
 
 export function assert(cond: boolean, msg: string | Error) {
