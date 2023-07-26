@@ -4,7 +4,7 @@ describe("Utils", function () {
   );
   const assert = require("assert");
 
-  describe.only("deepMerge", function () {
+  describe("deepMerge", function () {
     it("should merge two shallow objects", function () {
       const combined = Utils.deepMerge({ k1: true }, { k2: true });
       assert(combined.k1);

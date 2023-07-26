@@ -160,6 +160,7 @@ describe("JSONSchemaExporter", function () {
                 pointers: { base: "@meta:Term" },
                 attributes: {
                   name: "RecTerm",
+                  selection: "required",
                 },
                 children: [
                   {
