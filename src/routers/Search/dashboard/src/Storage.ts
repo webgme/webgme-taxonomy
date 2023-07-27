@@ -107,7 +107,7 @@ class Storage {
 
   async createArtifact(metadata, files) {
     console.log("Creating artifact:", metadata, files);
-    metadata.taxonomyTags = metadata.taxonomyTags || [];
+    metadata.tags = metadata.tags || {};
     const opts = {
       method: "POST",
       headers: { "Content-Type": "application/json" },

@@ -38,7 +38,7 @@
   let displayedName = null;
   let displayTags = false;
   async function showTags(artifact) {
-    displayedTags = await formatter.toHumanFormat(artifact.taxonomyTags);
+    displayedTags = await formatter.toHumanFormat(artifact.tags);
     displayedName = artifact.displayName;
     displayTags = true;
   }

@@ -26,7 +26,7 @@
   const formatter = new TagFormatter();
 
   /** The artifact set to append a new artifact to. Null to hide dialog.*/
-  export let set: { displayName: string; taxonomyTags: any[] } | null = null;
+  export let set: { displayName: string; tags: object } | null = null;
   /** The content type name for the artifact set to append to. */
   export let contentType: ContentType;
 
@@ -39,22 +39,22 @@
   $: displayName = set?.displayName ?? "";
   $: appendName = displayName;
   $: setOpen(set != null);
-  $: setMetadata(set?.taxonomyTags ?? []);
+  $: setMetadata(set?.tags ?? {});
   $: progresses = uploading ? Array(files.length).fill(0) : [];
 
   function setOpen(value: boolean) {
     if (value !== open) open = value;
   }
 
-  let lastTags = set?.taxonomyTags ?? [];
+  let lastTags = set?.tags ?? {};
   async function setMetadata(tags: any[]) {
     if (tags === lastTags) {
       return;
     }
 
     try {
-      const taxonomyTags = await formatter.toHumanFormat(tags);
-      metadata = { taxonomyTags };
+      const tags = await formatter.toHumanFormat(tags);
+      metadata = { tags };
     } catch (err) {
       if (err instanceof FormatError) {
         console.warn("Latest artifact has invalid taxonomy tags:", err.message);
@@ -123,20 +123,27 @@
     return dispatch("error", { error });
   }
 
-  function getTagDisplayName(tag) {
-    // FIXME: there is no way to tell the difference btwn terms and compound fields...
-    let currentTag = tag;
-    const tagNames = [];
-    while (currentTag) {
-      const [name, tag] =
-        Object.entries(currentTag).find(([, data]) => isObject(data)) || [];
-      currentTag = tag;
-      if (name) {
-        tagNames.push(name);
+  function getTagsDisplayNames(tags, prefix = null): string[] {
+    const names = Object.entries(tags).flatMap(([name, value]) => {
+      if (isObject(value)) {
+        const isOption = Object.keys(value).length === 0;  // for an enum/set/list/etc
+        if (isOption) {
+          return [name];
+        } else {
+          return getTagsDisplayNames(value, name);
+        }
+      } else {
+          return [`${name}: ${value}`];
       }
-    }
+    });
 
-    return tagNames.pop(); // Only return the most specific one for now...
+    return names.map(name => {
+      if (prefix) {
+        return prefix + '.' + name;
+      } else {
+        return name;
+      }
+    });
   }
 
   function closeHandler(e: CustomEvent<{ action: string }>) {
@@ -208,7 +215,8 @@
 
     <p>
       Taxonomy Terms <span style="font-style:italic">(optional)</span>:<br />
-      {metadata ? metadata.taxonomyTags.map(getTagDisplayName).join(", ") : ""}
+      {metadata ? getTagsDisplayNames(metadata.tags) : ""}
+      <!-- TODO: how to show these? -->
     </p>
 
     {#if !uploading}

@@ -73,11 +73,11 @@ export default class MongoAdapter implements Adapter {
     return repos;
   }
 
-  async createArtifact(metadata: ArtifactMetadata) {
+  async createArtifact(metadata: ArtifactMetadatav2) {
     const artifactSet = {
       displayName: metadata.displayName,
       taxonomyVersion: metadata.taxonomyVersion,
-      taxonomyTags: [],
+      tags: metadata.tags,
       artifacts: [],
     };
     const result = await this._collection.insertOne(artifactSet);

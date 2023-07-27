@@ -84,12 +84,12 @@
 
   function onFilterUpdate(searchQuery: string, filterTags: FilterTag[]) {
     const filter = (item) => {
-      const { displayName, taxonomyTags = [] } = item;
+      const { displayName, tags = {} } = item;
 
-      const matchingTags = FilterTag.applyFilters(taxonomyTags, filterTags);
+      const matchingTags = FilterTag.applyFilters(tags, filterTags);
       const hasMatchingArtifact = item.children.find((child) => {
-        const { displayName, taxonomyTags = [] } = child;
-        return FilterTag.applyFilters(taxonomyTags, filterTags);
+        const { displayName, tags = {} } = child;
+        return FilterTag.applyFilters(tags, filterTags);
       });
 
       if (matchingTags || hasMatchingArtifact) {
@@ -112,7 +112,8 @@
 
   $: onFilterUpdate(searchQuery, filterTags);
 
-  $: itemTags = items.flatMap((item) => item.taxonomyTags ?? []);
+  // FIXME: what should this be?
+  $: itemTags = items.flatMap((item) => item.tags ?? {});
 
   function setQueryStringParams(newParams: URLSearchParams) {
     const params = new URLSearchParams(location.search);
@@ -436,31 +437,6 @@
   <DialogContent id="content">
     <Textfield label="Name" bind:value={artifactName} />
     <!-- TODO: create process -->
-    <!-- TODO: re-enable this when we can automatically create processes
-    <p>{contentType} file(s):</p>
-    <ul>
-      {#each artifactFiles as file}
-        <li>{file.name}</li>
-      {/each}
-    </ul>
-    <Dropzone on:drop={onFileDrop} multiple={true}>
-      <p>Select dataset to upload.</p>
-    </Dropzone>
-    <p>
-      Taxonomy Terms:
-      {uploadMetadata
-        ? uploadMetadata.taxonomyTags.map((tag) => tag.Tag).join(", ")
-        : ""}
-    </p>
-    <Dropzone on:drop={onTagsFileDrop} accept=".json">
-      <p>Select tags file for dataset.</p>
-    </Dropzone>
-    <a
-      target="_blank"
-      href={window.location.href.replace("/Search/", "/TagCreator/")}
-      >Click to select tags for your dataset.</a
-    >
-    -->
   </DialogContent>
   <Actions>
     <Button>
@@ -510,19 +486,6 @@
                   <PrimaryText>{item.displayName}</PrimaryText>
                   <SecondaryText />
                 </Text>
-                {#each item.taxonomyTags as tag}
-                  <!--
-                                                            <Chip chip={tag.id}>
-                    {#if tag.type === 'EnumField'}
-                <Text>{tag.name}</Text>
-                                            {:else if tag.value}
-                <Text>{tag.name}: {tag.value}</Text>
-                    {:else}
-                <Text>{tag.name}</Text>
-                    {/if}
-                                                            </Chip>
-                  -->
-                {/each}
               </Item>
             {/each}
           </List>
