@@ -246,6 +246,15 @@ class TagNotFoundError extends UserError {
   }
 }
 
+async function eventEmitted(emitter, eventName) {
+  return new Promise((resolve) => {
+    emitter.on(eventName, resolve);
+  });
+}
+
 Utils.UserError = UserError;
 Utils.handleUserErrors = handleUserErrors;
+Utils.responseClose = (res) => {
+  return eventEmitted(res, "close");
+};
 module.exports = Utils;

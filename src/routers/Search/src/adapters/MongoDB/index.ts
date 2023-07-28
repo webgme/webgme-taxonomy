@@ -141,17 +141,17 @@ export default class MongoAdapter implements Adapter {
     formatter: TagFormatter,
     targetDir: string,
   ): Promise<void> {
-    const set = await this._collection.findOne({
+    const repo = await this._collection.findOne({
       _id: new ObjectId(repoId),
     });
-    if (!set) {
+    if (!repo) {
       // TODO: throw an error
       return;
     }
 
     await Promise.all(
       ids.map(async (idx) => {
-        const metadata = set.artifacts[idx];
+        const metadata = repo.artifacts[idx];
         const artifactPath = path.join(targetDir, idx.toString());
         if (metadata) {
           const metadataPath = path.join(artifactPath, "metadata.json");
@@ -193,6 +193,8 @@ export default class MongoAdapter implements Adapter {
     const metadata = await this._files.find({ _id: id }).next();
     if (metadata) {
       const filepath = path.join(targetDir, metadata.filename);
+      await fsp.mkdir(path.dirname(filepath), { recursive: true });
+
       const fileStream = fs.createWriteStream(filepath);
       const stream = this._files.openDownloadStream(id).pipe(fileStream);
 
@@ -228,5 +230,5 @@ async function writeJsonData(filePath: string, metadata: ArtifactMetadata) {
 }
 
 async function streamClose(stream: stream.Stream): Promise<void> {
-  return new Promise((res, rej) => stream.on("close", res));
+  return new Promise((res, _rej) => stream.on("close", res));
 }
