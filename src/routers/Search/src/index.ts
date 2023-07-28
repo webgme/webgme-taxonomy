@@ -27,16 +27,14 @@ import { isString } from "./Utils";
 import DashboardConfiguration from "../../../common/SearchFilterDataExporter";
 import TagFormatter from "../../../common/TagFormatter";
 import path from "path";
-const staticPath = path.join(__dirname, "..", "dashboard", "public");
-import os from "os";
-import { COMPRESSION_LEVEL, zip } from "zip-a-folder";
 import fsp from "fs/promises";
-import fs from "fs";
+const staticPath = path.join(__dirname, "..", "dashboard", "public");
 import StorageAdapter from "./adapters";
 import {
   ChildContentTypeNotFoundError,
   MetaNodeNotFoundError,
 } from "./adapters/common/ModelError";
+import TaskQueue, { DownloadTask, FilePath } from "./TaskQueue";
 
 /* N.B. gmeAuth, safeStorage and workerManager are not ready to use until the start function is called.
  * (However inside an incoming request they are all ensured to have been initialized.)
@@ -187,8 +185,9 @@ function initialize(middlewareOpts: MiddlewareOptions) {
     }),
   );
 
-  router.get(
-    RouterUtils.getContentTypeRoutes("artifacts/:parentId/download"),
+  const downloadQueue: TaskQueue<DownloadTask, FilePath> = new TaskQueue();
+  router.post(
+    RouterUtils.getContentTypeRoutes("artifacts/:parentId/downloads/"),
     RouterUtils.handleUserErrors(
       logger,
       async function downloadContent(req, res) {
@@ -215,30 +214,54 @@ function initialize(middlewareOpts: MiddlewareOptions) {
           mainConfig,
         );
 
-        const tmpDir = await fsp.mkdtemp(
-          path.join(os.tmpdir(), "webgme-taxonomy-"),
+        const task = new DownloadTask(
+          logger,
+          storage,
+          formatter,
+          parentId,
+          ids,
         );
-        const downloadDir = path.join(tmpDir, "download");
-        const zipPath = path.join(tmpDir, `${parentId}.zip`);
-        await storage.download(parentId, ids, formatter, downloadDir);
-        await zip(downloadDir, zipPath, {
-          compression: COMPRESSION_LEVEL.medium,
-        });
-        await fsp.rm(downloadDir, { recursive: true });
+        console.log(">>> about to submit download task");
+        const id = downloadQueue.submitTask(task);
+        console.log("submitted download task:", id);
+        res.json(id);
+      },
+    ),
+  );
 
-        try {
-          await fsp.access(zipPath, fs.constants.R_OK);
-          res.download(
-            zipPath,
-            path.basename(zipPath),
-            () => fsp.rm(tmpDir, { recursive: true }),
-          );
-          return false;
-        } catch (err) {
-          // no files associated with the artifact
-          logger.error(`${err}`);
-          res.sendStatus(204);
-        }
+  router.get(
+    RouterUtils.getContentTypeRoutes(
+      "artifacts/:parentId/downloads/:taskId/status",
+    ),
+    RouterUtils.handleUserErrors(
+      logger,
+      async function getDownloadTaskStatus(req, res) {
+        const { taskId } = req.params;
+        const status = downloadQueue.getStatus(parseInt(taskId));
+        console.log("status for", taskId, "is", status);
+        res.json(status);
+      },
+    ),
+  );
+
+  router.get(
+    RouterUtils.getContentTypeRoutes(
+      "artifacts/:parentId/downloads/:taskId",
+    ),
+    RouterUtils.handleUserErrors(
+      logger,
+      async function getDownloadContent(req, res) {
+        const { taskId } = req.params;
+        const zipPath = downloadQueue.getResult(parseInt(taskId));
+        const tmpDir = path.dirname(zipPath);
+
+        res.download(
+          zipPath,
+          path.basename(zipPath),
+        );
+
+        await RouterUtils.responseClose(res);
+        await fsp.rm(tmpDir, { recursive: true });
       },
     ),
   );
