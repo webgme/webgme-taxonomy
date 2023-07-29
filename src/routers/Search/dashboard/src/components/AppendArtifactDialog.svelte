@@ -9,6 +9,7 @@
   import Button, { Label } from "@smui/button";
   import LinearProgress from "@smui/linear-progress";
   import IconButton from "@smui/icon-button";
+  import TagCreatorDialog from "./TagCreatorDialog.svelte";
 
   import { createEventDispatcher, getContext } from "svelte";
   import { fade } from "svelte/transition";
@@ -223,6 +224,8 @@
       <Label>Upload</Label>
     </Button>
   </div>
+
+  <TagCreatorDialog></TagCreatorDialog>
 </Dialog>
 
 <style>
