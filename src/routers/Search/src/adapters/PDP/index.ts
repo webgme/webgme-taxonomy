@@ -37,7 +37,7 @@ import type {
   ArtifactMetadata,
   Repository,
 } from "../common/types";
-import { deepMerge, filterMap, range, sleep } from "../../Utils";
+import { filterMap, range, sleep } from "../../Utils";
 import CreateRequestLogger from "./CreateRequestLogger";
 const logFilePath = process.env.CREATE_LOG_PATH || "./CreateProcesses.jsonl";
 const reqLogger = new CreateRequestLogger(logFilePath);
@@ -165,7 +165,11 @@ export default class PDP implements Adapter {
     return await this._fetchJson(url, opts);
   }
 
-  async _getObs(processId: ProcessID, obsIndex: number, version: number) {
+  async _getObs(
+    processId: ProcessID,
+    obsIndex: number,
+    version: number,
+  ): Promise<Observation> {
     const queryDict = {
       processId: processId.toString(),
       obsIndex: obsIndex.toString(),
@@ -252,9 +256,9 @@ export default class PDP implements Adapter {
       version,
     );
     try {
-      const metadata = responseObservation.data[0];
-      metadata.taxonomyTags = formatter.toHumanFormat(
-        metadata.taxonomyTags ?? [],
+      const metadata = toArtifactMetadatav2(responseObservation.data[0]);
+      metadata.tags = formatter.toHumanFormat(
+        metadata.tags ?? {},
       );
       const metadataPath = path.join(
         downloadDir,
@@ -262,7 +266,7 @@ export default class PDP implements Adapter {
         `${version}`,
         `metadata.json`,
       );
-      //let's save the observation metadata to a file metada.json
+      // let's save the observation metadata to a file metadata.json
       await this._writeJsonData(metadataPath, metadata);
     } catch (err) {
       const logPath = path.join(

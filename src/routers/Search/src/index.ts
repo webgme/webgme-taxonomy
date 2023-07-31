@@ -23,7 +23,7 @@ import UploadContext from "./UploadContext";
 import RouterUtils from "../../../common/routers/Utils";
 import type { MiddlewareOptions, WebgmeRequest } from "../../../common/types";
 import Utils from "../../../common/Utils";
-import { isString } from "./Utils";
+import { deepMerge, isString } from "./Utils";
 import DashboardConfiguration from "../../../common/SearchFilterDataExporter";
 import TagFormatter from "../../../common/TagFormatter";
 import path from "path";
@@ -37,6 +37,7 @@ import {
   ChildContentTypeNotFoundError,
   MetaNodeNotFoundError,
 } from "./adapters/common/ModelError";
+import { ArtifactMetadatav2 } from "./adapters/common/types";
 
 /* N.B. gmeAuth, safeStorage and workerManager are not ready to use until the start function is called.
  * (However inside an incoming request they are all ensured to have been initialized.)
@@ -285,7 +286,7 @@ async function addContentTypeSystemTags(
   req: Request,
   _res: Response,
 ) {
-  const { metadata } = req.body;
+  const metadata: ArtifactMetadatav2 = req.body.metadata;
   const gmeContext = (<WebgmeRequest> req).webgmeContext;
 
   const { core, projectVersion } = gmeContext;
@@ -303,10 +304,11 @@ async function addContentTypeSystemTags(
   const desc = ""; // TODO: add description
   const files: any[] = []; // TODO: add files
 
+  // TODO: write some tests for this
   const context = await UploadContext.from({
     name: metadata.displayName,
     description: desc,
-    tags: metadata.taxonomyTags,
+    tags: metadata.tags,
     files,
     core,
     contentType,
@@ -316,7 +318,8 @@ async function addContentTypeSystemTags(
   const systemTags =
     (await Promise.all(systemTerms.map((t) => t.createTags(context)))).flat();
 
-  metadata.taxonomyTags.push(...systemTags);
+  // TODO: refactor this to make it easier to test...
+  metadata.tags = deepMerge(metadata.tags, ...systemTags);
 }
 
 /**
@@ -349,9 +352,9 @@ async function convertTaxonomyTags(
   }
 
   const formatter = await TagFormatter.from(core, node);
-  const { metadata } = req.body;
+  const metadata: ArtifactMetadatav2 = req.body.metadata;
   try {
-    metadata.taxonomyTags = formatter.toGuidFormat(metadata.taxonomyTags);
+    metadata.tags = formatter.toGuidFormat(metadata.tags);
   } catch (err) {
     if (err instanceof TagFormatter.FormatError) {
       res.status(400).send(err.message);

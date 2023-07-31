@@ -237,15 +237,15 @@ define([
 
       console.log({ memberPaths });
       const memberNodes = await this._loadNodes(memberPaths);
-      const taxonomyTags = await Promise.all(
+      const tags = await Promise.all(
         memberNodes.map((node, i) => this._getTagData(node, memberAttrs[i])),
       );
-      console.log({ taxonomyTags });
-      return { taxonomyTags };
+      return tags;
     }
   };
 
   TagCreatorControl.prototype._getTagData = function (memberNode, attrDict) {
+    // TODO: update this
     const tag = {
       ID: memberNode.getGuid(),
     };
