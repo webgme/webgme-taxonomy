@@ -476,7 +476,9 @@ function factory() {
     }
 
     getInstance(schema = this.schema) {
-      if (schema.type === "object") {
+      if (schema.anyOf) {
+        return this.getInstance(schema.anyOf[0]);
+      } else if (schema.type === "object") {
         const entries = Object.entries(schema.properties).map(([k, v]) => [
           k,
           this.getInstance(v),

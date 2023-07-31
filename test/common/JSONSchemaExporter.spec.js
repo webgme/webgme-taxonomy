@@ -70,6 +70,59 @@ describe("JSONSchemaExporter", function () {
       const { formData } = schemaDict;
       assert(formData.Vocabulary.RequiredTerm);
     });
+
+    it("should set required fields correctly", async function () {
+      const root = await Utils.getNewRootNode(project, commitHash, core);
+      const taxonomyJson = {
+        pointers: { base: "@meta:Taxonomy" },
+        children: [
+          {
+            pointers: { base: "@meta:Vocabulary" },
+            children: [
+              {
+                pointers: { base: "@meta:Term" },
+                attributes: {
+                  name: "RequiredTerm",
+                  selection: "required",
+                },
+                children: [
+                  {
+                    pointers: { base: "@meta:TextField" },
+                    attributes: { name: "requiredField" },
+                  },
+                  {
+                    pointers: { base: "@meta:EnumField" },
+                    attributes: { name: "value", required: false },
+                    children: [
+                      {
+                        pointers: { base: "@meta:CompoundField" },
+                        attributes: { name: "A" },
+                      },
+                      {
+                        pointers: { base: "@meta:CompoundField" },
+                        attributes: { name: "B" },
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      };
+      const importer = new Importer(core, root);
+      const taxonomy = await importer.import(root, taxonomyJson);
+      const exporter = JSONSchemaExporter.from(core, taxonomy);
+      const { schema } = await exporter.getSchemas(taxonomy);
+
+      const termSchema = schema.properties.Vocabulary.properties.RequiredTerm;
+      const reqFields = termSchema.required;
+
+      assert(termSchema);
+
+      assert(reqFields.includes("requiredField"));
+      assert(!reqFields.includes("value"));
+    });
   });
 
   describe("required props", function () {
