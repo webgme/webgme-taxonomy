@@ -1,6 +1,7 @@
-import { defineConfig, devices } from "@playwright/test";
+import { TraceMode, defineConfig, devices } from "@playwright/test";
 
 const FULLY_PARALLEL: boolean = false;
+const DEBUG_TIMEOUT_MS = 300000
 const DEFAULT_HOST: string = "127.0.0.1";
 const DEFAULT_PORT: string = "8080";
 const BASE_URL = `http://${DEFAULT_HOST}:${DEFAULT_PORT}/`;
@@ -16,6 +17,9 @@ const BASE_URL = `http://${DEFAULT_HOST}:${DEFAULT_PORT}/`;
  * See https://playwright.dev/docs/test-configuration.
  */
 export default defineConfig({
+
+  timeout: DEBUG_TIMEOUT_MS,
+
   testDir: "e2e",
   // testIgnore: 'test-*.spec-ts',
   testMatch: "*.spec.ts",
@@ -40,7 +44,7 @@ export default defineConfig({
     baseURL: BASE_URL,
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
-    trace: "on-first-retry",
+    trace: get_trace_mode(),
     screenshot: "only-on-failure",
     video: {
       mode: "on",
@@ -102,3 +106,21 @@ export default defineConfig({
     timeout: 120 * 1000,
   },
 });
+
+
+/**
+ * Get the trace mode
+ * 
+ * Wrapped in function call to permit abstraction in case of different contexts
+ *
+ * 'on-first-retry' - Record a trace only when retrying a test for the first time.
+ * 'on-all-retries' - Record traces for all test retries.
+ * 'off' - Do not record a trace.
+ * 'on' - Record a trace for each test. (not recommended as it's performance heavy)
+ * 'retain-on-failure' - Record a trace for each test, but remove it from successful test runs.
+ * @return {*} 
+ */
+function get_trace_mode() : TraceMode  {
+  return "on";
+}
+

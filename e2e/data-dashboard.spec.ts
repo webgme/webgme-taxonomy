@@ -1,9 +1,10 @@
 import { expect, request, test } from "@playwright/test";
 import TestMethods from "./common/test-methods";
-import { TestTaxonomy } from "./common/fixtures/TestTaxonomy";
-import { baseTest } from "./common/fixtures/taxonomy.fixtures";
+import { test_with_taxonomy } from "./common/fixtures/mock-taxonomy.fixtures";
+import { configured_test } from "./common/fixtures/test-config.fixtures";
 
-const PROJECT_NAMER = TestMethods.project_name_generator();
+const GENERIC_PROJECT_NAMER = TestMethods.project_name_generator("General");
+const TAXONOMY_PROJECT_NAMER = TestMethods.project_name_generator("Taxonomy");
 const PROJECT_NAME_CSS_SELECTOR =
   "body > div.ui-layout-north.no-print.ui-layout-pane.ui-layout-pane-north > div > div.navbar.navbar-inverse.navbar-fixed-top > div > div.project-navigator-controller.ng-scope > nav > ul > li:nth-child(4) > div.label-container.ng-scope > span";
 
@@ -78,8 +79,8 @@ test.describe(`Data dashboard`, function () {
     console.log(`Issue: https://github.com/webgme/webgme-taxonomy/issues/304`);
   });
 
-  test("Create new repo (and it shows up).", async ({ page }) => {
-    const current_project_name: string = PROJECT_NAMER.next().value;
+  configured_test("Create new repo (and it shows up).", async ({ page }) => {
+    const current_project_name: string = GENERIC_PROJECT_NAMER.next().value;
 
     // Routes to / based on baseUrl in config
     await page.goto("/");
@@ -107,22 +108,24 @@ test.describe(`Data dashboard`, function () {
     await page.close();
   });
 
-  test.fixme(
+  test_with_taxonomy(
     "Upload new artifact to a repo and ensure it shows up",
-    async ({ page }) => {}
+    async ({ page, mock_taxonomy }) => {
+      // Begin navigation
+      await page.goto("/");
+
+      const taxonomy = await mock_taxonomy.get()
+      
+      console.log(taxonomy)
+    }
   );
 
   test.fixme("Download artifact", async ({ page }) => {});
 
-  test.fixme(
+  configured_test.fixme(
     "View/download the metadata for the artifact (ensure correct)",
     async ({ page }) => {}
   );
 
-  test.fixme(
-    "View/download the metadata for the artifact (ensure correct)",
-    async ({ page }) => {}
-  );
-
-  test.fixme("Filter using:", async ({ page }) => {});
+  configured_test.fixme("Filter using:", async ({ page }) => {});
 });
