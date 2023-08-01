@@ -44,11 +44,13 @@ class Storage {
 
     const checkStatusUrl = this.baseUrl + parentId +
       `/downloads/${taskId}/status`;
-    const status: Status = await (await this._fetchJson(checkStatusUrl))
+    let status: Status = await (await this._fetchJson(checkStatusUrl))
       .unwrap();
 
     while (status !== Status.Complete) {
       await sleep(10);
+      status = await (await this._fetchJson(checkStatusUrl))
+        .unwrap();
     }
 
     const downloadUrl = this.baseUrl + parentId +
