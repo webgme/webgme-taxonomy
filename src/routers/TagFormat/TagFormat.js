@@ -8,6 +8,7 @@ var express = require("express"),
 const RouterUtils = require("../../common/routers/Utils");
 const Utils = require("../../common/Utils");
 const TagFormatter = require("../../common/TagFormatter");
+const isObject = require("../Search/build/Utils").isObject;
 /**
  * Called when the server is created but before it starts to listening to incoming requests.
  * N.B. gmeAuth, safeStorage and workerManager are not ready to use until the start function is called.
@@ -51,7 +52,7 @@ function initialize(middlewareOpts) {
       let { tags } = req.query;
       try {
         tags = JSON.parse(tags);
-        if (!Array.isArray(tags)) {
+        if (!isObject(tags) || Array.isArray(tags)) {
           return res
             .status(400)
             .send(`Expected a list of tags. Found ${JSON.stringify(tags)}`);
