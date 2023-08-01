@@ -40,6 +40,7 @@ export default defineConfig({
   reporter: "html",
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
+
     /* Base URL to use in actions like `await page.goto('/')`. */
     baseURL: BASE_URL,
 
@@ -54,6 +55,7 @@ export default defineConfig({
 
   /* Configure projects for major browsers */
   projects: [
+
     {
       name: "chromium",
       use: {
@@ -95,6 +97,7 @@ export default defineConfig({
     //   use: { ...devices['Desktop Chrome'], channel: 'chrome' },
     // },
   ],
+
 
   /* Run your local dev server before starting the tests */
   webServer: {

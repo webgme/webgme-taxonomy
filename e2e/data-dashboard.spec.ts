@@ -5,6 +5,7 @@ import { configured_test } from "./common/fixtures/test-config.fixtures";
 
 const GENERIC_PROJECT_NAMER = TestMethods.project_name_generator("General");
 const TAXONOMY_PROJECT_NAMER = TestMethods.project_name_generator("Taxonomy");
+
 const PROJECT_NAME_CSS_SELECTOR =
   "body > div.ui-layout-north.no-print.ui-layout-pane.ui-layout-pane-north > div > div.navbar.navbar-inverse.navbar-fixed-top > div > div.project-navigator-controller.ng-scope > nav > ul > li:nth-child(4) > div.label-container.ng-scope > span";
 
@@ -82,6 +83,7 @@ test.describe(`Data dashboard`, function () {
   configured_test("Create new repo (and it shows up).", async ({ page }) => {
     const current_project_name: string = GENERIC_PROJECT_NAMER.next().value;
 
+
     // Routes to / based on baseUrl in config
     await page.goto("/");
 
@@ -103,10 +105,19 @@ test.describe(`Data dashboard`, function () {
     await expect(page.locator(PROJECT_NAME_CSS_SELECTOR)).toHaveText(
       current_project_name,
       { timeout: 300000 }
+    // Click Create and wait for combobox to select project type (see Question #2 at top)
+    await page.getByRole("button", { name: "Create" }).click();
+    await page.getByRole("combobox").selectOption("file:TaxonomyProject");
+    await page.getByRole("button", { name: "Create" }).click();
+    await expect(page.locator(PROJECT_NAME_CSS_SELECTOR)).toHaveText(
+      current_project_name,
+      { timeout: 300000 }
     );
 
     await page.close();
+    await page.close();
   });
+
 
   test_with_taxonomy(
     "Upload new artifact to a repo and ensure it shows up",
@@ -115,6 +126,7 @@ test.describe(`Data dashboard`, function () {
       await page.goto("/");
 
       const taxonomy = await mock_taxonomy.get()
+
       
       console.log(taxonomy)
     }
@@ -122,10 +134,14 @@ test.describe(`Data dashboard`, function () {
 
   test.fixme("Download artifact", async ({ page }) => {});
 
+
   configured_test.fixme(
+
     "View/download the metadata for the artifact (ensure correct)",
     async ({ page }) => {}
   );
 
+
   configured_test.fixme("Filter using:", async ({ page }) => {});
+
 });
