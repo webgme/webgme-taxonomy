@@ -39,34 +39,10 @@
   $: displayName = set?.displayName ?? "";
   $: appendName = displayName;
   $: setOpen(set != null);
-  $: setMetadata(set?.tags ?? {});
   $: progresses = uploading ? Array(files.length).fill(0) : [];
 
   function setOpen(value: boolean) {
     if (value !== open) open = value;
-  }
-
-  let lastTags = set?.tags ?? {};
-  async function setMetadata(tags: any[]) {
-    if (tags === lastTags) {
-      return;
-    }
-
-    try {
-      const tags = await formatter.toHumanFormat(tags);
-      metadata = { tags };
-    } catch (err) {
-      if (err instanceof FormatError) {
-        console.warn("Latest artifact has invalid taxonomy tags:", err.message);
-      } else {
-        console.error(
-          "An error occurred while setting default tags",
-          err.stack
-        );
-      }
-    }
-
-    lastTags = tags;
   }
 
   function onAppendFileDrop(event: DropEvent) {
