@@ -20,6 +20,46 @@ test.describe(`Data dashboard`, function () {
       throw new Error(`Repository didn't show up after 3000 ms`);
     }
   });
+
+  test("can select repo", async ({ page }) => {
+    test.fail();
+  });
+
+  test("can upload data to repo", async ({ page }) => {
+    test.fail();
+  });
+
+  test("can view uploaded data", async ({ page }) => {
+    test.fail();
+  });
+
+  test("can view more uploaded data", async ({ page }) => {
+    test.fail();
+  });
+
+  test("can download data from repo", async ({ page }) => {
+    test.fail();
+  });
+
+  test("can filter repo using search text", async ({ page }) => {
+    test.fail();
+  });
+
+  test("can filter repo using text tag", async ({ page }) => {
+    test.fail();
+  });
+
+  test("can filter repo using enum tag", async ({ page }) => {
+    test.fail();
+  });
+
+  test("can filter repo using set tag", async ({ page }) => {
+    test.fail();
+  });
+
+  test("can filter repo using numeric tag", async ({ page }) => {
+    test.fail();
+  });
 });
 
 // TODO: it would be good to move these to a utils file or something
