@@ -351,7 +351,7 @@
       artifactFiles
     );
     displayMessage(status);
-    if (status === "Created!") {
+    if (status.includes("Created!")) {
       // FIXME: replace this with a proper enum
       fetchData();
     }
@@ -503,6 +503,7 @@
           <List twoLine avatarList>
             {#each items as item (item.hash)}
               <Item
+                data-testid={item.displayName}
                 selected={item === selectedArtifactSet}
                 on:SMUI:action={() => onItemClicked(item)}
               >

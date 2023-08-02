@@ -72,7 +72,6 @@ const PROJECT_NAME_CSS_SELECTOR =
  *        return console.log(`framereceived --> ${prettyPrintJson(d)}`);
  *      });
  *    })
- *
  */
 
 test.describe(`Data dashboard`, function () {
@@ -80,6 +79,7 @@ test.describe(`Data dashboard`, function () {
     console.log(`Issue: https://github.com/webgme/webgme-taxonomy/issues/304`);
   });
 
+  // HEAD
   configured_test("Create new repo (and it shows up).", async ({ page }) => {
     const current_project_name: string = GENERIC_PROJECT_NAMER.next().value;
 
@@ -103,7 +103,7 @@ test.describe(`Data dashboard`, function () {
     await page.getByRole("button", { name: "Create" }).click();
     await expect(page.locator(PROJECT_NAME_CSS_SELECTOR)).toHaveText(
       current_project_name,
-      { timeout: 300000 }
+      { timeout: 300000 },
     );
     // Click Create and wait for combobox to select project type (see Question #2 at top)
     await page.getByRole("button", { name: "Create" }).click();
@@ -111,7 +111,7 @@ test.describe(`Data dashboard`, function () {
     await page.getByRole("button", { name: "Create" }).click();
     await expect(page.locator(PROJECT_NAME_CSS_SELECTOR)).toHaveText(
       current_project_name,
-      { timeout: 300000 }
+      { timeout: 300000 },
     );
 
     await page.close();
@@ -127,15 +127,31 @@ test.describe(`Data dashboard`, function () {
       const taxonomy = await mock_taxonomy.get();
 
       console.log(taxonomy);
-    }
+    },
   );
 
   test.fixme("Download artifact", async ({ page }) => {});
 
   configured_test.fixme(
     "View/download the metadata for the artifact (ensure correct)",
-    async ({ page }) => {}
+    async ({ page }) => {},
   );
 
   configured_test.fixme("Filter using:", async ({ page }) => {});
+
+  test("can create repo", async ({ page }) => {
+    const repoName = "NewExample-" + Date.now();
+    await page.goto(
+      "http://localhost:8080/routers/Search/guest%2Be2e_tests/branch/master/%2FC/static/",
+    );
+
+    // Create a new repo
+    await page.getByLabel(/Upload dataset/).click();
+    await page.getByRole("textbox", { name: "Name" }).fill(repoName);
+    await page.getByRole("button", { name: "Submit" }).click();
+
+    // check that the new repository is there
+    const element = page.getByTestId(repoName);
+    expect(await element.isVisible()).toBeTruthy();
+  });
 });
