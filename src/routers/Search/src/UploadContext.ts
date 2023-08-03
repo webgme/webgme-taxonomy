@@ -12,6 +12,7 @@ interface UploadContextData {
   project: ProjectVersion;
   core: GmeClasses.Core;
   contentType: Core.Node;
+  userId: string;
 }
 
 interface ProjectAttributes {
@@ -78,6 +79,7 @@ export default class UploadContext {
       content,
       data.core,
       data.contentType,
+      Primitive.from(data.userId),
     );
     return new UploadContext(
       data.core,
@@ -137,13 +139,14 @@ async function getGMEContext(
   content: GMENode,
   core: GmeClasses.Core,
   contentType: Core.Node,
+  userId: Primitive.Primitive,
 ): Promise<GMEContext> {
   const metaDict = getMetaNodeDict(core, contentType);
 
   // Add UploadContext node (active node)
   // This doesn't use the helper method since it doesn't actually
   // have a parent node (hence the "@tmp" path)
-  const context = new GMENode("@tmp");
+  const context = new GMENode("@tmp", { userId });
   context.setActiveNode();
   const nodes: GMENode[] = [context];
   context.pointers.base = 1;
@@ -200,6 +203,7 @@ async function getGMEContext(
   // Add extra system info
   const date = new Date();
   const system = new GMENode("@tmp/system", {
+    time: Primitive.from(date.toString()),
     isoDateTime: Primitive.from(date.toISOString()),
   });
   await addChildToContext(
