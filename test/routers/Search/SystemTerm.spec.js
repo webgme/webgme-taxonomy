@@ -100,7 +100,7 @@ describe("SystemTerm", function () {
         name: "TestUploadName",
         description: "someDesc",
         tags: [],
-        files: [{ name: "someFile" }],
+        files: [{ path: "path/to/someFile" }],
         core,
         contentType,
         project: projectVersion,
@@ -183,7 +183,6 @@ describe("SystemTerm", function () {
 
       const vocabName = Object.keys(tag).shift();
       assert.equal(vocabName, "Base");
-      console.log(JSON.stringify(tag));
       assert.equal(tag.Base.content.type.name, "ExampleContentType");
     });
 
@@ -218,7 +217,7 @@ describe("SystemTerm", function () {
       const member = members.pop();
       assert.equal(Object.keys(member).length, 1);
       assert.equal(Object.keys(member.File).length, 1);
-      assert.equal(member.File.name, "someFile");
+      assert.equal(member.File.path, "path/to/someFile");
     });
 
     it("should make tag with compound field", async function () {

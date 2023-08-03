@@ -328,8 +328,8 @@ async function addContentTypeSystemTags(
   const systemTerms = await SystemTerm.findAll(core, vocabs);
   const desc = ""; // TODO: add description
 
-  const files: FileUpload[] = filenames.map((name: string) => ({
-    name,
+  const files: FileUpload[] = filenames.map((path: string) => ({
+    path,
   }));
   const userId = middlewareOpts.getUserId(req);
 

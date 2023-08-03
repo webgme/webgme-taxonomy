@@ -5,7 +5,7 @@ import { ProjectVersion } from "../../../common/types";
 type TypeDict = { [path: string]: string }; // FIXME: don't duplicate this
 
 export interface FileUpload {
-  name: string;
+  path: string;
   // TODO: add the hash?
 }
 
@@ -64,7 +64,7 @@ export default class UploadContext {
     // TODO: handle tags
     const files = data.files.map((fdata, i) =>
       new GMENode(`@tmp/content/file_${i}`, {
-        name: Primitive.from(fdata.name),
+        path: Primitive.from(fdata.path),
       })
     );
 
