@@ -19,7 +19,7 @@ import type { Request, Response } from "express";
 const router = express.Router();
 
 import SystemTerm from "./SystemTerm";
-import UploadContext from "./UploadContext";
+import UploadContext, { FileUpload } from "./UploadContext";
 import RouterUtils from "../../../common/routers/Utils";
 import type { MiddlewareOptions, WebgmeRequest } from "../../../common/types";
 import Utils from "../../../common/Utils";
@@ -311,7 +311,7 @@ async function addContentTypeSystemTags(
   req: Request,
   _res: Response,
 ) {
-  const { metadata } = req.body;
+  const { metadata, filenames = [] } = req.body;
   const gmeContext = (<WebgmeRequest> req).webgmeContext;
 
   const { core, projectVersion } = gmeContext;
@@ -327,7 +327,10 @@ async function addContentTypeSystemTags(
 
   const systemTerms = await SystemTerm.findAll(core, vocabs);
   const desc = ""; // TODO: add description
-  const files: any[] = []; // TODO: add files
+
+  const files: FileUpload[] = filenames.map((name: string) => ({
+    name,
+  }));
   const userId = middlewareOpts.getUserId(req);
 
   const context = await UploadContext.from({

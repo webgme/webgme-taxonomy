@@ -100,7 +100,7 @@ describe("SystemTerm", function () {
         name: "TestUploadName",
         description: "someDesc",
         tags: [],
-        files: [],
+        files: [{ name: "someFile" }],
         core,
         contentType,
         project: projectVersion,
@@ -202,21 +202,23 @@ describe("SystemTerm", function () {
     });
 
     it("should make tag with set field", async function () {
-      const term = systemTerms.find((term) => term.name === "SetTest");
+      const term = systemTerms.find((term) => term.name === "attachments");
 
       const tags = await term.createTags(context);
       assert.equal(tags.length, 1);
       const [tag] = tags;
 
       const vocabName = Object.keys(tag).shift();
-      assert.equal(vocabName, "SystemTerms");
+      assert.equal(vocabName, "Base");
 
-      const members = tag.SystemTerms.SetTest.TestUploadName;
+      const members = tag.Base.attachments.files;
       assert(Array.isArray(members));
-      assert(members.find((member) => Object.keys(member).shift() === "name"));
-      assert(
-        members.find((member) => Object.keys(member).shift() === "isoDateTime"),
-      );
+      assert.equal(members.length, 1);
+
+      const member = members.pop();
+      assert.equal(Object.keys(member).length, 1);
+      assert.equal(Object.keys(member.File).length, 1);
+      assert.equal(member.File.name, "someFile");
     });
 
     it("should make tag with compound field", async function () {
