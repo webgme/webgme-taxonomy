@@ -4,7 +4,7 @@ test.describe(`Data dashboard`, function () {
   test("can create repo", async ({ page }) => {
     const repoName = "NewExample-" + Date.now();
     await page.goto(
-      "http://localhost:8080/routers/Search/guest%2Be2e_tests/branch/master/%2FC/static/",
+      "/routers/Search/guest%2Be2e_tests/branch/master/%2FC/static/",
     );
 
     // Create a new repo
