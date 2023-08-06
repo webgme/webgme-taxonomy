@@ -1,4 +1,4 @@
-import TestMethods from "../test-methods";
+import TestMethods from "../common/test-methods";
 import { ITaxonomy } from "./ITaxonomy";
 import TaxonomyParser from '../../../src/common/TaxonomyParser'
 
