@@ -126,7 +126,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
           req,
           mainConfig,
         );
-
+debugger;
         const status = await storage.createArtifact(metadata);
         res.json("status: " + status);
       },

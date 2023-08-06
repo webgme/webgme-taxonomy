@@ -1,32 +1,85 @@
-import { test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
+// import { repoTest } from "./tests/repo-test";
+import RepoImpl from "./common/fixtures/RepoImpl";
+
+const TIMEOUT_TO_WAIT_FOR_PROJECT_CREATION_MS = 3000;
+const TIMEOUT_TO_WAIT_FOR_LOCATOR_CHECK_TO_COMPLETE = 3000;
+
+
 
 test.describe(`Data dashboard`, function () {
+
+  let repoData: RepoImpl; // This is an anti-pattern, but it works for now
+
   test("can create repo", async ({ page }) => {
-    const repoName = "NewExample-" + Date.now();
-    await page.goto(
-      "/routers/Search/guest%2Be2e_tests/branch/master/%2FC/static/",
-    );
+
+    repoData = new RepoImpl("/routers/Search/guest%2Be2e_tests/branch/master/%2FC/static/");
+
+    const newLocal = await repoData.getRepoRoute();
+    await page.goto(newLocal);
 
     // Create a new repo
     await page.getByLabel(/Upload dataset/).click();
-    await page.getByRole("textbox", { name: "Name" }).fill(repoName);
+    const textBoxLocator = page.getByRole("textbox", { name: "Name" });
+    const textBoxLocatorIsVisible = await poll(
+      () => textBoxLocator.isVisible(),
+      {
+        timeout: TIMEOUT_TO_WAIT_FOR_LOCATOR_CHECK_TO_COMPLETE,
+      }
+    );
+
+    if (!textBoxLocatorIsVisible) {
+      throw new Error(
+        `Repository didn't show up after ${TIMEOUT_TO_WAIT_FOR_PROJECT_CREATION_MS} ms (possible "Error: Not authorized to read project [guest+taxonomy]")`
+      );
+    }
+
+    const repoName = await repoData.getRepoName();
+    await textBoxLocator.fill(repoName);
+
     await page.getByRole("button", { name: "Submit" }).click();
 
     // check that the new repository is there
     // FIXME: there has to be a better way to do this...
     const element = page.getByTestId(repoName);
-    const isVisible = await poll(() => element.isVisible(), { timeout: 3000 });
+
+    const isVisible = await poll(() => element.isVisible(), {
+      timeout: TIMEOUT_TO_WAIT_FOR_PROJECT_CREATION_MS,
+    });
     if (!isVisible) {
-      throw new Error(`Repository didn't show up after 3000 ms`);
+      throw new Error(
+        `Repository didn't show up after ${TIMEOUT_TO_WAIT_FOR_PROJECT_CREATION_MS} ms`
+      );
     }
   });
 
   test("can select repo", async ({ page }) => {
-    test.fail();
+    // Targets
+    // "Datas in NewExample-1691336450520" - label
+    // "Showing 0-0 of 0"
+
+    // Assumes that even though previous test fails, the repo is still populated
+
+    const repoRoute = await repoData.getRepoRoute();
+    debugger;
+    await page.goto(repoRoute);
+    const repoName = await repoData.getRepoName();
+
+    await page.getByText(repoName).click();
+    await expect(page.getByRole("heading", { name: `Datas in ${repoName.trim()}` })).toBeDefined();
   });
 
   test("can upload data to repo", async ({ page }) => {
-    test.fail();
+    await page.goto(await repoData.getRepoRoute());
+    const repoName = await repoData.getRepoName();
+    await page.getByText(repoName, { exact: true }).click();
+    await page.getByRole('button', { name: 'Upload', exact: true }).click();
+    const fileChooserPromise = page.waitForEvent('filechooser');
+    await page.getByText('Select dataset to upload.').click();
+    const fileChooser = await fileChooserPromise;
+    fileChooser.setFiles("e2e\resources\test-file.txt")
+    debugger;
+
   });
 
   test("can view uploaded data", async ({ page }) => {
@@ -70,7 +123,7 @@ interface PollOptions {
 
 async function poll(
   fn: () => Promise<boolean>,
-  opts?: PollOptions,
+  opts?: PollOptions
 ): Promise<boolean> {
   const maxDuration = opts?.timeout || 1000;
   const interval = opts?.interval || 10;

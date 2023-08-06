@@ -46,11 +46,11 @@ export default defineConfig({
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: get_trace_mode(),
-    screenshot: "only-on-failure",
-    video: {
-      mode: "on",
-      size: { width: 1920, height: 1080 },
-    },
+    // screenshot: "only-on-failure",
+    // video: {
+    //   mode: "on",
+    //   size: { width: 1920, height: 1080 },
+    // },
   },
 
   /* Configure projects for major browsers */
@@ -103,7 +103,8 @@ export default defineConfig({
   webServer: {
     command: "npm run start",
     url: BASE_URL,
-    reuseExistingServer: !process.env.CI,
+    // reuseExistingServer: !process.env.CI, # Hard set for testing
+    reuseExistingServer: true,
     stdout: "ignore", // default
     stderr: "pipe", // default
     timeout: 120 * 1000,
@@ -124,6 +125,6 @@ export default defineConfig({
  * @return {*} 
  */
 function get_trace_mode() : TraceMode  {
-  return "on";
+  return "off";
 }
 
