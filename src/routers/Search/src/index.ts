@@ -38,6 +38,8 @@ import {
   MetaNodeNotFoundError,
 } from "./adapters/common/ModelError";
 import { ArtifactMetadatav2 } from "./adapters/common/types";
+import JSONSchemaExporter from "../../../common/JSONSchemaExporter";
+
 
 /* N.B. gmeAuth, safeStorage and workerManager are not ready to use until the start function is called.
  * (However inside an incoming request they are all ensured to have been initialized.)
@@ -94,6 +96,17 @@ function initialize(middlewareOpts: MiddlewareOptions) {
         res.json(configuration);
       },
     ),
+  );
+
+  router.get(
+    RouterUtils.getContentTypeRoutes("schema.json"),
+    RouterUtils.handleUserErrors(logger, async (request, response) => {
+      const { root, core, contentType } = request.webgmeContext;
+      const exporter = JSONSchemaExporter.from(core, root);
+      const vocabularies = await Utils.getVocabulariesFor(core, contentType);
+      const { schema } = await exporter.getVocabSchemas(vocabularies, "");
+      response.json(schema);
+    }),
   );
 
   // Accessing and updating data via the storage adapter
