@@ -36,6 +36,7 @@
   let metadata: any;
   let open = false;
   let uploading: Promise<UploadPromise[]> | null = null;
+  let showTagCreator = false;
 
   $: displayName = set?.displayName ?? "";
   $: appendName = displayName;
@@ -206,15 +207,7 @@
       </Dropzone>
     {/if}
 
-    <a
-      target="_blank"
-      href={window.location.href
-        .replace("/Search/", "/TagCreator/") // FIXME: use the correct content type
-        .replace(
-          /[^\/]*\/static\//,
-          `${encodeURIComponent(contentType.nodePath)}/static/`
-        )}>Click to select tags for your dataset.</a
-    >
+    <a on:click={() => showTagCreator = true} href="#">Click to select tags for your dataset.</a>
   </Content>
   <div class="dialog-actions">
     <Button disabled={uploading} on:click={() => close()}>
@@ -225,7 +218,7 @@
     </Button>
   </div>
 
-  <TagCreatorDialog></TagCreatorDialog>
+  <TagCreatorDialog bind:open={showTagCreator}></TagCreatorDialog>
 </Dialog>
 
 <style>
