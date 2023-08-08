@@ -11,10 +11,12 @@ import _ from "underscore";
 import path from "path";
 import fsp from "fs/promises";
 import { newtype } from "./types";
+import os from "os";
 import type {
   AppendObservationResponse,
   GetObservationFilesResponse,
   Observation,
+  ObservationFile,
   Process,
   ProcessID,
 } from "./types";
@@ -35,7 +37,9 @@ import type {
   Adapter,
   Artifact,
   ArtifactMetadata,
+  DownloadInfo,
   Repository,
+
 } from "../common/types";
 import { filterMap, range, sleep } from "../../Utils";
 import CreateRequestLogger from "./CreateRequestLogger";
@@ -46,6 +50,7 @@ import {
   UploadParams,
   UploadRequest,
 } from "../common/AppendResult";
+import { json } from "express";
 const UPLOAD_HEADERS = {
   Accept: "application/xml",
   "Content-Type": "application/octet-stream",
@@ -239,6 +244,85 @@ export default class PDP implements Adapter {
     );
   }
 
+  async downloadMetadata(
+    repoId: string, 
+    contentIds: string[],
+    formatter: TagFormatter,
+    downloadDir: string,
+    ): Promise<string> {
+    const processId = newtype<ProcessID>(repoId);
+    const obsIdxAndVersions = contentIds.map((idString) =>
+      idString.split("_").map((n) => +n)
+    );
+    await Promise.all(
+      obsIdxAndVersions.map(async ([index, version]) =>
+        await this.getObsMetadata(processId, index, version, formatter, downloadDir)
+      ),
+    );
+    return downloadDir;
+  }
+
+  async downloadFileURLs(repoId: string, contentIds: string[]): Promise<DownloadInfo[]> {
+    const processId = newtype<ProcessID>(repoId);
+    const obsIdxAndVersions = contentIds.map((idString) =>
+      idString.split("_").map((n) => +n)
+    );
+    // obsIdxAndVersions is now a list of tuples (index, version) for each observation
+    // to download
+
+    const response = await Promise.all(
+      obsIdxAndVersions.map(async ([index, version]) => {
+        // Lets download the actual files associated with this observation,index
+        const response = await this._getObsFiles(processId, index, version);
+        if (response.files.length === 0) {
+          return {
+            repoId: processId.toString(),
+            obsIndex: index,
+            version: version,
+            files: [],
+          }
+        }
+        // return the file name and urls
+        console.log(response.files)
+        // wait for the transfer to complete and the files to be available
+        if (response.transferId != null) {
+          let transferStatus = await this._getFileTransferStatus(
+            response.processId,
+            response.directoryId,
+            response.transferId,
+          );
+          while (transferStatus && transferStatus.status != "Succeeded") {
+            console.log("Ctx: About to wait for the download...");
+            await sleep(1000);
+            transferStatus = await this._getFileTransferStatus(
+              response.processId,
+              response.directoryId,
+              response.transferId,
+            );
+          }
+        }
+        return {
+          repoId: processId.toString(),
+          index: index,
+          version: version,
+          files: response.files.map((file) => {
+            return {
+              name: file.name,
+              url: file.sasUrl,
+            }
+          }
+          ),
+        }
+      }
+      ),
+    );
+    // Here we return the object array containing ObservationFile objects
+    if (response.length === 0) {
+      return [];
+    }
+    return response as unknown as DownloadInfo[];
+  }
+
   async _downloadObservation(
     processId: ProcessID,
     obsIndex: number,
@@ -247,52 +331,7 @@ export default class PDP implements Adapter {
     formatter: TagFormatter,
   ) {
     // Let's first get the observation metadata
-    const responseObservation = await this._getObs(
-      processId,
-      obsIndex,
-      version,
-    );
-    try {
-      const metadata = responseObservation.data[0];
-      metadata.taxonomyTags = formatter.toHumanFormat(
-        metadata.taxonomyTags ?? [],
-      );
-      const metadataPath = path.join(
-        downloadDir,
-        `${obsIndex}`,
-        `${version}`,
-        `metadata.json`,
-      );
-      //let's save the observation metadata to a file metada.json
-      await this._writeJsonData(metadataPath, metadata);
-    } catch (err) {
-      const logPath = path.join(
-        downloadDir,
-        `${obsIndex}`,
-        `${version}`,
-        `warnings.txt`,
-      );
-      if (isFormatError(err)) {
-        const metadata = responseObservation.data[0];
-        const metadataPath = path.join(
-          downloadDir,
-          `${obsIndex}`,
-          `${version}`,
-          `metadata.json`,
-        );
-        await this._writeJsonData(metadataPath, metadata);
-        this._writeData(
-          logPath,
-          `An error occurred when converting the taxonomy tags: ${err.message}\n\nThe internal format has been saved in metadata.json.`,
-        );
-      } else {
-        let msg = err instanceof Error ? err.message : err;
-        this._writeData(
-          logPath,
-          `An error occurred when generating metadata.json: ${msg}`,
-        );
-      }
-    }
+    await this.getObsMetadata(processId, obsIndex, version, formatter, downloadDir);
 
     // Lets download the actual files associated with this observation,index
     const response = await this._getObsFiles(processId, obsIndex, version);
@@ -331,6 +370,55 @@ export default class PDP implements Adapter {
         )
       ),
     );
+  }
+
+  private async getObsMetadata(processId: ProcessID, obsIndex: number, version: number, formatter: TagFormatter, downloadDir: string) {
+    const responseObservation = await this._getObs(
+      processId,
+      obsIndex,
+      version
+    );
+    try {
+      const metadata = responseObservation.data[0];
+      metadata.taxonomyTags = formatter.toHumanFormat(
+        metadata.taxonomyTags ?? []
+      );
+      const metadataPath = path.join(
+        downloadDir,
+        `${obsIndex}`,
+        `${version}`,
+        `metadata.json`
+      );
+      //let's save the observation metadata to a file metada.json
+      await this._writeJsonData(metadataPath, metadata);
+    } catch (err) {
+      const logPath = path.join(
+        downloadDir,
+        `${obsIndex}`,
+        `${version}`,
+        `warnings.txt`
+      );
+      if (isFormatError(err)) {
+        const metadata = responseObservation.data[0];
+        const metadataPath = path.join(
+          downloadDir,
+          `${obsIndex}`,
+          `${version}`,
+          `metadata.json`
+        );
+        await this._writeJsonData(metadataPath, metadata);
+        await this._writeData(
+          logPath,
+          `An error occurred when converting the taxonomy tags: ${err.message}\n\nThe internal format has been saved in metadata.json.`
+        );
+      } else {
+        let msg = err instanceof Error ? err.message : err;
+        await this._writeData(
+          logPath,
+          `An error occurred when generating metadata.json: ${msg}`
+        );
+      }
+    }
   }
 
   async appendArtifact(
@@ -374,10 +462,11 @@ export default class PDP implements Adapter {
     const dirPath = path.dirname(filePath) + path.sep;
     await fsp.mkdir(dirPath, { recursive: true });
     await fsp.writeFile(filePath, data);
+    console.log(`Ctx: Wrote data to ${filePath}`);
   }
 
   async _writeJsonData(filePath: string, metadata: ArtifactMetadata) {
-    this._writeData(filePath, JSON.stringify(metadata));
+    await this._writeData(filePath, JSON.stringify(metadata));
   }
 
   static _correctFilePath(

@@ -27,6 +27,8 @@ import { isString } from "./Utils";
 import DashboardConfiguration from "../../../common/SearchFilterDataExporter";
 import TagFormatter from "../../../common/TagFormatter";
 import path from "path";
+import os from "os";
+import fs from "fs";
 import fsp from "fs/promises";
 const staticPath = path.join(__dirname, "..", "dashboard", "public");
 import StorageAdapter from "./adapters";
@@ -35,6 +37,7 @@ import {
   MetaNodeNotFoundError,
 } from "./adapters/common/ModelError";
 import TaskQueue, { DownloadTask, FilePath } from "./TaskQueue";
+import { COMPRESSION_LEVEL, zip } from "zip-a-folder";
 
 /* N.B. gmeAuth, safeStorage and workerManager are not ready to use until the start function is called.
  * (However inside an incoming request they are all ensured to have been initialized.)
@@ -185,12 +188,12 @@ function initialize(middlewareOpts: MiddlewareOptions) {
     }),
   );
 
-  const downloadQueue: TaskQueue<DownloadTask, FilePath> = new TaskQueue();
-  router.post(
-    RouterUtils.getContentTypeRoutes("artifacts/:parentId/downloads/"),
+
+  router.get(
+    RouterUtils.getContentTypeRoutes("artifacts/:parentId/files/"),
     RouterUtils.handleUserErrors(
       logger,
-      async function downloadContent(req, res) {
+      async function downloadContentURL(req, res) {
         const { parentId } = req.params;
         // TODO: get the IDs for the specific observations to get
         let ids;
@@ -213,13 +216,103 @@ function initialize(middlewareOpts: MiddlewareOptions) {
           req,
           mainConfig,
         );
+       // need to download the urls of the associated observations ids
+        const urlResponse = await storage.downloadFileURLs(parentId, ids);
+        console.log("Dowload Info:", urlResponse);
+        res.json(urlResponse);
+      },
+    ),
+  );
+
+  router.get(
+    RouterUtils.getContentTypeRoutes("artifacts/:parentId/metadata/"),
+    RouterUtils.handleUserErrors(
+      logger,
+      async function downloadContentURL(req, res) {
+        const { parentId } = req.params;
+        // TODO: get the IDs for the specific observations to get
+        let ids;
+        if (isString(req.query.ids)) {
+          ids = JSON.parse(req.query.ids);
+        } else {
+          res.status(400).send("List of artifact IDs required");
+          return;
+        }
+        const { root, core } = req.webgmeContext;
+        const node = await Utils.findTaxonomyNode(core, root);
+        if (node == null) {
+          res.status(400).send("No taxonomy node found");
+          return;
+        }
+        const formatter = await TagFormatter.from(core, node);
+        const storage = await StorageAdapter.from(
+          req.webgmeContext,
+          req,
+          mainConfig,
+        );
+        // Need to download the metadata of the associated observations ids
+        const tmpDir = await fsp.mkdtemp(
+          path.join(os.tmpdir(), "webgme-taxonomy-"),
+        );
+        const downloadDir = path.join(tmpDir, "metadata");
+        console.log(">>> about to download to", downloadDir);
+        const tmp1dir = await storage.downloadMetadata(parentId, ids, formatter, downloadDir);
+        console.log(">>> about to zip", tmp1dir);
+        const zipPath = path.join(tmpDir, `${parentId}.zip`);
+        await zip(downloadDir, zipPath, {
+          compression: COMPRESSION_LEVEL.medium,
+        });
+        await fsp.access(zipPath, fs.constants.R_OK);
+        console.log("created zip archive:", zipPath, "from", downloadDir);
+        
+        res.download(
+          zipPath,
+          path.basename(zipPath),
+        );
+        
+        await RouterUtils.responseClose(res);
+        console.log(">>> about to remove", downloadDir);
+        await fsp.rm(downloadDir, { recursive: true });
+        console.log(">>> about to remove", tmpDir);
+        await fsp.rm(tmpDir, { recursive: true });
+      },
+    ),
+  );
+
+  const downloadQueue: TaskQueue<DownloadTask, FilePath> = new TaskQueue();
+  router.post(
+    RouterUtils.getContentTypeRoutes("artifacts/:parentId/downloads/"),
+    RouterUtils.handleUserErrors(
+      logger,
+      async function downloadContent(req, res) {
+        const { parentId } = req.params;
+        // TODO: get the IDs for the specific observations to get
+        let ids;
+        if (isString(req.query.ids)) {
+          ids = JSON.parse(req.query.ids);
+        } else {
+          res.status(400).send("List of artifact IDs required");
+          return;
+        }
+        const { root, core } = req.webgmeContext;
+        const node = await Utils.findTaxonomyNode(core, root);
+        if (node == null) {
+          res.status(400).send("No taxonomy node found");
+          return;
+        }
+        const formatter = await TagFormatter.from(core, node);
+        const storage = await StorageAdapter.from(
+          req.webgmeContext,
+          req,
+          mainConfig,
+        );
 
         const task = new DownloadTask(
           logger,
           storage,
           formatter,
           parentId,
-          ids,
+          ids
         );
         console.log(">>> about to submit download task");
         const id = downloadQueue.submitTask(task);

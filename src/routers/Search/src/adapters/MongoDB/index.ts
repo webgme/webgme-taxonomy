@@ -12,6 +12,7 @@ import type {
   Artifact,
   ArtifactMetadata,
   Repository,
+  DownloadInfo,
 } from "../common/types";
 import type TagFormatter from "../../../../../common/TagFormatter";
 import { FormatError } from "../../../../../common/TagFormatter";
@@ -25,6 +26,7 @@ import {
   UploadRequest,
 } from "../common/AppendResult";
 import { WebgmeContext } from "../../../../../common/types";
+import { GetObservationFilesResponse } from "../PDP/types";
 
 const mongoUri = gmeConfig.mongo.uri;
 const defaultClient = new MongoClient(mongoUri);
@@ -40,6 +42,12 @@ export default class MongoAdapter implements Adapter {
     const name = `taxonomy_data_${collectionName}`;
     this._collection = db.collection(name);
     this._files = new GridFSBucket(db, { bucketName: name });
+  }
+  downloadMetadata(repoId: string, contentIds: string[], formatter: TagFormatter, downloadDir: string): Promise<string> {
+    throw new Error("Method not implemented.");
+  }
+  downloadFileURLs(repoId: string, contentIds: string[]): Promise<DownloadInfo[]> {
+    throw new Error("Method not implemented.");
   }
 
   async listArtifacts(): Promise<Repository[]> {
