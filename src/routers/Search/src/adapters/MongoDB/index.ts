@@ -11,8 +11,8 @@ import type {
   Adapter,
   Artifact,
   ArtifactMetadata,
-  Repository,
   DownloadInfo,
+  Repository,
 } from "../common/types";
 import type TagFormatter from "../../../../../common/TagFormatter";
 import { FormatError } from "../../../../../common/TagFormatter";
@@ -43,10 +43,18 @@ export default class MongoAdapter implements Adapter {
     this._collection = db.collection(name);
     this._files = new GridFSBucket(db, { bucketName: name });
   }
-  downloadMetadata(repoId: string, contentIds: string[], formatter: TagFormatter, downloadDir: string): Promise<string> {
+  downloadMetadata(
+    repoId: string,
+    contentIds: string[],
+    formatter: TagFormatter,
+    downloadDir: string,
+  ): Promise<string> {
     throw new Error("Method not implemented.");
   }
-  downloadFileURLs(repoId: string, contentIds: string[]): Promise<DownloadInfo[]> {
+  downloadFileURLs(
+    repoId: string,
+    contentIds: string[],
+  ): Promise<DownloadInfo[]> {
     throw new Error("Method not implemented.");
   }
 

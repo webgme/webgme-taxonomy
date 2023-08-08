@@ -188,7 +188,6 @@ function initialize(middlewareOpts: MiddlewareOptions) {
     }),
   );
 
-
   router.get(
     RouterUtils.getContentTypeRoutes("artifacts/:parentId/files/"),
     RouterUtils.handleUserErrors(
@@ -216,7 +215,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
           req,
           mainConfig,
         );
-       // need to download the urls of the associated observations ids
+        // need to download the urls of the associated observations ids
         const urlResponse = await storage.downloadFileURLs(parentId, ids);
         console.log("Dowload Info:", urlResponse);
         res.json(urlResponse);
@@ -256,7 +255,12 @@ function initialize(middlewareOpts: MiddlewareOptions) {
         );
         const downloadDir = path.join(tmpDir, "metadata");
         console.log(">>> about to download to", downloadDir);
-        const tmp1dir = await storage.downloadMetadata(parentId, ids, formatter, downloadDir);
+        const tmp1dir = await storage.downloadMetadata(
+          parentId,
+          ids,
+          formatter,
+          downloadDir,
+        );
         console.log(">>> about to zip", tmp1dir);
         const zipPath = path.join(tmpDir, `${parentId}.zip`);
         await zip(downloadDir, zipPath, {
@@ -264,12 +268,12 @@ function initialize(middlewareOpts: MiddlewareOptions) {
         });
         await fsp.access(zipPath, fs.constants.R_OK);
         console.log("created zip archive:", zipPath, "from", downloadDir);
-        
+
         res.download(
           zipPath,
           path.basename(zipPath),
         );
-        
+
         await RouterUtils.responseClose(res);
         console.log(">>> about to remove", downloadDir);
         await fsp.rm(downloadDir, { recursive: true });
@@ -312,7 +316,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
           storage,
           formatter,
           parentId,
-          ids
+          ids,
         );
         console.log(">>> about to submit download task");
         const id = downloadQueue.submitTask(task);

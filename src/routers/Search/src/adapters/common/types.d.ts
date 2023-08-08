@@ -17,13 +17,16 @@ export interface Adapter {
     formatter: TagFormatter,
     downloadDir: string,
   ): Promise<void>;
-  downloadFileURLs(repoId: string, contentIds: string[]): Promise<DownloadInfo[]>;
+  downloadFileURLs(
+    repoId: string,
+    contentIds: string[],
+  ): Promise<DownloadInfo[]>;
   downloadMetadata(
-    repoId: string, 
+    repoId: string,
     contentIds: string[],
     formatter: TagFormatter,
-    downloadDir: string
-    ): Promise<string>;
+    downloadDir: string,
+  ): Promise<string>;
 
   uploadFile?(
     repoId: string,
@@ -86,7 +89,6 @@ export interface TaxonomyCommit {
   commit: string;
 }
 
-
 export interface DownloadInfo {
   repoId: string;
   index: string;
@@ -98,4 +100,3 @@ export interface FileURLInfo {
   name: string;
   url: string;
 }
-  

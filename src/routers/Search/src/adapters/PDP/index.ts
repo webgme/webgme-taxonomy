@@ -39,7 +39,6 @@ import type {
   ArtifactMetadata,
   DownloadInfo,
   Repository,
-
 } from "../common/types";
 import { filterMap, range, sleep } from "../../Utils";
 import CreateRequestLogger from "./CreateRequestLogger";
@@ -245,24 +244,33 @@ export default class PDP implements Adapter {
   }
 
   async downloadMetadata(
-    repoId: string, 
+    repoId: string,
     contentIds: string[],
     formatter: TagFormatter,
     downloadDir: string,
-    ): Promise<string> {
+  ): Promise<string> {
     const processId = newtype<ProcessID>(repoId);
     const obsIdxAndVersions = contentIds.map((idString) =>
       idString.split("_").map((n) => +n)
     );
     await Promise.all(
       obsIdxAndVersions.map(async ([index, version]) =>
-        await this.getObsMetadata(processId, index, version, formatter, downloadDir)
+        await this.getObsMetadata(
+          processId,
+          index,
+          version,
+          formatter,
+          downloadDir,
+        )
       ),
     );
     return downloadDir;
   }
 
-  async downloadFileURLs(repoId: string, contentIds: string[]): Promise<DownloadInfo[]> {
+  async downloadFileURLs(
+    repoId: string,
+    contentIds: string[],
+  ): Promise<DownloadInfo[]> {
     const processId = newtype<ProcessID>(repoId);
     const obsIdxAndVersions = contentIds.map((idString) =>
       idString.split("_").map((n) => +n)
@@ -280,10 +288,10 @@ export default class PDP implements Adapter {
             obsIndex: index,
             version: version,
             files: [],
-          }
+          };
         }
         // return the file name and urls
-        console.log(response.files)
+        console.log(response.files);
         // wait for the transfer to complete and the files to be available
         if (response.transferId != null) {
           let transferStatus = await this._getFileTransferStatus(
@@ -309,12 +317,10 @@ export default class PDP implements Adapter {
             return {
               name: file.name,
               url: file.sasUrl,
-            }
-          }
-          ),
-        }
-      }
-      ),
+            };
+          }),
+        };
+      }),
     );
     // Here we return the object array containing ObservationFile objects
     if (response.length === 0) {
@@ -331,7 +337,13 @@ export default class PDP implements Adapter {
     formatter: TagFormatter,
   ) {
     // Let's first get the observation metadata
-    await this.getObsMetadata(processId, obsIndex, version, formatter, downloadDir);
+    await this.getObsMetadata(
+      processId,
+      obsIndex,
+      version,
+      formatter,
+      downloadDir,
+    );
 
     // Lets download the actual files associated with this observation,index
     const response = await this._getObsFiles(processId, obsIndex, version);
@@ -372,22 +384,28 @@ export default class PDP implements Adapter {
     );
   }
 
-  private async getObsMetadata(processId: ProcessID, obsIndex: number, version: number, formatter: TagFormatter, downloadDir: string) {
+  private async getObsMetadata(
+    processId: ProcessID,
+    obsIndex: number,
+    version: number,
+    formatter: TagFormatter,
+    downloadDir: string,
+  ) {
     const responseObservation = await this._getObs(
       processId,
       obsIndex,
-      version
+      version,
     );
     try {
       const metadata = responseObservation.data[0];
       metadata.taxonomyTags = formatter.toHumanFormat(
-        metadata.taxonomyTags ?? []
+        metadata.taxonomyTags ?? [],
       );
       const metadataPath = path.join(
         downloadDir,
         `${obsIndex}`,
         `${version}`,
-        `metadata.json`
+        `metadata.json`,
       );
       //let's save the observation metadata to a file metada.json
       await this._writeJsonData(metadataPath, metadata);
@@ -396,7 +414,7 @@ export default class PDP implements Adapter {
         downloadDir,
         `${obsIndex}`,
         `${version}`,
-        `warnings.txt`
+        `warnings.txt`,
       );
       if (isFormatError(err)) {
         const metadata = responseObservation.data[0];
@@ -404,18 +422,18 @@ export default class PDP implements Adapter {
           downloadDir,
           `${obsIndex}`,
           `${version}`,
-          `metadata.json`
+          `metadata.json`,
         );
         await this._writeJsonData(metadataPath, metadata);
         await this._writeData(
           logPath,
-          `An error occurred when converting the taxonomy tags: ${err.message}\n\nThe internal format has been saved in metadata.json.`
+          `An error occurred when converting the taxonomy tags: ${err.message}\n\nThe internal format has been saved in metadata.json.`,
         );
       } else {
         let msg = err instanceof Error ? err.message : err;
         await this._writeData(
           logPath,
-          `An error occurred when generating metadata.json: ${msg}`
+          `An error occurred when generating metadata.json: ${msg}`,
         );
       }
     }
