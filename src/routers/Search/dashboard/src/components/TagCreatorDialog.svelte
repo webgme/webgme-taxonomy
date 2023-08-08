@@ -7,15 +7,15 @@
   import SchemaForm/*, { type JSONSchema7 }*/ from "svelte-jsonschema-form";
 
   export let open = false;
+  export let nodePath: string = "";
+
   let schema = fetchSchema();
 
   async function fetchSchema() {
-    const url = "../schema.json";
+    const url = `../../${encodeURIComponent(nodePath)}/schema.json`
     const response = await fetch(url);
     if (response.ok) {
-      const schema = await response.json();
-      console.log(schema);
-      return schema;
+      return await response.json();
     } else {
       throw new Error(await response.text());
     }
@@ -30,8 +30,7 @@
     {#await schema}
       <p>Loading schema...</p>
     {:then schema}
-      <!-- <SchemaForm {schema} /> -->
-      <pre>{JSON.stringify(schema)}</pre>
+      <SchemaForm {schema} />
     {:catch error}
       <div class="error">ERROR: {error.message}</div>
     {/await}

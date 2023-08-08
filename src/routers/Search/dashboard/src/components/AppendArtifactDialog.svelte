@@ -218,7 +218,7 @@
     </Button>
   </div>
 
-  <TagCreatorDialog bind:open={showTagCreator}></TagCreatorDialog>
+  <TagCreatorDialog bind:open={showTagCreator} nodePath={contentType.nodePath}></TagCreatorDialog>
 </Dialog>
 
 <style>

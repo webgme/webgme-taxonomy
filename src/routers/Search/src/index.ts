@@ -104,7 +104,8 @@ function initialize(middlewareOpts: MiddlewareOptions) {
       const { root, core, contentType } = request.webgmeContext;
       const exporter = JSONSchemaExporter.from(core, root);
       const vocabularies = await Utils.getVocabulariesFor(core, contentType);
-      const { schema } = await exporter.getVocabSchemas(vocabularies, "");
+      const name = core.getAttribute(contentType, "name")?.toString() ?? "";
+      const { schema } = await exporter.getVocabSchemas(vocabularies, name, true);
       response.json(schema);
     }),
   );
