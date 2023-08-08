@@ -9,7 +9,6 @@
   import Button, { Label } from "@smui/button";
   import LinearProgress from "@smui/linear-progress";
   import IconButton from "@smui/icon-button";
-  import TagCreatorDialog from "./TagCreatorDialog.svelte";
 
   import { createEventDispatcher, getContext } from "svelte";
   import { fade } from "svelte/transition";
@@ -36,7 +35,6 @@
   let metadata: any;
   let open = false;
   let uploading: Promise<UploadPromise[]> | null = null;
-  let showTagCreator = false;
 
   $: displayName = set?.displayName ?? "";
   $: appendName = displayName;
@@ -207,7 +205,15 @@
       </Dropzone>
     {/if}
 
-    <a on:click={() => showTagCreator = true} href="#">Click to select tags for your dataset.</a>
+    <a
+      target="_blank"
+      href={window.location.href
+        .replace("/Search/", "/TagCreator/") // FIXME: use the correct content type
+        .replace(
+          /[^\/]*\/static\//,
+          `${encodeURIComponent(contentType.nodePath)}/static/`
+        )}>Click to select tags for your dataset.</a
+    >
   </Content>
   <div class="dialog-actions">
     <Button disabled={uploading} on:click={() => close()}>
@@ -217,8 +223,6 @@
       <Label>Upload</Label>
     </Button>
   </div>
-
-  <TagCreatorDialog bind:open={showTagCreator} nodePath={contentType.nodePath}></TagCreatorDialog>
 </Dialog>
 
 <style>
