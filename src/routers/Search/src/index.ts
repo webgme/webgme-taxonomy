@@ -215,6 +215,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
           req,
           mainConfig,
         );
+
         // need to download the urls of the associated observations ids
         const urlResponse = await storage.downloadFileURLs(parentId, ids);
         console.log("Dowload Info:", urlResponse);
@@ -224,61 +225,32 @@ function initialize(middlewareOpts: MiddlewareOptions) {
   );
 
   router.get(
-    RouterUtils.getContentTypeRoutes("artifacts/:parentId/metadata/"),
+    RouterUtils.getContentTypeRoutes("artifacts/:parentId/:id/metadata.json"),
     RouterUtils.handleUserErrors(
       logger,
-      async function downloadContentURL(req, res) {
-        const { parentId } = req.params;
-        // TODO: get the IDs for the specific observations to get
-        let ids;
-        if (isString(req.query.ids)) {
-          ids = JSON.parse(req.query.ids);
-        } else {
-          res.status(400).send("List of artifact IDs required");
-          return;
-        }
+      async function getMetadata(req, res) {
+        const { parentId, id } = req.params;
         const { root, core } = req.webgmeContext;
+
         const node = await Utils.findTaxonomyNode(core, root);
-        if (node == null) {
+        if (node == null) { // TODO: replace with user error
           res.status(400).send("No taxonomy node found");
           return;
         }
+
         const formatter = await TagFormatter.from(core, node);
         const storage = await StorageAdapter.from(
           req.webgmeContext,
           req,
           mainConfig,
         );
-        // Need to download the metadata of the associated observations ids
-        const tmpDir = await fsp.mkdtemp(
-          path.join(os.tmpdir(), "webgme-taxonomy-"),
-        );
-        const downloadDir = path.join(tmpDir, "metadata");
-        console.log(">>> about to download to", downloadDir);
-        const tmp1dir = await storage.downloadMetadata(
+        const metadata = await storage.getMetadata(
           parentId,
-          ids,
+          id,
           formatter,
-          downloadDir,
-        );
-        console.log(">>> about to zip", tmp1dir);
-        const zipPath = path.join(tmpDir, `${parentId}.zip`);
-        await zip(downloadDir, zipPath, {
-          compression: COMPRESSION_LEVEL.medium,
-        });
-        await fsp.access(zipPath, fs.constants.R_OK);
-        console.log("created zip archive:", zipPath, "from", downloadDir);
-
-        res.download(
-          zipPath,
-          path.basename(zipPath),
         );
 
-        await RouterUtils.responseClose(res);
-        console.log(">>> about to remove", downloadDir);
-        await fsp.rm(downloadDir, { recursive: true });
-        console.log(">>> about to remove", tmpDir);
-        await fsp.rm(tmpDir, { recursive: true });
+        res.json(metadata);
       },
     ),
   );

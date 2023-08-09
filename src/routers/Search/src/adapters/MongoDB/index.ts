@@ -26,7 +26,6 @@ import {
   UploadRequest,
 } from "../common/AppendResult";
 import { WebgmeContext } from "../../../../../common/types";
-import { GetObservationFilesResponse } from "../PDP/types";
 
 const mongoUri = gmeConfig.mongo.uri;
 const defaultClient = new MongoClient(mongoUri);
@@ -43,15 +42,31 @@ export default class MongoAdapter implements Adapter {
     this._collection = db.collection(name);
     this._files = new GridFSBucket(db, { bucketName: name });
   }
-  downloadMetadata(
+
+  async getMetadata(
     repoId: string,
-    contentIds: string[],
+    contentId: string,
     formatter: TagFormatter,
-    downloadDir: string,
-  ): Promise<string> {
-    throw new Error("Method not implemented.");
+  ): Promise<any> {
+    const repo = await this.getRepository(repoId);
+    return await this.getMetadataFor(repo, contentId, formatter);
   }
-  downloadFileURLs(
+
+  private async getMetadataFor(
+    repo: any,
+    contentId: string,
+    formatter: TagFormatter,
+  ): Promise<any> {
+    const metadata = repo.artifacts[contentId];
+    if (metadata) {
+      metadata.taxonomyTags = formatter.toHumanFormat(
+        metadata.taxonomyTags ?? [],
+      );
+    }
+    return metadata;
+  }
+
+  async downloadFileURLs(
     repoId: string,
     contentIds: string[],
   ): Promise<DownloadInfo[]> {
@@ -97,14 +112,19 @@ export default class MongoAdapter implements Adapter {
     return "Created!";
   }
 
+  private async getRepository(repoId: string): any {
+    // TODO: throw error if not found? Or use option type?
+    return await this._collection.findOne({
+      _id: new ObjectId(repoId),
+    });
+  }
+
   async appendArtifact(
     repoId: string,
     metadata: ArtifactMetadata,
     filenames: string[],
   ) {
-    const repo = await this._collection.findOne({
-      _id: new ObjectId(repoId),
-    });
+    const repo = await this.getRepository(repoId);
 
     const fileIds = _.range(filenames.length).map(() => new ObjectId());
     const artifact: Artifact = {

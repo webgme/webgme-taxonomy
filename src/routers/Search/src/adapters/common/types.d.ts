@@ -21,12 +21,11 @@ export interface Adapter {
     repoId: string,
     contentIds: string[],
   ): Promise<DownloadInfo[]>;
-  downloadMetadata(
+  getMetadata(
     repoId: string,
-    contentIds: string[],
+    contentId: string,
     formatter: TagFormatter,
-    downloadDir: string,
-  ): Promise<string>;
+  ): Promise<any>;
 
   uploadFile?(
     repoId: string,
@@ -91,8 +90,7 @@ export interface TaxonomyCommit {
 
 export interface DownloadInfo {
   repoId: string;
-  index: string;
-  version: string;
+  id: string;
   files: FileURLInfo[];
 }
 

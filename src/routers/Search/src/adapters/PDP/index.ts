@@ -243,28 +243,19 @@ export default class PDP implements Adapter {
     );
   }
 
-  async downloadMetadata(
+  async getMetadata(
     repoId: string,
-    contentIds: string[],
+    contentId: string,
     formatter: TagFormatter,
-    downloadDir: string,
-  ): Promise<string> {
+  ): Promise<any> {
     const processId = newtype<ProcessID>(repoId);
-    const obsIdxAndVersions = contentIds.map((idString) =>
-      idString.split("_").map((n) => +n)
+    const [index, version] = contentId.split("_").map((n) => +n);
+    return await this.getObsMetadata(
+      processId,
+      index,
+      version,
+      formatter,
     );
-    await Promise.all(
-      obsIdxAndVersions.map(async ([index, version]) =>
-        await this.getObsMetadata(
-          processId,
-          index,
-          version,
-          formatter,
-          downloadDir,
-        )
-      ),
-    );
-    return downloadDir;
   }
 
   async downloadFileURLs(
@@ -311,14 +302,11 @@ export default class PDP implements Adapter {
         }
         return {
           repoId: processId.toString(),
-          index: index,
-          version: version,
-          files: response.files.map((file) => {
-            return {
-              name: file.name,
-              url: file.sasUrl,
-            };
-          }),
+          id: `${index}_${version}`,
+          files: response.files.map((file) => ({
+            name: file.name,
+            url: file.sasUrl,
+          })),
         };
       }),
     );
@@ -337,7 +325,7 @@ export default class PDP implements Adapter {
     formatter: TagFormatter,
   ) {
     // Let's first get the observation metadata
-    await this.getObsMetadata(
+    await this.writeObsMetadata(
       processId,
       obsIndex,
       version,
@@ -385,6 +373,25 @@ export default class PDP implements Adapter {
   }
 
   private async getObsMetadata(
+    processId: ProcessID,
+    obsIndex: number,
+    version: number,
+    formatter: TagFormatter,
+  ): Promise<any> {
+    const responseObservation = await this._getObs(
+      processId,
+      obsIndex,
+      version,
+    );
+    const metadata = responseObservation.data[0];
+    metadata.taxonomyTags = formatter.toHumanFormat(
+      metadata.taxonomyTags ?? [],
+    );
+
+    return metadata;
+  }
+
+  private async writeObsMetadata(
     processId: ProcessID,
     obsIndex: number,
     version: number,
