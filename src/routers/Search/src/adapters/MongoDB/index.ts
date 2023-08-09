@@ -11,6 +11,7 @@ import type {
   Adapter,
   Artifact,
   ArtifactMetadata,
+  DownloadInfo,
   Repository,
 } from "../common/types";
 import type TagFormatter from "../../../../../common/TagFormatter";
@@ -40,6 +41,48 @@ export default class MongoAdapter implements Adapter {
     const name = `taxonomy_data_${collectionName}`;
     this._collection = db.collection(name);
     this._files = new GridFSBucket(db, { bucketName: name });
+  }
+
+  async getMetadata(
+    repoId: string,
+    contentId: string,
+    formatter: TagFormatter,
+  ): Promise<any> {
+    const repo = await this.getRepository(repoId);
+    return this.getMetadataFor(repo, contentId, formatter);
+  }
+
+  async getBulkMetadata(
+    repoId: string,
+    contentIds: string[],
+    formatter: TagFormatter,
+  ): Promise<any[]> {
+    const repo = await this.getRepository(repoId);
+    const metadata = contentIds.map((id) =>
+      this.getMetadataFor(repo, id, formatter)
+    );
+    return metadata;
+  }
+
+  private getMetadataFor(
+    repo: any,
+    contentId: string,
+    formatter: TagFormatter,
+  ): any {
+    const metadata = repo.artifacts[contentId];
+    if (metadata) {
+      metadata.taxonomyTags = formatter.toHumanFormat(
+        metadata.taxonomyTags ?? [],
+      );
+    }
+    return metadata;
+  }
+
+  async downloadFileURLs(
+    repoId: string,
+    contentIds: string[],
+  ): Promise<DownloadInfo[]> {
+    throw new Error("Method not implemented.");
   }
 
   async listArtifacts(): Promise<Repository[]> {
@@ -81,14 +124,30 @@ export default class MongoAdapter implements Adapter {
     return "Created!";
   }
 
+  private async getRepository(repoId: string): Promise<any> {
+    // TODO: throw error if not found? Or use option type?
+    return await this._collection.findOne({
+      _id: new ObjectId(repoId),
+    });
+  }
+
+  async getContentIds(repoId: string): Promise<string[]> {
+    const repo = await this.getRepository(repoId);
+
+    if (!repo) {
+      // TODO: throw an error
+      return [];
+    }
+
+    return Object.keys(repo.artifacts);
+  }
+
   async appendArtifact(
     repoId: string,
     metadata: ArtifactMetadata,
     filenames: string[],
   ) {
-    const repo = await this._collection.findOne({
-      _id: new ObjectId(repoId),
-    });
+    const repo = await this.getRepository(repoId);
 
     const fileIds = _.range(filenames.length).map(() => new ObjectId());
     const artifact: Artifact = {

@@ -185,6 +185,120 @@ function initialize(middlewareOpts: MiddlewareOptions) {
     }),
   );
 
+  router.get(
+    RouterUtils.getContentTypeRoutes("artifacts/:parentId/files/"),
+    RouterUtils.handleUserErrors(
+      logger,
+      async function downloadContentURL(req, res) {
+        const { parentId } = req.params;
+        // TODO: get the IDs for the specific observations to get
+        let ids;
+        if (isString(req.query.ids)) {
+          ids = JSON.parse(req.query.ids);
+        } else {
+          res.status(400).send("List of artifact IDs required");
+          return;
+        }
+
+        const { root, core } = req.webgmeContext;
+        const node = await Utils.findTaxonomyNode(core, root);
+        if (node == null) {
+          res.status(400).send("No taxonomy node found");
+          return;
+        }
+        const formatter = await TagFormatter.from(core, node);
+        const storage = await StorageAdapter.from(
+          req.webgmeContext,
+          req,
+          mainConfig,
+        );
+
+        // need to download the urls of the associated observations ids
+        const urlResponse = await storage.downloadFileURLs(parentId, ids);
+        res.json(urlResponse);
+      },
+    ),
+  );
+
+  router.get(
+    RouterUtils.getContentTypeRoutes("artifacts/:parentId/:id/metadata.json"),
+    RouterUtils.handleUserErrors(
+      logger,
+      async function getMetadata(req, res) {
+        const { parentId, id } = req.params;
+        const { root, core } = req.webgmeContext;
+
+        const node = await Utils.findTaxonomyNode(core, root);
+        if (node == null) { // TODO: replace with user error
+          res.status(400).send("No taxonomy node found");
+          return;
+        }
+
+        const formatter = await TagFormatter.from(core, node);
+        const storage = await StorageAdapter.from(
+          req.webgmeContext,
+          req,
+          mainConfig,
+        );
+        const metadata = await storage.getMetadata(
+          parentId,
+          id,
+          formatter,
+        );
+
+        res.json(metadata);
+      },
+    ),
+  );
+
+  router.get(
+    RouterUtils.getContentTypeRoutes("artifacts/:parentId/metadata.jsonl"),
+    RouterUtils.handleUserErrors(
+      logger,
+      async function getBulkMetadata(req, res) {
+        const { parentId } = req.params;
+        const { root, core } = req.webgmeContext;
+        let ids: string[];
+        if (isString(req.query.ids)) {
+          ids = JSON.parse(req.query.ids);
+        } else {
+          res.status(400).send("List of artifact IDs required");
+          return;
+        }
+
+        const node = await Utils.findTaxonomyNode(core, root);
+        if (node == null) { // TODO: replace with user error
+          res.status(400).send("No taxonomy node found");
+          return;
+        }
+
+        const MAX_THRESHOLD = 20000;
+        if (ids.length > MAX_THRESHOLD) {
+          res.status(400).send("Too many content IDs");
+          return;
+        }
+
+        const formatter = await TagFormatter.from(core, node);
+        const storage = await StorageAdapter.from(
+          req.webgmeContext,
+          req,
+          mainConfig,
+        );
+        const metadata = await storage.getBulkMetadata(
+          parentId,
+          ids,
+          formatter,
+        );
+
+        const metadataLines = metadata
+          .map((md) => JSON.stringify(md))
+          .join("\n");
+
+        res.send(metadataLines);
+      },
+    ),
+  );
+
   const downloadQueue: TaskQueue<DownloadTask, FilePath> = new TaskQueue();
   router.post(
     RouterUtils.getContentTypeRoutes("artifacts/:parentId/downloads/"),
@@ -200,7 +314,6 @@ function initialize(middlewareOpts: MiddlewareOptions) {
           res.status(400).send("List of artifact IDs required");
           return;
         }
-
         const { root, core } = req.webgmeContext;
         const node = await Utils.findTaxonomyNode(core, root);
         if (node == null) {
