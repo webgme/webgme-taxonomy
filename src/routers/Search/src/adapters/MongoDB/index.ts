@@ -112,7 +112,7 @@ export default class MongoAdapter implements Adapter {
     return "Created!";
   }
 
-  private async getRepository(repoId: string): any {
+  private async getRepository(repoId: string): Promise<any> {
     // TODO: throw error if not found? Or use option type?
     return await this._collection.findOne({
       _id: new ObjectId(repoId),

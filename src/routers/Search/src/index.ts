@@ -218,7 +218,6 @@ function initialize(middlewareOpts: MiddlewareOptions) {
 
         // need to download the urls of the associated observations ids
         const urlResponse = await storage.downloadFileURLs(parentId, ids);
-        console.log("Dowload Info:", urlResponse);
         res.json(urlResponse);
       },
     ),
