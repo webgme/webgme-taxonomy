@@ -17,6 +17,20 @@ export interface Adapter {
     formatter: TagFormatter,
     downloadDir: string,
   ): Promise<void>;
+  downloadFileURLs(
+    repoId: string,
+    contentIds: string[],
+  ): Promise<DownloadInfo[]>;
+  getMetadata(
+    repoId: string,
+    contentId: string,
+    formatter: TagFormatter,
+  ): Promise<any>;
+  getBulkMetadata(
+    repoId: string,
+    contentIds: string[],
+    formatter: TagFormatter,
+  ): Promise<any[]>;
   uploadFile?(
     repoId: string,
     index: string,
@@ -76,4 +90,15 @@ export interface TaxonomyBranch {
 export interface TaxonomyCommit {
   id: string;
   commit: string;
+}
+
+export interface DownloadInfo {
+  repoId: string;
+  id: string;
+  files: FileURLInfo[];
+}
+
+export interface FileURLInfo {
+  name: string;
+  url: string;
 }

@@ -11,6 +11,7 @@ import type {
   Adapter,
   Artifact,
   ArtifactMetadata,
+  DownloadInfo,
   Repository,
 } from "../common/types";
 import type TagFormatter from "../../../../../common/TagFormatter";
@@ -40,6 +41,48 @@ export default class MongoAdapter implements Adapter {
     const name = `taxonomy_data_${collectionName}`;
     this._collection = db.collection(name);
     this._files = new GridFSBucket(db, { bucketName: name });
+  }
+
+  async getMetadata(
+    repoId: string,
+    contentId: string,
+    formatter: TagFormatter,
+  ): Promise<any> {
+    const repo = await this.getRepository(repoId);
+    return this.getMetadataFor(repo, contentId, formatter);
+  }
+
+  async getBulkMetadata(
+    repoId: string,
+    contentIds: string[],
+    formatter: TagFormatter,
+  ): Promise<any[]> {
+    const repo = await this.getRepository(repoId);
+    const metadata = contentIds.map((id) =>
+      this.getMetadataFor(repo, id, formatter)
+    );
+    return metadata;
+  }
+
+  private getMetadataFor(
+    repo: any,
+    contentId: string,
+    formatter: TagFormatter,
+  ): any {
+    const metadata = repo.artifacts[contentId];
+    if (metadata) {
+      metadata.taxonomyTags = formatter.toHumanFormat(
+        metadata.taxonomyTags ?? [],
+      );
+    }
+    return metadata;
+  }
+
+  async downloadFileURLs(
+    repoId: string,
+    contentIds: string[],
+  ): Promise<DownloadInfo[]> {
+    throw new Error("Method not implemented.");
   }
 
   async listArtifacts(): Promise<Repository[]> {
@@ -81,14 +124,30 @@ export default class MongoAdapter implements Adapter {
     return "Created!";
   }
 
+  private async getRepository(repoId: string): Promise<any> {
+    // TODO: throw error if not found? Or use option type?
+    return await this._collection.findOne({
+      _id: new ObjectId(repoId),
+    });
+  }
+
+  async getContentIds(repoId: string): Promise<string[]> {
+    const repo = await this.getRepository(repoId);
+
+    if (!repo) {
+      // TODO: throw an error
+      return [];
+    }
+
+    return Object.keys(repo.artifacts);
+  }
+
   async appendArtifact(
     repoId: string,
     metadata: ArtifactMetadata,
     filenames: string[],
   ) {
-    const repo = await this._collection.findOne({
-      _id: new ObjectId(repoId),
-    });
+    const repo = await this.getRepository(repoId);
 
     const fileIds = _.range(filenames.length).map(() => new ObjectId());
     const artifact: Artifact = {
@@ -141,17 +200,17 @@ export default class MongoAdapter implements Adapter {
     formatter: TagFormatter,
     targetDir: string,
   ): Promise<void> {
-    const set = await this._collection.findOne({
+    const repo = await this._collection.findOne({
       _id: new ObjectId(repoId),
     });
-    if (!set) {
+    if (!repo) {
       // TODO: throw an error
       return;
     }
 
     await Promise.all(
       ids.map(async (idx) => {
-        const metadata = set.artifacts[idx];
+        const metadata = repo.artifacts[idx];
         const artifactPath = path.join(targetDir, idx.toString());
         if (metadata) {
           const metadataPath = path.join(artifactPath, "metadata.json");
@@ -193,6 +252,8 @@ export default class MongoAdapter implements Adapter {
     const metadata = await this._files.find({ _id: id }).next();
     if (metadata) {
       const filepath = path.join(targetDir, metadata.filename);
+      await fsp.mkdir(path.dirname(filepath), { recursive: true });
+
       const fileStream = fs.createWriteStream(filepath);
       const stream = this._files.openDownloadStream(id).pipe(fileStream);
 
@@ -228,5 +289,5 @@ async function writeJsonData(filePath: string, metadata: ArtifactMetadata) {
 }
 
 async function streamClose(stream: stream.Stream): Promise<void> {
-  return new Promise((res, rej) => stream.on("close", res));
+  return new Promise((res, _rej) => stream.on("close", res));
 }

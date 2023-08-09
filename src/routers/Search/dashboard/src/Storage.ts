@@ -1,6 +1,5 @@
 import TaxonomyReference from "./TaxonomyReference";
-import { assert, Result } from "./Utils";
-import { filterMap } from "./Utils";
+import { assert, filterMap, Result, sleep } from "./Utils";
 import { Readable, writable } from "svelte/store";
 
 type UploadParams = {
@@ -13,6 +12,13 @@ export type UploadPromise = Promise<boolean> & Readable<number> & {
   file: File;
   abort: () => void;
 };
+
+// TODO: consolidate code with original definition in TaskQueue.ts
+enum Status {
+  Created,
+  Running,
+  Complete,
+}
 
 class Storage {
   baseUrl: string;
@@ -30,9 +36,26 @@ class Storage {
   }
 
   async getDownloadUrl(parentId, ...ids) {
-    // TODO: add item IDs
     const qs = `ids=${encodeURIComponent(JSON.stringify(ids))}`;
-    return this.baseUrl + parentId + `/download?${qs}`;
+    const createArchiveUrl = this.baseUrl + parentId + `/downloads/?${qs}`;
+    const taskId: number =
+      await (await this._fetchJson(createArchiveUrl, { method: "post" }))
+        .unwrap();
+
+    const checkStatusUrl = this.baseUrl + parentId +
+      `/downloads/${taskId}/status`;
+    let status: Status = await (await this._fetchJson(checkStatusUrl))
+      .unwrap();
+
+    while (status !== Status.Complete) {
+      await sleep(10);
+      status = await (await this._fetchJson(checkStatusUrl))
+        .unwrap();
+    }
+
+    const downloadUrl = this.baseUrl + parentId +
+      `/downloads/${taskId}`;
+    return downloadUrl;
   }
 
   private _uploadFile({ method, url, headers }: UploadParams, file: File) {
