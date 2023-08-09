@@ -4,14 +4,20 @@ import { ProjectVersion } from "../../../common/types";
 
 type TypeDict = { [path: string]: string }; // FIXME: don't duplicate this
 
-interface UploadContextData {
+export interface FileUpload {
+  path: string;
+  // TODO: add the hash?
+}
+
+export interface UploadContextData {
   name: string;
   description: string;
   tags: any[];
-  files: any[];
+  files: FileUpload[];
   project: ProjectVersion;
   core: GmeClasses.Core;
   contentType: Core.Node;
+  userId: string;
 }
 
 interface ProjectAttributes {
@@ -55,7 +61,12 @@ export default class UploadContext {
       name: Primitive.from(data.name),
       description: Primitive.from(data.description),
     });
-    // TODO: handle tags, files
+    // TODO: handle tags
+    const files = data.files.map((fdata, i) =>
+      new GMENode(`@tmp/content/file_${i}`, {
+        path: Primitive.from(fdata.path),
+      })
+    );
 
     const [owner, name] = data.project.id.split("+");
     const attrs: ProjectAttributes = {
@@ -76,8 +87,10 @@ export default class UploadContext {
     const gmeContext = await getGMEContext(
       project,
       content,
+      files,
       data.core,
       data.contentType,
+      Primitive.from(data.userId),
     );
     return new UploadContext(
       data.core,
@@ -135,15 +148,17 @@ async function addChildToContext(
 async function getGMEContext(
   project: GMENode,
   content: GMENode,
+  files: GMENode[],
   core: GmeClasses.Core,
   contentType: Core.Node,
+  userId: Primitive.Primitive,
 ): Promise<GMEContext> {
   const metaDict = getMetaNodeDict(core, contentType);
 
   // Add UploadContext node (active node)
   // This doesn't use the helper method since it doesn't actually
   // have a parent node (hence the "@tmp" path)
-  const context = new GMENode("@tmp");
+  const context = new GMENode("@tmp", { userId });
   context.setActiveNode();
   const nodes: GMENode[] = [context];
   context.pointers.base = 1;
@@ -158,6 +173,18 @@ async function getGMEContext(
     metaDict.get("UploadContent"),
     context,
   );
+
+  // Add files
+  await files.reduce(async (prevTask, file) => {
+    await prevTask;
+    return addChildToContext(
+      core,
+      nodes,
+      file,
+      metaDict.get("File"),
+      content,
+    );
+  }, Promise.resolve());
 
   // Next, we will add the reference to the content type. Since content types
   // contain the vocabularies which in turn contain transformations, etc, this
@@ -200,6 +227,7 @@ async function getGMEContext(
   // Add extra system info
   const date = new Date();
   const system = new GMENode("@tmp/system", {
+    time: Primitive.from(date.toString()),
     isoDateTime: Primitive.from(date.toISOString()),
   });
   await addChildToContext(

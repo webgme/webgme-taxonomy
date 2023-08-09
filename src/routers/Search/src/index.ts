@@ -19,7 +19,7 @@ import type { Request, Response } from "express";
 const router = express.Router();
 
 import SystemTerm from "./SystemTerm";
-import UploadContext from "./UploadContext";
+import UploadContext, { FileUpload } from "./UploadContext";
 import RouterUtils from "../../../common/routers/Utils";
 import type { MiddlewareOptions, WebgmeRequest } from "../../../common/types";
 import Utils from "../../../common/Utils";
@@ -115,7 +115,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
     RouterUtils.getContentTypeRoutes("artifacts/"),
     RouterUtils.handleUserErrors(
       logger,
-      addSystemTags,
+      addSystemTags.bind(null, middlewareOpts),
       convertTaxonomyTags,
       async function createArtifact(req, res) {
         const { metadata } = req.body;
@@ -140,7 +140,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
     RouterUtils.getContentTypeRoutes("artifacts/:parentId/append"),
     RouterUtils.handleUserErrors(
       logger,
-      addChildSystemTags,
+      addChildSystemTags.bind(null, middlewareOpts),
       convertTaxonomyTags,
       async function appendContent(req, res) {
         const { parentId } = req.params;
@@ -344,6 +344,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
  * content in the repo.
  */
 async function addChildSystemTags(
+  middlewareOpts: MiddlewareOptions,
   req: Request,
   res: Response,
 ) {
@@ -358,25 +359,27 @@ async function addChildSystemTags(
     throw new ChildContentTypeNotFoundError(gmeContext, contentType);
   }
 
-  return addContentTypeSystemTags(childContentType, req, res);
+  return addContentTypeSystemTags(middlewareOpts, childContentType, req, res);
 }
 
 async function addSystemTags(
+  middlewareOpts: MiddlewareOptions,
   req: Request,
   res: Response,
 ) {
   const gmeContext = (<WebgmeRequest> req).webgmeContext;
   const { contentType } = gmeContext;
 
-  return addContentTypeSystemTags(contentType, req, res);
+  return addContentTypeSystemTags(middlewareOpts, contentType, req, res);
 }
 
 async function addContentTypeSystemTags(
+  middlewareOpts: MiddlewareOptions,
   contentType: Core.Node,
   req: Request,
   _res: Response,
 ) {
-  const { metadata } = req.body;
+  const { metadata, filenames = [] } = req.body;
   const gmeContext = (<WebgmeRequest> req).webgmeContext;
 
   const { core, projectVersion } = gmeContext;
@@ -392,7 +395,11 @@ async function addContentTypeSystemTags(
 
   const systemTerms = await SystemTerm.findAll(core, vocabs);
   const desc = ""; // TODO: add description
-  const files: any[] = []; // TODO: add files
+
+  const files: FileUpload[] = filenames.map((path: string) => ({
+    path,
+  }));
+  const userId = middlewareOpts.getUserId(req);
 
   const context = await UploadContext.from({
     name: metadata.displayName,
@@ -402,6 +409,7 @@ async function addContentTypeSystemTags(
     core,
     contentType,
     project: projectVersion,
+    userId,
   });
 
   const systemTags =
