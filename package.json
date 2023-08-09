@@ -19,7 +19,7 @@
     "clean_up": "node ./node_modules/webgme-engine/src/bin/clean_up.js",
     "build": "tsc --build",
     "prepublish": "husky install",
-    "prepare": "npm run build && cd src/routers/Dashboard/app && npm install && cd ../../Search/dashboard && npm install"
+    "prepare": "npm run build && cd src/routers/Dashboard/app && npm install && cd ../../Search/dashboard && npm install && cd ../../TagCreator/form && npm install"
   },
   "version": "1.2.2",
   "devDependencies": {
