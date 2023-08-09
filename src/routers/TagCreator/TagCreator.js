@@ -81,7 +81,7 @@ function initialize(middlewareOpts) {
         const config = await exporter.getVocabSchemas(
           vocabularies,
           title,
-          false,
+          true,
         );
         config.taxonomyVersion = req.webgmeContext.projectVersion;
         config.taxonomyVersion.url = getHostUrl(req);
