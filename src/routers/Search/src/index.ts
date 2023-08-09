@@ -27,8 +27,6 @@ import { isString } from "./Utils";
 import DashboardConfiguration from "../../../common/SearchFilterDataExporter";
 import TagFormatter from "../../../common/TagFormatter";
 import path from "path";
-import os from "os";
-import fs from "fs";
 import fsp from "fs/promises";
 const staticPath = path.join(__dirname, "..", "dashboard", "public");
 import StorageAdapter from "./adapters";
@@ -37,7 +35,6 @@ import {
   MetaNodeNotFoundError,
 } from "./adapters/common/ModelError";
 import TaskQueue, { DownloadTask, FilePath } from "./TaskQueue";
-import { COMPRESSION_LEVEL, zip } from "zip-a-folder";
 
 /* N.B. gmeAuth, safeStorage and workerManager are not ready to use until the start function is called.
  * (However inside an incoming request they are all ensured to have been initialized.)
@@ -250,6 +247,54 @@ function initialize(middlewareOpts: MiddlewareOptions) {
         );
 
         res.json(metadata);
+      },
+    ),
+  );
+
+  router.get(
+    RouterUtils.getContentTypeRoutes("artifacts/:parentId/metadata.jsonl"),
+    RouterUtils.handleUserErrors(
+      logger,
+      async function getBulkMetadata(req, res) {
+        const { parentId } = req.params;
+        const { root, core } = req.webgmeContext;
+        let ids: string[];
+        if (isString(req.query.ids)) {
+          ids = JSON.parse(req.query.ids);
+        } else {
+          res.status(400).send("List of artifact IDs required");
+          return;
+        }
+
+        const node = await Utils.findTaxonomyNode(core, root);
+        if (node == null) { // TODO: replace with user error
+          res.status(400).send("No taxonomy node found");
+          return;
+        }
+
+        const MAX_THRESHOLD = 20000;
+        if (ids.length > MAX_THRESHOLD) {
+          res.status(400).send("Too many content IDs");
+          return;
+        }
+
+        const formatter = await TagFormatter.from(core, node);
+        const storage = await StorageAdapter.from(
+          req.webgmeContext,
+          req,
+          mainConfig,
+        );
+        const metadata = await storage.getBulkMetadata(
+          parentId,
+          ids,
+          formatter,
+        );
+
+        const metadataLines = metadata
+          .map((md) => JSON.stringify(md))
+          .join("\n");
+
+        res.send(metadataLines);
       },
     ),
   );

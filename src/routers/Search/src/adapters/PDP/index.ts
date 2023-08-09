@@ -258,6 +258,16 @@ export default class PDP implements Adapter {
     );
   }
 
+  async getBulkMetadata(
+    repoId: string,
+    contentIds: string[],
+    formatter: TagFormatter,
+  ): Promise<any> {
+    return await Promise.all(
+      contentIds.map((id) => this.getMetadata(repoId, id, formatter)),
+    );
+  }
+
   async downloadFileURLs(
     repoId: string,
     contentIds: string[],

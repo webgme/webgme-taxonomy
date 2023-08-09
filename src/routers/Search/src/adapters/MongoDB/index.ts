@@ -49,14 +49,26 @@ export default class MongoAdapter implements Adapter {
     formatter: TagFormatter,
   ): Promise<any> {
     const repo = await this.getRepository(repoId);
-    return await this.getMetadataFor(repo, contentId, formatter);
+    return this.getMetadataFor(repo, contentId, formatter);
   }
 
-  private async getMetadataFor(
+  async getBulkMetadata(
+    repoId: string,
+    contentIds: string[],
+    formatter: TagFormatter,
+  ): Promise<any[]> {
+    const repo = await this.getRepository(repoId);
+    const metadata = contentIds.map((id) =>
+      this.getMetadataFor(repo, id, formatter)
+    );
+    return metadata;
+  }
+
+  private getMetadataFor(
     repo: any,
     contentId: string,
     formatter: TagFormatter,
-  ): Promise<any> {
+  ): any {
     const metadata = repo.artifacts[contentId];
     if (metadata) {
       metadata.taxonomyTags = formatter.toHumanFormat(
@@ -117,6 +129,17 @@ export default class MongoAdapter implements Adapter {
     return await this._collection.findOne({
       _id: new ObjectId(repoId),
     });
+  }
+
+  async getContentIds(repoId: string): Promise<string[]> {
+    const repo = await this.getRepository(repoId);
+
+    if (!repo) {
+      // TODO: throw an error
+      return [];
+    }
+
+    return Object.keys(repo.artifacts);
   }
 
   async appendArtifact(

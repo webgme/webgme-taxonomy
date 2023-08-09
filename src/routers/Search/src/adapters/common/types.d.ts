@@ -26,7 +26,11 @@ export interface Adapter {
     contentId: string,
     formatter: TagFormatter,
   ): Promise<any>;
-
+  getBulkMetadata(
+    repoId: string,
+    contentIds: string[],
+    formatter: TagFormatter,
+  ): Promise<any[]>;
   uploadFile?(
     repoId: string,
     index: string,
