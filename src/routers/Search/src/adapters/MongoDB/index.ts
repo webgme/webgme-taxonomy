@@ -13,6 +13,7 @@ import type {
   ArtifactMetadata,
   DownloadInfo,
   Repository,
+  UploadReservation,
 } from "../common/types";
 import type TagFormatter from "../../../../../common/TagFormatter";
 import { FormatError } from "../../../../../common/TagFormatter";
@@ -27,20 +28,22 @@ import {
 } from "../common/AppendResult";
 import { WebgmeContext } from "../../../../../common/types";
 
-const mongoUri = gmeConfig.mongo.uri;
-const defaultClient = new MongoClient(mongoUri);
+const defaultMongoUri = gmeConfig.mongo.uri;
+const defaultClient = new MongoClient(defaultMongoUri);
 
 export default class MongoAdapter implements Adapter {
   private _client: MongoClient;
   private _files: GridFSBucket;
   private _collection: Collection<Document>;
+  private _hostUri: string;
 
-  constructor(client: MongoClient, collectionName: string) {
+  constructor(client: MongoClient, collectionName: string, hostUri: string) {
     this._client = client;
     const db = this._client.db();
     const name = `taxonomy_data_${collectionName}`;
     this._collection = db.collection(name);
     this._files = new GridFSBucket(db, { bucketName: name });
+    this._hostUri = hostUri;
   }
 
   async getMetadata(
@@ -112,8 +115,33 @@ export default class MongoAdapter implements Adapter {
     return repos;
   }
 
-  async createArtifact(metadata: ArtifactMetadata) {
+  // TODO: split into 2 functions?
+  async withUploadReservation<T>(
+    fn: (res: MongoReservation) => Promise<T>,
+    repoId?: string,
+  ): Promise<T> {
+    // TODO: this needs to use a queue for each repository
+    const isRepoRes = !repoId;
+    let reservation;
+    if (isRepoRes) {
+      reservation = new RepoReservation(this._hostUri);
+    } else { // appending content to the repo
+      const repo = await this.getRepository(repoId);
+      const index: number = repo?.artifacts.length ?? 0;
+      reservation = new ContentReservation(this._hostUri, repoId, index);
+    }
+
+    try {
+      return await fn(reservation);
+    } catch (err) {
+      throw err;
+      // TODO: release the reservation
+    }
+  }
+
+  async createArtifact(res: RepoReservation, metadata: ArtifactMetadata) {
     const artifactSet = {
+      _id: new ObjectId(res.repoId),
       displayName: metadata.displayName,
       taxonomyVersion: metadata.taxonomyVersion,
       taxonomyTags: [],
@@ -143,12 +171,11 @@ export default class MongoAdapter implements Adapter {
   }
 
   async appendArtifact(
-    repoId: string,
+    res: ContentReservation,
     metadata: ArtifactMetadata,
     filenames: string[],
   ) {
-    const repo = await this.getRepository(repoId);
-
+    const repoId = res.repoId;
     const fileIds = _.range(filenames.length).map(() => new ObjectId());
     const artifact: Artifact = {
       displayName: metadata.displayName,
@@ -167,8 +194,11 @@ export default class MongoAdapter implements Adapter {
       { returnDocument: "after" },
     );
 
-    // TODO: handle artifact not found case
-    const index = result.value?.artifacts.length ?? 0;
+    if (!result.value) {
+      // TODO: handle artifact not found case
+    }
+
+    const index = res.index;
     const files = _.zip(filenames, fileIds).map(([name, id]) => {
       const extendedId = encodeURIComponent(id + "_" + name);
       const url = `./artifacts/${repoId}/${index}/${extendedId}/upload`;
@@ -271,10 +301,43 @@ export default class MongoAdapter implements Adapter {
     }
 
     const mongoUri = core.getAttribute(storageNode, "URI");
-    const client = mongoUri
-      ? new MongoClient(mongoUri.toString())
-      : defaultClient;
-    return new MongoAdapter(client, collection.toString());
+    let hostUri, client;
+    if (mongoUri) {
+      client = new MongoClient(mongoUri.toString());
+      hostUri = `mongoDoc://${mongoUri.toString()}/${collection.toString()}/`;
+    } else {
+      client = defaultClient;
+      hostUri = `mongoDoc://${defaultMongoUri}/${collection.toString()}/`;
+    }
+
+    return new MongoAdapter(client, collection.toString(), hostUri);
+  }
+}
+
+interface MongoReservation extends UploadReservation {
+  uri: string;
+  repoId: string;
+}
+
+class RepoReservation implements MongoReservation {
+  repoId: string;
+  uri: string;
+
+  constructor(hostUri: string) {
+    this.repoId = new ObjectId().toString();
+    this.uri = hostUri + "/" + this.repoId;
+  }
+}
+
+class ContentReservation implements UploadReservation {
+  repoId: string;
+  uri: string;
+  index: number;
+
+  constructor(hostUri: string, repoId: string, index: number) {
+    this.repoId = repoId;
+    this.index = index;
+    this.uri = `${hostUri}/${this.repoId}/${index}`;
   }
 }
 

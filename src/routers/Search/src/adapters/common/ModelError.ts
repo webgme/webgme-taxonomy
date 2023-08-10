@@ -73,3 +73,11 @@ export class MetaNodeNotFoundError extends ModelError {
     super(context, msg);
   }
 }
+
+export class TaxNodeNotFoundError extends ModelError {
+  constructor(gmeContext: WebgmeContext) {
+    const msg = `No taxonomy defined in the project.`;
+    const context = ModelError.getContext(gmeContext, gmeContext.root);
+    super(context, msg);
+  }
+}

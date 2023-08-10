@@ -4,9 +4,12 @@ import type { WebgmeContext, WebgmeRequest } from "../../../../../common/types";
 
 export interface Adapter {
   listArtifacts(): Promise<Repository[]>;
-  createArtifact(metadata: ArtifactMetadata): Promise<string>;
+  createArtifact(
+    res: UploadReservation,
+    metadata: ArtifactMetadata,
+  ): Promise<string>;
   appendArtifact(
-    repoId: string,
+    res: UploadReservation,
     metadata: ArtifactMetadata,
     filenames: string[],
   ): Promise<AppendResult>;
@@ -37,6 +40,18 @@ export interface Adapter {
     fileId: string,
     req: WebgmeRequest,
   ): Promise<void>;
+  /*
+   * RAII-style reservations for uploading data
+   */
+  withUploadReservation<T>(
+    fn: (res: UploadReservation) => Promise<T>,
+    repoId?: string,
+  ): Promise<T>;
+}
+
+export interface UploadReservation {
+  repoId?: string;
+  uri: string | undefined;
 }
 
 export interface AdapterStatic {

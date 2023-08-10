@@ -133,6 +133,19 @@ describe("SystemTerm", function () {
       assert.equal(tag.Base.name.value, "TestUploadName");
     });
 
+    it.only("should make tag using upload location's URI", async function () {
+      const term = systemTerms.find((term) => term.name === "URI");
+
+      const tags = await term.createTags(context);
+      assert.equal(tags.length, 1);
+      const [tag] = tags;
+
+      const vocabName = Object.keys(tag).shift();
+      assert.equal(vocabName, "Base");
+      assert(!!tag.Base.URI.value);
+      assert(tag.Base.URI.value.startsWith("mongoDoc://"));
+    });
+
     it("should make tag using upload's description", async function () {
       const term = systemTerms.find((term) => term.name === "description");
 
