@@ -125,6 +125,6 @@ export default defineConfig({
  * @return {*} 
  */
 function get_trace_mode() : TraceMode  {
-  return "off";
+  return "on";
 }
 

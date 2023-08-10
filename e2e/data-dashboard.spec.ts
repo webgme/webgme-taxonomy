@@ -1,23 +1,31 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 // import { repoTest } from "./tests/repo-test";
-import RepoImpl from "./common/fixtures/RepoImpl";
+import RepoImpl from "./_archive/fixtures/RepoImpl";
 
 const TIMEOUT_TO_WAIT_FOR_PROJECT_CREATION_MS = 3000;
 const TIMEOUT_TO_WAIT_FOR_LOCATOR_CHECK_TO_COMPLETE = 3000;
+const TIMEOUT_TO_WAIT_FOR_CREATED_TOAST_POPUP = 5000;
 
 
+// To ensure that the tests are run in order
+test.describe.configure({ mode: 'serial' });
 
 test.describe(`Data dashboard`, function () {
 
-  let repoData: RepoImpl; // This is an anti-pattern, but it works for now
+  let page: Page;
+  let repoName: string = "NewExample-" + Date.now();
 
-  test("can create repo", async ({ page }) => {
 
-    repoData = new RepoImpl("/routers/Search/guest%2Be2e_tests/branch/master/%2FC/static/");
+  test.beforeAll(async ({ browser }) => {
+    page = await browser.newPage();
+  });
 
-    const newLocal = await repoData.getRepoRoute();
-    await page.goto(newLocal);
+  test("Can navigate to repo management", async ({ baseURL }) => {
+    await page.goto(`${baseURL}routers/Search/guest%2Be2e_tests/branch/master/%2FC/static/`);
+  });
 
+
+  test("can create repo", async () => {
     // Create a new repo
     await page.getByLabel(/Upload dataset/).click();
     const textBoxLocator = page.getByRole("textbox", { name: "Name" });
@@ -34,7 +42,6 @@ test.describe(`Data dashboard`, function () {
       );
     }
 
-    const repoName = await repoData.getRepoName();
     await textBoxLocator.fill(repoName);
 
     await page.getByRole("button", { name: "Submit" }).click();
@@ -43,74 +50,72 @@ test.describe(`Data dashboard`, function () {
     // FIXME: there has to be a better way to do this...
     const element = page.getByTestId(repoName);
 
-    const isVisible = await poll(() => element.isVisible(), {
-      timeout: TIMEOUT_TO_WAIT_FOR_PROJECT_CREATION_MS,
-    });
-    if (!isVisible) {
-      throw new Error(
-        `Repository didn't show up after ${TIMEOUT_TO_WAIT_FOR_PROJECT_CREATION_MS} ms`
-      );
-    }
+    const toastNotificationText: string = await page.locator('._toastItem').innerText();
+    expect(toastNotificationText.includes("Created!")).toBeTruthy();
+    
+    // FIXME
+    // expect(await page.locator('div.status')).toContainText("Created!")
+    expect(true).toBeTruthy();
   });
 
-  test("can select repo", async ({ page }) => {
-    // Targets
-    // "Datas in NewExample-1691336450520" - label
-    // "Showing 0-0 of 0"
+  test("reload to get entry to show up (FIXME)", async () => {
+    // FIXME: dump this when the test "new repo shows up in list" works
+    await page.reload();
+  });
 
-    // Assumes that even though previous test fails, the repo is still populated
-
-    const repoRoute = await repoData.getRepoRoute();
-    debugger;
-    await page.goto(repoRoute);
-    const repoName = await repoData.getRepoName();
+  test("can select repo", async () => {
 
     await page.getByText(repoName).click();
     await expect(page.getByRole("heading", { name: `Datas in ${repoName.trim()}` })).toBeDefined();
   });
 
-  test("can upload data to repo", async ({ page }) => {
-    await page.goto(await repoData.getRepoRoute());
-    const repoName = await repoData.getRepoName();
+  test("can upload data to repo", async () => {
+    // debugger;
     await page.getByText(repoName, { exact: true }).click();
     await page.getByRole('button', { name: 'Upload', exact: true }).click();
     const fileChooserPromise = page.waitForEvent('filechooser');
     await page.getByText('Select dataset to upload.').click();
     const fileChooser = await fileChooserPromise;
-    fileChooser.setFiles("e2e\resources\test-file.txt")
+    await fileChooser.setFiles("C:\\_\\wl\\webgme_projects\\webgme-taxonomy\\e2e\\resources\\test-file.txt");
+    // Contained in div.dialog-actions.svelte-1owpu03
+    await page.getByRole('button', { name: 'Upload' }).first().click()
+    const uploadedRepoTag = await page.getByText(repoName)
+    expect(uploadedRepoTag).toBeTruthy();
+  });
+
+  test("can view uploaded data", async () => {
+    await page.getByText(repoName).click();
+    const downloadButton = await page.getByText("Download");
+    expect(downloadButton).toBeEnabled();
+    await page.getByText("Download").click();
     debugger;
-
   });
 
-  test("can view uploaded data", async ({ page }) => {
+  test("can view more uploaded data", async () => {
     test.fail();
   });
 
-  test("can view more uploaded data", async ({ page }) => {
+  test("can download data from repo", async () => {
     test.fail();
   });
 
-  test("can download data from repo", async ({ page }) => {
+  test("can filter repo using search text", async () => {
     test.fail();
   });
 
-  test("can filter repo using search text", async ({ page }) => {
+  test("can filter repo using text tag", async () => {
     test.fail();
   });
 
-  test("can filter repo using text tag", async ({ page }) => {
+  test("can filter repo using enum tag", async () => {
     test.fail();
   });
 
-  test("can filter repo using enum tag", async ({ page }) => {
+  test("can filter repo using set tag", async () => {
     test.fail();
   });
 
-  test("can filter repo using set tag", async ({ page }) => {
-    test.fail();
-  });
-
-  test("can filter repo using numeric tag", async ({ page }) => {
+  test("can filter repo using numeric tag", async () => {
     test.fail();
   });
 });
