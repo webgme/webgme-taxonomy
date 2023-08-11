@@ -18,6 +18,7 @@ export interface UploadContextData {
   core: GmeClasses.Core;
   contentType: Core.Node;
   userId: string;
+  uri?: string;
 }
 
 interface ProjectAttributes {
@@ -83,10 +84,17 @@ export default class UploadContext {
       attrs.tag = Primitive.from(data.project.tag);
     }
     const project = new GMENode("@tmp/project", attrs);
+    let location: GMENode | undefined;
+    if (data.uri) {
+      location = new GMENode("@tmp/location", {
+        URI: Primitive.from(data.uri),
+      });
+    }
 
     const gmeContext = await getGMEContext(
       project,
       content,
+      location,
       files,
       data.core,
       data.contentType,
@@ -148,6 +156,7 @@ async function addChildToContext(
 async function getGMEContext(
   project: GMENode,
   content: GMENode,
+  location: GMENode | undefined,
   files: GMENode[],
   core: GmeClasses.Core,
   contentType: Core.Node,
@@ -173,6 +182,17 @@ async function getGMEContext(
     metaDict.get("UploadContent"),
     context,
   );
+
+  // Add location
+  if (location) {
+    await addChildToContext(
+      core,
+      nodes,
+      location,
+      metaDict.get("UploadLocation"),
+      context,
+    );
+  }
 
   // Add files
   await files.reduce(async (prevTask, file) => {
@@ -213,7 +233,6 @@ async function getGMEContext(
   content.pointers.type = contentTypeIdx;
 
   // TODO: add tags
-  // TODO: add files
 
   // Add project metadata
   await addChildToContext(

@@ -45,6 +45,21 @@ export class MissingAttributeError extends ModelError {
   }
 }
 
+export class InvalidAttributeError extends ModelError {
+  constructor(
+    gmeContext: WebgmeContext,
+    node: Core.Node,
+    attrName: string,
+    issue: string,
+  ) {
+    const { core } = gmeContext;
+    const name = core.getAttribute(node, "name");
+    const msg = `Invalid ${attrName} for ${name}: ${issue}`;
+    const context = ModelError.getContext(gmeContext, node);
+    super(context, msg);
+  }
+}
+
 export class StorageNotFoundError extends ModelError {
   constructor(gmeContext: WebgmeContext, contentTypeNode: Core.Node) {
     const { core } = gmeContext;
@@ -69,6 +84,14 @@ export class MetaNodeNotFoundError extends ModelError {
   constructor(gmeContext: WebgmeContext, name: string) {
     const msg =
       `Could not find "${name}" in the metamodel. Is this a taxonomy project?`;
+    const context = ModelError.getContext(gmeContext, gmeContext.root);
+    super(context, msg);
+  }
+}
+
+export class TaxNodeNotFoundError extends ModelError {
+  constructor(gmeContext: WebgmeContext) {
+    const msg = `No taxonomy defined in the project.`;
     const context = ModelError.getContext(gmeContext, gmeContext.root);
     super(context, msg);
   }

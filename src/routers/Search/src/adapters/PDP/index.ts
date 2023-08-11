@@ -11,12 +11,11 @@ import _ from "underscore";
 import path from "path";
 import fsp from "fs/promises";
 import { newtype } from "./types";
-import os from "os";
+import { Result } from "oxide.ts";
 import type {
   AppendObservationResponse,
   GetObservationFilesResponse,
   Observation,
-  ObservationFile,
   Process,
   ProcessID,
 } from "./types";
@@ -32,13 +31,17 @@ import type {
 import { pipeline } from "stream";
 import { promisify } from "util";
 const streamPipeline = promisify(pipeline);
-import { MissingAttributeError } from "../common/ModelError";
+import {
+  InvalidAttributeError,
+  MissingAttributeError,
+} from "../common/ModelError";
 import type {
   Adapter,
   Artifact,
   ArtifactMetadata,
   DownloadInfo,
   Repository,
+  UploadReservation,
 } from "../common/types";
 import { filterMap, range, sleep } from "../../Utils";
 import CreateRequestLogger from "./CreateRequestLogger";
@@ -49,7 +52,6 @@ import {
   UploadParams,
   UploadRequest,
 } from "../common/AppendResult";
-import { json } from "express";
 const UPLOAD_HEADERS = {
   Accept: "application/xml",
   "Content-Type": "application/octet-stream",
@@ -80,17 +82,20 @@ export default class PDP implements Adapter {
   private _baseUrl: string;
   private _token: string;
   private _readToken: string;
+  private _hostUri: string;
   processType: string;
 
   constructor(
     baseUrl: string,
     processType: string,
+    hostUri: string,
     token: string,
     readToken: string | undefined,
   ) {
     this._baseUrl = baseUrl;
     this._token = token;
     this.processType = processType;
+    this._hostUri = hostUri;
     this._readToken = readToken || token;
   }
 
@@ -205,7 +210,48 @@ export default class PDP implements Adapter {
     return RouterUtils.getObserverIdFromToken(this._token);
   }
 
-  async createArtifact(metadata: ArtifactMetadata): Promise<string> {
+  async withRepoReservation<T>(
+    fn: (res: ProcessReservation) => Promise<T>,
+  ): Promise<T> {
+    const reservation = new ProcessReservation(this._hostUri, "PROCESS_ID");
+
+    try {
+      return await fn(reservation);
+    } catch (err) {
+      // TODO: clean up the reservation?
+      throw err;
+      // TODO: release the reservation
+    }
+  }
+
+  async withContentReservation<T>(
+    fn: (res: ObservationReservation) => Promise<T>,
+    repoId: string,
+  ): Promise<T> {
+    const processId = newtype<ProcessID>(repoId);
+    const procInfo = await this._getProcessState(processId);
+    const index = procInfo.numObservations;
+    const version = 0;
+    const reservation = new ObservationReservation(
+      this._hostUri,
+      processId,
+      index,
+      version,
+    );
+
+    try {
+      return await fn(reservation);
+    } catch (err) {
+      // TODO: clean up the reservation?
+      throw err;
+      // TODO: release the reservation
+    }
+  }
+
+  async createArtifact(
+    _res: ProcessReservation,
+    metadata: ArtifactMetadata,
+  ): Promise<string> {
     reqLogger.log(this._getObserverId(), metadata);
 
     // TODO: update this to actually create the processes
@@ -457,11 +503,11 @@ export default class PDP implements Adapter {
   }
 
   async appendArtifact(
-    repoId: string,
+    res: ObservationReservation,
     metadata: ArtifactMetadata,
     filenames: string[],
   ): Promise<AppendResult> {
-    const processId = newtype<ProcessID>(repoId);
+    const processId = res.processId;
     const procInfo = await this._getProcessState(processId);
     const index = procInfo.numObservations;
     const version = 0;
@@ -578,7 +624,7 @@ export default class PDP implements Adapter {
     );
   }
 
-  async _createProcess(type: string) {
+  private async _createProcess(type: string): Promise<ProcessOwnerPermissions> {
     //TODO we probably need description field
     const queryDict = {
       isFunction: false.toString(),
@@ -644,12 +690,71 @@ export default class PDP implements Adapter {
       (tokens) => tokens.get(projectId),
     );
 
+    const hostUri = Result.safe(
+      PDP.getHostUri,
+      baseUrl.toString(),
+      processType.toString(),
+    )
+      .mapErr((err) =>
+        new InvalidAttributeError(gmeContext, storageNode, "URL", err.message)
+      )
+      .unwrap();
+
     return new PDP(
       baseUrl.toString(),
       processType.toString(),
+      hostUri,
       userToken,
       readToken,
     );
+  }
+
+  static getHostUri(baseUrl: string, processType: string): string {
+    if (baseUrl.startsWith("http://")) {
+      throw new Error("URL must use https");
+    }
+
+    const hostAddr = baseUrl
+      .replace(/^(https:\/\/)?/, "")
+      .replace(/\/$/, "");
+    return `pdp://${hostAddr}/${processType}`;
+  }
+}
+
+interface PdpReservation extends UploadReservation {
+  uri: string;
+  repoId: string;
+}
+
+class ProcessReservation implements PdpReservation {
+  uri: string;
+  repoId: string;
+
+  constructor(hostUri: string, repoId: string) {
+    this.uri = hostUri;
+    this.repoId = repoId;
+  }
+}
+
+class ObservationReservation implements PdpReservation {
+  uri: string;
+  repoId: string;
+  index: number;
+  version: number;
+  processId: ProcessID;
+
+  constructor(
+    hostUri: string,
+    processId: ProcessID,
+    index: number,
+    version: number,
+  ) {
+    const uri = [processId.toString(), index, version].join("/");
+    this.uri = `${hostUri}/${uri}`;
+    this.repoId = processId.toString();
+    this.processId = processId;
+    this.index = index;
+    this.version = version;
   }
 }
 
@@ -665,6 +770,14 @@ function parseArtifact(obs: Observation): Artifact | undefined {
       time: obs.startTime,
     };
   }
+}
+
+interface ProcessOwnerPermissions {
+  isFunction: boolean;
+  processType: string;
+  processId: ProcessID;
+  principalId: string;
+  permission: string;
 }
 
 function isFormatError(err: any): err is FormatError {

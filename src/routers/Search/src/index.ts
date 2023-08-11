@@ -15,13 +15,16 @@
 
 // http://expressjs.com/en/guide/routing.html
 import * as express from "express";
-import type { Request, Response } from "express";
 const router = express.Router();
 
 import SystemTerm from "./SystemTerm";
 import UploadContext, { FileUpload } from "./UploadContext";
-import RouterUtils from "../../../common/routers/Utils";
-import type { MiddlewareOptions, WebgmeRequest } from "../../../common/types";
+import RouterUtils, { UserError } from "../../../common/routers/Utils";
+import type {
+  MiddlewareOptions,
+  WebgmeContext,
+  WebgmeRequest,
+} from "../../../common/types";
 import Utils from "../../../common/Utils";
 import { isString } from "./Utils";
 import DashboardConfiguration from "../../../common/SearchFilterDataExporter";
@@ -33,8 +36,10 @@ import StorageAdapter from "./adapters";
 import {
   ChildContentTypeNotFoundError,
   MetaNodeNotFoundError,
+  TaxNodeNotFoundError,
 } from "./adapters/common/ModelError";
 import TaskQueue, { DownloadTask, FilePath } from "./TaskQueue";
+import { ArtifactMetadata, UploadReservation } from "./adapters/common/types";
 
 /* N.B. gmeAuth, safeStorage and workerManager are not ready to use until the start function is called.
  * (However inside an incoming request they are all ensured to have been initialized.)
@@ -112,12 +117,11 @@ function initialize(middlewareOpts: MiddlewareOptions) {
     RouterUtils.getContentTypeRoutes("artifacts/"),
     RouterUtils.handleUserErrors(
       logger,
-      addSystemTags.bind(null, middlewareOpts),
-      convertTaxonomyTags,
       async function createArtifact(req, res) {
-        const { metadata } = req.body;
-        // FIXME: what if it isn't using the branch in the URL?
-        const projectVersion = req.webgmeContext.projectVersion;
+        const userId = middlewareOpts.getUserId(req);
+        let metadata: ArtifactMetadata = req.body.metadata;
+        const gmeContext = (<WebgmeRequest> req).webgmeContext;
+        const projectVersion = gmeContext.projectVersion;
         metadata.taxonomyVersion = projectVersion;
 
         // Upload to the storage backend
@@ -127,35 +131,71 @@ function initialize(middlewareOpts: MiddlewareOptions) {
           mainConfig,
         );
 
-        const status = await storage.createArtifact(metadata);
+        const status = await storage.withRepoReservation(
+          async (reservation) => {
+            await addSystemTags(
+              metadata,
+              reservation,
+              gmeContext,
+              userId,
+            );
+            await toGuidFormat(
+              gmeContext,
+              metadata,
+            );
+            return await storage.createArtifact(reservation, metadata);
+          },
+        );
+
         res.json("status: " + status);
       },
     ),
   );
 
   router.post(
-    RouterUtils.getContentTypeRoutes("artifacts/:parentId/append"),
+    RouterUtils.getContentTypeRoutes("artifacts/:repoId/append"),
     RouterUtils.handleUserErrors(
       logger,
-      addChildSystemTags.bind(null, middlewareOpts),
-      convertTaxonomyTags,
       async function appendContent(req, res) {
-        const { parentId } = req.params;
+        const userId = middlewareOpts.getUserId(req);
+        let metadata: ArtifactMetadata = req.body.metadata;
+        const gmeContext = (<WebgmeRequest> req).webgmeContext;
+        const projectVersion = gmeContext.projectVersion;
+        metadata.taxonomyVersion = projectVersion;
+
+        const { repoId } = req.params;
         const storage = await StorageAdapter.from(
           req.webgmeContext,
           req,
           mainConfig,
         );
-        const appendResult = await storage.appendArtifact(
-          parentId,
-          req.body.metadata,
-          req.body.filenames,
+
+        const appendResult = await storage.withContentReservation(
+          async (reservation) => {
+            await addChildSystemTags(
+              metadata,
+              reservation,
+              gmeContext,
+              userId,
+            );
+            await toGuidFormat(
+              gmeContext,
+              metadata,
+            );
+            return await storage.appendArtifact(
+              reservation,
+              req.body.metadata,
+              req.body.filenames,
+            );
+          },
+          repoId,
         );
+
         appendResult.files.forEach((file) => {
           const isRelative = file.params.url.startsWith("./");
           if (isRelative) {
             const baseUrl = req.originalUrl
-              .split(`artifacts/${parentId}/append`)
+              .split(`artifacts/${repoId}/append`)
               .shift();
             file.params.url = baseUrl + file.params.url.substring(2);
           }
@@ -200,13 +240,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
           return;
         }
 
-        const { root, core } = req.webgmeContext;
-        const node = await Utils.findTaxonomyNode(core, root);
-        if (node == null) {
-          res.status(400).send("No taxonomy node found");
-          return;
-        }
-        const formatter = await TagFormatter.from(core, node);
+        //const formatter = await getFormatter(req.webgmeContext);
         const storage = await StorageAdapter.from(
           req.webgmeContext,
           req,
@@ -226,15 +260,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
       logger,
       async function getMetadata(req, res) {
         const { parentId, id } = req.params;
-        const { root, core } = req.webgmeContext;
-
-        const node = await Utils.findTaxonomyNode(core, root);
-        if (node == null) { // TODO: replace with user error
-          res.status(400).send("No taxonomy node found");
-          return;
-        }
-
-        const formatter = await TagFormatter.from(core, node);
+        const formatter = await getFormatter(req.webgmeContext);
         const storage = await StorageAdapter.from(
           req.webgmeContext,
           req,
@@ -257,7 +283,6 @@ function initialize(middlewareOpts: MiddlewareOptions) {
       logger,
       async function getBulkMetadata(req, res) {
         const { parentId } = req.params;
-        const { root, core } = req.webgmeContext;
         let ids: string[];
         if (isString(req.query.ids)) {
           ids = JSON.parse(req.query.ids);
@@ -265,20 +290,13 @@ function initialize(middlewareOpts: MiddlewareOptions) {
           res.status(400).send("List of artifact IDs required");
           return;
         }
-
-        const node = await Utils.findTaxonomyNode(core, root);
-        if (node == null) { // TODO: replace with user error
-          res.status(400).send("No taxonomy node found");
-          return;
-        }
-
         const MAX_THRESHOLD = 20000;
         if (ids.length > MAX_THRESHOLD) {
           res.status(400).send("Too many content IDs");
           return;
         }
 
-        const formatter = await TagFormatter.from(core, node);
+        const formatter = await getFormatter(req.webgmeContext);
         const storage = await StorageAdapter.from(
           req.webgmeContext,
           req,
@@ -314,19 +332,12 @@ function initialize(middlewareOpts: MiddlewareOptions) {
           res.status(400).send("List of artifact IDs required");
           return;
         }
-        const { root, core } = req.webgmeContext;
-        const node = await Utils.findTaxonomyNode(core, root);
-        if (node == null) {
-          res.status(400).send("No taxonomy node found");
-          return;
-        }
-        const formatter = await TagFormatter.from(core, node);
+        const formatter = await getFormatter(req.webgmeContext);
         const storage = await StorageAdapter.from(
           req.webgmeContext,
           req,
           mainConfig,
         );
-
         const task = new DownloadTask(
           logger,
           storage,
@@ -334,9 +345,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
           parentId,
           ids,
         );
-        console.log(">>> about to submit download task");
         const id = downloadQueue.submitTask(task);
-        console.log("submitted download task:", id);
         res.json(id);
       },
     ),
@@ -351,7 +360,6 @@ function initialize(middlewareOpts: MiddlewareOptions) {
       async function getDownloadTaskStatus(req, res) {
         const { taskId } = req.params;
         const status = downloadQueue.getStatus(parseInt(taskId));
-        console.log("status for", taskId, "is", status);
         res.json(status);
       },
     ),
@@ -389,11 +397,12 @@ function initialize(middlewareOpts: MiddlewareOptions) {
  * content in the repo.
  */
 async function addChildSystemTags(
-  middlewareOpts: MiddlewareOptions,
-  req: Request,
-  res: Response,
+  metadata: ArtifactMetadata,
+  reservation: UploadReservation,
+  gmeContext: WebgmeContext,
+  userId: string,
+  filenames: string[] = [],
 ) {
-  const gmeContext = (<WebgmeRequest> req).webgmeContext;
   const { core, contentType } = gmeContext;
   const childContentType = (await core.loadChildren(contentType))
     .find((n) =>
@@ -404,29 +413,43 @@ async function addChildSystemTags(
     throw new ChildContentTypeNotFoundError(gmeContext, contentType);
   }
 
-  return addContentTypeSystemTags(middlewareOpts, childContentType, req, res);
+  return addContentTypeSystemTags(
+    childContentType,
+    metadata,
+    reservation,
+    gmeContext,
+    userId,
+    filenames,
+  );
 }
 
 async function addSystemTags(
-  middlewareOpts: MiddlewareOptions,
-  req: Request,
-  res: Response,
+  metadata: ArtifactMetadata, // FIXME: what is the actual type here?
+  reservation: UploadReservation,
+  gmeContext: WebgmeContext,
+  userId: string,
+  filenames: string[] = [],
 ) {
-  const gmeContext = (<WebgmeRequest> req).webgmeContext;
   const { contentType } = gmeContext;
 
-  return addContentTypeSystemTags(middlewareOpts, contentType, req, res);
+  return addContentTypeSystemTags(
+    contentType,
+    metadata,
+    reservation,
+    gmeContext,
+    userId,
+    filenames,
+  );
 }
 
 async function addContentTypeSystemTags(
-  middlewareOpts: MiddlewareOptions,
   contentType: Core.Node,
-  req: Request,
-  _res: Response,
+  metadata: ArtifactMetadata,
+  reservation: UploadReservation,
+  gmeContext: WebgmeContext,
+  userId: string,
+  filenames: string[] = [],
 ) {
-  const { metadata, filenames = [] } = req.body;
-  const gmeContext = (<WebgmeRequest> req).webgmeContext;
-
   const { core, projectVersion } = gmeContext;
   const children = await core.loadChildren(contentType);
   const vocabs = children
@@ -440,11 +463,10 @@ async function addContentTypeSystemTags(
 
   const systemTerms = await SystemTerm.findAll(core, vocabs);
   const desc = ""; // TODO: add description
-
   const files: FileUpload[] = filenames.map((path: string) => ({
     path,
   }));
-  const userId = middlewareOpts.getUserId(req);
+  const uri: string | undefined = reservation.uri;
 
   const context = await UploadContext.from({
     name: metadata.displayName,
@@ -455,6 +477,7 @@ async function addContentTypeSystemTags(
     contentType,
     project: projectVersion,
     userId,
+    uri,
   });
 
   const systemTags =
@@ -479,30 +502,34 @@ function getVocabulariesMetaNode(
   return vocabNode;
 }
 
-async function convertTaxonomyTags(
-  req: Request,
-  res: Response,
-): Promise<void> {
-  const { root, core } = (<WebgmeRequest> req).webgmeContext;
-  const node = await Utils.findTaxonomyNode(core, root);
-
-  // TODO: convert the following to a model error
-  if (node == null) {
-    res.status(400).send("No taxonomy node found");
-    return;
-  }
-
-  const formatter = await TagFormatter.from(core, node);
-  const { metadata } = req.body;
+/**
+ * Convert the taxonomy tags in the metadata to GUID format.
+ */
+async function toGuidFormat(
+  gmeContext: WebgmeContext,
+  metadata: ArtifactMetadata,
+): Promise<ArtifactMetadata> {
+  const formatter = await getFormatter(gmeContext);
   try {
     metadata.taxonomyTags = formatter.toGuidFormat(metadata.taxonomyTags);
+    return metadata;
   } catch (err) {
+    // A stop-gap solution until FormatError actually inherits from UserError
     if (err instanceof TagFormatter.FormatError) {
-      res.status(400).send(err.message);
+      throw new UserError(err.message);
     } else {
       throw err;
     }
   }
+}
+
+async function getFormatter(gmeContext: WebgmeContext): Promise<TagFormatter> {
+  const { root, core } = gmeContext;
+  const node = await Utils.findTaxonomyNode(core, root);
+  if (node == null) {
+    throw new TaxNodeNotFoundError(gmeContext);
+  }
+  return await TagFormatter.from(core, node);
 }
 
 /**

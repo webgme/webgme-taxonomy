@@ -114,4 +114,22 @@ describe("PDP", function () {
       await storage._appendObservation(processId, obs);
     });
   });
+
+  describe("getHostUri", function () {
+    it("should replace trailing /", function () {
+      const uri = PDP.getHostUri("https://127.0.0.1:80/", "someProcess");
+      assert.equal(uri, "pdp://127.0.0.1:80/someProcess");
+    });
+
+    it("should strip https://", function () {
+      const uri = PDP.getHostUri("https://127.0.0.1:80/", "someProcess");
+      assert.equal(uri, "pdp://127.0.0.1:80/someProcess");
+    });
+
+    it("should throw an error if http", function () {
+      assert.throws(() =>
+        PDP.getHostUri("http://127.0.0.1:80/", "someProcess")
+      );
+    });
+  });
 });

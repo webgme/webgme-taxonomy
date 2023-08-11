@@ -96,6 +96,7 @@ describe("SystemTerm", function () {
       systemTerms = await SystemTerm.findAll(core, taxonomy);
 
       // create the upload context
+      const uri = "mongoDoc://someMongoURI/collection/";
       context = await UploadContext.from({
         name: "TestUploadName",
         description: "someDesc",
@@ -105,6 +106,7 @@ describe("SystemTerm", function () {
         contentType,
         project: projectVersion,
         userId: "someUserID",
+        uri,
       });
     });
 
@@ -131,6 +133,19 @@ describe("SystemTerm", function () {
       const vocabName = Object.keys(tag).shift();
       assert.equal(vocabName, "Base");
       assert.equal(tag.Base.name.value, "TestUploadName");
+    });
+
+    it("should make tag using upload location's URI", async function () {
+      const term = systemTerms.find((term) => term.name === "URI");
+
+      const tags = await term.createTags(context);
+      assert.equal(tags.length, 1);
+      const [tag] = tags;
+
+      const vocabName = Object.keys(tag).shift();
+      assert.equal(vocabName, "Base");
+      assert(!!tag.Base.URI.value);
+      assert(tag.Base.URI.value.startsWith("mongoDoc://"));
     });
 
     it("should make tag using upload's description", async function () {
