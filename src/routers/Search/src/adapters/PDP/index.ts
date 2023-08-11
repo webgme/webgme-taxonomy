@@ -145,13 +145,14 @@ export default class PDP implements Adapter {
     }
 
     let observations = [];
-    if(obsInfo.numObservations < 20){
-    observations = await this._fetchJson(
-      "v2/Process/PeekObservations?processId=" + pid + "&obsIndex=0"+ "&maxReturn=" + obsInfo.numObservations,
-      setAuthToken(DefaultFetchOpts(), this._readToken),
-    )
-    // print the observations to the console...
-    }else{
+    if (obsInfo.numObservations < 20) {
+      observations = await this._fetchJson(
+        "v2/Process/PeekObservations?processId=" + pid + "&obsIndex=0" +
+          "&maxReturn=" + obsInfo.numObservations,
+        setAuthToken(DefaultFetchOpts(), this._readToken),
+      );
+      // print the observations to the console...
+    } else {
       let remainingCount = obsInfo.numObservations;
       let maxResult = 0;
       let startNumber = 0;
@@ -164,7 +165,8 @@ export default class PDP implements Adapter {
           remainingCount = 0;
         }
         const tmpReturn = await this._fetchJson(
-          "v2/Process/PeekObservations?processId=" + pid + "&obsIndex=" + startNumber + "&maxReturn=" + maxResult,
+          "v2/Process/PeekObservations?processId=" + pid + "&obsIndex=" +
+            startNumber + "&maxReturn=" + maxResult,
           setAuthToken(DefaultFetchOpts(), this._readToken),
         );
         if (tmpReturn) {
@@ -177,7 +179,6 @@ export default class PDP implements Adapter {
     }
     return await observations;
   }
-
 
   async _getObsFiles(
     processId: ProcessID,
@@ -677,7 +678,7 @@ export default class PDP implements Adapter {
     opts.headers.Authorization = opts.headers.Authorization ||
       "Bearer " + this._token;
     opts.headers.accept = opts.headers.accept || "application/json";
-    console.log("Ctx: Fetching", url, opts)
+    console.log("Ctx: Fetching", url, opts);
     // try fetch but catch errors and retry
     let response;
     try {
@@ -694,12 +695,10 @@ export default class PDP implements Adapter {
 
     return response;
     // return await fetch(url, opts);
-
   }
 
   async _fetchJson(url: string, opts: FetchOpts = DefaultFetchOpts()) {
     const response = await this._fetch(url, opts);
-
 
     if (!response.ok) {
       throw new Error(
