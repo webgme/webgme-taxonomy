@@ -1,7 +1,9 @@
 <script lang="ts">
   import SchemaForm from 'svelte-jsonschema-form';
+  import Button, { Label } from '@smui/button';
 
   let configuration = fetchSchema();
+  let data = {};
 
   async function fetchSchema() {
     const url = "../configuration.json";    
@@ -18,7 +20,11 @@
   {#await configuration}
     <p>Loading schema...</p>
   {:then {schema}}
-    <SchemaForm {schema} />
+    <SchemaForm {schema} {data} let:actions={actions}>
+      <Button on:click={() => actions.download("tags")} type="button" variant="raised">
+        <Label>Download</Label>
+      </Button>
+    </SchemaForm>
   {:catch error}
     <div class="error">ERROR: {error.message}</div>
   {/await}
