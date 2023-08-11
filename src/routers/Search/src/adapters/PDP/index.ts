@@ -11,6 +11,7 @@ import _ from "underscore";
 import path from "path";
 import fsp from "fs/promises";
 import { newtype } from "./types";
+import { Result } from "oxide.ts";
 import type {
   AppendObservationResponse,
   GetObservationFilesResponse,
@@ -30,7 +31,10 @@ import type {
 import { pipeline } from "stream";
 import { promisify } from "util";
 const streamPipeline = promisify(pipeline);
-import { MissingAttributeError } from "../common/ModelError";
+import {
+  InvalidAttributeError,
+  MissingAttributeError,
+} from "../common/ModelError";
 import type {
   Adapter,
   Artifact,
@@ -206,30 +210,34 @@ export default class PDP implements Adapter {
     return RouterUtils.getObserverIdFromToken(this._token);
   }
 
-  // TODO: split into 2 functions?
-  async withUploadReservation<T>(
-    fn: (res: PdpReservation) => Promise<T>,
-    repoId?: string,
+  async withRepoReservation<T>(
+    fn: (res: ProcessReservation) => Promise<T>,
   ): Promise<T> {
-    // TODO:
-    const isRepoRes = !repoId;
-    let reservation;
-    if (isRepoRes) {
-      // For now, we are using a placeholder for the process ID since repos
-      // are manually created at the moment
-      reservation = new ProcessReservation(this._hostUri, "PROCESS_ID");
-    } else { // appending content to the repo
-      const processId = newtype<ProcessID>(repoId);
-      const procInfo = await this._getProcessState(processId);
-      const index = procInfo.numObservations;
-      const version = 0;
-      reservation = new ObservationReservation(
-        this._hostUri,
-        processId,
-        index,
-        version,
-      );
+    const reservation = new ProcessReservation(this._hostUri, "PROCESS_ID");
+
+    try {
+      return await fn(reservation);
+    } catch (err) {
+      // TODO: clean up the reservation?
+      throw err;
+      // TODO: release the reservation
     }
+  }
+
+  async withContentReservation<T>(
+    fn: (res: ObservationReservation) => Promise<T>,
+    repoId: string,
+  ): Promise<T> {
+    const processId = newtype<ProcessID>(repoId);
+    const procInfo = await this._getProcessState(processId);
+    const index = procInfo.numObservations;
+    const version = 0;
+    const reservation = new ObservationReservation(
+      this._hostUri,
+      processId,
+      index,
+      version,
+    );
 
     try {
       return await fn(reservation);
@@ -682,7 +690,16 @@ export default class PDP implements Adapter {
       (tokens) => tokens.get(projectId),
     );
 
-    const hostUri = `pdp://${baseUrl}/${processType}/`;
+    const hostUri = Result.safe(
+      PDP.getHostUri,
+      baseUrl.toString(),
+      processType.toString(),
+    )
+      .mapErr((err) =>
+        new InvalidAttributeError(gmeContext, storageNode, "URL", err.message)
+      )
+      .unwrap();
+
     return new PDP(
       baseUrl.toString(),
       processType.toString(),
@@ -690,6 +707,17 @@ export default class PDP implements Adapter {
       userToken,
       readToken,
     );
+  }
+
+  static getHostUri(baseUrl: string, processType: string): string {
+    if (baseUrl.startsWith("http://")) {
+      throw new Error("URL must use https");
+    }
+
+    const hostAddr = baseUrl
+      .replace(/^(https:\/\/)?/, "")
+      .replace(/\/$/, "");
+    return `pdp://${hostAddr}/${processType}`;
   }
 }
 

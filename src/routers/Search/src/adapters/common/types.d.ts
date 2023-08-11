@@ -43,9 +43,12 @@ export interface Adapter {
   /*
    * RAII-style reservations for uploading data
    */
-  withUploadReservation<T>(
+  withRepoReservation<T>(
     fn: (res: UploadReservation) => Promise<T>,
-    repoId?: string,
+  ): Promise<T>;
+  withContentReservation<T>(
+    fn: (res: UploadReservation) => Promise<T>,
+    repoId: string,
   ): Promise<T>;
 }
 

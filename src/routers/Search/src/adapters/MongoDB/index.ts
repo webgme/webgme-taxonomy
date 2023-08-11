@@ -115,21 +115,26 @@ export default class MongoAdapter implements Adapter {
     return repos;
   }
 
-  // TODO: split into 2 functions?
-  async withUploadReservation<T>(
-    fn: (res: MongoReservation) => Promise<T>,
-    repoId?: string,
+  async withRepoReservation<T>(
+    fn: (res: RepoReservation) => Promise<T>,
+  ): Promise<T> {
+    const reservation = new RepoReservation(this._hostUri);
+
+    try {
+      return await fn(reservation);
+    } catch (err) {
+      throw err;
+    }
+  }
+
+  async withContentReservation<T>(
+    fn: (res: ContentReservation) => Promise<T>,
+    repoId: string,
   ): Promise<T> {
     // TODO: this needs to use a queue for each repository
-    const isRepoRes = !repoId;
-    let reservation;
-    if (isRepoRes) {
-      reservation = new RepoReservation(this._hostUri);
-    } else { // appending content to the repo
-      const repo = await this.getRepository(repoId);
-      const index: number = repo?.artifacts.length ?? 0;
-      reservation = new ContentReservation(this._hostUri, repoId, index);
-    }
+    const repo = await this.getRepository(repoId);
+    const index: number = repo?.artifacts.length ?? 0;
+    const reservation = new ContentReservation(this._hostUri, repoId, index);
 
     try {
       return await fn(reservation);
@@ -304,13 +309,22 @@ export default class MongoAdapter implements Adapter {
     let hostUri, client;
     if (mongoUri) {
       client = new MongoClient(mongoUri.toString());
-      hostUri = `mongoDoc://${mongoUri.toString()}/${collection.toString()}/`;
+      hostUri = MongoAdapter.getHostUri(
+        mongoUri.toString(),
+        collection.toString(),
+      );
     } else {
       client = defaultClient;
-      hostUri = `mongoDoc://${defaultMongoUri}/${collection.toString()}/`;
+      hostUri = MongoAdapter.getHostUri(defaultMongoUri, collection.toString());
     }
 
     return new MongoAdapter(client, collection.toString(), hostUri);
+  }
+
+  static getHostUri(mongoUri: string, collection: string): string {
+    const hostAddr = mongoUri
+      .replace(/^(mongodb:\/\/)?/, "").replace(/\/$/, "");
+    return `mongoDoc://${hostAddr}/${collection}`;
   }
 }
 

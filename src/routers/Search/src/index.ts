@@ -131,7 +131,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
           mainConfig,
         );
 
-        const status = await storage.withUploadReservation(
+        const status = await storage.withRepoReservation(
           async (reservation) => {
             await addSystemTags(
               metadata,
@@ -170,7 +170,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
           mainConfig,
         );
 
-        const appendResult = await storage.withUploadReservation(
+        const appendResult = await storage.withContentReservation(
           async (reservation) => {
             await addChildSystemTags(
               metadata,

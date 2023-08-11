@@ -45,6 +45,21 @@ export class MissingAttributeError extends ModelError {
   }
 }
 
+export class InvalidAttributeError extends ModelError {
+  constructor(
+    gmeContext: WebgmeContext,
+    node: Core.Node,
+    attrName: string,
+    issue: string,
+  ) {
+    const { core } = gmeContext;
+    const name = core.getAttribute(node, "name");
+    const msg = `Invalid ${attrName} for ${name}: ${issue}`;
+    const context = ModelError.getContext(gmeContext, node);
+    super(context, msg);
+  }
+}
+
 export class StorageNotFoundError extends ModelError {
   constructor(gmeContext: WebgmeContext, contentTypeNode: Core.Node) {
     const { core } = gmeContext;
