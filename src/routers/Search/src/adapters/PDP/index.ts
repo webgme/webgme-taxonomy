@@ -144,17 +144,40 @@ export default class PDP implements Adapter {
       return [];
     }
 
-    const observations = await Promise.all(
-      range(0, obsInfo.numObservations).map((i) =>
-        this._fetchJson(
-          "v2/Process/GetObservation?processId=" + pid + "&obsIndex=" + i,
+    let observations = [];
+    if(obsInfo.numObservations < 20){
+    observations = await this._fetchJson(
+      "v2/Process/PeekObservations?processId=" + pid + "&obsIndex=0"+ "&maxReturn=" + obsInfo.numObservations,
+      setAuthToken(DefaultFetchOpts(), this._readToken),
+    )
+    // print the observations to the console...
+    }else{
+      let remainingCount = obsInfo.numObservations;
+      let maxResult = 0;
+      let startNumber = 0;
+      while (remainingCount > 0) {
+        if (remainingCount >= 20) {
+          maxResult = 20;
+          remainingCount -= 20;
+        } else {
+          maxResult = remainingCount;
+          remainingCount = 0;
+        }
+        const tmpReturn = await this._fetchJson(
+          "v2/Process/PeekObservations?processId=" + pid + "&obsIndex=" + startNumber + "&maxReturn=" + maxResult,
           setAuthToken(DefaultFetchOpts(), this._readToken),
-        )
-      ),
-    );
+        );
+        if (tmpReturn) {
+          // print the observations to the console...
+          observations.push(...tmpReturn);
+        }
 
-    return observations;
+        startNumber += 20;
+      }
+    }
+    return await observations;
   }
+
 
   async _getObsFiles(
     processId: ProcessID,
@@ -654,11 +677,35 @@ export default class PDP implements Adapter {
     opts.headers.Authorization = opts.headers.Authorization ||
       "Bearer " + this._token;
     opts.headers.accept = opts.headers.accept || "application/json";
-    return await fetch(url, opts);
+    console.log("Ctx: Fetching", url, opts)
+    // try fetch but catch errors and retry
+    let response;
+    try {
+      response = await fetch(url, opts);
+    } catch (err) {
+      console.log("Ctx: Fetch failed, retrying...", err);
+      response = await fetch(url, opts);
+    }
+    // check if the response is ok, if not retry
+    if (!response.ok) {
+      console.log("Ctx: Fetch failed, retrying...", response);
+      response = await fetch(url, opts);
+    }
+
+    return response;
+    // return await fetch(url, opts);
+
   }
 
   async _fetchJson(url: string, opts: FetchOpts = DefaultFetchOpts()) {
     const response = await this._fetch(url, opts);
+
+
+    if (!response.ok) {
+      throw new Error(
+        `Failed to fetch ${url}: ${response.status} ${response.statusText}`,
+      );
+    }
     return await response.json();
   }
 
