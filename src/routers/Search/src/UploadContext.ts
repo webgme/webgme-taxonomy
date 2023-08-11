@@ -87,7 +87,7 @@ export default class UploadContext {
     let location: GMENode | undefined;
     if (data.uri) {
       location = new GMENode("@tmp/location", {
-        uri: Primitive.from(data.uri),
+        URI: Primitive.from(data.uri),
       });
     }
 
@@ -233,7 +233,6 @@ async function getGMEContext(
   content.pointers.type = contentTypeIdx;
 
   // TODO: add tags
-  // TODO: add files
 
   // Add project metadata
   await addChildToContext(
