@@ -35,7 +35,9 @@
     AppendArtifactDialog,
     ArtifactSetViewer,
     TaxonomyFilter,
-  } from "./components";
+    TagSelector,
+    CreateRepoDialog,
+   } from "./components";
 
   import TaxonomyData from "./TaxonomyData";
   import TaxonomyReference from "./TaxonomyReference";
@@ -236,6 +238,15 @@
     fetchData();
   }
 
+  async function onTryCreateRepo(event) {
+    const {status} = event.detail;
+    displayMessage(status);
+    if (status === "Created!") {
+      // FIXME: replace this with a proper enum
+      await fetchData();
+    }
+  }
+
   async function fetchData() {
     isLoading = true;
     try {
@@ -317,9 +328,8 @@
 
   ////// Artifact Upload //////
   const queryDict = parseQueryString(window.location.href);
-  let creatingArtifact = queryDict.action === "create";
+  let creatingRepo = queryDict.action === "create";
   let artifactFiles = [];
-  let uploadMetadata;
 
   function onFileDrop(event) {
     const { acceptedFiles } = event.detail;
@@ -327,34 +337,6 @@
       artifactFiles = acceptedFiles;
     }
     // TODO: handle rejections
-  }
-
-  async function onTagsFileDrop(event) {
-    const [tagsFile] = event.detail.acceptedFiles;
-    if (tagsFile) {
-      uploadMetadata = JSON.parse(await readFile(tagsFile));
-    }
-  }
-
-  async function onUploadClicked() {
-    if (!uploadMetadata) {
-      // TODO: require tags?
-    }
-    // TODO: re-enable this once they can create datasets on their own
-    //if (artifactFiles.length === 0) {
-    //  return displayError("No dataset files provided");
-    //}
-    //uploadMetadata.displayName = artifactName;
-    //await storage.createArtifact(uploadMetadata, artifactFiles);
-    const status = await storage.createArtifact(
-      { displayName: artifactName },
-      artifactFiles
-    );
-    displayMessage(status);
-    if (status === "Created!") {
-      // FIXME: replace this with a proper enum
-      fetchData();
-    }
   }
 
   let artifactName = "";
@@ -426,56 +408,16 @@
   />
 {/if}
 
-<!-- Artifact creation dialog -->
-<Dialog
-  bind:open={creatingArtifact}
-  aria-labelledby="title"
-  aria-describedby="content"
->
-  <DialogTitle id="title">Create new dataset</DialogTitle>
-  <DialogContent id="content">
-    <Textfield label="Name" bind:value={artifactName} />
-    <!-- TODO: create process -->
-    <!-- TODO: re-enable this when we can automatically create processes
-    <p>{contentType} file(s):</p>
-    <ul>
-      {#each artifactFiles as file}
-        <li>{file.name}</li>
-      {/each}
-    </ul>
-    <Dropzone on:drop={onFileDrop} multiple={true}>
-      <p>Select dataset to upload.</p>
-    </Dropzone>
-    <p>
-      Taxonomy Terms:
-      {uploadMetadata
-        ? uploadMetadata.taxonomyTags.map((tag) => tag.Tag).join(", ")
-        : ""}
-    </p>
-    <Dropzone on:drop={onTagsFileDrop} accept=".json">
-      <p>Select tags file for dataset.</p>
-    </Dropzone>
-    <a
-      target="_blank"
-      href={window.location.href.replace("/Search/", "/TagCreator/")}
-      >Click to select tags for your dataset.</a
-    >
-    -->
-  </DialogContent>
-  <Actions>
-    <Button>
-      <Label>Cancel</Label>
-    </Button>
-    <Button on:click={() => onUploadClicked()}>
-      <Label>Submit</Label>
-    </Button>
-  </Actions>
-</Dialog>
+<!-- Repo creation dialog -->
+<CreateRepoDialog
+  bind:open={creatingRepo}
+  on:create={onTryCreateRepo}
+/>
 <!-- Main app -->
 <main id="app">
   <AppHeader
     {title}
-    on:createArtifact={() => (creatingArtifact = true)}
+    on:createArtifact={() => (creatingRepo = true)}
     on:openEditor={onOpenInEditor}
   />
   {#if isLoading}

@@ -128,8 +128,8 @@ class Storage {
     console.log("Updating artifact:", metadata, newContent);
   }
 
-  async createArtifact(metadata, files) {
-    console.log("Creating artifact:", metadata, files);
+  async createRepo(metadata) {
+    console.log("Creating repo:", metadata);
     metadata.taxonomyTags = metadata.taxonomyTags || [];
     const opts = {
       method: "POST",

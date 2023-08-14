@@ -3,7 +3,8 @@ import type TagFormatter from "../../../../../common/TagFormatter";
 import type { WebgmeContext, WebgmeRequest } from "../../../../../common/types";
 
 export interface Adapter {
-  listArtifacts(): Promise<Repository[]>;
+  listRepos(): Promise<Repository[]>;
+  listArtifacts(repoId: string): Promise<Artifact[]>;
   createArtifact(
     res: UploadReservation,
     metadata: ArtifactMetadata,
@@ -81,9 +82,9 @@ export interface Repository {
   displayName: string;
   taxonomyTags: any[];
   taxonomyVersion: TaxonomyVersion;
-  children: Artifact[];
 }
 
+// TODO: update this format to include GUID/human format for the tags
 export interface ArtifactMetadata {
   displayName: string;
   taxonomyTags: any[];

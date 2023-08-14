@@ -172,6 +172,7 @@ async function getGMEContext(
   const nodes: GMENode[] = [context];
   context.pointers.base = 1;
 
+  // TODO: don't add the node if the meta node doesn't exist
   await GMEContext.addNode(core, metaDict.get("UploadContext"), nodes);
 
   // Add content

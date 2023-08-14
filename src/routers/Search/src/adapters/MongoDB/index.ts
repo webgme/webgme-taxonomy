@@ -88,31 +88,35 @@ export default class MongoAdapter implements Adapter {
     throw new Error("Method not implemented.");
   }
 
-  async listArtifacts(): Promise<Repository[]> {
+  async listRepos(): Promise<Repository[]> {
     const documents = await this._collection.find({}).toArray();
     const repos: Repository[] = documents.map((doc) => {
       const docId = doc._id.toString();
-      const artifacts = doc.artifacts.map(
-        (data: ArtifactMetadata, index: number) => ({
-          parentId: docId,
-          id: index.toString(),
-          displayName: data.displayName,
-          taxonomyTags: data.taxonomyTags,
-          taxonomyVersion: data.taxonomyVersion,
-          time: data.time,
-        }),
-      );
 
       return {
         id: docId,
         displayName: doc.displayName,
         taxonomyTags: doc.taxonomyTags,
         taxonomyVersion: doc.taxonomyVersion,
-        children: artifacts,
       };
     });
 
     return repos;
+  }
+
+  async listArtifacts(repoId: string): Promise<Artifact[]> {
+    const repo = await this.getRepository(repoId);
+    const artifacts = repo.artifacts.map(
+      (data: ArtifactMetadata, index: number) => ({
+        parentId: repoId,
+        id: index.toString(),
+        displayName: data.displayName,
+        taxonomyTags: data.taxonomyTags,
+        taxonomyVersion: data.taxonomyVersion,
+        time: data.time,
+      }),
+    );
+    return artifacts;
   }
 
   async withRepoReservation<T>(
@@ -323,7 +327,8 @@ export default class MongoAdapter implements Adapter {
 
   static getHostUri(mongoUri: string, collection: string): string {
     const hostAddr = mongoUri
-      .replace(/^(mongodb:\/\/)?/, "").replace(/\/$/, "");
+      .replace(/^(mongodb:\/\/)?/, "")
+      .replace(/\/$/, "");
     return `mongoDoc://${hostAddr}/${collection}`;
   }
 }
