@@ -240,7 +240,7 @@
   async function onTryCreateRepo(event) {
     const {status} = event.detail;
     displayMessage(status);
-    if (status === "Created!") {
+    if (status.includes("Created!")) {
       // FIXME: replace this with a proper enum
       await fetchData();
     }

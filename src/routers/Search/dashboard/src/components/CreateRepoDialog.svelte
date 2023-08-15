@@ -19,9 +19,8 @@
     taxonomyTags: [],
   };
 
-  $: metadata.displayName = displayName;
-
   async function onCreateRepo() {
+    metadata.displayName = displayName;
     const status = await storage.createRepo(metadata);
     dispatch('create', {status});
   }

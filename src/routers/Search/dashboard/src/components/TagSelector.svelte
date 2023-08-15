@@ -14,7 +14,6 @@
   export let contentType: ContentType;
   export let displayTypeName: string = 'content';
   export let disabled: boolean = false;
-  $: console.log({contentType})
 
   function getTagDisplayName(tag) {
     // FIXME: there is no way to tell the difference btwn terms and compound fields...
