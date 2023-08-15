@@ -35,7 +35,6 @@
     AppendArtifactDialog,
     ArtifactSetViewer,
     TaxonomyFilter,
-    TagSelector,
     CreateRepoDialog,
    } from "./components";
 
@@ -43,8 +42,8 @@
   import TaxonomyReference from "./TaxonomyReference";
 
   let title: string;
-  let contentType: string = "Data";
-  $: title = `${contentType} Dashboard`;
+  let contentType: ContentType = {name: "Data"};
+  $: title = `${contentType.name} Dashboard`;
   let vocabularies: TaxonomyData[] = [];
 
   import TagFormatter, { FormatError } from "./Formatter";
@@ -210,9 +209,9 @@
     currentTaxonomy = TaxonomyReference.from(configuration.project);
     // FIXME: Only 2-level depth is currently supported
     let depth = 1;
-    let contentType = configuration.content;
-    while (contentType.content) {
-      contentType = contentType.content;
+    let contentTypeIter = configuration.content;
+    while (contentTypeIter.content) {
+      contentTypeIter = contentTypeIter.content;
       depth++;
     }
     if (depth !== 2) {
@@ -234,7 +233,7 @@
     );
     vocabularies = trimTaxonomy(dataVocabs);
     filterTags = parseTagParams(params.get("filterTags"));
-    contentType = configuration.name;
+    contentType = configuration.content;
     fetchData();
   }
 
@@ -411,6 +410,7 @@
 <!-- Repo creation dialog -->
 <CreateRepoDialog
   bind:open={creatingRepo}
+  bind:contentType
   on:create={onTryCreateRepo}
 />
 <!-- Main app -->

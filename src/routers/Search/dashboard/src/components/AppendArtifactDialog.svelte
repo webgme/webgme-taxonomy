@@ -189,7 +189,7 @@
 
     <TagSelector 
       bind:metadata={metadata}
-      bind:contentType={contentType}
+      bind:contentType
       bind:disabled={selectTagDisabled}
     />
   </Content>

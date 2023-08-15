@@ -17,7 +17,7 @@
   import DisplayTagsDialog from "./DisplayTagsDialog.svelte";
 
   export let artifactSet;
-  export let contentType = "artifact";
+  export let contentType = {name: "artifact"};
   let numArtifacts = 10;
   let shownArtifacts = [];
   let selected = [];
@@ -107,7 +107,7 @@
   <Card>
     <Content>
       <h2 class="mdc-typography--headline6" style="margin: 0;">
-        {capitalize(contentType)}s in {artifactSet.displayName}
+        {capitalize(contentType.name)}s in {artifactSet.displayName}
       </h2>
       <h4
         class="mdc-typography--subtitle3"

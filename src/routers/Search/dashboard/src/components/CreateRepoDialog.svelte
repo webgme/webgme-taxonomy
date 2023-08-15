@@ -3,19 +3,21 @@
   A dialog for creating new repositories
 -->
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
+  import { createEventDispatcher, getContext } from "svelte";
   import Dialog, { Content, Title, Actions } from "@smui/dialog";
   import Button, { Label } from "@smui/button";
   import TagSelector from "./TagSelector.svelte";
   import Textfield from "@smui/textfield";
   import type { default as ContentType } from "../ContentType";
-
+  const storage: Storage = getContext("storage");
   const dispatch = createEventDispatcher();
 
   export let open;
   export let contentType: ContentType;
-  let displayName;
-  let metadata = {taxonomyTags: []};
+  let displayName = '';
+  let metadata = {
+    taxonomyTags: [],
+  };
 
   $: metadata.displayName = displayName;
 
@@ -36,7 +38,7 @@
     <Textfield label="Name" bind:value={displayName} />
     <TagSelector 
       bind:metadata={metadata}
-      bind:contentType={contentType}
+      bind:contentType
     />
   </Content>
   <Actions>

@@ -5,11 +5,16 @@
 <script lang="ts">
   import type { default as ContentType } from "../ContentType";
   import Dropzone from "svelte-file-dropzone";
+  import {
+    isObject,
+    readFile,
+  } from "../Utils";
 
   export let metadata;
   export let contentType: ContentType;
   export let displayTypeName: string = 'content';
   export let disabled: boolean = false;
+  $: console.log({contentType})
 
   function getTagDisplayName(tag) {
     // FIXME: there is no way to tell the difference btwn terms and compound fields...
