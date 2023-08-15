@@ -62,13 +62,10 @@
 
   $: artifactSet, onArtifactSetChange();
 
-  let prevSetHash = null;
-
   onArtifactSetChange();
   function onArtifactSetChange() {
-    if (artifactSet && prevSetHash !== artifactSet.hash) {
+    if (artifactSet) {
       selected = [];
-      prevSetHash = artifactSet.hash;
       numArtifacts = Math.min(artifactSet.children.length, 10);
       setShownArtifacts(numArtifacts);
     }

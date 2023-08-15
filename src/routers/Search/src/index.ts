@@ -115,16 +115,19 @@ function initialize(middlewareOpts: MiddlewareOptions) {
 
   router.get(
     RouterUtils.getContentTypeRoutes("artifacts/:repoId"),
-    RouterUtils.handleUserErrors(logger, async function listRepos(req, res) {
-      const { repoId } = req.params;
-      const storage = await StorageAdapter.from(
-        req.webgmeContext,
-        req,
-        mainConfig,
-      );
-      const artifacts = await storage.listArtifacts(repoId);
-      res.status(200).json(artifacts).end();
-    }),
+    RouterUtils.handleUserErrors(
+      logger,
+      async function listArtifacts(req, res) {
+        const { repoId } = req.params;
+        const storage = await StorageAdapter.from(
+          req.webgmeContext,
+          req,
+          mainConfig,
+        );
+        const artifacts = await storage.listArtifacts(repoId);
+        res.status(200).json(artifacts).end();
+      },
+    ),
   );
 
   router.post(

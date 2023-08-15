@@ -33,15 +33,17 @@
 
   async function onTagsFileDrop(event) {
     const [tagsFile] = event.detail.acceptedFiles;
+    console.log('file dropped', tagsFile);
     if (tagsFile) {
       metadata = JSON.parse(await readFile(tagsFile));
+      console.log({metadata})
     }
   }
 
 </script>
 
 <div>
-    <p>
+    <p> <!-- TODO: Check if they are actually optional -->
       Taxonomy Terms <span style="font-style:italic">(optional)</span>:<br />
       {metadata ? metadata.taxonomyTags.map(getTagDisplayName).join(", ") : ""}
     </p>

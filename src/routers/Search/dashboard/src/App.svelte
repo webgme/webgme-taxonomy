@@ -47,11 +47,13 @@
   let vocabularies: TaxonomyData[] = [];
 
   import TagFormatter, { FormatError } from "./Formatter";
-  import Storage, { ModelError, RequestError, ModelContext } from "./Storage";
+  import Storage, { LoadState, ModelError, RequestError, ModelContext } from "./Storage";
+  import type { PopulatedRepo } from "./Storage";
   const storage = setContext("storage", new Storage());
 
-  let allItems = [];
-  let items = [];
+
+  let allItems: PopulatedRepo = [];
+  let items: PopulatedRepo = [];
 
   const params = new URLSearchParams(location.search);
   let searchQuery: string = params.get("searchQuery") || "";
@@ -246,16 +248,38 @@
     }
   }
 
+  async function loadContents(repo: PopulatedRepo) {
+    repo.loadState = LoadState.Pending;
+    const children = await storage.listArtifacts(repo.id);
+    // TODO: keep all and just show if they are valid or not...
+    const validArtifacts = children.filter(
+      (content) => content.taxonomyVersion && currentTaxonomy.supports(content.taxonomyVersion)
+    );
+    repo.children = validArtifacts;
+    repo.loadState = LoadState.Complete;
+
+    if (selectedArtifactSet?.id === repo.id) {
+      selectedArtifactSet = selectedArtifactSet;
+    }
+  }
+
   async function fetchData() {
     isLoading = true;
     try {
-      allItems = await storage.listArtifacts();
-      allItems.forEach((set) => {
-        const validArtifacts = set.children.filter(
-          (item) => item.taxonomyVersion && currentTaxonomy.supports(item.taxonomyVersion)
-        );
-        set.children = validArtifacts;
-      });
+      allItems = (await storage.listRepos())
+        .map(repo => ({
+          id: repo.id,
+          displayName: repo.displayName,
+          taxonomyTags: repo.taxonomyTags,
+          taxonomyVersion: repo.taxonomyVersion,
+          children: [],
+          loadState: LoadState.Pending,
+        }));
+
+      if (selectedArtifactSet) {
+        selectedArtifactSet = allItems.find(repo => repo.id === selectedArtifactSet.id);
+      }
+      allItems.forEach((repo) => loadContents(repo));
     } catch (err) {
       displayError(err);
 
@@ -443,7 +467,7 @@
         <!-- Artifact list -->
         {#if items.length}
           <List twoLine avatarList>
-            {#each items as item (item.hash)}
+            {#each items as item (item.id)}
               <Item
                 selected={item === selectedArtifactSet}
                 on:SMUI:action={() => onItemClicked(item)}
