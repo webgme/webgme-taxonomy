@@ -101,23 +101,40 @@ function initialize(middlewareOpts: MiddlewareOptions) {
   // Accessing and updating data via the storage adapter
   router.get(
     RouterUtils.getContentTypeRoutes("artifacts/"),
-    // TODO: add the artifact ID...
-    RouterUtils.handleUserErrors(logger, async function listContent(req, res) {
+    RouterUtils.handleUserErrors(logger, async function listRepos(req, res) {
+      const eager = req.query.eager === "true";
       const storage = await StorageAdapter.from(
         req.webgmeContext,
         req,
         mainConfig,
       );
-      const artifacts = await storage.listArtifacts();
+      const artifacts = await storage.listRepos();
       res.status(200).json(artifacts).end();
     }),
+  );
+
+  router.get(
+    RouterUtils.getContentTypeRoutes("artifacts/:repoId"),
+    RouterUtils.handleUserErrors(
+      logger,
+      async function listArtifacts(req, res) {
+        const { repoId } = req.params;
+        const storage = await StorageAdapter.from(
+          req.webgmeContext,
+          req,
+          mainConfig,
+        );
+        const artifacts = await storage.listArtifacts(repoId);
+        res.status(200).json(artifacts).end();
+      },
+    ),
   );
 
   router.post(
     RouterUtils.getContentTypeRoutes("artifacts/"),
     RouterUtils.handleUserErrors(
       logger,
-      async function createArtifact(req, res) {
+      async function createRepo(req, res) {
         const userId = middlewareOpts.getUserId(req);
         let metadata: ArtifactMetadata = req.body.metadata;
         const gmeContext = (<WebgmeRequest> req).webgmeContext;

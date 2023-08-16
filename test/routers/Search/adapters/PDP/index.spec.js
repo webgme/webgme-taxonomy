@@ -47,7 +47,7 @@ describe("PDP", function () {
       )
     );
 
-    it("should use read token on listArtifacts", async function () {
+    it("should use read token on listRepos", async function () {
       storage._getObserverId = sinon.fake.returns("observer");
       storage._fetchJson = (url, opts) => {
         const isReadToken = opts.headers.Authorization.includes("readToken");
@@ -80,7 +80,45 @@ describe("PDP", function () {
           throw new Error(`Unknown request: ${url}`);
         }
       };
-      const repos = await storage.listArtifacts();
+      const repos = await storage.listRepos();
+      assert.equal(repos.length, 10);
+    });
+
+    it("should use read token on listArtifacts", async function () {
+      storage._getObserverId = sinon.fake.returns("observer");
+      storage._fetchJson = (url, opts) => {
+        console.log({ url });
+        const isReadToken = opts.headers.Authorization.includes("readToken");
+        assert(isReadToken);
+
+        if (url.includes("ListProcesses")) {
+          const ids = [...new Array(10)].map((_, i) => `process_${i}`);
+          return ids.map((processId) => ({
+            processId,
+            processType: storage.processType,
+          }));
+        } else if (url.includes("GetProcessState")) {
+          return { numObservations: 11 };
+        } else if (url.includes("GetObservation")) {
+          const processId = url.split("processId=")[1].split("&").shift();
+          const taxonomyVersion = {
+            commit: "someCommit",
+            tag: "v1.0.0",
+          };
+          const taxonomyTags = [];
+          const displayName = `Artifact for ${processId}`;
+          const data = { taxonomyTags, taxonomyVersion, displayName };
+
+          return storage._createObservationData(
+            processId,
+            storage.processType,
+            data,
+          );
+        } else {
+          throw new Error(`Unknown request: ${url}`);
+        }
+      };
+      const repos = await storage.listArtifacts("repoId");
       assert.equal(repos.length, 10);
     });
 

@@ -99,42 +99,39 @@ export default class PDP implements Adapter {
     this._readToken = readToken || token;
   }
 
-  async listArtifacts(): Promise<Repository[]> {
+  async listRepos(): Promise<Repository[]> {
     const allProcesses: Process[] = await this._fetchJson(
       "v2/Process/ListProcesses?permission=read",
       setAuthToken(DefaultFetchOpts(), this._readToken),
     );
 
-    const processObservations = await Promise.all(
+    // fetch the first observation for each to get the repo metadata
+    const processMetadata = await Promise.all(
       allProcesses
         .filter(({ processType }) => processType === this.processType)
-        .map(({ processId }) => this.getProcessObservations(processId)),
+        .map(({ processId }) => this._getObs(processId, 0, 1, this._readToken)),
     );
 
-    const artifacts: Artifact[] = filterMap(
-      processObservations.flat(),
-      parseArtifact,
+    const repos: Repository[] = filterMap(
+      processMetadata,
+      parseRepository,
     );
-    const repos: Repository[] = Object.entries(
-      _.groupBy(artifacts, (artifact) => artifact.parentId ?? ""),
-    ).map(([parentId, artifacts]) => {
-      artifacts.sort((a1, a2) => (a1.time < a2.time ? -1 : 1));
-      const { displayName } = artifacts[0];
-      const lastIndex = artifacts.length - 1;
-      const { taxonomyTags, taxonomyVersion } = artifacts[lastIndex];
-      return {
-        id: parentId,
-        displayName,
-        taxonomyTags,
-        taxonomyVersion,
-        children: artifacts,
-      };
-    });
 
     return repos;
   }
 
-  async getProcessObservations(pid: ProcessID): Promise<Observation[]> {
+  async listArtifacts(repoId: string): Promise<Artifact[]> {
+    const processId = newtype<ProcessID>(repoId);
+    const observations = await this.getProcessObservations(processId);
+    const artifacts: Artifact[] = filterMap(
+      observations,
+      parseArtifact,
+    );
+
+    return artifacts;
+  }
+
+  private async getProcessObservations(pid: ProcessID): Promise<Observation[]> {
     const obsInfo = await this._fetchJson(
       `v2/Process/GetProcessState?processId=${pid}`,
       setAuthToken(DefaultFetchOpts(), this._readToken),
@@ -144,16 +141,31 @@ export default class PDP implements Adapter {
       return [];
     }
 
+    // skip the first one since it contains repo metadata
+    const start = 1;
     const observations = await Promise.all(
-      range(0, obsInfo.numObservations).map((i) =>
-        this._fetchJson(
-          "v2/Process/GetObservation?processId=" + pid + "&obsIndex=" + i,
-          setAuthToken(DefaultFetchOpts(), this._readToken),
-        )
+      range(start, obsInfo.numObservations).map((i) =>
+        this._getObs(pid, i, 1, this._readToken)
       ),
     );
 
     return observations;
+  }
+
+  async _getObs(
+    processId: ProcessID,
+    obsIndex: number,
+    version: number,
+    token: string = this._token,
+  ): Promise<Observation> {
+    const queryDict = {
+      processId: processId.toString(),
+      obsIndex: obsIndex.toString(),
+      version: version.toString(),
+    };
+    const url = PDP._addQueryParams("v2/Process/GetObservation", queryDict);
+    const opts = setAuthToken(DefaultFetchOpts(), token);
+    return await this._fetchJson(url, opts);
   }
 
   async _getObsFiles(
@@ -171,19 +183,6 @@ export default class PDP implements Adapter {
     const url = PDP._addQueryParams("v3/Files/GetObservationFiles", queryDict);
     const opts = {
       method: "put",
-    };
-    return await this._fetchJson(url, opts);
-  }
-
-  async _getObs(processId: ProcessID, obsIndex: number, version: number) {
-    const queryDict = {
-      processId: processId.toString(),
-      obsIndex: obsIndex.toString(),
-      version: version.toString(),
-    };
-    const url = PDP._addQueryParams("v2/Process/GetObservation", queryDict);
-    const opts = {
-      method: "get",
     };
     return await this._fetchJson(url, opts);
   }
@@ -755,6 +754,20 @@ class ObservationReservation implements PdpReservation {
     this.processId = processId;
     this.index = index;
     this.version = version;
+  }
+}
+
+function parseRepository(
+  obs: Observation,
+): Repository | undefined {
+  const metadata = obs.data && obs.data[0];
+  if (metadata) {
+    return {
+      id: obs.processId.toString(),
+      displayName: metadata.displayName,
+      taxonomyTags: metadata.taxonomyTags,
+      taxonomyVersion: metadata.taxonomyVersion,
+    };
   }
 }
 
