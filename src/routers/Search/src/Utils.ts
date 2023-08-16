@@ -2,9 +2,23 @@ export async function sleep(duration: number): Promise<void> {
   return new Promise((res) => setTimeout(res, duration));
 }
 
-export function range(start: number, end: number): number[] {
-  const len = end - start;
-  return [...new Array(len)].map((_v, index) => start + index);
+export function range(start: number, end: number, step: number = 1): number[] {
+  const len = Math.ceil((end - start) / step);
+  return [...new Array(len)].map((_v, index) => start + step * index);
+}
+
+/**
+ * Split the values between start, end into intervals with the given max size.
+ *
+ * Note: this returns [start, length] *not* [start, end]
+ */
+export function intervals(
+  start: number,
+  end: number,
+  maxSize = 20,
+): [number, number][] {
+  return range(start, end, maxSize)
+    .map((start) => [start, Math.min(end - start, maxSize)]);
 }
 
 export function filterMap<I, O>(list: I[], fn: (x: I) => O | undefined): O[] {
