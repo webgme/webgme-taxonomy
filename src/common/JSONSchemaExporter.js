@@ -335,6 +335,12 @@ function factory() {
           fieldSchema.type = "string";
           isPrimitive = true;
           break;
+        case "UriField":
+          fieldSchema.type = "string";
+          // TODO: get the supported patterns
+          fieldSchema.pattern = ;
+          isPrimitive = true;
+          break;
         case "EnumField":
           Object.assign(fieldSchema, await this._getAnyOfSchema(node));
           // Currently, setting the default is problematic for enums and results in the default key

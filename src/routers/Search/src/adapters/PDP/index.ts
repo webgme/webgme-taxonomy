@@ -718,6 +718,22 @@ export default class PDP implements Adapter {
       .replace(/\/$/, "");
     return `pdp://${hostAddr}/${processType}`;
   }
+
+  static getUriPatterns(): string[] {
+    const idPattern = "[0-9a-z]+-[0-9a-z]+-[0-9a-z]+[0-9a-z]+-[0-9a-z]+";
+    const indexPattern = "[0-9]+";
+    const versionPattern = "[0-9]+";
+    const oldVersion = `${idPattern}_${indexPattern}_${versionPattern}`;
+
+    const urlPattern = "[a-zA-Z_\.-]+(:\d+)?";
+    const typePattern = "[a-zA-Z]+";
+    const hostPattern = `pdp://${urlPattern}/${typePattern}/`;
+    return [
+      oldVersion,
+      hostPattern + idPattern,
+      hostPattern + idPattern + "/" + indexPattern + "/" + versionPattern,
+    ];
+  }
 }
 
 interface PdpReservation extends UploadReservation {
@@ -730,7 +746,7 @@ class ProcessReservation implements PdpReservation {
   repoId: string;
 
   constructor(hostUri: string, repoId: string) {
-    this.uri = hostUri;
+    this.uri = hostUri + "/" + repoId;
     this.repoId = repoId;
   }
 }

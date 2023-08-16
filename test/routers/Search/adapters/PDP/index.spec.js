@@ -170,4 +170,19 @@ describe("PDP", function () {
       );
     });
   });
+
+  describe("getUriPatterns", function () {
+    it("should pass if deprecated format", function () {
+      const idString = "e0de6a4a-5257-4f2c-b3ce-470e3299fc4a_9_0";
+    });
+
+    it("should fail if missing version in deprecated format", function () {
+      const idString = "e0de6a4a-5257-4f2c-b3ce-470e3299fc4a_9";
+    });
+
+    it("should pass in new format", function () {
+      const idString =
+        "pdp://127.0.0.1:435/e0de6a4a-5257-4f2c-b3ce-470e3299fc4a/9/0";
+    });
+  });
 });

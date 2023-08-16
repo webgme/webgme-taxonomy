@@ -331,6 +331,16 @@ export default class MongoAdapter implements Adapter {
       .replace(/\/$/, "");
     return `mongoDoc://${hostAddr}/${collection}`;
   }
+
+  static getUriPatterns(): string[] {
+    const hostPattern = "mongoDoc://[a-zA-Z_\.-]+(:\d+)?/[a-zA-Z_]+/";
+    const repoPattern = "[a-zA-Z\d]{24}";
+    const contentPattern = "[0-9]+";
+    return [
+      hostPattern + repoPattern,
+      hostPattern + repoPattern + "/" + contentPattern,
+    ];
+  }
 }
 
 interface MongoReservation extends UploadReservation {
