@@ -256,4 +256,120 @@ describe("SystemTerm", function () {
     it.skip("should make tag using project", function () {
     });
   });
+
+  describe("UploadContext (compat)", function () {
+    let root, systemTerms;
+    const uri = "mongoDoc://someMongoURI/collection/";
+
+    it("should not fail if missing library", async function () {
+      root = await Utils.getNewRootNode(project, commitHash, core);
+      const taxonomy = await getNodeByName(root, "UploadNameTaxonomy");
+      contentType = await getNodeByName(root, "ExampleContentType");
+      systemTerms = await SystemTerm.findAll(core, taxonomy);
+      const metaNode = Object.values(core.getAllMetaNodes(root))
+        .find((node) => core.getAttribute(node, "name") === "UploadContext");
+      core.removeLibrary(metaNode, "taxonomy");
+
+      // create the upload context
+      context = await UploadContext.from({
+        name: "TestUploadName",
+        description: "someDesc",
+        tags: [],
+        files: [{ path: "path/to/someFile" }],
+        core,
+        contentType,
+        project: projectVersion,
+        userId: "someUserID",
+        uri,
+      });
+
+      const term = systemTerms.find((term) => term.name === "name");
+      const tags = await term.createTags(context);
+      assert.equal(tags.length, 0);
+    });
+
+    describe("meta nodes", function () {
+      let gmeAuth, storage, project, commitHash, core, projectVersion;
+      before(async () => {
+        const params = await Utils.initializeProject(
+          "SystemTermTest2",
+          "taxonomy",
+        );
+        gmeAuth = params.gmeAuth;
+        storage = params.storage;
+        commitHash = params.commitHash;
+        core = params.core;
+        project = params.project;
+        projectVersion = {
+          id: project.projectId,
+          commit: commitHash,
+        };
+
+        // Create the necessary nodes in the project
+      });
+
+      after(async function () {
+        await storage.closeDatabase();
+        await gmeAuth.unload();
+      });
+
+      describe("missing System", function () {
+        let metanodes, systemTerms, contentType, context;
+        before(async () => {
+          const root = await Utils.getNewRootNode(project, commitHash, core);
+          // Create an empty taxonomy
+          metanodes = Object.values(core.getAllMetaNodes(root));
+          const taxonomyDef = metanodes.find((n) =>
+            core.getAttribute(n, "name") === "Taxonomy"
+          );
+          const contentTypeDef = metanodes.find((n) =>
+            core.getAttribute(n, "name") === "Taxonomy"
+          );
+          const taxonomy = core.createNode({
+            parent: root,
+            base: taxonomyDef,
+          });
+          contentType = core.createNode({
+            parent: root,
+            base: contentTypeDef,
+          });
+          const systemDef = metanodes.find((node) =>
+            core.getAttribute(node, "name") === "System"
+          );
+          core.deleteNode(systemDef);
+
+          context = await UploadContext.from({
+            name: "TestUploadName",
+            description: "someDesc",
+            tags: [],
+            files: [{ path: "path/to/someFile" }],
+            core,
+            contentType,
+            project: projectVersion,
+            userId: "someUserID",
+            uri,
+          });
+
+          systemTerms = await SystemTerm.findAll(core, taxonomy);
+        });
+
+        it("should make name tag", async function () {
+          const term = systemTerms.find((term) => term.name === "name");
+          const tags = await term.createTags(context);
+          assert.equal(tags.length, 1);
+        });
+
+        // We don't need to worry about terms that depend on it, like uploadedAt,
+        // bc they won't be present in the project if the dependent definition, aka
+        // System, isn't present. We don't test this bc deleting System results in
+        // a broken transformation.
+        it("should throw error on broken transformations", async function () {
+          // Deleting the definition will break the transformation for the uploadedAt
+          // term
+          const term = systemTerms.find((term) => term.name === "uploadedAt");
+          await assert.rejects(term.createTags(context));
+        });
+      });
+    });
+  });
 });

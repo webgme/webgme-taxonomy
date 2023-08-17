@@ -1,4 +1,4 @@
-import { Err, Ok, Result } from "oxide.ts";
+import { Err, None, Ok, Option, Result, Some } from "oxide.ts";
 
 export async function sleep(duration: number): Promise<void> {
   return new Promise((res) => setTimeout(res, duration));
@@ -110,20 +110,19 @@ const defaultErrorFn = (key: string) => `Key not found: ${key}`;
 /**
  * A dictionary that throws an error if a key is not found.
  */
-export class StrictDict<V> {
+export class OptionDict<V> {
   private readonly dict: { [key: string]: V };
-  private readonly errorFn: (key: string) => string;
 
-  constructor(dict: { [key: string]: V }, errorFn?: (k: string) => string) {
+  constructor(dict: { [key: string]: V }) {
     this.dict = dict;
-    this.errorFn = errorFn || defaultErrorFn;
   }
 
-  get(key: string): V {
+  get(key: string): Option<V> {
+    console.log("getting", key, ". Exists?", this.dict.hasOwnProperty(key));
     if (this.dict.hasOwnProperty(key)) {
-      return this.dict[key];
+      return Some(this.dict[key]);
     }
-    throw new Error(this.errorFn(key));
+    return None;
   }
 }
 
