@@ -65,6 +65,7 @@ export interface AdapterStatic {
     request: WebgmeRequest,
     config: any,
   ): Promise<Adapter>;
+  getUriPatterns(): string[];
 }
 
 export interface Artifact {

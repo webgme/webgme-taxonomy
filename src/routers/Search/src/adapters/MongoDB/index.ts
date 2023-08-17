@@ -27,6 +27,7 @@ import {
   UploadRequest,
 } from "../common/AppendResult";
 import { WebgmeContext } from "../../../../../common/types";
+import { Pattern } from "../../Utils";
 
 const defaultMongoUri = gmeConfig.mongo.uri;
 const defaultClient = new MongoClient(defaultMongoUri);
@@ -330,6 +331,16 @@ export default class MongoAdapter implements Adapter {
       .replace(/^(mongodb:\/\/)?/, "")
       .replace(/\/$/, "");
     return `mongoDoc://${hostAddr}/${collection}`;
+  }
+
+  static getUriPatterns(): string[] {
+    const hostPattern = `mongoDoc://${Pattern.URL}/[a-zA-Z_]+/`;
+    const repoPattern = "[a-f0-9]{24}";
+    const contentPattern = "[0-9]+";
+    return [
+      hostPattern + repoPattern,
+      hostPattern + repoPattern + "/" + contentPattern,
+    ];
   }
 }
 

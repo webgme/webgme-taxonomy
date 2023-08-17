@@ -43,7 +43,7 @@ import type {
   Repository,
   UploadReservation,
 } from "../common/types";
-import { filterMap, intervals, sleep } from "../../Utils";
+import { filterMap, intervals, Pattern, sleep } from "../../Utils";
 import CreateRequestLogger from "./CreateRequestLogger";
 const logFilePath = process.env.CREATE_LOG_PATH || "./CreateProcesses.jsonl";
 const reqLogger = new CreateRequestLogger(logFilePath);
@@ -741,6 +741,25 @@ export default class PDP implements Adapter {
       .replace(/\/$/, "");
     return `pdp://${hostAddr}/${processType}`;
   }
+
+  static getUriPatterns(): string[] {
+    const hexSeq = "[0-9a-f]+";
+    const idPattern = [hexSeq, hexSeq, hexSeq, hexSeq, hexSeq].join("-");
+    const indexPattern = "[0-9]+";
+    const versionPattern = "[0-9]+";
+
+    const typePattern = "[a-zA-Z]+";
+    const hostPattern = `pdp://${Pattern.URL}/${typePattern}/`;
+
+    const newProcessPattern = `PROCESS_ID`;
+    const processPattern = Pattern.anyIn(idPattern, newProcessPattern);
+
+    const repoPattern = hostPattern + processPattern;
+    return [
+      repoPattern,
+      repoPattern + "/" + indexPattern + "/" + versionPattern,
+    ];
+  }
 }
 
 interface PdpReservation extends UploadReservation {
@@ -753,7 +772,7 @@ class ProcessReservation implements PdpReservation {
   repoId: string;
 
   constructor(hostUri: string, repoId: string) {
-    this.uri = hostUri;
+    this.uri = hostUri + "/" + repoId;
     this.repoId = repoId;
   }
 }

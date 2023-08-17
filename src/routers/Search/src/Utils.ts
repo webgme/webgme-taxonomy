@@ -21,6 +21,16 @@ export function intervals(
     .map((start) => [start, Math.min(end - start, maxSize)]);
 }
 
+// FIXME: it would be nice to specify ...lists as the input where each has a different type
+// but I am not sure how to specify variadic generic types
+export function zip<A, B>(l1: A[], l2: B[]): [A, B][] {
+  const maxIndex = Math.min(
+    l1.length,
+    l2.length,
+  );
+  return range(0, maxIndex).map((i) => [l1[i], l2[i]]);
+}
+
 export function filterMap<I, O>(list: I[], fn: (x: I) => O | undefined): O[] {
   return list.reduce((items, input) => {
     const mapped = fn(input);
@@ -77,4 +87,28 @@ export class StrictDict<V> {
     }
     throw new Error(this.errorFn(key));
   }
+}
+
+export function unique<T>(arr: T[]): T[] {
+  return [...new Set(arr)];
+}
+
+export namespace Pattern {
+  /*
+   * Combine a list of JSON schema patterns into a single pattern that
+   * combines them all in an "or" (ie, checking that the text matches
+   * any of the input patterns).
+   */
+  export function anyIn(...patterns: string[]): string {
+    return `(${patterns.join("|")})`;
+  }
+
+  export function exact(pattern: string): string {
+    return `^${pattern}$`;
+  }
+
+  const IP_ADDRESS = "[0-9]{3}\.[0-9]+\.[0-9]+\.[0-9]+";
+  const DOMAIN_NAME = "[a-zA-Z_\.-]+";
+  const PORT = ":[0-9]+";
+  export const URL = `(${anyIn(DOMAIN_NAME, IP_ADDRESS)})(${PORT})?`;
 }

@@ -1,7 +1,7 @@
 describe("PDP", function () {
   const PDP =
     require("../../../../../src/routers/Search/build/adapters/PDP").default;
-  const { range } = require(
+  const { range, Pattern } = require(
     "../../../../../src/routers/Search/build/Utils",
   );
   const assert = require("assert");
@@ -190,6 +190,44 @@ describe("PDP", function () {
       assert.throws(() =>
         PDP.getHostUri("http://127.0.0.1:80/", "someProcess")
       );
+    });
+  });
+
+  describe("getUriPatterns", function () {
+    const Ajv = require("ajv");
+    const ajv = new Ajv();
+    const patterns = PDP.getUriPatterns();
+    const urlSchema = {
+      type: "string",
+      pattern: Pattern.exact(Pattern.anyIn(...patterns)),
+    };
+    const validate = ajv.compile(urlSchema);
+
+    it("should fail if deprecated format", function () {
+      const idString = "e0de6a4a-5257-4f2c-b3ce-470e3299fc4a_9_0";
+      assert(!validate(idString));
+    });
+
+    it("should fail if missing version in deprecated format", function () {
+      const idString = "e0de6a4a-5257-4f2c-b3ce-470e3299fc4a_9";
+      assert(!validate(idString));
+    });
+
+    it("should allow content uri", function () {
+      const idString =
+        "pdp://127.0.0.1:435/someType/e0de6a4a-5257-4f2c-b3ce-470e3299fc4a/9/0";
+      assert(validate(idString));
+    });
+
+    it("should allow (tmp) new process ID", function () {
+      const idString = "pdp://127.0.0.1:435/someType/PROCESS_ID/9/0";
+      assert(validate(idString));
+    });
+
+    it("should allow repo/process version", function () {
+      const idString =
+        "pdp://127.0.0.1:435/processType/e0de6a4a-5257-4f2c-b3ce-470e3299fc4a";
+      assert(validate(idString));
     });
   });
 });
