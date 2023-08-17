@@ -1,3 +1,5 @@
+import { Err, Ok, Result } from "oxide.ts";
+
 export async function sleep(duration: number): Promise<void> {
   return new Promise((res) => setTimeout(res, duration));
 }
@@ -5,6 +7,42 @@ export async function sleep(duration: number): Promise<void> {
 export function range(start: number, end: number, step: number = 1): number[] {
   const len = Math.ceil((end - start) / step);
   return [...new Array(len)].map((_v, index) => start + step * index);
+}
+
+export async function retry<T>(
+  fn: () => Promise<T>,
+  maxAttempts: number = 2,
+): Promise<T> {
+  const initError: Result<T, Error> = Err(
+    new Error("Cannot retry w/o any attempts."),
+  );
+  const result = await range(0, maxAttempts)
+    .reduce(
+      async (
+        prevAttempt: Promise<Result<T, Error>>,
+        _: number,
+      ): Promise<Result<T, Error>> => {
+        const prevResult: Result<T, Error> = await prevAttempt;
+
+        if (prevResult.isOk()) {
+          return prevResult;
+        } else {
+          try {
+            return Ok(await fn());
+          } catch (errThing) {
+            const error: Error = errThing instanceof Error
+              ? errThing
+              : new Error(
+                errThing?.toString() || "Error occurred during retry attempt.",
+              );
+            return Err(error);
+          }
+        }
+      },
+      Promise.resolve(initError),
+    );
+
+  return result.unwrap();
 }
 
 /**

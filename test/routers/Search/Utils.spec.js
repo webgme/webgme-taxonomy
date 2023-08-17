@@ -1,8 +1,25 @@
 describe("Utils", function () {
   const assert = require("assert");
-  const { range, intervals, Pattern } = require(
+  const { retry, range, intervals, Pattern } = require(
     "../../../src/routers/Search/build/Utils",
   );
+
+  describe("retry", function () {
+    it("should throw error if all attempts fail", async function () {
+      await assert.rejects(() => retry(async () => assert(false)));
+    });
+
+    it("should make multiple attempts", async function () {
+      let attempts = 0;
+      await retry(async () => assert(++attempts > 1));
+      assert.equal(attempts, 2);
+    });
+
+    it("should return fn return value", async function () {
+      const ten = await retry(async () => 10);
+      assert.equal(ten, 10);
+    });
+  });
 
   describe("range", function () {
     it("should not return the last value", function () {
