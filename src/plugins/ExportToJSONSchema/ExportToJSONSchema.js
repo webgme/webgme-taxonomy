@@ -4,13 +4,19 @@
 define([
   "text!./metadata.json",
   "plugin/PluginBase",
+  "module",
 ], function (
   pluginMetadata,
   PluginBase,
+  module,
 ) {
   "use strict";
 
-  const JSONSchemaExporter = require("../../common/JSONSchemaExporter");
+  const path = require.nodeRequire("path");
+  const SRC_DIR = path.join(path.dirname(module.uri), "..", "..");
+  const JSONSchemaExporter = require.nodeRequire(
+    path.join(SRC_DIR, "common", "JSONSchemaExporter"),
+  );
   pluginMetadata = JSON.parse(pluginMetadata);
 
   class ExportToJSONSchema extends PluginBase {
