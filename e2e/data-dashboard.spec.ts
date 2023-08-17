@@ -6,7 +6,7 @@ test.describe("Data dashboard", function () {
       "http://localhost:8080/routers/Search/guest%2Be2e_tests/branch/master/%2FC/static/",
     );
 
-    await expect(page).toHaveTitle(/Data Dashboard/);
+    await expect(page).toHaveTitle(/TestContentUpload Dashboard/);
   });
 
   // test("can create repo", async ({ page }) => {

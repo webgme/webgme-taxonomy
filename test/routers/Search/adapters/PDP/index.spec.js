@@ -1,6 +1,9 @@
 describe("PDP", function () {
   const PDP =
     require("../../../../../src/routers/Search/build/adapters/PDP").default;
+  const { range } = require(
+    "../../../../../src/routers/Search/build/Utils",
+  );
   const assert = require("assert");
   const sinon = require("sinon");
 
@@ -86,8 +89,27 @@ describe("PDP", function () {
 
     it("should use read token on listArtifacts", async function () {
       storage._getObserverId = sinon.fake.returns("observer");
+      storage.getObservations = (processId, start, limit, token) => {
+        const isReadToken = token.includes("readToken");
+        assert(isReadToken);
+        const taxonomyVersion = {
+          commit: "someCommit",
+          tag: "v1.0.0",
+        };
+        const taxonomyTags = [];
+        const displayName = `Artifact for ${processId}`;
+        const data = { taxonomyTags, taxonomyVersion, displayName };
+
+        return range(start, start + limit).map((index) =>
+          storage._createObservationData(
+            processId,
+            storage.processType,
+            data,
+          )
+        );
+      };
+
       storage._fetchJson = (url, opts) => {
-        console.log({ url });
         const isReadToken = opts.headers.Authorization.includes("readToken");
         assert(isReadToken);
 
