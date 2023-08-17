@@ -43,7 +43,7 @@ import type {
   Repository,
   UploadReservation,
 } from "../common/types";
-import { filterMap, Pattern, range, sleep } from "../../Utils";
+import { filterMap, intervals, Pattern, sleep } from "../../Utils";
 import CreateRequestLogger from "./CreateRequestLogger";
 const logFilePath = process.env.CREATE_LOG_PATH || "./CreateProcesses.jsonl";
 const reqLogger = new CreateRequestLogger(logFilePath);
@@ -109,7 +109,9 @@ export default class PDP implements Adapter {
     const processMetadata = await Promise.all(
       allProcesses
         .filter(({ processType }) => processType === this.processType)
-        .map(({ processId }) => this._getObs(processId, 0, 1, this._readToken)),
+        .map(({ processId }) =>
+          this.getObservation(processId, 0, 1, this._readToken)
+        ),
     );
 
     const repos: Repository[] = filterMap(
@@ -144,15 +146,36 @@ export default class PDP implements Adapter {
     // skip the first one since it contains repo metadata
     const start = 1;
     const observations = await Promise.all(
-      range(start, obsInfo.numObservations).map((i) =>
-        this._getObs(pid, i, 1, this._readToken)
-      ),
+      intervals(start, obsInfo.numObservations, 20)
+        .map(([start, len]) =>
+          this.getObservations(
+            pid,
+            start,
+            len,
+            this._readToken,
+          )
+        ),
+    );
+
+    return observations.flat();
+  }
+
+  private async getObservations(
+    processId: ProcessID,
+    startIndex: number,
+    limit: number = 20,
+    token: string = this._token,
+  ): Promise<Observation[]> {
+    const observations: Observation[] = await this._fetchJson(
+      `v2/Process/PeekObservations?processId=${processId}&obsIndex=${startIndex}` +
+        `&maxReturn=${limit}`,
+      setAuthToken(DefaultFetchOpts(), token),
     );
 
     return observations;
   }
 
-  async _getObs(
+  private async getObservation(
     processId: ProcessID,
     obsIndex: number,
     version: number,
@@ -433,7 +456,7 @@ export default class PDP implements Adapter {
     version: number,
     formatter: TagFormatter,
   ): Promise<any> {
-    const responseObservation = await this._getObs(
+    const responseObservation = await this.getObservation(
       processId,
       obsIndex,
       version,
@@ -453,7 +476,7 @@ export default class PDP implements Adapter {
     formatter: TagFormatter,
     downloadDir: string,
   ) {
-    const responseObservation = await this._getObs(
+    const responseObservation = await this.getObservation(
       processId,
       obsIndex,
       version,
