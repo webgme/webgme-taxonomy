@@ -743,17 +743,21 @@ export default class PDP implements Adapter {
   }
 
   static getUriPatterns(): string[] {
-    const idPattern = "[0-9a-z]+-[0-9a-z]+-[0-9a-z]+[0-9a-z]+-[0-9a-z]+";
+    const hexSeq = "[0-9a-f]+";
+    const idPattern = [hexSeq, hexSeq, hexSeq, hexSeq, hexSeq].join("-");
     const indexPattern = "[0-9]+";
     const versionPattern = "[0-9]+";
-    const oldVersion = `${idPattern}_${indexPattern}_${versionPattern}`;
 
     const typePattern = "[a-zA-Z]+";
     const hostPattern = `pdp://${Pattern.URL}/${typePattern}/`;
+
+    const newProcessPattern = `PROCESS_ID`;
+    const processPattern = Pattern.anyIn(idPattern, newProcessPattern);
+
+    const repoPattern = hostPattern + processPattern;
     return [
-      oldVersion,
-      hostPattern + idPattern,
-      hostPattern + idPattern + "/" + indexPattern + "/" + versionPattern,
+      repoPattern,
+      repoPattern + "/" + indexPattern + "/" + versionPattern,
     ];
   }
 }

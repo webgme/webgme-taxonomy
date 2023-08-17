@@ -1,26 +1,43 @@
 describe("MongoDB", function () {
   const MongoDB =
     require("../../../../../src/routers/Search/build/adapters/MongoDB").default;
+  const { range, Pattern } = require(
+    "../../../../../src/routers/Search/build/Utils",
+  );
   const assert = require("assert");
   const gmeConfig = require("../../../../../config");
+  const { MongoClient } = require("mongodb");
   const defaultMongoUri = gmeConfig.mongo.uri;
-  const client = new MongoClient(defaultMongoUri);
 
   describe("getUriPatterns", function () {
+    const Ajv = require("ajv");
+    const ajv = new Ajv();
     const patterns = MongoDB.getUriPatterns();
-    const uriRegex = new RegExp(`\\(${patterns.join("|")}\\)`);
+    const urlSchema = {
+      type: "string",
+      pattern: Pattern.exact(Pattern.anyIn(...patterns)),
+    };
+    const validate = ajv.compile(urlSchema);
+
     const collection = "__testCollection";
     const hostUri = MongoDB.getHostUri(
       "mongodb://127.0.0.1:27017/",
       collection,
     );
-    let mongo;
-    before(() => mongo = new MongoDB(client, collection, hostUri));
 
-    it.only("should match against repos", async function () {
+    let client, mongo;
+    before(() => {
+      client = new MongoClient(defaultMongoUri);
+      mongo = new MongoDB(client, collection, hostUri);
+    });
+    after(() => client.close());
+
+    it("should match against repos", async function () {
       await Promise.all(
         range(0, 100).map((_) =>
-          mongo.withRepoReservation((res) => assert(uriRegex.test(res.uri)))
+          mongo.withRepoReservation((res) =>
+            assert(validate(res.uri), "Found failing URI: " + res.uri)
+          )
         ),
       );
     });
@@ -38,11 +55,12 @@ describe("MongoDB", function () {
           time: new Date().toString(),
         };
         await mongo.createArtifact(res, metadata);
+        return res.repoId;
       });
       await Promise.all(
         range(0, 10).map((_) =>
           mongo.withContentReservation(
-            (res) => assert(uriRegex.test(res.uri)),
+            (res) => assert(validate(res.uri), "Found failing URI: " + res.uri),
             repoId,
           )
         ),

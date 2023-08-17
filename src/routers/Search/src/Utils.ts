@@ -100,8 +100,15 @@ export namespace Pattern {
    * any of the input patterns).
    */
   export function anyIn(...patterns: string[]): string {
-    return `\\(${patterns.join("|")}\\)`;
+    return `(${patterns.join("|")})`;
   }
 
-  export const URL = "[a-zA-Z_\.-]+(:\d+)?";
+  export function exact(pattern: string): string {
+    return `^${pattern}$`;
+  }
+
+  const IP_ADDRESS = "[0-9]{3}\.[0-9]+\.[0-9]+\.[0-9]+";
+  const DOMAIN_NAME = "[a-zA-Z_\.-]+";
+  const PORT = ":[0-9]+";
+  export const URL = `(${anyIn(DOMAIN_NAME, IP_ADDRESS)})(${PORT})?`;
 }

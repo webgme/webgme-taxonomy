@@ -2,8 +2,9 @@
 /*eslint-env node, browser*/
 // @ts-check
 /// <reference path="define.d.ts" />
-const StorageAdapters = require("../routers/Search/build/adapters/index");
-const { anyPatternIn, zip, unique } = require("../routers/Search/build/Utils");
+const StorageAdapters =
+  require("../routers/Search/build/adapters/index").default;
+const { Pattern, zip, unique } = require("../routers/Search/build/Utils");
 const optionTypes = ["EnumField", "SetField"];
 
 class JSONSchemaExporter {
@@ -338,9 +339,9 @@ class JSONSchemaExporter {
         break;
       case "UriField":
         fieldSchema.type = "string";
-        fieldSchema.pattern = anyPatternIn(
+        fieldSchema.pattern = Pattern.exact(Pattern.anyIn(
           ...StorageAdapters.getUriPatterns(),
-        );
+        ));
         isPrimitive = true;
         break;
       case "EnumField":

@@ -335,7 +335,7 @@ export default class MongoAdapter implements Adapter {
 
   static getUriPatterns(): string[] {
     const hostPattern = `mongoDoc://${Pattern.URL}/[a-zA-Z_]+/`;
-    const repoPattern = "[a-zA-Z\d]{24}";
+    const repoPattern = "[a-f0-9]{24}";
     const contentPattern = "[0-9]+";
     return [
       hostPattern + repoPattern,
