@@ -4,14 +4,13 @@
 define([
   "text!./metadata.json",
   "plugin/PluginBase",
-  "webgme-taxonomy/JSONSchemaExporter",
 ], function (
   pluginMetadata,
   PluginBase,
-  JSONSchemaExporter,
 ) {
   "use strict";
 
+  const JSONSchemaExporter = require("../../common/JSONSchemaExporter");
   pluginMetadata = JSON.parse(pluginMetadata);
 
   class ExportToJSONSchema extends PluginBase {
@@ -22,6 +21,8 @@ define([
 
     async main() {
       const exporter = new JSONSchemaExporter(this.core, this.META);
+      // TODO: Check if it is a taxonomy node. If so, export the children
+      // TODO: else, export the associated vocabularies
       const { schema, uiSchema } = await exporter.getSchemas(this.activeNode);
       const files = {
         "schema.json": JSON.stringify(schema, null, 2),

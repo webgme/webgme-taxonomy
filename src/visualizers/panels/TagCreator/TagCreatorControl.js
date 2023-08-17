@@ -6,14 +6,12 @@
 define([
   "js/Constants",
   "js/Utils/GMEConcepts",
-  "webgme-taxonomy/JSONSchemaExporter",
   "webgme-taxonomy/Utils",
   "js/NodePropertyNames",
   "q",
 ], function (
   CONSTANTS,
   GMEConcepts,
-  JSONSchemaExporter,
   Utils,
   nodePropertyNames,
   Q,
@@ -277,21 +275,19 @@ define([
   };
 
   /* * * * * * * * Node Event Handling * * * * * * * */
-  TagCreatorControl.prototype._getJSONSchemas = async function (nodeId) {
-    const { core, rootNode } = await this._getCoreInstance();
-    const meta = this._toMetaDict(
-      core,
-      Object.values(core.getAllMetaNodes(rootNode)),
+  TagCreatorControl.prototype._getJSONSchemas = async function () {
+    const pluginId = "JSONSchemaExporter";
+    const context = this._client.getCurrentPluginContext(pluginId);
+    const results = await Q.ninvoke(
+      this._client,
+      "runServerPlugin",
+      pluginId,
+      context,
     );
-    const exporter = new JSONSchemaExporter(core, meta);
 
-    const activeNode = await core.loadByPath(rootNode, this._currentNodeId);
-    const vocabs = await this._getVocabularies(core, rootNode, activeNode);
-    const taxonomyData = await exporter.getVocabSchemas(vocabs);
-    if (vocabs.length) {
-      taxonomyData.taxonomyPath = core.getPath(core.getParent(vocabs[0]));
-    }
-    return taxonomyData;
+    console.log({ results });
+    // TODO: get the taxonomy data
+    // return taxonomyData;
   };
 
   TagCreatorControl.prototype._getVocabularies = async function (

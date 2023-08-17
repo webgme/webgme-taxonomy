@@ -43,7 +43,7 @@ import type {
   Repository,
   UploadReservation,
 } from "../common/types";
-import { filterMap, range, sleep } from "../../Utils";
+import { filterMap, Pattern, range, sleep } from "../../Utils";
 import CreateRequestLogger from "./CreateRequestLogger";
 const logFilePath = process.env.CREATE_LOG_PATH || "./CreateProcesses.jsonl";
 const reqLogger = new CreateRequestLogger(logFilePath);
@@ -725,9 +725,8 @@ export default class PDP implements Adapter {
     const versionPattern = "[0-9]+";
     const oldVersion = `${idPattern}_${indexPattern}_${versionPattern}`;
 
-    const urlPattern = "[a-zA-Z_\.-]+(:\d+)?";
     const typePattern = "[a-zA-Z]+";
-    const hostPattern = `pdp://${urlPattern}/${typePattern}/`;
+    const hostPattern = `pdp://${Pattern.URL}/${typePattern}/`;
     return [
       oldVersion,
       hostPattern + idPattern,
