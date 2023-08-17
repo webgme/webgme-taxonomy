@@ -43,7 +43,7 @@ import type {
   Repository,
   UploadReservation,
 } from "../common/types";
-import { filterMap, intervals, Pattern, sleep } from "../../Utils";
+import { filterMap, intervals, Pattern, retry, sleep } from "../../Utils";
 import CreateRequestLogger from "./CreateRequestLogger";
 const logFilePath = process.env.CREATE_LOG_PATH || "./CreateProcesses.jsonl";
 const reqLogger = new CreateRequestLogger(logFilePath);
@@ -676,7 +676,15 @@ export default class PDP implements Adapter {
     opts.headers.Authorization = opts.headers.Authorization ||
       "Bearer " + this._token;
     opts.headers.accept = opts.headers.accept || "application/json";
-    return await fetch(url, opts);
+    return await retry(async () => {
+      const response = await fetch(url, opts);
+      if (response.status > 399) {
+        const msg = `${opts.method || "GET"} ${url} failed: ${await response
+          .text()} (${response.status})`;
+        throw new Error(msg);
+      }
+      return response;
+    });
   }
 
   async _fetchJson(url: string, opts: FetchOpts = DefaultFetchOpts()) {
