@@ -566,7 +566,7 @@
 
   :global(.mdc-drawer-app-content) > main {
     min-height: 0;
-    overflow-y: scroll;
+    overflow-y: auto;
   }
 
   :global(.log.info) {
