@@ -506,6 +506,7 @@
           bind:contentType
           on:download={(event) => onDownload(event.detail)}
           on:upload={(event) => (appendItem = event.detail.artifactSet)}
+          on:copyUri={(event) => displayMessage("Copied URI: " + event.detail.name)}
         />
       {/if}
     </AppContent>
