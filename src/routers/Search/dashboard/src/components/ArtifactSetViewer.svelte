@@ -193,6 +193,6 @@
 
   .card-container > :global(.mdc-card .smui-card__content .mdc-deprecated-list) {
     flex: 0 1 auto;
-    overflow-y: scroll;
+    overflow-y: auto;
   }
 </style>
