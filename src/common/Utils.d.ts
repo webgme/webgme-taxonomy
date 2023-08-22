@@ -6,9 +6,16 @@ declare const utils: {
     node: Core.Node,
   ): Promise<Core.Node | null>;
 
-  getVocabulariesFor(core: GmeClasses.Core, contentType: Core.Node): Promise<GmeCommon.DataObject[]>;
+  getVocabulariesFor(
+    core: GmeClasses.Core,
+    contentType: Core.Node,
+  ): Promise<GmeCommon.DataObject[]>;
 
-  isTypeNamed(core: GmeClasses.Core, node: Core.Node, typeName: string): boolean;
+  isTypeNamed(
+    core: GmeClasses.Core,
+    node: Core.Node,
+    typeName: string,
+  ): boolean;
 };
 
 export default utils;
