@@ -43,13 +43,14 @@
     displayTags = true;
   }
 
-  async function getUri(content) {
-    const tags = await formatter.toHumanFormat(content.taxonomyTags);
+  async function getUri(content, tags=null) {
+    tags = tags ?? await formatter.toHumanFormat(content.taxonomyTags);
     return getTagValue(tags, 'Base', 'URI', 'value');
   }
 
   async function onCopyLink(content) {
-    const uri = await getUri(content);
+    const tags = await formatter.toHumanFormat(content.taxonomyTags);
+    const uri = await getUri(content, tags);
 
     try {
       await navigator.clipboard.writeText(uri);
