@@ -13,6 +13,7 @@ import type {
   ArtifactMetadata,
   ArtifactMetadatav2,
   DownloadInfo,
+  Metadata,
   Repository,
   TaxonomyVersion,
   UploadReservation,
@@ -282,16 +283,25 @@ export default class MongoAdapter implements Adapter {
         const artifact = repo.artifacts[idx];
         const artifactPath = path.join(targetDir, idx.toString());
         if (artifact) {
-          const metadataPath = path.join(artifactPath, "artifact.json");
+          const metadataPath = path.join(artifactPath, "metadata.json");
+          const amd = toArtifactMetadatav2(artifact);
           try {
-            artifact.tags = formatter.toHumanFormat(
-              artifact.tags ?? {},
+            amd.tags = formatter.toHumanFormat(
+              amd.tags ?? {},
             );
-            await writeJsonData(metadataPath, artifact);
+            const metadata = {
+              tags: amd.tags,
+              taxonomyVersion: amd.taxonomyVersion,
+            };
+            await writeMetadata(metadataPath, metadata);
           } catch (err) {
             const logPath = path.join(artifactPath, `warnings.txt`);
             if (err instanceof FormatError) {
-              await writeJsonData(metadataPath, artifact);
+              const metadata = {
+                tags: amd.tags,
+                taxonomyVersion: amd.taxonomyVersion,
+              };
+              await writeMetadata(metadataPath, metadata);
               writeData(
                 logPath,
                 `An error occurred when converting the taxonomy tags: ${err.message}\n\nThe internal format has been saved in artifact.json.`,
@@ -405,6 +415,10 @@ async function writeData(filePath: string, data: string) {
   const dirPath = path.dirname(filePath) + path.sep;
   await fsp.mkdir(dirPath, { recursive: true });
   await fsp.writeFile(filePath, data);
+}
+
+async function writeMetadata(filePath: string, metadata: Metadata) {
+  writeData(filePath, JSON.stringify(metadata));
 }
 
 async function writeJsonData(filePath: string, metadata: ArtifactMetadata) {

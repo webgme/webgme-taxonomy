@@ -94,6 +94,15 @@ export interface Repository {
   taxonomyVersion: TaxonomyVersion;
 }
 
+/*
+ * Metadata exposed to the end user via the tag form and downloading archives
+ * from the storage endpoints
+ */
+export interface Metadata {
+  tags: TagDict;
+  taxonomyVersion: TaxonomyVersion;
+}
+
 export type ArtifactMetadata = ArtifactMetadatav1 | ArtifactMetadatav2;
 
 export interface ArtifactMetadatav2 {
