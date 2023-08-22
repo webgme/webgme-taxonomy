@@ -94,8 +94,8 @@ export default class MongoAdapter implements Adapter {
   ): any {
     const metadata = repo.artifacts[contentId];
     if (metadata) {
-      metadata.taxonomyTags = formatter.toHumanFormat(
-        metadata.taxonomyTags ?? [],
+      metadata.tags = formatter.toHumanFormat(
+        metadata.tags ?? {},
       );
     }
     return metadata;

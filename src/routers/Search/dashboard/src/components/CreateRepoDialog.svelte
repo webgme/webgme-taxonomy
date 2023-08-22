@@ -16,7 +16,7 @@
   export let contentType: ContentType;
   let displayName = '';
   let metadata = {
-    taxonomyTags: [],
+    tags: {},
   };
 
   async function onCreateRepo() {

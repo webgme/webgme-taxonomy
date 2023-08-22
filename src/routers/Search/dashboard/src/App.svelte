@@ -271,7 +271,7 @@
         .map(repo => ({
           id: repo.id,
           displayName: repo.displayName,
-          taxonomyTags: repo.taxonomyTags,
+          tags: repo.tags,
           taxonomyVersion: repo.taxonomyVersion,
           children: [],
           loadState: LoadState.Pending,
