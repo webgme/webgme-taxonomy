@@ -3,6 +3,7 @@
   A dialog for appending artifacts to a set.
 -->
 <script lang="ts">
+  import TagSelector from "./TagSelector.svelte";
   import Dialog, { Content, Title, Actions } from "@smui/dialog";
   import Textfield from "@smui/textfield";
   import Dropzone from "svelte-file-dropzone";
@@ -35,11 +36,13 @@
   let metadata: any;
   let open = false;
   let uploading: Promise<UploadPromise[]> | null = null;
+  let selectTagDisabled = false;
 
   $: displayName = set?.displayName ?? "";
   $: appendName = displayName;
   $: setOpen(set != null);
   $: progresses = uploading ? Array(files.length).fill(0) : [];
+  $: selectTagDisabled = !!uploading;
 
   function setOpen(value: boolean) {
     if (value !== open) open = value;
@@ -53,12 +56,6 @@
     // TODO: handle rejections
   }
 
-  async function onAppendTagsFileDrop(event: DropEvent) {
-    const [tagsFile] = event.detail.acceptedFiles;
-    if (tagsFile) {
-      metadata = JSON.parse(await readFile(tagsFile));
-    }
-  }
 
   async function onAppendClicked() {
     if (!files.length) {
@@ -97,29 +94,6 @@
 
   function dispatchError(error: string) {
     return dispatch("error", { error });
-  }
-
-  function getTagsDisplayNames(tags, prefix = null): string[] {
-    const names = Object.entries(tags).flatMap(([name, value]) => {
-      if (isObject(value)) {
-        const isOption = Object.keys(value).length === 0;  // for an enum/set/list/etc
-        if (isOption) {
-          return [name];
-        } else {
-          return getTagsDisplayNames(value, name);
-        }
-      } else {
-          return [`${name}: ${value}`];
-      }
-    });
-
-    return names.map(name => {
-      if (prefix) {
-        return prefix + '.' + name;
-      } else {
-        return name;
-      }
-    });
   }
 
   function closeHandler(e: CustomEvent<{ action: string }>) {
@@ -189,31 +163,11 @@
       </Dropzone>
     {/if}
 
-    <p>
-      Taxonomy Terms <span style="font-style:italic">(optional)</span>:<br />
-      {metadata ? getTagsDisplayNames(metadata.tags) : ""}
-      <!-- TODO: how to show these? -->
-    </p>
-
-    {#if !uploading}
-      <Dropzone on:drop={onAppendTagsFileDrop} accept=".json">
-        <p>Select tags file for dataset.</p>
-      </Dropzone>
-    {:else}
-      <Dropzone disabled accept=".json">
-        <p>Select tags file for dataset.</p>
-      </Dropzone>
-    {/if}
-
-    <a
-      target="_blank"
-      href={window.location.href
-        .replace("/Search/", "/TagCreator/") // FIXME: use the correct content type
-        .replace(
-          /[^\/]*\/static\//,
-          `${encodeURIComponent(contentType.nodePath)}/static/`
-        )}>Click to select tags for your dataset.</a
-    >
+    <TagSelector 
+      bind:metadata={metadata}
+      bind:contentType
+      bind:disabled={selectTagDisabled}
+    />
   </Content>
   <div class="dialog-actions">
     <Button disabled={uploading} on:click={() => close()}>

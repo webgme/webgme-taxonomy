@@ -1,5 +1,5 @@
 // Taxonomy version information received from the server
-interface TaxonomyVersionData {
+export interface TaxonomyVersionData {
   id: string;
   tag: string;
   commit: string;

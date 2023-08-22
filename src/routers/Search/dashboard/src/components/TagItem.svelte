@@ -10,7 +10,6 @@
   } from "@smui/list";
 
   export let tag;
-  export let depth = 0;
 
   // Given a tag object, create a list of paths to nested values
 

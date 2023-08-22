@@ -5,6 +5,7 @@ function factory() {
   const OptionFieldTypes = ["EnumField", "SetField"];
   const FieldTypes = [
     "TextField",
+    "UriField",
     "IntegerField",
     "FloatField",
     "BooleanField",

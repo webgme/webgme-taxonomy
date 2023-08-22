@@ -3,10 +3,14 @@ import type TagFormatter from "../../../../../common/TagFormatter";
 import type { WebgmeContext, WebgmeRequest } from "../../../../../common/types";
 
 export interface Adapter {
-  listArtifacts(): Promise<Repository[]>;
-  createArtifact(metadata: ArtifactMetadata): Promise<string>;
+  listRepos(): Promise<Repository[]>;
+  listArtifacts(repoId: string): Promise<Artifact[]>;
+  createArtifact(
+    res: UploadReservation,
+    metadata: ArtifactMetadata,
+  ): Promise<string>;
   appendArtifact(
-    repoId: string,
+    res: UploadReservation,
     metadata: ArtifactMetadata,
     filenames: string[],
   ): Promise<AppendResult>;
@@ -17,12 +21,41 @@ export interface Adapter {
     formatter: TagFormatter,
     downloadDir: string,
   ): Promise<void>;
+  downloadFileURLs(
+    repoId: string,
+    contentIds: string[],
+  ): Promise<DownloadInfo[]>;
+  getMetadata(
+    repoId: string,
+    contentId: string,
+    formatter: TagFormatter,
+  ): Promise<any>;
+  getBulkMetadata(
+    repoId: string,
+    contentIds: string[],
+    formatter: TagFormatter,
+  ): Promise<any[]>;
   uploadFile?(
     repoId: string,
     index: string,
     fileId: string,
     req: WebgmeRequest,
   ): Promise<void>;
+  /*
+   * RAII-style reservations for uploading data
+   */
+  withRepoReservation<T>(
+    fn: (res: UploadReservation) => Promise<T>,
+  ): Promise<T>;
+  withContentReservation<T>(
+    fn: (res: UploadReservation) => Promise<T>,
+    repoId: string,
+  ): Promise<T>;
+}
+
+export interface UploadReservation {
+  repoId?: string;
+  uri: string | undefined;
 }
 
 export interface AdapterStatic {
@@ -32,6 +65,7 @@ export interface AdapterStatic {
     request: WebgmeRequest,
     config: any,
   ): Promise<Adapter>;
+  getUriPatterns(): string[];
 }
 
 export interface Artifact {
@@ -58,7 +92,15 @@ export interface Repository {
   displayName: string;
   tags: TagDict;
   taxonomyVersion: TaxonomyVersion;
-  children: Artifact[];
+}
+
+/*
+ * Metadata exposed to the end user via the tag form and downloading archives
+ * from the storage endpoints
+ */
+export interface Metadata {
+  tags: TagDict;
+  taxonomyVersion: TaxonomyVersion;
 }
 
 export type ArtifactMetadata = ArtifactMetadatav1 | ArtifactMetadatav2;
@@ -94,4 +136,15 @@ export interface TaxonomyBranch {
 export interface TaxonomyCommit {
   id: string;
   commit: string;
+}
+
+export interface DownloadInfo {
+  repoId: string;
+  id: string;
+  files: FileURLInfo[];
+}
+
+export interface FileURLInfo {
+  name: string;
+  url: string;
 }
