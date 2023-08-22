@@ -1,5 +1,6 @@
 <script lang="ts">
   import SchemaForm from 'svelte-jsonschema-form';
+  import TopAppBar, { Row, Section, Title } from "@smui/top-app-bar";
   import Button, { Label } from '@smui/button';
 
   let configuration = fetchSchema();
@@ -18,8 +19,24 @@
 
 <main>
   {#await configuration}
+    <TopAppBar variant="static">
+      <Row>
+        <Section>
+          <Title>Metadata Tag Creator</Title>
+        </Section>
+      </Row>
+    </TopAppBar>
     <p>Loading schema...</p>
   {:then {schema}}
+    <TopAppBar variant="static">
+      <Row>
+        <Section>
+          {#if schema.title}
+            <Title>{schema.title}</Title>
+          {/if}
+        </Section>
+      </Row>
+    </TopAppBar>
     <SchemaForm {schema} {data} let:actions={actions}>
       <Button on:click={() => actions.download("tags")} type="button" variant="raised">
         <Label>Download</Label>
@@ -31,4 +48,7 @@
 </main>
 
 <style lang="scss">
+  :global(.jsonschema-form > .smui-paper > .smui-paper__title) {
+    display: none;
+  }
 </style>
