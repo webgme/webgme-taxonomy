@@ -110,7 +110,7 @@ export default class PDP implements Adapter {
       allProcesses
         .filter(({ processType }) => processType === this.processType)
         .map(({ processId }) =>
-          this.getObservation(processId, 0, 1, this._readToken)
+          this.getObservation(processId, 0, 0, this._readToken)
         ),
     );
 
