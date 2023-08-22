@@ -463,7 +463,7 @@
       </Content>
     </Drawer>
     <AppContent>
-      <main style="display: inline-block; vertical-align: top">
+      <main style="display: inline-block; vertical-align: top; min-width: 33%">
         <!-- Artifact list -->
         {#if items.length}
           <List twoLine avatarList>
