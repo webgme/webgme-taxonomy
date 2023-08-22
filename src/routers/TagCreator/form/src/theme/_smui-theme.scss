@@ -24,3 +24,5 @@ a {
 a:visited {
   color: color.scale(#40b3ff, $lightness: -35%);
 }
+
+@import 'svelte-jsonschema-form/src/theme/custom'
