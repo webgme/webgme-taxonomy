@@ -1,7 +1,10 @@
 import TestMethods from "../common/test-methods";
 import { ITaxonomy } from "./ITaxonomy";
-import TaxonomyParser from '../../../src/common/TaxonomyParser'
+import TaxonomyParser from "../../../src/common/TaxonomyParser";
 
+/**
+ * Class wrapping generation of a mock taxonomy file
+ */
 export class TestTaxonomy implements ITaxonomy {
   taxonomy_file: Promise<string>;
   constructor() {

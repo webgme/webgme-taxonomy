@@ -70,7 +70,7 @@ export default class TestMethods {
    * @memberof TestMethods
    */
   static async create_temp_taxonomy_file(
-    taxonomy_generator: () => Promise<string> = TestMethods.taxonomy_generator_shim,
+    taxonomy_generator: () => Promise<string> = TestMethods.get_static_taxonomy_csv,
     name: string = "taxonomy_file"
   ): Promise<string> {
     return TestMethods.create_temp_file(
@@ -80,7 +80,11 @@ export default class TestMethods {
     );
   }
 
-  static async taxonomy_generator_shim(): Promise<string> {
+  /**
+   * Creates an in-memory sample CSV
+   * @returns
+   */
+  static async get_static_taxonomy_csv(): Promise<string> {
     return [
       "parentTerm,,,",
       ",childTerm,,,",
@@ -93,6 +97,11 @@ export default class TestMethods {
     ].join("\n");
   }
 
+  /**
+   * Creates a listener on socket.io calls (helper to track issue where
+   * split on empty cookie in socket was throwing an error)
+   * @param pageref
+   */
   static async setPageListener(pageref) {
     await pageref.route(
       new RegExp(".+socket.io.+$"),
@@ -113,10 +122,20 @@ export default class TestMethods {
     );
   }
 
+  /**
+   * Basic wrapper to perform consistent JSON.stringify to pretty-print
+   * @param d
+   * @returns
+   */
   static prettyPrintJson(d) {
     return JSON.stringify(d, null, 2);
   }
 
+  /**
+   * Dynamic generation of a mock taxonomy file for use in upload,
+   * removing need for a pre-generated scenario.
+   * @returns
+   */
   static async generate_test_taxonomy_file() {
     const TaxonomyParser = require("../src/common/TaxonomyParser");
 
