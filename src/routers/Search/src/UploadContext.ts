@@ -1,17 +1,24 @@
-import { filterMap, mapObject, StrictDict } from "./Utils";
+import { filterMap, mapObject, OptionDict } from "./Utils";
 import { GMEContext, GMENode, Primitive } from "webgme-transformations";
 import { ProjectVersion } from "../../../common/types";
 
 type TypeDict = { [path: string]: string }; // FIXME: don't duplicate this
 
-interface UploadContextData {
+export interface FileUpload {
+  path: string;
+  // TODO: add the hash?
+}
+
+export interface UploadContextData {
   name: string;
   description: string;
   tags: any[];
-  files: any[];
+  files: FileUpload[];
   project: ProjectVersion;
   core: GmeClasses.Core;
   contentType: Core.Node;
+  userId: string;
+  uri?: string;
 }
 
 interface ProjectAttributes {
@@ -55,7 +62,12 @@ export default class UploadContext {
       name: Primitive.from(data.name),
       description: Primitive.from(data.description),
     });
-    // TODO: handle tags, files
+    // TODO: handle tags
+    const files = data.files.map((fdata, i) =>
+      new GMENode(`@tmp/content/file_${i}`, {
+        path: Primitive.from(fdata.path),
+      })
+    );
 
     const [owner, name] = data.project.id.split("+");
     const attrs: ProjectAttributes = {
@@ -72,12 +84,21 @@ export default class UploadContext {
       attrs.tag = Primitive.from(data.project.tag);
     }
     const project = new GMENode("@tmp/project", attrs);
+    let location: GMENode | undefined;
+    if (data.uri) {
+      location = new GMENode("@tmp/location", {
+        URI: Primitive.from(data.uri),
+      });
+    }
 
     const gmeContext = await getGMEContext(
       project,
       content,
+      location,
+      files,
       data.core,
       data.contentType,
+      Primitive.from(data.userId),
     );
     return new UploadContext(
       data.core,
@@ -93,7 +114,7 @@ export default class UploadContext {
 function getMetaNodeDict(
   core: GmeClasses.Core,
   node: Core.Node,
-): StrictDict<Core.Node> {
+): OptionDict<Core.Node> {
   const metaEntries = filterMap(
     Object.values(core.getAllMetaNodes(node)),
     (node) => {
@@ -103,9 +124,8 @@ function getMetaNodeDict(
       }
     },
   );
-  return new StrictDict(
+  return new OptionDict(
     Object.fromEntries(metaEntries),
-    (key: string) => `Could not find definition for ${key}`,
   );
 }
 
@@ -135,29 +155,69 @@ async function addChildToContext(
 async function getGMEContext(
   project: GMENode,
   content: GMENode,
+  location: GMENode | undefined,
+  files: GMENode[],
   core: GmeClasses.Core,
   contentType: Core.Node,
+  userId: Primitive.Primitive,
 ): Promise<GMEContext> {
   const metaDict = getMetaNodeDict(core, contentType);
 
   // Add UploadContext node (active node)
   // This doesn't use the helper method since it doesn't actually
   // have a parent node (hence the "@tmp" path)
-  const context = new GMENode("@tmp");
+  const context = new GMENode("@tmp", { userId });
   context.setActiveNode();
   const nodes: GMENode[] = [context];
-  context.pointers.base = 1;
+  context.pointers.base = 1; // FIXME: this depends on if the next one exists
 
-  await GMEContext.addNode(core, metaDict.get("UploadContext"), nodes);
+  await metaDict.get("UploadContext")
+    .map((metaNode) => GMEContext.addNode(core, metaNode, nodes))
+    .unwrapOrElse(() => Promise.resolve(0));
 
   // Add content
-  await addChildToContext(
-    core,
-    nodes,
-    content,
-    metaDict.get("UploadContent"),
-    context,
-  );
+
+  await metaDict.get("UploadContent")
+    .map((metaNode) =>
+      addChildToContext(
+        core,
+        nodes,
+        content,
+        metaNode,
+        context,
+      )
+    )
+    .unwrapOrElse(() => Promise.resolve());
+
+  // Add location
+  if (location) {
+    await metaDict.get("UploadLocation")
+      .map((metaNode) =>
+        addChildToContext(
+          core,
+          nodes,
+          location,
+          metaNode,
+          context,
+        )
+      )
+      .unwrapOrElse(() => Promise.resolve());
+  }
+
+  // Add files
+  await metaDict.get("File").map((metaNode) =>
+    files.reduce(async (prevTask, file) => {
+      await prevTask;
+      return addChildToContext(
+        core,
+        nodes,
+        file,
+        metaNode,
+        content,
+      );
+    }, Promise.resolve())
+  )
+    .unwrapOrElse(() => Promise.resolve());
 
   // Next, we will add the reference to the content type. Since content types
   // contain the vocabularies which in turn contain transformations, etc, this
@@ -186,29 +246,35 @@ async function getGMEContext(
   content.pointers.type = contentTypeIdx;
 
   // TODO: add tags
-  // TODO: add files
 
   // Add project metadata
-  await addChildToContext(
-    core,
-    nodes,
-    project,
-    metaDict.get("ProjectMetadata"),
-    context,
-  );
+  await metaDict.get("ProjectMetadata").map((metaNode) =>
+    addChildToContext(
+      core,
+      nodes,
+      project,
+      metaNode,
+      context,
+    )
+  )
+    .unwrapOrElse(() => Promise.resolve());
 
   // Add extra system info
   const date = new Date();
   const system = new GMENode("@tmp/system", {
+    time: Primitive.from(date.toString()),
     isoDateTime: Primitive.from(date.toISOString()),
   });
-  await addChildToContext(
-    core,
-    nodes,
-    system,
-    metaDict.get("System"),
-    context,
-  );
+  await metaDict.get("System").map((metaNode) =>
+    addChildToContext(
+      core,
+      nodes,
+      system,
+      metaNode,
+      context,
+    )
+  )
+    .unwrapOrElse(() => Promise.resolve());
 
   const gmeContext = new GMEContext(nodes);
   gmeContext.validate();

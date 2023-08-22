@@ -4,7 +4,7 @@ import type { WebgmeContext, WebgmeRequest } from "../../../../common/types";
 import RouterUtils from "../../../../common/routers/Utils";
 import { StorageNotFoundError } from "./common/ModelError";
 import fs from "fs";
-import type { AdapterStatic } from "./common/types";
+import type { Adapter, AdapterStatic } from "./common/types";
 
 const SUPPORTED_ADAPTERS: { [type: string]: AdapterStatic } = Object
   .fromEntries(
@@ -20,7 +20,7 @@ export default class Adapters {
     gmeContext: WebgmeContext,
     req: WebgmeRequest,
     config: any,
-  ) {
+  ): Promise<Adapter> {
     const { core, contentType } = gmeContext;
     const storageNode = (await core.loadChildren(contentType)).find((child) =>
       isTypeOf(core, child, "Storage")
@@ -35,17 +35,22 @@ export default class Adapters {
       "name",
     );
     const adapterName = adapterType?.toString().toLowerCase();
-    const Adapter = (adapterName != null)
+    const AdapterType = (adapterName != null)
       ? SUPPORTED_ADAPTERS[adapterName]
       : null;
     assert(
-      Adapter,
+      AdapterType,
       new RouterUtils.UserError(
         `Unsupported storage adapter: ${adapterType}`,
         400,
       ),
     );
-    return await Adapter.from(gmeContext, storageNode, req, config);
+    return await AdapterType.from(gmeContext, storageNode, req, config);
+  }
+  static getUriPatterns(): string[] {
+    return Object.values(SUPPORTED_ADAPTERS).flatMap((adapter) =>
+      adapter.getUriPatterns()
+    );
   }
 }
 
