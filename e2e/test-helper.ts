@@ -6,7 +6,7 @@ interface PollOptions {
   interval?: number;
 }
 
-async function poll(
+export async function poll(
   fn: () => Promise<boolean>,
   opts?: PollOptions,
 ): Promise<boolean> {
@@ -23,6 +23,6 @@ async function poll(
   return isPassing;
 }
 
-async function sleep(ms: number): Promise<void> {
+export async function sleep(ms: number): Promise<void> {
   return new Promise((res) => setTimeout(res, ms));
 }

@@ -66,33 +66,31 @@ test.describe(`Data dashboard`, function () {
 
   test("can select repo", async () => {
     await page.getByText(repoName).click();
-    await expect(
+    expect(
       page.getByRole("heading", { name: `Datas in ${repoName.trim()}` }),
     ).toBeDefined();
   });
 
   test("can upload data to repo", async () => {
-    // debugger;
     await page.getByText(repoName, { exact: true }).click();
     await page.getByRole("button", { name: "Upload", exact: true }).click();
     const fileChooserPromise = page.waitForEvent("filechooser");
     await page.getByText("Select dataset to upload.").click();
     const fileChooser = await fileChooserPromise;
     await fileChooser.setFiles(
-      "C:\\_\\wl\\webgme_projects\\webgme-taxonomy\\e2e\\resources\\test-file.txt",
+      "./e2e/resources/test-file.txt",
     );
     // Contained in div.dialog-actions.svelte-1owpu03
     await page.getByRole("button", { name: "Upload" }).first().click();
-    const uploadedRepoTag = await page.getByText(repoName);
+    const uploadedRepoTag = page.getByText(repoName);
     expect(uploadedRepoTag).toBeTruthy();
   });
 
   test("can view uploaded data", async () => {
-    await page.getByText(repoName).click();
-    const downloadButton = await page.getByText("Download");
+    await page.getByTestId(repoName).click();
+    const downloadButton = page.getByText("Download");
     expect(downloadButton).toBeEnabled(); // 8-10-23 is not enabled
     await page.getByText("Download").click();
-    debugger;
   });
 
   test("can view more uploaded data", async () => {
