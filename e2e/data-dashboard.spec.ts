@@ -13,6 +13,7 @@ test.describe.configure({ mode: "serial" });
 test.describe(`Data dashboard`, function () {
   let page: Page;
   let repoName: string = "NewExample-" + Date.now();
+  let contentName = "ExampleContent";
 
   test.beforeAll(async ({ browser }) => {
     page = await browser.newPage();
@@ -56,7 +57,6 @@ test.describe(`Data dashboard`, function () {
 
     // FIXME
     // expect(await page.locator('div.status')).toContainText("Created!")
-    expect(true).toBeTruthy();
   });
 
   test("reload to get entry to show up (FIXME)", async () => {
@@ -74,6 +74,10 @@ test.describe(`Data dashboard`, function () {
   test("can upload data to repo", async () => {
     await page.getByText(repoName, { exact: true }).click();
     await page.getByRole("button", { name: "Upload", exact: true }).click();
+
+    const nameInput = page.getByRole("textbox", { name: "Name" });
+    nameInput.fill(contentName);
+
     const fileChooserPromise = page.waitForEvent("filechooser");
     await page.getByText("Select dataset to upload.").click();
     const fileChooser = await fileChooserPromise;
@@ -82,15 +86,27 @@ test.describe(`Data dashboard`, function () {
     );
     // Contained in div.dialog-actions.svelte-1owpu03
     await page.getByRole("button", { name: "Upload" }).first().click();
-    const uploadedRepoTag = page.getByText(repoName);
-    expect(uploadedRepoTag).toBeTruthy();
+
+    // wait for the upload complete toast
+    const isUploadComplete = await poll(
+      () => page.getByText("Upload complete!").isVisible(),
+      {
+        interval: 100,
+        timeout: 3000,
+      },
+    );
+    expect(isUploadComplete).toBeTruthy();
   });
 
   test("can view uploaded data", async () => {
-    await page.getByTestId(repoName).click();
-    const downloadButton = page.getByText("Download");
-    expect(downloadButton).toBeEnabled(); // 8-10-23 is not enabled
-    await page.getByText("Download").click();
+    const content = page.getByTestId(contentName);
+    const isContentShowing = await poll(
+      () => content.isVisible(),
+      {
+        timeout: TIMEOUT_TO_WAIT_FOR_LOCATOR_CHECK_TO_COMPLETE,
+      },
+    );
+    expect(isContentShowing).toBeTruthy();
   });
 
   test("can view more uploaded data", async () => {

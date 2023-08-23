@@ -6,6 +6,9 @@ interface PollOptions {
   interval?: number;
 }
 
+/*
+ * Poll until function returns true
+ */
 export async function poll(
   fn: () => Promise<boolean>,
   opts?: PollOptions,
