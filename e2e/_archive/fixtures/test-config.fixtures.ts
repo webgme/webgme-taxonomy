@@ -1,9 +1,7 @@
 import { test as base } from "@playwright/test";
 
-type NonNegativeNumber<T extends number> = number extends T
-  ? never
-  : `${T}` extends `-${string}` | `${string}.${string}`
-  ? never
+type NonNegativeNumber<T extends number> = number extends T ? never
+  : `${T}` extends `-${string}` | `${string}.${string}` ? never
   : T;
 
 export interface ITestConfiguration {

@@ -8,7 +8,7 @@ interface PollOptions {
 
 async function poll(
   fn: () => Promise<boolean>,
-  opts?: PollOptions
+  opts?: PollOptions,
 ): Promise<boolean> {
   const maxDuration = opts?.timeout || 1000;
   const interval = opts?.interval || 10;

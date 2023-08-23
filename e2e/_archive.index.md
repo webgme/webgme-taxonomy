@@ -13,7 +13,7 @@
 
 <div class="pre">
 _archive
-|-- common                          
+|-- common
 |   `-- test-methods.ts
 |-- designer.spec.ts.bak
 |-- dev-pages
@@ -39,9 +39,10 @@ Started as a bucket for helper methods
 
 #### generate_test_taxonomy_file
 
-Dynamic generation of a mock taxonomy file for use in upload, removing need for a pre-generated scenario.  
+Dynamic generation of a mock taxonomy file for use in upload, removing need for
+a pre-generated scenario.
 
-Calls 
+Calls
 
     - create_temp_taxonomy_file
     - create_temp_file
@@ -64,15 +65,15 @@ Creates an in-memory sample CSV
 Create a temporary file in the local operating system of the form
 <name><cryptostring>.<extension>
 
-This is just a helper method, so no checking (e.g., validating the extension
-is more like 'csv' and not '.csv')
+This is just a helper method, so no checking (e.g., validating the extension is
+more like 'csv' and not '.csv')
 
 Call the text_generator if supplied to populate the file
 
 #### setPageListener
 
-Creates a listener on socket.io calls (helper to track issue where
-split on empty cookie in socket was throwing an error)
+Creates a listener on socket.io calls (helper to track issue where split on
+empty cookie in socket was throwing an error)
 
 Calls
 
@@ -84,12 +85,13 @@ Basic wrapper to perform consistent JSON.stringify to pretty-print
 
 ### designer.spec.ts.bak
 
-Previous initial attempt downt the wrong path; may contain some potential code to mine for mouse events.
+Previous initial attempt downt the wrong path; may contain some potential code
+to mine for mouse events.
 
 ### repo_dev_page.ts
 
-Class meant to wrap access to a page, meant to start as a page reference
-for repo page.  No immediate value.
+Class meant to wrap access to a page, meant to start as a page reference for
+repo page. No immediate value.
 
 ### ITaxonomy.ts
 
@@ -97,7 +99,8 @@ Interface to describe mutable object holding taxonomy file generator
 
 ### RepoImpl.ts
 
-Class meant to wrap the definition of a repo for use as a fixture (commented out in repo-test.ts)
+Class meant to wrap the definition of a repo for use as a fixture (commented out
+in repo-test.ts)
 
 ### TestTaxonomy.ts
 
@@ -105,11 +108,11 @@ Class wrapping generation of a mock taxonomy file
 
 ### mock-taxonomy.fixtures.ts
 
-Implmentation of the MockTaxonomy; creates a one-time wrapper
-on a promise to produce a taxonomy
-    - to produce a CSV representation on the (temp) file system,
-    - to translate into a usuable taxonomy via TaxonomyParser.fromCSV, and
-    - to return a string path to the temp file.
+Implmentation of the MockTaxonomy; creates a one-time wrapper on a promise to
+produce a taxonomy - to produce a CSV representation on the (temp) file system,
+
+- to translate into a usuable taxonomy via TaxonomyParser.fromCSV, and - to
+  return a string path to the temp file.
 
 ### taxonomy.fixtures.ts
 

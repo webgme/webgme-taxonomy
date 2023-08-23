@@ -1,7 +1,7 @@
-import { TraceMode, defineConfig, devices } from "@playwright/test";
+import { defineConfig, devices, TraceMode } from "@playwright/test";
 
 const FULLY_PARALLEL: boolean = false;
-const DEBUG_TIMEOUT_MS = 300000
+const DEBUG_TIMEOUT_MS = 300000;
 const DEFAULT_HOST: string = "127.0.0.1";
 const DEFAULT_PORT: string = "8080";
 const BASE_URL = `http://${DEFAULT_HOST}:${DEFAULT_PORT}/`;
@@ -17,7 +17,6 @@ const BASE_URL = `http://${DEFAULT_HOST}:${DEFAULT_PORT}/`;
  * See https://playwright.dev/docs/test-configuration.
  */
 export default defineConfig({
-
   timeout: DEBUG_TIMEOUT_MS,
 
   testDir: "e2e",
@@ -40,7 +39,6 @@ export default defineConfig({
   reporter: "html",
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
-
     /* Base URL to use in actions like `await page.goto('/')`. */
     baseURL: BASE_URL,
 
@@ -55,7 +53,6 @@ export default defineConfig({
 
   /* Configure projects for major browsers */
   projects: [
-
     {
       name: "chromium",
       use: {
@@ -66,7 +63,6 @@ export default defineConfig({
         // }
       },
     },
-
     // {
     //   name: 'firefox',
     //   use: { ...devices['Desktop Firefox'] },
@@ -98,7 +94,6 @@ export default defineConfig({
     // },
   ],
 
-
   /* Run your local dev server before starting the tests */
   webServer: {
     command: "npm run start",
@@ -111,10 +106,9 @@ export default defineConfig({
   },
 });
 
-
 /**
  * Get the trace mode
- * 
+ *
  * Wrapped in function call to permit abstraction in case of different contexts
  *
  * 'on-first-retry' - Record a trace only when retrying a test for the first time.
@@ -122,9 +116,8 @@ export default defineConfig({
  * 'off' - Do not record a trace.
  * 'on' - Record a trace for each test. (not recommended as it's performance heavy)
  * 'retain-on-failure' - Record a trace for each test, but remove it from successful test runs.
- * @return {*} 
+ * @return {*}
  */
-function get_trace_mode() : TraceMode  {
+function get_trace_mode(): TraceMode {
   return "on";
 }
-

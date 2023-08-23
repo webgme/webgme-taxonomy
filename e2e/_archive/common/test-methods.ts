@@ -14,7 +14,7 @@ export default class TestMethods {
    * @memberof TestMethods
    */
   static *project_name_generator(
-    prefix: string = "Project"
+    prefix: string = "Project",
   ): Generator<string> {
     // Global hyphen search
     const HYPEN_RE: RegExp = /\-/gi;
@@ -35,7 +35,6 @@ export default class TestMethods {
    *
    * Call the text_generator if supplied to populate the file
    *
-   *
    * @static
    * @param {string} name
    * @param {string} extension
@@ -48,12 +47,12 @@ export default class TestMethods {
     name: string,
     extension: string,
     text_generator?: () => Promise<string>,
-    temp_dir?: string
+    temp_dir?: string,
   ): Promise<string> {
     temp_dir = temp_dir ? temp_dir : os.tmpdir();
     const temp_file_path = path.join(
       temp_dir,
-      `${name}${crypto.randomBytes(16).toString("hex")}.${extension}`
+      `${name}${crypto.randomBytes(16).toString("hex")}.${extension}`,
     );
     if (text_generator != null) {
       const generated_text = await text_generator();
@@ -70,13 +69,14 @@ export default class TestMethods {
    * @memberof TestMethods
    */
   static async create_temp_taxonomy_file(
-    taxonomy_generator: () => Promise<string> = TestMethods.get_static_taxonomy_csv,
-    name: string = "taxonomy_file"
+    taxonomy_generator: () => Promise<string> =
+      TestMethods.get_static_taxonomy_csv,
+    name: string = "taxonomy_file",
   ): Promise<string> {
     return TestMethods.create_temp_file(
       "taxonomy_file",
       "csv",
-      taxonomy_generator
+      taxonomy_generator,
     );
   }
 
@@ -107,18 +107,22 @@ export default class TestMethods {
       new RegExp(".+socket.io.+$"),
       async (route, request) => {
         console.log(
-          `********** BEGIN Route - ${request.url()}\nHeaders: ${TestMethods.prettyPrintJson(
-            request.headers()
-          )}`
+          `********** BEGIN Route - ${request.url()}\nHeaders: ${
+            TestMethods.prettyPrintJson(
+              request.headers(),
+            )
+          }`,
         );
         route.continue();
         await request.response();
         console.log(
-          `********** END Route - ${request.url()}\nHeaders: ${TestMethods.prettyPrintJson(
-            request.headers()
-          )}`
+          `********** END Route - ${request.url()}\nHeaders: ${
+            TestMethods.prettyPrintJson(
+              request.headers(),
+            )
+          }`,
         );
-      }
+      },
     );
   }
 
@@ -158,7 +162,7 @@ export default class TestMethods {
       "json",
       async () => {
         return JSON.stringify(taxonomy);
-      }
+      },
     );
 
     return temp_taxonomy_json_file;
