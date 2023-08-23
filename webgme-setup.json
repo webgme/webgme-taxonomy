@@ -83,6 +83,11 @@
         "src": "src/routers/Profiles",
         "test": "test/routers/Profiles",
         "mount": "routers/Profiles"
+      },
+      "API": {
+        "src": "src/routers/API",
+        "test": "test/routers/API",
+        "mount": "api"
       }
     }
   },
