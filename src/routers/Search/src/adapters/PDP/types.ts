@@ -55,3 +55,27 @@ export interface ObservationFile {
   length: number;
   hash: string;
 }
+
+export enum TransferStatus {
+  Success = "Succeeded",
+  Pending = "Pending", // FIXME: what are the other options???
+}
+
+type DateTimeString = string;
+export interface TransferState {
+  operation: string;
+  files: any[];
+  runStart: DateTimeString;
+  runEnd: DateTimeString;
+  lastUpdate: DateTimeString;
+  runDurationMs: number;
+  status: TransferStatus;
+}
+
+export interface ProcessState {
+  isFunction: boolean;
+  processType: string;
+  processId: ProcessID;
+  numObservations: number;
+  lastVersionIndex: number;
+}
