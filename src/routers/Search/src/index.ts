@@ -102,7 +102,6 @@ function initialize(middlewareOpts: MiddlewareOptions) {
   router.get(
     RouterUtils.getContentTypeRoutes("artifacts/"),
     RouterUtils.handleUserErrors(logger, async function listRepos(req, res) {
-      const eager = req.query.eager === "true";
       const storage = await StorageAdapter.from(
         req.webgmeContext,
         req,
