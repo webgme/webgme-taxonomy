@@ -52,6 +52,7 @@ import {
   UploadParams,
   UploadRequest,
 } from "../common/AppendResult";
+import { CreateResult, Status } from "../common/CreateResult";
 const UPLOAD_HEADERS = {
   Accept: "application/xml",
   "Content-Type": "application/octet-stream",
@@ -273,16 +274,9 @@ export default class PDP implements Adapter {
   async createArtifact(
     _res: ProcessReservation,
     metadata: ArtifactMetadata,
-  ): Promise<string> {
+  ): Promise<CreateResult> {
     reqLogger.log(this._getObserverId(), metadata);
-
-    // TODO: update this to actually create the processes
-    //const newProc = await this._createProcess(type);
-    //await this._appendObservation(newProc.processId, type, metadata);
-
-    //return newProc;
-    // TODO: upload the data file
-    return "Submitted create request!";
+    return new CreateResult(Status.Submitted);
   }
 
   // TODO: update method signature to be more generic

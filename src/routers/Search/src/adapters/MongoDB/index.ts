@@ -28,6 +28,7 @@ import {
 } from "../common/AppendResult";
 import { WebgmeContext } from "../../../../../common/types";
 import { Pattern } from "../../Utils";
+import { CreateResult, Status } from "../common/CreateResult";
 
 const defaultMongoUri = gmeConfig.mongo.uri;
 const defaultClient = new MongoClient(defaultMongoUri);
@@ -149,7 +150,10 @@ export default class MongoAdapter implements Adapter {
     }
   }
 
-  async createArtifact(res: RepoReservation, metadata: ArtifactMetadata) {
+  async createArtifact(
+    res: RepoReservation,
+    metadata: ArtifactMetadata,
+  ): Promise<CreateResult> {
     const artifactSet = {
       _id: new ObjectId(res.repoId),
       displayName: metadata.displayName,
@@ -157,9 +161,8 @@ export default class MongoAdapter implements Adapter {
       taxonomyTags: [],
       artifacts: [],
     };
-    const result = await this._collection.insertOne(artifactSet);
-
-    return "Created!";
+    const _result = await this._collection.insertOne(artifactSet);
+    return new CreateResult(Status.Created);
   }
 
   private async getRepository(repoId: string): Promise<any> {

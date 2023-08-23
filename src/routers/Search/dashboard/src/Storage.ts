@@ -1,6 +1,9 @@
 import TaxonomyReference, { TaxonomyVersionData } from "./TaxonomyReference";
 import { assert, filterMap, Result, sleep } from "./Utils";
 import { Readable, writable } from "svelte/store";
+import type { Artifact } from "../../src/adapters/common/types";
+import { Status } from "../../src/TaskQueue";
+import type { CreateResult } from "../../src/adapters/common/CreateResult";
 
 type UploadParams = {
   method: string;
@@ -131,7 +134,7 @@ class Storage {
     console.log("Updating artifact:", metadata, newContent);
   }
 
-  async createRepo(metadata) {
+  async createRepo(metadata): Promise<CreateResult> {
     console.log("Creating repo:", metadata);
     metadata.taxonomyTags = metadata.taxonomyTags || [];
     const opts = {
@@ -258,13 +261,6 @@ function parseArtifact(data: ArtifactData): Artifact | undefined {
   };
 }
 
-// TODO: consolidate code with original definition in TaskQueue.ts
-enum Status {
-  Created,
-  Running,
-  Complete,
-}
-
 // TODO: unify the below types with the server types
 interface RepositoryData {
   id: string;
@@ -288,16 +284,6 @@ export interface Repository {
   displayName: string;
   taxonomyTags: any[];
   taxonomyVersion: TaxonomyReference;
-}
-
-export interface Artifact {
-  parentId?: string;
-  id?: string;
-  displayName: string;
-  taxonomyTags: any[];
-  taxonomyVersion: TaxonomyReference;
-  time: string;
-  files?: string[];
 }
 
 export enum LoadState {

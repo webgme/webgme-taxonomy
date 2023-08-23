@@ -1,6 +1,7 @@
 import type { AppendResult } from "./AppendResult";
 import type TagFormatter from "../../../../../common/TagFormatter";
 import type { WebgmeContext, WebgmeRequest } from "../../../../../common/types";
+import { CreateResult } from "./CreateResult";
 
 export interface Adapter {
   listRepos(): Promise<Repository[]>;
@@ -8,7 +9,7 @@ export interface Adapter {
   createArtifact(
     res: UploadReservation,
     metadata: ArtifactMetadata,
-  ): Promise<string>;
+  ): Promise<CreateResult>;
   appendArtifact(
     res: UploadReservation,
     metadata: ArtifactMetadata,
