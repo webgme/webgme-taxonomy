@@ -1,6 +1,7 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 // import { repoTest } from "./tests/repo-test";
 import RepoImpl from "./_archive/fixtures/RepoImpl";
+import { poll } from "./test-helper";
 
 const TIMEOUT_TO_WAIT_FOR_PROJECT_CREATION_MS = 3000;
 const TIMEOUT_TO_WAIT_FOR_LOCATOR_CHECK_TO_COMPLETE = 3000;
@@ -19,7 +20,7 @@ test.describe(`Data dashboard`, function () {
 
   test("Can navigate to repo management", async ({ baseURL }) => {
     await page.goto(
-      `${baseURL}routers/Search/guest%2Be2e_tests/branch/master/%2FC/static/`
+      `${baseURL}routers/Search/guest%2Be2e_tests/branch/master/%2FC/static/`,
     );
   });
 
@@ -31,12 +32,12 @@ test.describe(`Data dashboard`, function () {
       () => textBoxLocator.isVisible(),
       {
         timeout: TIMEOUT_TO_WAIT_FOR_LOCATOR_CHECK_TO_COMPLETE,
-      }
+      },
     );
 
     if (!textBoxLocatorIsVisible) {
       throw new Error(
-        `Repository didn't show up after ${TIMEOUT_TO_WAIT_FOR_PROJECT_CREATION_MS} ms (possible "Error: Not authorized to read project [guest+taxonomy]")`
+        `Repository didn't show up after ${TIMEOUT_TO_WAIT_FOR_PROJECT_CREATION_MS} ms (possible "Error: Not authorized to read project [guest+taxonomy]")`,
       );
     }
 
@@ -66,7 +67,7 @@ test.describe(`Data dashboard`, function () {
   test("can select repo", async () => {
     await page.getByText(repoName).click();
     await expect(
-      page.getByRole("heading", { name: `Datas in ${repoName.trim()}` })
+      page.getByRole("heading", { name: `Datas in ${repoName.trim()}` }),
     ).toBeDefined();
   });
 
@@ -78,7 +79,7 @@ test.describe(`Data dashboard`, function () {
     await page.getByText("Select dataset to upload.").click();
     const fileChooser = await fileChooserPromise;
     await fileChooser.setFiles(
-      "C:\\_\\wl\\webgme_projects\\webgme-taxonomy\\e2e\\resources\\test-file.txt"
+      "C:\\_\\wl\\webgme_projects\\webgme-taxonomy\\e2e\\resources\\test-file.txt",
     );
     // Contained in div.dialog-actions.svelte-1owpu03
     await page.getByRole("button", { name: "Upload" }).first().click();

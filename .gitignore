@@ -137,8 +137,6 @@ src/routers/Search/dashboard/src/Bearer.ts
 /test-results/
 /playwright-report/
 /playwright/.cache/
-/test-results/
-/playwright-report/
-/playwright/.cache/
 
 CreateProcesses.jsonl
+notes.md
