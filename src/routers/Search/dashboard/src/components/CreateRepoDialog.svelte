@@ -21,8 +21,8 @@
 
   async function onCreateRepo() {
     metadata.displayName = displayName;
-    const status = await storage.createRepo(metadata);
-    dispatch('create', {status});
+    const result = await storage.createRepo(metadata);
+    dispatch('create', {status: result.status});
   }
 
 </script>
