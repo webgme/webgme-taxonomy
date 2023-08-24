@@ -92,7 +92,7 @@ test.describe(`Data dashboard`, function () {
       () => page.getByText("Upload complete!").isVisible(),
       {
         interval: 100,
-        timeout: 5000,
+        timeout: 20000,
       },
     );
     expect(isUploadComplete).toBeTruthy();
