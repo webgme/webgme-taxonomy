@@ -5,6 +5,7 @@
 
   let configuration = fetchSchema();
   let data = {};
+  const uischema = { collapse: "unrequired" } as const;
 
   async function fetchSchema() {
     const url = "../configuration.json";    
@@ -37,7 +38,7 @@
         </Section>
       </Row>
     </TopAppBar>
-    <SchemaForm {schema} {data} let:actions={actions}>
+    <SchemaForm {schema} {uischema} {data} let:actions={actions}>
       <Button on:click={() => actions.download("tags")} type="button" variant="raised">
         <Label>Download</Label>
       </Button>
