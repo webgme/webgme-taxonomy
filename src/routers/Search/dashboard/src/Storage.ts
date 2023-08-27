@@ -1,4 +1,4 @@
-import TaxonomyReference from "./TaxonomyReference";
+import TaxonomyReference, { TaxonomyVersionData } from "./TaxonomyReference";
 import { assert, filterMap, Result, sleep } from "./Utils";
 import { Readable, writable } from "svelte/store";
 
@@ -13,13 +13,6 @@ export type UploadPromise = Promise<boolean> & Readable<number> & {
   abort: () => void;
 };
 
-// TODO: consolidate code with original definition in TaskQueue.ts
-enum Status {
-  Created,
-  Running,
-  Complete,
-}
-
 class Storage {
   baseUrl: string;
   constructor() {
@@ -29,10 +22,20 @@ class Storage {
     this.baseUrl = chunks.join("/") + "/artifacts/";
   }
 
-  async listArtifacts(): Promise<ArtifactSet[]> {
+  async listRepos(): Promise<Repository[]> {
     const result = await this._fetchJson(this.baseUrl, null, ListError);
-    const items: any[] = await result.unwrap();
-    return filterMap(items, (item) => ArtifactSet.tryFrom(item));
+    const items: RepositoryData[] = await result.unwrap();
+    return filterMap(items, (item) => parseRepo(item));
+  }
+
+  async listArtifacts(repoId: string): Promise<Artifact[]> {
+    const result = await this._fetchJson(
+      this.baseUrl + repoId,
+      null,
+      ListError,
+    );
+    const items: ArtifactData[] = await result.unwrap();
+    return filterMap(items, (item) => parseArtifact(item));
   }
 
   async getDownloadUrl(parentId, ...ids) {
@@ -128,8 +131,8 @@ class Storage {
     console.log("Updating artifact:", metadata, newContent);
   }
 
-  async createArtifact(metadata, files) {
-    console.log("Creating artifact:", metadata, files);
+  async createRepo(metadata) {
+    console.log("Creating repo:", metadata);
     metadata.taxonomyTags = metadata.taxonomyTags || [];
     const opts = {
       method: "POST",
@@ -232,23 +235,83 @@ class AppendDataError extends StorageError {
   }
 }
 
-class ArtifactSet {
-  static tryFrom(item: any) {
-    if (!item.displayName) {
-      console.log("Found malformed data. Filtering out. Data:", item);
-    } else {
-      const hash = [item.id, ...item.children.map((child) => child.id).sort()]
-        .join("/");
-      item.hash = hash;
-      item.children = item.children.map((child) => {
-        if (child.taxonomyVersion) {
-          child.taxonomyVersion = TaxonomyReference.from(child.taxonomyVersion);
-        }
-        return child;
-      });
-      return item;
-    }
+function parseRepo(item: RepositoryData): Repository | undefined {
+  if (!item.displayName) {
+    console.log("Found malformed data. Filtering out. Data:", item);
+  } else {
+    return {
+      id: item.id,
+      displayName: item.displayName,
+      taxonomyTags: item.taxonomyTags,
+      taxonomyVersion: TaxonomyReference.from(item.taxonomyVersion),
+    };
   }
+}
+
+function parseArtifact(data: ArtifactData): Artifact | undefined {
+  return {
+    id: data.id,
+    displayName: data.displayName,
+    taxonomyTags: data.taxonomyTags,
+    time: data.time,
+    taxonomyVersion: TaxonomyReference.from(data.taxonomyVersion),
+  };
+}
+
+// TODO: consolidate code with original definition in TaskQueue.ts
+enum Status {
+  Created,
+  Running,
+  Complete,
+}
+
+// TODO: unify the below types with the server types
+interface RepositoryData {
+  id: string;
+  displayName: string;
+  taxonomyTags: any[];
+  taxonomyVersion: TaxonomyVersionData;
+}
+
+interface ArtifactData {
+  parentId?: string;
+  id?: string;
+  displayName: string;
+  taxonomyTags: any[];
+  taxonomyVersion: TaxonomyVersionData;
+  time: string;
+  files?: string[];
+}
+
+export interface Repository {
+  id: string;
+  displayName: string;
+  taxonomyTags: any[];
+  taxonomyVersion: TaxonomyReference;
+}
+
+export interface Artifact {
+  parentId?: string;
+  id?: string;
+  displayName: string;
+  taxonomyTags: any[];
+  taxonomyVersion: TaxonomyReference;
+  time: string;
+  files?: string[];
+}
+
+export enum LoadState {
+  Pending,
+  Complete,
+}
+
+export interface PopulatedRepo {
+  id: string;
+  displayName: string;
+  taxonomyTags: any[];
+  taxonomyVersion: TaxonomyReference;
+  children: Artifact[];
+  loadState: LoadState;
 }
 
 export default Storage;

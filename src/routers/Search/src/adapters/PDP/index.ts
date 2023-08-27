@@ -11,6 +11,7 @@ import _ from "underscore";
 import path from "path";
 import fsp from "fs/promises";
 import { newtype } from "./types";
+import { Result } from "oxide.ts";
 import type {
   AppendObservationResponse,
   GetObservationFilesResponse,
@@ -30,14 +31,19 @@ import type {
 import { pipeline } from "stream";
 import { promisify } from "util";
 const streamPipeline = promisify(pipeline);
-import { MissingAttributeError } from "../common/ModelError";
+import {
+  InvalidAttributeError,
+  MissingAttributeError,
+} from "../common/ModelError";
 import type {
   Adapter,
   Artifact,
   ArtifactMetadata,
+  DownloadInfo,
   Repository,
+  UploadReservation,
 } from "../common/types";
-import { filterMap, range, sleep } from "../../Utils";
+import { filterMap, intervals, Pattern, retry, sleep } from "../../Utils";
 import CreateRequestLogger from "./CreateRequestLogger";
 const logFilePath = process.env.CREATE_LOG_PATH || "./CreateProcesses.jsonl";
 const reqLogger = new CreateRequestLogger(logFilePath);
@@ -76,56 +82,58 @@ export default class PDP implements Adapter {
   private _baseUrl: string;
   private _token: string;
   private _readToken: string;
+  private _hostUri: string;
   processType: string;
 
   constructor(
     baseUrl: string,
     processType: string,
+    hostUri: string,
     token: string,
     readToken: string | undefined,
   ) {
     this._baseUrl = baseUrl;
     this._token = token;
     this.processType = processType;
+    this._hostUri = hostUri;
     this._readToken = readToken || token;
   }
 
-  async listArtifacts(): Promise<Repository[]> {
+  async listRepos(): Promise<Repository[]> {
     const allProcesses: Process[] = await this._fetchJson(
       "v2/Process/ListProcesses?permission=read",
       setAuthToken(DefaultFetchOpts(), this._readToken),
     );
 
-    const processObservations = await Promise.all(
+    // fetch the first observation for each to get the repo metadata
+    const processMetadata = await Promise.all(
       allProcesses
         .filter(({ processType }) => processType === this.processType)
-        .map(({ processId }) => this.getProcessObservations(processId)),
+        .map(({ processId }) =>
+          this.getObservation(processId, 0, 0, this._readToken)
+        ),
     );
 
-    const artifacts: Artifact[] = filterMap(
-      processObservations.flat(),
-      parseArtifact,
+    const repos: Repository[] = filterMap(
+      processMetadata,
+      parseRepository,
     );
-    const repos: Repository[] = Object.entries(
-      _.groupBy(artifacts, (artifact) => artifact.parentId ?? ""),
-    ).map(([parentId, artifacts]) => {
-      artifacts.sort((a1, a2) => (a1.time < a2.time ? -1 : 1));
-      const { displayName } = artifacts[0];
-      const lastIndex = artifacts.length - 1;
-      const { taxonomyTags, taxonomyVersion } = artifacts[lastIndex];
-      return {
-        id: parentId,
-        displayName,
-        taxonomyTags,
-        taxonomyVersion,
-        children: artifacts,
-      };
-    });
 
     return repos;
   }
 
-  async getProcessObservations(pid: ProcessID): Promise<Observation[]> {
+  async listArtifacts(repoId: string): Promise<Artifact[]> {
+    const processId = newtype<ProcessID>(repoId);
+    const observations = await this.getProcessObservations(processId);
+    const artifacts: Artifact[] = filterMap(
+      observations,
+      parseArtifact,
+    );
+
+    return artifacts;
+  }
+
+  private async getProcessObservations(pid: ProcessID): Promise<Observation[]> {
     const obsInfo = await this._fetchJson(
       `v2/Process/GetProcessState?processId=${pid}`,
       setAuthToken(DefaultFetchOpts(), this._readToken),
@@ -135,16 +143,52 @@ export default class PDP implements Adapter {
       return [];
     }
 
+    // skip the first one since it contains repo metadata
+    const start = 1;
     const observations = await Promise.all(
-      range(0, obsInfo.numObservations).map((i) =>
-        this._fetchJson(
-          "v2/Process/GetObservation?processId=" + pid + "&obsIndex=" + i,
-          setAuthToken(DefaultFetchOpts(), this._readToken),
-        )
-      ),
+      intervals(start, obsInfo.numObservations, 20)
+        .map(([start, len]) =>
+          this.getObservations(
+            pid,
+            start,
+            len,
+            this._readToken,
+          )
+        ),
+    );
+
+    return observations.flat();
+  }
+
+  private async getObservations(
+    processId: ProcessID,
+    startIndex: number,
+    limit: number = 20,
+    token: string = this._token,
+  ): Promise<Observation[]> {
+    const observations: Observation[] = await this._fetchJson(
+      `v2/Process/PeekObservations?processId=${processId}&obsIndex=${startIndex}` +
+        `&maxReturn=${limit}`,
+      setAuthToken(DefaultFetchOpts(), token),
     );
 
     return observations;
+  }
+
+  private async getObservation(
+    processId: ProcessID,
+    obsIndex: number,
+    version: number,
+    token: string = this._token,
+  ): Promise<Observation> {
+    const queryDict = {
+      processId: processId.toString(),
+      obsIndex: obsIndex.toString(),
+      version: version.toString(),
+    };
+    const url = PDP._addQueryParams("v2/Process/GetObservation", queryDict);
+    const opts = setAuthToken(DefaultFetchOpts(), token);
+    return await this._fetchJson(url, opts);
   }
 
   async _getObsFiles(
@@ -162,19 +206,6 @@ export default class PDP implements Adapter {
     const url = PDP._addQueryParams("v3/Files/GetObservationFiles", queryDict);
     const opts = {
       method: "put",
-    };
-    return await this._fetchJson(url, opts);
-  }
-
-  async _getObs(processId: ProcessID, obsIndex: number, version: number) {
-    const queryDict = {
-      processId: processId.toString(),
-      obsIndex: obsIndex.toString(),
-      version: version.toString(),
-    };
-    const url = PDP._addQueryParams("v2/Process/GetObservation", queryDict);
-    const opts = {
-      method: "get",
     };
     return await this._fetchJson(url, opts);
   }
@@ -201,7 +232,48 @@ export default class PDP implements Adapter {
     return RouterUtils.getObserverIdFromToken(this._token);
   }
 
-  async createArtifact(metadata: ArtifactMetadata): Promise<string> {
+  async withRepoReservation<T>(
+    fn: (res: ProcessReservation) => Promise<T>,
+  ): Promise<T> {
+    const reservation = new ProcessReservation(this._hostUri, "PROCESS_ID");
+
+    try {
+      return await fn(reservation);
+    } catch (err) {
+      // TODO: clean up the reservation?
+      throw err;
+      // TODO: release the reservation
+    }
+  }
+
+  async withContentReservation<T>(
+    fn: (res: ObservationReservation) => Promise<T>,
+    repoId: string,
+  ): Promise<T> {
+    const processId = newtype<ProcessID>(repoId);
+    const procInfo = await this._getProcessState(processId);
+    const index = procInfo.numObservations;
+    const version = 0;
+    const reservation = new ObservationReservation(
+      this._hostUri,
+      processId,
+      index,
+      version,
+    );
+
+    try {
+      return await fn(reservation);
+    } catch (err) {
+      // TODO: clean up the reservation?
+      throw err;
+      // TODO: release the reservation
+    }
+  }
+
+  async createArtifact(
+    _res: ProcessReservation,
+    metadata: ArtifactMetadata,
+  ): Promise<string> {
     reqLogger.log(this._getObserverId(), metadata);
 
     // TODO: update this to actually create the processes
@@ -239,6 +311,90 @@ export default class PDP implements Adapter {
     );
   }
 
+  async getMetadata(
+    repoId: string,
+    contentId: string,
+    formatter: TagFormatter,
+  ): Promise<any> {
+    const processId = newtype<ProcessID>(repoId);
+    const [index, version] = contentId.split("_").map((n) => +n);
+    return await this.getObsMetadata(
+      processId,
+      index,
+      version,
+      formatter,
+    );
+  }
+
+  async getBulkMetadata(
+    repoId: string,
+    contentIds: string[],
+    formatter: TagFormatter,
+  ): Promise<any> {
+    return await Promise.all(
+      contentIds.map((id) => this.getMetadata(repoId, id, formatter)),
+    );
+  }
+
+  async downloadFileURLs(
+    repoId: string,
+    contentIds: string[],
+  ): Promise<DownloadInfo[]> {
+    const processId = newtype<ProcessID>(repoId);
+    const obsIdxAndVersions = contentIds.map((idString) =>
+      idString.split("_").map((n) => +n)
+    );
+    // obsIdxAndVersions is now a list of tuples (index, version) for each observation
+    // to download
+
+    const response = await Promise.all(
+      obsIdxAndVersions.map(async ([index, version]) => {
+        // Lets download the actual files associated with this observation,index
+        const response = await this._getObsFiles(processId, index, version);
+        if (response.files.length === 0) {
+          return {
+            repoId: processId.toString(),
+            obsIndex: index,
+            version: version,
+            files: [],
+          };
+        }
+        // return the file name and urls
+        console.log(response.files);
+        // wait for the transfer to complete and the files to be available
+        if (response.transferId != null) {
+          let transferStatus = await this._getFileTransferStatus(
+            response.processId,
+            response.directoryId,
+            response.transferId,
+          );
+          while (transferStatus && transferStatus.status != "Succeeded") {
+            console.log("Ctx: About to wait for the download...");
+            await sleep(1000);
+            transferStatus = await this._getFileTransferStatus(
+              response.processId,
+              response.directoryId,
+              response.transferId,
+            );
+          }
+        }
+        return {
+          repoId: processId.toString(),
+          id: `${index}_${version}`,
+          files: response.files.map((file) => ({
+            name: file.name,
+            url: file.sasUrl,
+          })),
+        };
+      }),
+    );
+    // Here we return the object array containing ObservationFile objects
+    if (response.length === 0) {
+      return [];
+    }
+    return response as unknown as DownloadInfo[];
+  }
+
   async _downloadObservation(
     processId: ProcessID,
     obsIndex: number,
@@ -247,52 +403,13 @@ export default class PDP implements Adapter {
     formatter: TagFormatter,
   ) {
     // Let's first get the observation metadata
-    const responseObservation = await this._getObs(
+    await this.writeObsMetadata(
       processId,
       obsIndex,
       version,
+      formatter,
+      downloadDir,
     );
-    try {
-      const metadata = responseObservation.data[0];
-      metadata.taxonomyTags = formatter.toHumanFormat(
-        metadata.taxonomyTags ?? [],
-      );
-      const metadataPath = path.join(
-        downloadDir,
-        `${obsIndex}`,
-        `${version}`,
-        `metadata.json`,
-      );
-      //let's save the observation metadata to a file metada.json
-      await this._writeJsonData(metadataPath, metadata);
-    } catch (err) {
-      const logPath = path.join(
-        downloadDir,
-        `${obsIndex}`,
-        `${version}`,
-        `warnings.txt`,
-      );
-      if (isFormatError(err)) {
-        const metadata = responseObservation.data[0];
-        const metadataPath = path.join(
-          downloadDir,
-          `${obsIndex}`,
-          `${version}`,
-          `metadata.json`,
-        );
-        await this._writeJsonData(metadataPath, metadata);
-        this._writeData(
-          logPath,
-          `An error occurred when converting the taxonomy tags: ${err.message}\n\nThe internal format has been saved in metadata.json.`,
-        );
-      } else {
-        let msg = err instanceof Error ? err.message : err;
-        this._writeData(
-          logPath,
-          `An error occurred when generating metadata.json: ${msg}`,
-        );
-      }
-    }
 
     // Lets download the actual files associated with this observation,index
     const response = await this._getObsFiles(processId, obsIndex, version);
@@ -333,12 +450,86 @@ export default class PDP implements Adapter {
     );
   }
 
+  private async getObsMetadata(
+    processId: ProcessID,
+    obsIndex: number,
+    version: number,
+    formatter: TagFormatter,
+  ): Promise<any> {
+    const responseObservation = await this.getObservation(
+      processId,
+      obsIndex,
+      version,
+    );
+    const metadata = responseObservation.data[0];
+    metadata.taxonomyTags = formatter.toHumanFormat(
+      metadata.taxonomyTags ?? [],
+    );
+
+    return metadata;
+  }
+
+  private async writeObsMetadata(
+    processId: ProcessID,
+    obsIndex: number,
+    version: number,
+    formatter: TagFormatter,
+    downloadDir: string,
+  ) {
+    const responseObservation = await this.getObservation(
+      processId,
+      obsIndex,
+      version,
+    );
+    try {
+      const metadata = responseObservation.data[0];
+      metadata.taxonomyTags = formatter.toHumanFormat(
+        metadata.taxonomyTags ?? [],
+      );
+      const metadataPath = path.join(
+        downloadDir,
+        `${obsIndex}`,
+        `${version}`,
+        `metadata.json`,
+      );
+      //let's save the observation metadata to a file metada.json
+      await this._writeJsonData(metadataPath, metadata);
+    } catch (err) {
+      const logPath = path.join(
+        downloadDir,
+        `${obsIndex}`,
+        `${version}`,
+        `warnings.txt`,
+      );
+      if (isFormatError(err)) {
+        const metadata = responseObservation.data[0];
+        const metadataPath = path.join(
+          downloadDir,
+          `${obsIndex}`,
+          `${version}`,
+          `metadata.json`,
+        );
+        await this._writeJsonData(metadataPath, metadata);
+        await this._writeData(
+          logPath,
+          `An error occurred when converting the taxonomy tags: ${err.message}\n\nThe internal format has been saved in metadata.json.`,
+        );
+      } else {
+        let msg = err instanceof Error ? err.message : err;
+        await this._writeData(
+          logPath,
+          `An error occurred when generating metadata.json: ${msg}`,
+        );
+      }
+    }
+  }
+
   async appendArtifact(
-    repoId: string,
+    res: ObservationReservation,
     metadata: ArtifactMetadata,
     filenames: string[],
   ): Promise<AppendResult> {
-    const processId = newtype<ProcessID>(repoId);
+    const processId = res.processId;
     const procInfo = await this._getProcessState(processId);
     const index = procInfo.numObservations;
     const version = 0;
@@ -374,10 +565,11 @@ export default class PDP implements Adapter {
     const dirPath = path.dirname(filePath) + path.sep;
     await fsp.mkdir(dirPath, { recursive: true });
     await fsp.writeFile(filePath, data);
+    console.log(`Ctx: Wrote data to ${filePath}`);
   }
 
   async _writeJsonData(filePath: string, metadata: ArtifactMetadata) {
-    this._writeData(filePath, JSON.stringify(metadata));
+    await this._writeData(filePath, JSON.stringify(metadata));
   }
 
   static _correctFilePath(
@@ -454,7 +646,7 @@ export default class PDP implements Adapter {
     );
   }
 
-  async _createProcess(type: string) {
+  private async _createProcess(type: string): Promise<ProcessOwnerPermissions> {
     //TODO we probably need description field
     const queryDict = {
       isFunction: false.toString(),
@@ -484,7 +676,15 @@ export default class PDP implements Adapter {
     opts.headers.Authorization = opts.headers.Authorization ||
       "Bearer " + this._token;
     opts.headers.accept = opts.headers.accept || "application/json";
-    return await fetch(url, opts);
+    return await retry(async () => {
+      const response = await fetch(url, opts);
+      if (response.status > 399) {
+        const msg = `${opts.method || "GET"} ${url} failed: ${await response
+          .text()} (${response.status})`;
+        throw new Error(msg);
+      }
+      return response;
+    });
   }
 
   async _fetchJson(url: string, opts: FetchOpts = DefaultFetchOpts()) {
@@ -520,12 +720,104 @@ export default class PDP implements Adapter {
       (tokens) => tokens.get(projectId),
     );
 
+    const hostUri = Result.safe(
+      PDP.getHostUri,
+      baseUrl.toString(),
+      processType.toString(),
+    )
+      .mapErr((err) =>
+        new InvalidAttributeError(gmeContext, storageNode, "URL", err.message)
+      )
+      .unwrap();
+
     return new PDP(
       baseUrl.toString(),
       processType.toString(),
+      hostUri,
       userToken,
       readToken,
     );
+  }
+
+  static getHostUri(baseUrl: string, processType: string): string {
+    if (baseUrl.startsWith("http://")) {
+      throw new Error("URL must use https");
+    }
+
+    const hostAddr = baseUrl
+      .replace(/^(https:\/\/)?/, "")
+      .replace(/\/$/, "");
+    return `pdp://${hostAddr}/${processType}`;
+  }
+
+  static getUriPatterns(): string[] {
+    const hexSeq = "[0-9a-f]+";
+    const idPattern = [hexSeq, hexSeq, hexSeq, hexSeq, hexSeq].join("-");
+    const indexPattern = "[0-9]+";
+    const versionPattern = "[0-9]+";
+
+    const typePattern = "[a-zA-Z]+";
+    const hostPattern = `pdp://${Pattern.URL}/${typePattern}/`;
+
+    const newProcessPattern = `PROCESS_ID`;
+    const processPattern = Pattern.anyIn(idPattern, newProcessPattern);
+
+    const repoPattern = hostPattern + processPattern;
+    return [
+      repoPattern,
+      repoPattern + "/" + indexPattern + "/" + versionPattern,
+    ];
+  }
+}
+
+interface PdpReservation extends UploadReservation {
+  uri: string;
+  repoId: string;
+}
+
+class ProcessReservation implements PdpReservation {
+  uri: string;
+  repoId: string;
+
+  constructor(hostUri: string, repoId: string) {
+    this.uri = hostUri + "/" + repoId;
+    this.repoId = repoId;
+  }
+}
+
+class ObservationReservation implements PdpReservation {
+  uri: string;
+  repoId: string;
+  index: number;
+  version: number;
+  processId: ProcessID;
+
+  constructor(
+    hostUri: string,
+    processId: ProcessID,
+    index: number,
+    version: number,
+  ) {
+    const uri = [processId.toString(), index, version].join("/");
+    this.uri = `${hostUri}/${uri}`;
+    this.repoId = processId.toString();
+    this.processId = processId;
+    this.index = index;
+    this.version = version;
+  }
+}
+
+function parseRepository(
+  obs: Observation,
+): Repository | undefined {
+  const metadata = obs.data && obs.data[0];
+  if (metadata) {
+    return {
+      id: obs.processId.toString(),
+      displayName: metadata.displayName,
+      taxonomyTags: metadata.taxonomyTags,
+      taxonomyVersion: metadata.taxonomyVersion,
+    };
   }
 }
 
@@ -541,6 +833,14 @@ function parseArtifact(obs: Observation): Artifact | undefined {
       time: obs.startTime,
     };
   }
+}
+
+interface ProcessOwnerPermissions {
+  isFunction: boolean;
+  processType: string;
+  processId: ProcessID;
+  principalId: string;
+  permission: string;
 }
 
 function isFormatError(err: any): err is FormatError {

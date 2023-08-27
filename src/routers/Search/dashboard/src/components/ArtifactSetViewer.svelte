@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { capitalize } from "../Utils";
+  import { capitalize, getTagValue } from "../Utils";
   import TagFormatter from "../Formatter";
   import Card, { Content, Actions } from "@smui/card";
   import Button, { Label } from "@smui/button";
@@ -17,7 +17,7 @@
   import DisplayTagsDialog from "./DisplayTagsDialog.svelte";
 
   export let artifactSet;
-  export let contentType = "artifact";
+  export let contentType = {name: "artifact"};
   let numArtifacts = 10;
   let shownArtifacts = [];
   let selected = [];
@@ -43,14 +43,41 @@
     displayTags = true;
   }
 
-  async function onCopyIdClicked() {
-    const id = selected.length === 1 ? artifactSet.id + '_' + selected[0] : artifactSet.id;
-    parent.postMessage({type:'selectArtifact', value:id}, "*");
+  async function getUri(content, tags=null) {
+    tags = tags ?? await formatter.toHumanFormat(content.taxonomyTags);
+    return getTagValue(tags, 'Base', 'URI', 'value');
+  }
+
+  async function onCopyLink(content) {
+    const tags = await formatter.toHumanFormat(content.taxonomyTags);
+    const uri = await getUri(content, tags);
+
     try {
-      await navigator.clipboard.writeText(id);
+      await navigator.clipboard.writeText(uri);
+      dispatch("copyUri", {
+        uri: uri || getDeprecatedID(content),
+        name: getTagValue(tags, 'Base', 'name', 'value')
+      })
     } catch (e) {
+      console.error(`Unable to copy URI to clipboard:`, e);
       //TODO - we should probably limit the clipboard to regular use
     }
+  }
+
+  async function onSelectContent() {
+    if (selected.length === 1) {
+      const content = artifactSet.children.find(content => content.id === selected[0]);
+      const uri = await getUri(content);
+      const id = getDeprecatedID(content);
+      parent.postMessage({type:'selectArtifact', value: id, uri}, "*");
+    } else {
+      const repoId = getDeprecatedID();
+      parent.postMessage({type:'selectArtifact', value: repoId}, "*");
+    }
+  }
+
+  function getDeprecatedID(content) {
+    return content ? artifactSet.id + '_' + content.id : artifactSet.id;
 
   }
 
@@ -62,13 +89,10 @@
 
   $: artifactSet, onArtifactSetChange();
 
-  let prevSetHash = null;
-
   onArtifactSetChange();
   function onArtifactSetChange() {
-    if (artifactSet && prevSetHash !== artifactSet.hash) {
+    if (artifactSet) {
       selected = [];
-      prevSetHash = artifactSet.hash;
       numArtifacts = Math.min(artifactSet.children.length, 10);
       setShownArtifacts(numArtifacts);
     }
@@ -107,7 +131,7 @@
   <Card>
     <Content>
       <h2 class="mdc-typography--headline6" style="margin: 0;">
-        {capitalize(contentType)}s in {artifactSet.displayName}
+        {capitalize(contentType.name)}s in {artifactSet.displayName}
       </h2>
       <h4
         class="mdc-typography--subtitle3"
@@ -145,7 +169,11 @@
       <List checkList twoLine>
         <!-- TODO: check if they have permissions to append to it -->
         {#each shownArtifacts as artifact (artifact.id)}
-          <Item>
+          <Item
+            class="repo-content"
+            data-testid={artifact.displayName}
+          >
+              <Checkbox bind:group={selected} value={artifact.id} />
             <Text>
               <PrimaryText>{artifact.displayName}</PrimaryText>
               <SecondaryText>
@@ -154,10 +182,8 @@
                   : ""}
               </SecondaryText>
             </Text>
-            <Meta>
-              <Checkbox bind:group={selected} value={artifact.id} />
-              <Graphic on:click$stopPropagation={() => showTags(artifact)} class="material-icons">info</Graphic>
-            </Meta>
+            <Meta on:click$stopPropagation={() => showTags(artifact)} class="material-icons">info</Meta>
+              <Meta on:click$stopPropagation={() => onCopyLink(artifact)} class="material-icons">link</Meta>
           </Item>
         {/each}
       </List>
@@ -169,9 +195,11 @@
       <Button on:click={onDownloadClicked} disabled={selected.length == 0}>
         <Label>Download</Label>
       </Button>
-      <Button on:click={onCopyIdClicked} disabled={window.self !== window.top ? selected.length != 1 : selected.length > 1}>
-        <Label>{window.self !== window.top ? "Select" : "Copy Id"}</Label>
+      {#if window.self !== window.top }
+      <Button on:click={() => onSelectContent()} disabled={selected.length != 1}>
+        <Label>Select</Label>
       </Button>
+      {/if}
     </Actions>
   </Card>
 </div>
@@ -196,6 +224,6 @@
 
   .card-container > :global(.mdc-card .smui-card__content .mdc-deprecated-list) {
     flex: 0 1 auto;
-    overflow-y: scroll;
+    overflow-y: auto;
   }
 </style>

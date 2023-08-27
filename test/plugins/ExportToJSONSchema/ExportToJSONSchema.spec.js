@@ -54,7 +54,7 @@ describe("ExportToJSONSchema", function () {
       .nodeify(done);
   });
 
-  it("should run plugin and update the branch", function (done) {
+  it("should run plugin and not update the branch", function (done) {
     var manager = new PluginCliManager(null, logger, gmeConfig),
       pluginConfig = {},
       context = {

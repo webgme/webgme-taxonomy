@@ -1,6 +1,9 @@
 describe("PDP", function () {
   const PDP =
     require("../../../../../src/routers/Search/build/adapters/PDP").default;
+  const { range, Pattern } = require(
+    "../../../../../src/routers/Search/build/Utils",
+  );
   const assert = require("assert");
   const sinon = require("sinon");
 
@@ -47,7 +50,7 @@ describe("PDP", function () {
       )
     );
 
-    it("should use read token on listArtifacts", async function () {
+    it("should use read token on listRepos", async function () {
       storage._getObserverId = sinon.fake.returns("observer");
       storage._fetchJson = (url, opts) => {
         const isReadToken = opts.headers.Authorization.includes("readToken");
@@ -80,7 +83,64 @@ describe("PDP", function () {
           throw new Error(`Unknown request: ${url}`);
         }
       };
-      const repos = await storage.listArtifacts();
+      const repos = await storage.listRepos();
+      assert.equal(repos.length, 10);
+    });
+
+    it("should use read token on listArtifacts", async function () {
+      storage._getObserverId = sinon.fake.returns("observer");
+      storage.getObservations = (processId, start, limit, token) => {
+        const isReadToken = token.includes("readToken");
+        assert(isReadToken);
+        const taxonomyVersion = {
+          commit: "someCommit",
+          tag: "v1.0.0",
+        };
+        const taxonomyTags = [];
+        const displayName = `Artifact for ${processId}`;
+        const data = { taxonomyTags, taxonomyVersion, displayName };
+
+        return range(start, start + limit).map((index) =>
+          storage._createObservationData(
+            processId,
+            storage.processType,
+            data,
+          )
+        );
+      };
+
+      storage._fetchJson = (url, opts) => {
+        const isReadToken = opts.headers.Authorization.includes("readToken");
+        assert(isReadToken);
+
+        if (url.includes("ListProcesses")) {
+          const ids = [...new Array(10)].map((_, i) => `process_${i}`);
+          return ids.map((processId) => ({
+            processId,
+            processType: storage.processType,
+          }));
+        } else if (url.includes("GetProcessState")) {
+          return { numObservations: 11 };
+        } else if (url.includes("GetObservation")) {
+          const processId = url.split("processId=")[1].split("&").shift();
+          const taxonomyVersion = {
+            commit: "someCommit",
+            tag: "v1.0.0",
+          };
+          const taxonomyTags = [];
+          const displayName = `Artifact for ${processId}`;
+          const data = { taxonomyTags, taxonomyVersion, displayName };
+
+          return storage._createObservationData(
+            processId,
+            storage.processType,
+            data,
+          );
+        } else {
+          throw new Error(`Unknown request: ${url}`);
+        }
+      };
+      const repos = await storage.listArtifacts("repoId");
       assert.equal(repos.length, 10);
     });
 
@@ -112,6 +172,62 @@ describe("PDP", function () {
       const processId = "processId";
       const obs = {};
       await storage._appendObservation(processId, obs);
+    });
+  });
+
+  describe("getHostUri", function () {
+    it("should replace trailing /", function () {
+      const uri = PDP.getHostUri("https://127.0.0.1:80/", "someProcess");
+      assert.equal(uri, "pdp://127.0.0.1:80/someProcess");
+    });
+
+    it("should strip https://", function () {
+      const uri = PDP.getHostUri("https://127.0.0.1:80/", "someProcess");
+      assert.equal(uri, "pdp://127.0.0.1:80/someProcess");
+    });
+
+    it("should throw an error if http", function () {
+      assert.throws(() =>
+        PDP.getHostUri("http://127.0.0.1:80/", "someProcess")
+      );
+    });
+  });
+
+  describe("getUriPatterns", function () {
+    const Ajv = require("ajv");
+    const ajv = new Ajv();
+    const patterns = PDP.getUriPatterns();
+    const urlSchema = {
+      type: "string",
+      pattern: Pattern.exact(Pattern.anyIn(...patterns)),
+    };
+    const validate = ajv.compile(urlSchema);
+
+    it("should fail if deprecated format", function () {
+      const idString = "e0de6a4a-5257-4f2c-b3ce-470e3299fc4a_9_0";
+      assert(!validate(idString));
+    });
+
+    it("should fail if missing version in deprecated format", function () {
+      const idString = "e0de6a4a-5257-4f2c-b3ce-470e3299fc4a_9";
+      assert(!validate(idString));
+    });
+
+    it("should allow content uri", function () {
+      const idString =
+        "pdp://127.0.0.1:435/someType/e0de6a4a-5257-4f2c-b3ce-470e3299fc4a/9/0";
+      assert(validate(idString));
+    });
+
+    it("should allow (tmp) new process ID", function () {
+      const idString = "pdp://127.0.0.1:435/someType/PROCESS_ID/9/0";
+      assert(validate(idString));
+    });
+
+    it("should allow repo/process version", function () {
+      const idString =
+        "pdp://127.0.0.1:435/processType/e0de6a4a-5257-4f2c-b3ce-470e3299fc4a";
+      assert(validate(idString));
     });
   });
 });
