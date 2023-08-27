@@ -469,6 +469,7 @@
           <List twoLine avatarList>
             {#each items as item (item.id)}
               <Item
+                data-testid={item.displayName}
                 selected={item === selectedArtifactSet}
                 on:SMUI:action={() => onItemClicked(item)}
               >

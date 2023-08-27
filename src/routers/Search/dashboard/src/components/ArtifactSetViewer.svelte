@@ -169,7 +169,10 @@
       <List checkList twoLine>
         <!-- TODO: check if they have permissions to append to it -->
         {#each shownArtifacts as artifact (artifact.id)}
-          <Item>
+          <Item
+            class="repo-content"
+            data-testid={artifact.displayName}
+          >
               <Checkbox bind:group={selected} value={artifact.id} />
             <Text>
               <PrimaryText>{artifact.displayName}</PrimaryText>
