@@ -167,7 +167,6 @@ function initialize(middlewareOpts: MiddlewareOptions) {
           req,
           mainConfig,
         );
-
         const status = await storage.withRepoReservation(
           async (reservation) => {
             await addSystemTags(
