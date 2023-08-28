@@ -464,12 +464,13 @@
       </Content>
     </Drawer>
     <AppContent>
-      <main style="display: inline-block; vertical-align: top">
+      <main style="display: inline-block; vertical-align: top; min-width: 33%">
         <!-- Artifact list -->
         {#if items.length}
           <List twoLine avatarList>
             {#each items as item (item.id)}
               <Item
+                data-testid={item.displayName}
                 selected={item === selectedArtifactSet}
                 on:SMUI:action={() => onItemClicked(item)}
               >
