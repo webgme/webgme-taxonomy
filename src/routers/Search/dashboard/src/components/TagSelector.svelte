@@ -45,7 +45,7 @@
 <div>
     <p> <!-- TODO: Check if they are actually optional -->
       Taxonomy Terms <span style="font-style:italic">(optional)</span>:<br />
-      {metadata ? metadata.taxonomyTags.map(getTagDisplayName).join(", ") : ""}
+      {metadata && metadata.taxonomyTags ? metadata.taxonomyTags.map(getTagDisplayName).join(", ") : ""}
     </p>
 
     {#if disabled}
