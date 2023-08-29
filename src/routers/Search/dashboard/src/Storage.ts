@@ -22,7 +22,7 @@ class Storage {
     this.baseUrl = chunks.join("/") + "/artifacts/";
   }
 
-  async listRepos(): Promise<Repository[]> {
+  async listRepos(defaultVersion: TaxonomyReference): Promise<Repository[]> {
     const result = await this._fetchJson(this.baseUrl, null, ListError);
     const items: RepositoryData[] = (await result.unwrap())
       .filter((data: any) => {
@@ -33,7 +33,7 @@ class Storage {
           return false;
         }
       });
-    return items.map((item) => parseRepo(item));
+    return items.map((item) => parseRepo(item, defaultVersion));
   }
 
   async listArtifacts(repoId: string): Promise<Artifact[]> {
@@ -252,12 +252,18 @@ class AppendDataError extends StorageError {
   }
 }
 
-function parseRepo(item: RepositoryData): Repository {
+function parseRepo(
+  item: RepositoryData,
+  defaultVersion: TaxonomyReference,
+): Repository {
   return {
     id: item.id,
     displayName: item.displayName,
     tags: item.tags,
-    taxonomyVersion: TaxonomyReference.from(item.taxonomyVersion),
+    // FIXME: this is a bit of a temp hack
+    taxonomyVersion: item.taxonomyVersion
+      ? TaxonomyReference.from(item.taxonomyVersion)
+      : defaultVersion,
   };
 }
 

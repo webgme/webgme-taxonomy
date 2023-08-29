@@ -259,7 +259,7 @@
   async function fetchData() {
     isLoading = true;
     try {
-      allItems = (await storage.listRepos())
+      allItems = (await storage.listRepos(currentTaxonomy))
         .map(repo => ({
           id: repo.id,
           displayName: repo.displayName,
