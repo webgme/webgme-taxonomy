@@ -24,8 +24,16 @@ class Storage {
 
   async listRepos(): Promise<Repository[]> {
     const result = await this._fetchJson(this.baseUrl, null, ListError);
-    const items: RepositoryData[] = await result.unwrap();
-    return filterMap(items, (item) => parseRepo(item));
+    const items: RepositoryData[] = (await result.unwrap())
+      .filter((data: any) => {
+        if (isRepositoryData(data)) {
+          return true;
+        } else {
+          console.warn("Found malformed repository:", data);
+          return false;
+        }
+      });
+    return items.map((item) => parseRepo(item));
   }
 
   async listArtifacts(repoId: string): Promise<Artifact[]> {
@@ -43,7 +51,8 @@ class Storage {
           return false;
         }
       });
-    return filterMap(items, (item) => parseArtifact(item));
+
+    return items.map((item) => parseArtifact(item));
   }
 
   async getDownloadUrl(parentId, ...ids) {
@@ -243,20 +252,16 @@ class AppendDataError extends StorageError {
   }
 }
 
-function parseRepo(item: RepositoryData): Repository | undefined {
-  if (!item.displayName) {
-    console.log("Found malformed data. Filtering out. Data:", item);
-  } else {
-    return {
-      id: item.id,
-      displayName: item.displayName,
-      taxonomyTags: item.taxonomyTags,
-      taxonomyVersion: TaxonomyReference.from(item.taxonomyVersion),
-    };
-  }
+function parseRepo(item: RepositoryData): Repository {
+  return {
+    id: item.id,
+    displayName: item.displayName,
+    taxonomyTags: item.taxonomyTags,
+    taxonomyVersion: TaxonomyReference.from(item.taxonomyVersion),
+  };
 }
 
-function parseArtifact(data: ArtifactData): Artifact | undefined {
+function parseArtifact(data: ArtifactData): Artifact {
   return {
     id: data.id,
     displayName: data.displayName,
@@ -291,16 +296,32 @@ interface ArtifactData {
   files?: string[];
 }
 
+function hasKeys(data: any, reqKeys: string[]): boolean {
+  return reqKeys.reduce(
+    (isType, reqKey) => isType && data.hasOwnProperty(reqKey),
+    true,
+  );
+}
+
 function isArtifactData(data: any): data is ArtifactData {
   const reqKeys = [
     "taxonomyTags",
     "taxonomyVersion",
   ];
 
-  return reqKeys.reduce(
-    (isType, reqKey) => isType && data.hasOwnProperty(reqKey),
-    true,
-  );
+  return hasKeys(data, reqKeys);
+}
+
+function isRepositoryData(data: any): data is RepositoryData {
+  const reqKeys = [
+    "id",
+    "displayName",
+    // Old repositories may not have taxonomy tags
+    //"taxonomyTags",
+    //"taxonomyVersion",
+  ];
+
+  return hasKeys(data, reqKeys);
 }
 
 export interface Repository {
