@@ -25,8 +25,9 @@ import type {
   WebgmeContext,
   WebgmeRequest,
 } from "../../../common/types";
+import { toArtifactMetadatav2 } from "./adapters/common/Helpers";
 import Utils from "../../../common/Utils";
-import { isString } from "./Utils";
+import { deepMerge, isString } from "./Utils";
 import DashboardConfiguration from "../../../common/SearchFilterDataExporter";
 import TagFormatter from "../../../common/TagFormatter";
 import path from "path";
@@ -39,7 +40,11 @@ import {
   TaxNodeNotFoundError,
 } from "./adapters/common/ModelError";
 import TaskQueue, { DownloadTask, FilePath } from "./TaskQueue";
-import { ArtifactMetadata, UploadReservation } from "./adapters/common/types";
+import {
+  ArtifactMetadata,
+  ArtifactMetadatav2,
+  UploadReservation,
+} from "./adapters/common/types";
 
 /* N.B. gmeAuth, safeStorage and workerManager are not ready to use until the start function is called.
  * (However inside an incoming request they are all ensured to have been initialized.)
@@ -135,7 +140,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
       logger,
       async function createRepo(req, res) {
         const userId = middlewareOpts.getUserId(req);
-        let metadata: ArtifactMetadata = getArtifactMetadata(
+        let metadata: ArtifactMetadatav2 = getArtifactMetadata(
           <WebgmeRequest> req,
         );
 
@@ -173,7 +178,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
       logger,
       async function appendContent(req, res) {
         const userId = middlewareOpts.getUserId(req);
-        let metadata: ArtifactMetadata = getArtifactMetadata(
+        let metadata: ArtifactMetadatav2 = getArtifactMetadata(
           <WebgmeRequest> req,
         );
 
@@ -412,7 +417,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
  * content in the repo.
  */
 async function addChildSystemTags(
-  metadata: ArtifactMetadata,
+  metadata: ArtifactMetadatav2,
   reservation: UploadReservation,
   gmeContext: WebgmeContext,
   userId: string,
@@ -439,7 +444,7 @@ async function addChildSystemTags(
 }
 
 async function addSystemTags(
-  metadata: ArtifactMetadata, // FIXME: what is the actual type here?
+  metadata: ArtifactMetadatav2,
   reservation: UploadReservation,
   gmeContext: WebgmeContext,
   userId: string,
@@ -459,7 +464,7 @@ async function addSystemTags(
 
 async function addContentTypeSystemTags(
   contentType: Core.Node,
-  metadata: ArtifactMetadata,
+  metadata: ArtifactMetadatav2,
   reservation: UploadReservation,
   gmeContext: WebgmeContext,
   userId: string,
@@ -483,10 +488,11 @@ async function addContentTypeSystemTags(
   }));
   const uri: string | undefined = reservation.uri;
 
+  // TODO: write some tests for this
   const context = await UploadContext.from({
     name: metadata.displayName,
     description: desc,
-    tags: metadata.taxonomyTags,
+    tags: metadata.tags,
     files,
     core,
     contentType,
@@ -498,7 +504,8 @@ async function addContentTypeSystemTags(
   const systemTags =
     (await Promise.all(systemTerms.map((t) => t.createTags(context)))).flat();
 
-  metadata.taxonomyTags.push(...systemTags);
+  // TODO: refactor this to make it easier to test...
+  metadata.tags = deepMerge(metadata.tags, ...systemTags);
 }
 
 /**
@@ -522,11 +529,11 @@ function getVocabulariesMetaNode(
  */
 async function toGuidFormat(
   gmeContext: WebgmeContext,
-  metadata: ArtifactMetadata,
+  metadata: ArtifactMetadatav2,
 ): Promise<ArtifactMetadata> {
   const formatter = await getFormatter(gmeContext);
   try {
-    metadata.taxonomyTags = formatter.toGuidFormat(metadata.taxonomyTags);
+    metadata.tags = formatter.toGuidFormat(metadata.tags);
     return metadata;
   } catch (err) {
     // A stop-gap solution until FormatError actually inherits from UserError
@@ -550,16 +557,16 @@ async function getFormatter(gmeContext: WebgmeContext): Promise<TagFormatter> {
 /**
  * Retrieve the artifact metadata from the request. Initialize it if none provided.
  */
-function getArtifactMetadata(req: WebgmeRequest): ArtifactMetadata {
+function getArtifactMetadata(req: WebgmeRequest): ArtifactMetadatav2 {
   const gmeContext = req.webgmeContext;
   const projectVersion = gmeContext.projectVersion;
 
   // TODO: check if it is a tags file...
-  let metadata: ArtifactMetadata = req.body.metadata;
+  const metadata = toArtifactMetadatav2(<ArtifactMetadata> req.body.metadata);
 
   // TODO: check if the project version and metadata tags are compatible
   // if not, throw a UserError
-  metadata.taxonomyTags = metadata.taxonomyTags || [];
+  metadata.tags = metadata.tags || {};
   metadata.taxonomyVersion = projectVersion;
 
   return metadata;

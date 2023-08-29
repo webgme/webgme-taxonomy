@@ -4,7 +4,7 @@
 /// <reference path="define.d.ts" />
 const StorageAdapters =
   require("../routers/Search/build/adapters/index").default;
-const { Pattern, zip, unique } = require("../routers/Search/build/Utils");
+const { Pattern, unique } = require("../routers/Search/build/Utils");
 const optionTypes = ["EnumField", "SetField"];
 
 class JSONSchemaExporter {
@@ -25,111 +25,102 @@ class JSONSchemaExporter {
     return this.getVocabSchemas(vocabs, taxonomyName, onlyReleased);
   }
 
-  async getVocabSchemas(vocabs, taxonomyName, onlyReleased = false) {
-    const termNodes = (
-      await Promise.all(
-        vocabs.map((node) => this.getTermNodes(node, onlyReleased)),
-      )
-    ).flat();
-
-    const terms = await Promise.all(
-      termNodes.map((node) => this.getTermFromNode(node)),
+  async getVocabSchemas(vocabNodes, taxonomyName, onlyReleased = false) {
+    const allVocabs = await Promise.all(
+      vocabNodes
+        .filter((node) => !onlyReleased || this.isReleased(node))
+        .map(
+          (node) => this._getVocab(node, onlyReleased),
+        ),
     );
-    const properties = {
-      taxonomyTags: {
-        title: taxonomyName,
-        type: "array",
-        uniqueItems: true,
-        minItems: 1,
-        items: {
-          type: "object",
-          anyOf: terms.map((term) => term.schema),
-        },
-      },
-    };
-
-    // add constraint for all required terms
-    const requiredTerms = terms.filter((term) => term.isRequired());
-    if (requiredTerms.length) {
-      properties.taxonomyTags.allOf = requiredTerms.map((term) => ({
-        contains: term.schema,
-      }));
-    }
+    const vocabs = allVocabs.filter((v) => !v.isEmpty());
+    const properties = Object.fromEntries(
+      vocabs.map((v) => [v.name, v.schema]),
+    );
+    const required = vocabs
+      .filter((v) => v.isRequired())
+      .map((v) => v.name);
 
     const schema = {
+      title: `Metadata for ${taxonomyName}`,
       type: "object",
       properties,
+      additionalProperties: false,
+      required,
     };
 
-    const uiSchema = {
-      taxonomyTags: {
-        items: {},
-      },
-    };
-    const formData = {
-      taxonomyTags: terms
-        .filter((term) => !term.isOptional())
-        .map((term) => term.getInstance()),
-    };
+    const uiSchema = {};
+    const formData = Object.assign(
+      {},
+      ...vocabs.filter((v) => v.isRequired())
+        .map((v) => v.getFormData()),
+    );
     return { schema, uiSchema, formData };
   }
 
-  async getTermFromNode(node) {
-    const parentTerms = this.getAncestorTerms(node);
-    const name = this.core.getAttribute(node, "name");
+  async _getVocab(vocabNode, onlyReleased = false) {
+    const terms = await Promise.all(
+      (await this.core.loadChildren(vocabNode))
+        .filter((node) =>
+          this.isTerm(node) && (!onlyReleased || this.isReleased(node))
+        )
+        .map((node) => this.getTermFromNode(node)),
+    );
+
+    const required = terms.filter((term) => term.isRequired())
+      .map((term) => term.name);
+
     const schema = {
       type: "object",
-      // FIXME: we need to figure out how to hide the top title...
-      title: name,
-      properties: {},
-      additionalProperties: false,
+      properties: Object.fromEntries(
+        terms.map((term) => [term.name, term.schema]),
+      ),
+      required,
     };
-    const termFields = await Promise.all(
-      parentTerms.map((n) => this.getDefinition(n)),
-    );
-    zip(parentTerms, termFields).reduce((schema, [parent, fields]) => {
-      const name = this.core.getAttribute(parent, "name");
-      return (schema.properties[name] = fields);
-    }, schema);
 
+    const name = this.core.getAttribute(vocabNode, "name");
+    return new Vocabulary(name, schema, terms);
+    // FIXME: this is assuming that it is flat atm
+    // TODO: add a test for deeper hierarchies
+  }
+
+  async getTermFromNode(node) {
+    // const parentTerms = this.getAncestorTerms(node);
+    const name = this.core.getAttribute(node, "name");
+    const schema = await this.getDefinition(node);
+    // const termFields = await Promise.all(
+    //   parentTerms.map((n) => this.getDefinition(n)),
+    // );
+    // // FIXME: remove the path to the children stuff
+    // zip(parentTerms, termFields).reduce((schema, [parent, fields]) => {
+    //   const name = this.core.getAttribute(parent, "name");
+    //   return (schema.properties[name] = fields);
+    // }, schema);
     const selection = this.core.getAttribute(node, "selection");
     return new Term(name, schema, selection);
   }
 
-  getAncestorTerms(node) {
-    const nodes = [node];
-    let parent = this.core.getParent(node);
-    while (this.isTerm(parent) || this.isVocab(parent)) {
-      nodes.unshift(parent);
-      parent = this.core.getParent(parent);
-    }
-    return nodes;
+  /**
+   * Gets whether the given node is a vocabulary node.
+   *
+   * @param {Core.Node | null} node The node to check the type of
+   * @return {node is Core.Node} Whether or not the `node` is a vocabulary
+   * @memberof JSONSchemaExporter
+   */
+  isVocab(node) {
+    return node != null && this.core.isTypeOf(node, this.META.Vocabulary);
+  }
+
+  async getTermNodes(node, onlyReleased) {
+    return (await this.core.loadSubTree(node)).filter((node) =>
+      this.isTerm(node) && (!onlyReleased || this.isReleased(node))
+    );
   }
 
   async getTermFields(node) {
     const fieldNodes = (await this.core.loadChildren(node)).filter(
       (n) => !this.isTerm(n),
     );
-  }
-
-  async getTermNodes(node, onlyReleased) {
-    return (await this.core.loadSubTree(node)).filter((node) =>
-      this.isTerm(node) && (!onlyReleased || this.isCurrentTerm(node))
-    );
-  }
-
-  isTypeOf(node, name) {
-    /** @type {Core.Node | null} */
-    let iternode = this.core.getMetaType(node);
-    while (iternode) {
-      const baseName = this.core.getAttribute(iternode, "name");
-      if (baseName === name) {
-        return true;
-      }
-      iternode = this.core.getBase(iternode);
-    }
-
-    return false;
   }
 
   isEnum(node) {
@@ -188,38 +179,17 @@ class JSONSchemaExporter {
     return node != null && this.core.isTypeOf(node, this.META.Term);
   }
 
-  /**
-   * Gets whether the given term node is deprecated.
-   *
-   * @param {Core.Node | null} node The node to check the type of
-   * @return {boolean} Whether or not the `node` is deprecated
-   * @memberof JSONSchemaExporter
-   */
-  isCurrentTerm(node) {
-    if (node === null) {
-      return false;
+  isTypeOf(node, name) {
+    /** @type {Core.Node | null} */
+    let iternode = this.core.getMetaType(node);
+    while (iternode) {
+      const baseName = this.core.getAttribute(iternode, "name");
+      if (baseName === name) {
+        return true;
+      }
+      iternode = this.core.getBase(iternode);
     }
-    const releaseState = this.core.getAttribute(node, "releaseState") ||
-      "released";
-
-    if (releaseState !== "released") {
-      return false;
-    }
-
-    const parent = this.core.getParent(node);
-    const hasUnreleasedParent = parent && !this.isCurrentTerm(parent);
-    return !hasUnreleasedParent;
-  }
-
-  /**
-   * Gets whether the given node is a vocabulary node.
-   *
-   * @param {Core.Node | null} node The node to check the type of
-   * @return {node is Core.Node} Whether or not the `node` is a vocabulary
-   * @memberof JSONSchemaExporter
-   */
-  isVocab(node) {
-    return node != null && this.core.isTypeOf(node, this.META.Vocabulary);
+    return false;
   }
 
   async getDependentDefinitions(node) {
@@ -311,7 +281,7 @@ class JSONSchemaExporter {
    * @memberof JSONSchemaExporter
    */
   async getFieldSchema(node) {
-    const name = this.core.getAttribute(node, "name");
+    const name = (this.core.getAttribute(node, "name") || "").toString();
     const baseNode = this.core.getMetaType(node);
     const baseName = this.core.getAttribute(baseNode, "name");
 
@@ -374,6 +344,29 @@ class JSONSchemaExporter {
   }
 
   /**
+   * Gets whether the given term node is deprecated.
+   *
+   * @param {Core.Node | null} node The node to check the type of
+   * @return {boolean} Whether or not the `node` is deprecated
+   * @memberof JSONSchemaExporter
+   */
+  isReleased(node) {
+    if (node === null) {
+      return false;
+    }
+    const releaseState = this.core.getAttribute(node, "releaseState") ||
+      "released";
+
+    if (releaseState !== "released") {
+      return false;
+    }
+
+    const parent = this.core.getParent(node);
+    const hasUnreleasedParent = parent && !this.isReleased(parent);
+    return !hasUnreleasedParent;
+  }
+
+  /**
    * Get a partial JSON schema allowing any of the node's children.
    *
    * @param {Core.Node} node A field node to get JSON schema for
@@ -424,6 +417,49 @@ class JSONSchemaExporter {
   }
 }
 
+class Vocabulary {
+  constructor(name, schema, childTerms) {
+    this.name = name;
+    this.schema = schema;
+    this.childTerms = childTerms;
+  }
+
+  // A vocabulary is required if it contains any required child terms
+  isRequired() {
+    return this.childTerms.some((term) => term.isRequired());
+  }
+
+  // Get the initial form data (only for required terms)
+  getFormData() {
+    if (!this.isRequired()) {
+      return;
+    }
+
+    const entries = this.childTerms
+      .filter((term) => term.isRequired())
+      .map((term) => [term.name, term.getInstance()]);
+
+    const formData = {};
+    formData[this.name] = Object.fromEntries(entries);
+    return formData;
+  }
+
+  isEmpty() {
+    return this.childTerms.length === 0;
+  }
+}
+
+function getContainmentAncestors(core, node) {
+  let pathToRoot = [];
+
+  while (node) {
+    pathToRoot.push(node);
+    node = core.getParent(node);
+  }
+
+  return pathToRoot;
+}
+
 class Property {
   constructor(name, schema, required = false) {
     this.name = name;
@@ -435,7 +471,15 @@ class Property {
     const core = exporter.core;
     const schema = await exporter.getFieldSchema(node);
     const name = core.getAttribute(node, "name");
-    const required = core.getAttribute(node, "required");
+
+    // FIXME: Due to a limitation in the tag forms, fields can only
+    // be considered required if they are contained in a required term
+    const parentTerm = getContainmentAncestors(core, node)
+      .find((node) => exporter.isTerm(node));
+    const isTermRequired =
+      core.getAttribute(parentTerm, "selection") === "required";
+    const required = isTermRequired && core.getAttribute(node, "required");
+
     return new Property(name, schema, required);
   }
 }
@@ -460,7 +504,9 @@ class Term {
   }
 
   getInstance(schema = this.schema) {
-    if (schema.type === "object") {
+    if (schema.anyOf) {
+      return this.getInstance(schema.anyOf[0]);
+    } else if (schema.type === "object") {
       const entries = Object.entries(schema.properties).map(([k, v]) => [
         k,
         this.getInstance(v),

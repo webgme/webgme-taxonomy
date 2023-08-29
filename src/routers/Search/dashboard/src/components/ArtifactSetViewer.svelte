@@ -38,18 +38,18 @@
   let displayedName = null;
   let displayTags = false;
   async function showTags(artifact) {
-    displayedTags = await formatter.toHumanFormat(artifact.taxonomyTags);
+    displayedTags = await formatter.toHumanFormat(artifact.tags);
     displayedName = artifact.displayName;
     displayTags = true;
   }
 
   async function getUri(content, tags=null) {
-    tags = tags ?? await formatter.toHumanFormat(content.taxonomyTags);
+    tags = tags ?? await formatter.toHumanFormat(content.tags);
     return getTagValue(tags, 'Base', 'URI', 'value');
   }
 
   async function onCopyLink(content) {
-    const tags = await formatter.toHumanFormat(content.taxonomyTags);
+    const tags = await formatter.toHumanFormat(content.tags);
     const uri = await getUri(content, tags);
 
     try {

@@ -170,9 +170,6 @@ export async function sleep(duration: number): Promise<void> {
   return new Promise((res) => setTimeout(res, duration));
 }
 
-export function getTagValue(tags: any[], ...fqn: string[]) {
-  return filterMap(
-    tags,
-    (tag) => fqn.reduce((tagData, name) => tagData && tagData[name], tag),
-  ).shift();
+export function getTagValue(tags: any, ...fqn: string[]) {
+  return fqn.reduce((tagData, name) => tagData && tagData[name], tags);
 }

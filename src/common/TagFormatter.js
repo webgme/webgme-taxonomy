@@ -12,7 +12,7 @@ function factory(Importer) {
      * that for the top-level tag.
      */
     toGuidFormat(tags) {
-      return tags.map((tag) => this._toGuidFormat(this.taxonomy, tag));
+      return this._toGuidFormat(this.taxonomy, tags);
     }
 
     _findTagNode(parentNode, tagName) {
@@ -39,7 +39,7 @@ function factory(Importer) {
       const nodesByGuid = Object.fromEntries(
         this._allNodes(this.taxonomy).map((node) => [node.guid, node]),
       );
-      return tags.map((tag) => this._toHumanFormat(tag, nodesByGuid));
+      return this._toHumanFormat(tags, nodesByGuid);
     }
 
     _allNodes(node) {

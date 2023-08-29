@@ -37,6 +37,7 @@ define([
 
   TagCreatorControl.prototype._initWidgetEventHandlers = function () {
     this._widget.addTags = async (taxonomyPath, formData) => {
+      this.markDisabled();
       const activeNodeId = this._currentNodeId;
       const { core, rootNode } = await this._getCoreInstance();
       const activeNode = await core.loadByPath(rootNode, activeNodeId);
@@ -58,7 +59,7 @@ define([
       );
 
       // add new members
-      const tags = formData.taxonomyTags;
+      const tags = formData.tags;
       tags.forEach((tagInfo) => {
         const tagNode = nodesByGuid[tagInfo.ID];
         core.addMember(activeNode, TAG_SET_NAMES, tagNode);
@@ -100,6 +101,13 @@ define([
         commitMsg,
       );
     };
+  };
+
+  TagCreatorControl.prototype.markDisabled = function () {
+    console.error(
+      `In an effort to focus on the main features of the taxonomy design studio, usage of the tag form within WebGME has been temporarily disabled. If this is a problem for you, please open an issue and restoring this functionality will be made a higher priority!`,
+    );
+    throw new Error("Tag form use from within webgme has been disabled.");
   };
 
   /* * * * * * * * Visualizer content update callbacks * * * * * * * */
@@ -227,15 +235,15 @@ define([
 
       console.log({ memberPaths });
       const memberNodes = await this._loadNodes(memberPaths);
-      const taxonomyTags = await Promise.all(
+      const tags = await Promise.all(
         memberNodes.map((node, i) => this._getTagData(node, memberAttrs[i])),
       );
-      console.log({ taxonomyTags });
-      return { taxonomyTags };
+      return tags;
     }
   };
 
   TagCreatorControl.prototype._getTagData = function (memberNode, attrDict) {
+    // TODO: update this
     const tag = {
       ID: memberNode.getGuid(),
     };

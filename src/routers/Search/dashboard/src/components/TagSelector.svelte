@@ -15,20 +15,27 @@
   export let displayTypeName: string = 'content';
   export let disabled: boolean = false;
 
-  function getTagDisplayName(tag) {
-    // FIXME: there is no way to tell the difference btwn terms and compound fields...
-    let currentTag = tag;
-    const tagNames = [];
-    while (currentTag) {
-      const [name, tag] =
-        Object.entries(currentTag).find(([, data]) => isObject(data)) || [];
-      currentTag = tag;
-      if (name) {
-        tagNames.push(name);
+  function getTagsDisplayNames(tags, prefix = null): string[] {
+    const names = Object.entries(tags).flatMap(([name, value]) => {
+      if (isObject(value)) {
+        const isOption = Object.keys(value).length === 0;  // for an enum/set/list/etc
+        if (isOption) {
+          return [name];
+        } else {
+          return getTagsDisplayNames(value, name);
+        }
+      } else {
+          return [`${name}: ${value}`];
       }
-    }
+    });
 
-    return tagNames.pop(); // Only return the most specific one for now...
+    return names.map(name => {
+      if (prefix) {
+        return prefix + '.' + name;
+      } else {
+        return name;
+      }
+    });
   }
 
   async function onTagsFileDrop(event) {
@@ -43,9 +50,11 @@
 </script>
 
 <div>
-    <p> <!-- TODO: Check if they are actually optional -->
+    <!-- TODO: Check if they are actually optional -->
+    <p>
       Taxonomy Terms <span style="font-style:italic">(optional)</span>:<br />
-      {metadata && metadata.taxonomyTags ? metadata.taxonomyTags.map(getTagDisplayName).join(", ") : ""}
+      {metadata && metadata.tags ? getTagsDisplayNames(metadata.tags) : ""}
+      <!-- TODO: how to show these? -->
     </p>
 
     {#if disabled}

@@ -108,10 +108,10 @@ describe("FilterTag", function () {
         value: "Male",
         children: [],
       });
-      const tags = [
-        { "DataSystemTerms": { "isData": {} } },
-        { "Subject": { "Sex": { "value": { "Female": {} } } } },
-      ];
+      const tags = {
+        DataSystemTerms: { isData: {} },
+        Subject: { Sex: { value: { Female: {} } } },
+      };
 
       assert(!FilterTag.applyFilters(tags, [filterTag]));
     });

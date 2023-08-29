@@ -77,10 +77,9 @@ function initialize(middlewareOpts) {
         const exporter = JSONSchemaExporter.from(core, root);
         const vocabularies = await Utils.getVocabulariesFor(core, contentType);
         const contentName = core.getAttribute(contentType, "name").toString();
-        const title = `${contentName} Terms`;
         const config = await exporter.getVocabSchemas(
           vocabularies,
-          title,
+          contentName,
           true,
         );
         config.taxonomyVersion = req.webgmeContext.projectVersion;

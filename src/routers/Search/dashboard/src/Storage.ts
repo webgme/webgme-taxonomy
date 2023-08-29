@@ -1,5 +1,5 @@
 import TaxonomyReference, { TaxonomyVersionData } from "./TaxonomyReference";
-import { assert, filterMap, Result, sleep } from "./Utils";
+import { assert, Result, sleep } from "./Utils";
 import { Readable, writable } from "svelte/store";
 
 type UploadParams = {
@@ -22,7 +22,7 @@ class Storage {
     this.baseUrl = chunks.join("/") + "/artifacts/";
   }
 
-  async listRepos(): Promise<Repository[]> {
+  async listRepos(defaultVersion: TaxonomyReference): Promise<Repository[]> {
     const result = await this._fetchJson(this.baseUrl, null, ListError);
     const items: RepositoryData[] = (await result.unwrap())
       .filter((data: any) => {
@@ -33,7 +33,7 @@ class Storage {
           return false;
         }
       });
-    return items.map((item) => parseRepo(item));
+    return items.map((item) => parseRepo(item, defaultVersion));
   }
 
   async listArtifacts(repoId: string): Promise<Artifact[]> {
@@ -150,7 +150,7 @@ class Storage {
 
   async createRepo(metadata) {
     console.log("Creating repo:", metadata);
-    metadata.taxonomyTags = metadata.taxonomyTags || [];
+    metadata.tags = metadata.tags || {};
     const opts = {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -252,12 +252,18 @@ class AppendDataError extends StorageError {
   }
 }
 
-function parseRepo(item: RepositoryData): Repository {
+function parseRepo(
+  item: RepositoryData,
+  defaultVersion: TaxonomyReference,
+): Repository {
   return {
     id: item.id,
     displayName: item.displayName,
-    taxonomyTags: item.taxonomyTags,
-    taxonomyVersion: TaxonomyReference.from(item.taxonomyVersion),
+    tags: item.tags,
+    // FIXME: this is a bit of a temp hack
+    taxonomyVersion: item.taxonomyVersion
+      ? TaxonomyReference.from(item.taxonomyVersion)
+      : defaultVersion,
   };
 }
 
@@ -265,7 +271,7 @@ function parseArtifact(data: ArtifactData): Artifact {
   return {
     id: data.id,
     displayName: data.displayName,
-    taxonomyTags: data.taxonomyTags,
+    tags: data.tags,
     time: data.time,
     taxonomyVersion: TaxonomyReference.from(data.taxonomyVersion),
   };
@@ -282,7 +288,7 @@ enum Status {
 interface RepositoryData {
   id: string;
   displayName: string;
-  taxonomyTags: any[];
+  tags: any[];
   taxonomyVersion: TaxonomyVersionData;
 }
 
@@ -290,7 +296,7 @@ interface ArtifactData {
   parentId?: string;
   id?: string;
   displayName: string;
-  taxonomyTags: any[];
+  tags: any;
   taxonomyVersion: TaxonomyVersionData;
   time: string;
   files?: string[];
@@ -305,7 +311,7 @@ function hasKeys(data: any, reqKeys: string[]): boolean {
 
 function isArtifactData(data: any): data is ArtifactData {
   const reqKeys = [
-    "taxonomyTags",
+    "tags",
     "taxonomyVersion",
   ];
 
@@ -317,7 +323,7 @@ function isRepositoryData(data: any): data is RepositoryData {
     "id",
     "displayName",
     // Old repositories may not have taxonomy tags
-    //"taxonomyTags",
+    //"tags",
     //"taxonomyVersion",
   ];
 
@@ -327,7 +333,7 @@ function isRepositoryData(data: any): data is RepositoryData {
 export interface Repository {
   id: string;
   displayName: string;
-  taxonomyTags: any[];
+  tags: any;
   taxonomyVersion: TaxonomyReference;
 }
 
@@ -335,7 +341,7 @@ export interface Artifact {
   parentId?: string;
   id?: string;
   displayName: string;
-  taxonomyTags: any[];
+  tags: any;
   taxonomyVersion: TaxonomyReference;
   time: string;
   files?: string[];
@@ -349,7 +355,7 @@ export enum LoadState {
 export interface PopulatedRepo {
   id: string;
   displayName: string;
-  taxonomyTags: any[];
+  tags: any;
   taxonomyVersion: TaxonomyReference;
   children: Artifact[];
   loadState: LoadState;
