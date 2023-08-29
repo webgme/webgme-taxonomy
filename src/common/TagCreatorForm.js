@@ -202,7 +202,7 @@ function factory() {
       this.schema = schema;
       this.downloadData = downloadData;
       this.uiSchema = uiSchema;
-      this.formData = formData || { taxonomyTags: [] };
+      this.formData = formData || {};
       this.buttons = [];
     }
 

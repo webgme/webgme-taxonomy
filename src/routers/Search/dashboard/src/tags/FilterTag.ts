@@ -53,12 +53,6 @@ export default class FilterTag<T extends string = string> {
     const value = ItemTag.valueForKey(itemTag, this.id);
     const foundTag = isDefined(value);
     const tagValuesMatch = this.value === value;
-    console.log(
-      "FT isMatch",
-      this,
-      itemTag,
-      this.isLabel() ? foundTag : tagValuesMatch,
-    );
     return this.isLabel() ? foundTag : tagValuesMatch;
   }
 
@@ -66,9 +60,9 @@ export default class FilterTag<T extends string = string> {
     return new LeanTag(this.id, this.value);
   }
 
-  static applyFilters(taxonomyTags: ItemTag[], filterTags: FilterTag[]) {
+  static applyFilters(tags: ItemTag, filterTags: FilterTag[]) {
     const matchingTags = filterTags.every(
-      (filterTag) => !!taxonomyTags.find((tag) => filterTag.isMatch(tag)),
+      (filterTag) => !!filterTag.isMatch(tags),
     );
 
     return matchingTags;

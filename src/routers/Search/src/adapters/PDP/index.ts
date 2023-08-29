@@ -52,6 +52,7 @@ import {
   UploadParams,
   UploadRequest,
 } from "../common/AppendResult";
+import { toArtifactMetadatav2 } from "../common/Helpers";
 const UPLOAD_HEADERS = {
   Accept: "application/xml",
   "Content-Type": "application/octet-stream",
@@ -461,9 +462,9 @@ export default class PDP implements Adapter {
       obsIndex,
       version,
     );
-    const metadata = responseObservation.data[0];
-    metadata.taxonomyTags = formatter.toHumanFormat(
-      metadata.taxonomyTags ?? [],
+    const metadata = toArtifactMetadatav2(responseObservation.data[0]);
+    metadata.tags = formatter.toHumanFormat(
+      metadata.tags ?? {},
     );
 
     return metadata;
@@ -482,9 +483,9 @@ export default class PDP implements Adapter {
       version,
     );
     try {
-      const metadata = responseObservation.data[0];
-      metadata.taxonomyTags = formatter.toHumanFormat(
-        metadata.taxonomyTags ?? [],
+      const metadata = toArtifactMetadatav2(responseObservation.data[0]);
+      metadata.tags = formatter.toHumanFormat(
+        metadata.tags ?? {},
       );
       const metadataPath = path.join(
         downloadDir,
@@ -812,11 +813,12 @@ function parseRepository(
 ): Repository | undefined {
   const metadata = obs.data && obs.data[0];
   if (metadata) {
+    const md = toArtifactMetadatav2(metadata);
     return {
       id: obs.processId.toString(),
-      displayName: metadata.displayName,
-      taxonomyTags: metadata.taxonomyTags,
-      taxonomyVersion: metadata.taxonomyVersion,
+      displayName: md.displayName,
+      tags: md.tags,
+      taxonomyVersion: md.taxonomyVersion,
     };
   }
 }
@@ -824,12 +826,13 @@ function parseRepository(
 function parseArtifact(obs: Observation): Artifact | undefined {
   const metadata = obs.data && obs.data[0];
   if (metadata && metadata.displayName) {
+    const md = toArtifactMetadatav2(metadata);
     return {
       parentId: obs.processId.toString(),
       id: obs.index + "_" + obs.version,
-      displayName: metadata.displayName,
-      taxonomyTags: metadata.taxonomyTags,
-      taxonomyVersion: metadata.taxonomyVersion,
+      displayName: md.displayName,
+      tags: md.tags,
+      taxonomyVersion: md.taxonomyVersion,
       time: obs.startTime,
     };
   }
