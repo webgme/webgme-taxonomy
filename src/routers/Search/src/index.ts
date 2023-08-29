@@ -135,10 +135,9 @@ function initialize(middlewareOpts: MiddlewareOptions) {
       logger,
       async function createRepo(req, res) {
         const userId = middlewareOpts.getUserId(req);
-        let metadata: ArtifactMetadata = req.body.metadata;
-        const gmeContext = (<WebgmeRequest> req).webgmeContext;
-        const projectVersion = gmeContext.projectVersion;
-        metadata.taxonomyVersion = projectVersion;
+        let metadata: ArtifactMetadata = getArtifactMetadata(
+          <WebgmeRequest> req,
+        );
 
         // Upload to the storage backend
         const storage = await StorageAdapter.from(
@@ -148,6 +147,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
         );
         const status = await storage.withRepoReservation(
           async (reservation) => {
+            const gmeContext = (<WebgmeRequest> req).webgmeContext;
             await addSystemTags(
               metadata,
               reservation,
@@ -173,10 +173,9 @@ function initialize(middlewareOpts: MiddlewareOptions) {
       logger,
       async function appendContent(req, res) {
         const userId = middlewareOpts.getUserId(req);
-        let metadata: ArtifactMetadata = req.body.metadata;
-        const gmeContext = (<WebgmeRequest> req).webgmeContext;
-        const projectVersion = gmeContext.projectVersion;
-        metadata.taxonomyVersion = projectVersion;
+        let metadata: ArtifactMetadata = getArtifactMetadata(
+          <WebgmeRequest> req,
+        );
 
         const { repoId } = req.params;
         const storage = await StorageAdapter.from(
@@ -187,6 +186,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
 
         const appendResult = await storage.withContentReservation(
           async (reservation) => {
+            const gmeContext = (<WebgmeRequest> req).webgmeContext;
             await addChildSystemTags(
               metadata,
               reservation,
@@ -545,6 +545,24 @@ async function getFormatter(gmeContext: WebgmeContext): Promise<TagFormatter> {
     throw new TaxNodeNotFoundError(gmeContext);
   }
   return await TagFormatter.from(core, node);
+}
+
+/**
+ * Retrieve the artifact metadata from the request. Initialize it if none provided.
+ */
+function getArtifactMetadata(req: WebgmeRequest): ArtifactMetadata {
+  const gmeContext = req.webgmeContext;
+  const projectVersion = gmeContext.projectVersion;
+
+  // TODO: check if it is a tags file...
+  let metadata: ArtifactMetadata = req.body.metadata;
+
+  // TODO: check if the project version and metadata tags are compatible
+  // if not, throw a UserError
+  metadata.taxonomyTags = metadata.taxonomyTags || [];
+  metadata.taxonomyVersion = projectVersion;
+
+  return metadata;
 }
 
 /**
