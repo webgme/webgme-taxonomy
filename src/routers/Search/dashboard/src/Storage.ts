@@ -34,7 +34,15 @@ class Storage {
       null,
       ListError,
     );
-    const items: ArtifactData[] = await result.unwrap();
+    const items: ArtifactData[] = (await result.unwrap())
+      .filter((data: any) => {
+        if (isArtifactData(data)) {
+          return true;
+        } else {
+          console.warn("Found malformed data", data);
+          return false;
+        }
+      });
     return filterMap(items, (item) => parseArtifact(item));
   }
 
@@ -281,6 +289,18 @@ interface ArtifactData {
   taxonomyVersion: TaxonomyVersionData;
   time: string;
   files?: string[];
+}
+
+function isArtifactData(data: any): data is ArtifactData {
+  const reqKeys = [
+    "taxonomyTags",
+    "taxonomyVersion",
+  ];
+
+  return reqKeys.reduce(
+    (isType, reqKey) => isType && data.hasOwnProperty(reqKey),
+    true,
+  );
 }
 
 export interface Repository {
