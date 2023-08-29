@@ -204,7 +204,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
             );
             return await storage.appendArtifact(
               reservation,
-              req.body.metadata,
+              metadata,
               req.body.filenames,
             );
           },
