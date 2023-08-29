@@ -259,7 +259,7 @@ function parseRepo(
   return {
     id: item.id,
     displayName: item.displayName,
-    tags: item.tags,
+    tags: item.tags || {},
     // FIXME: this is a bit of a temp hack
     taxonomyVersion: item.taxonomyVersion
       ? TaxonomyReference.from(item.taxonomyVersion)
@@ -268,10 +268,11 @@ function parseRepo(
 }
 
 function parseArtifact(data: ArtifactData): Artifact {
+  console.log("parse artifact", data);
   return {
     id: data.id,
     displayName: data.displayName,
-    tags: data.tags,
+    tags: data.tags || {},
     time: data.time,
     taxonomyVersion: TaxonomyReference.from(data.taxonomyVersion),
   };

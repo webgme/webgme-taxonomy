@@ -15,27 +15,20 @@
   export let displayTypeName: string = 'content';
   export let disabled: boolean = false;
 
-  function getTagsDisplayNames(tags, prefix = null): string[] {
-    const names = Object.entries(tags).flatMap(([name, value]) => {
-      if (isObject(value)) {
-        const isOption = Object.keys(value).length === 0;  // for an enum/set/list/etc
-        if (isOption) {
-          return [name];
-        } else {
-          return getTagsDisplayNames(value, name);
-        }
-      } else {
-          return [`${name}: ${value}`];
+  function getTagDisplayName(tag) {
+    // FIXME: there is no way to tell the difference btwn terms and compound fields...
+    let currentTag = tag;
+    const tagNames = [];
+    while (currentTag) {
+      const [name, tag] =
+        Object.entries(currentTag).find(([, data]) => isObject(data)) || [];
+      currentTag = tag;
+      if (name) {
+        tagNames.push(name);
       }
-    });
+    }
 
-    return names.map(name => {
-      if (prefix) {
-        return prefix + '.' + name;
-      } else {
-        return name;
-      }
-    });
+    return tagNames.pop(); // Only return the most specific one for now...
   }
 
   async function onTagsFileDrop(event) {
@@ -50,11 +43,9 @@
 </script>
 
 <div>
-    <!-- TODO: Check if they are actually optional -->
-    <p>
+    <p> <!-- TODO: Check if they are actually optional -->
       Taxonomy Terms <span style="font-style:italic">(optional)</span>:<br />
-      {metadata && metadata.tags ? getTagsDisplayNames(metadata.tags) : ""}
-      <!-- TODO: how to show these? -->
+      {metadata && metadata.taxonomyTags ? metadata.taxonomyTags.map(getTagDisplayName).join(", ") : ""}
     </p>
 
     {#if disabled}
@@ -70,7 +61,7 @@
     <a
       target="_blank"
       href={window.location.href
-        .replace("/Search/", "/TagCreatorv1/") // FIXME: use the correct content type
+        .replace("/Search/", "/TagCreatorv1/")
         .replace(
           /[^\/]*\/static\//,
           `${encodeURIComponent(contentType.nodePath)}/static/`
@@ -80,7 +71,7 @@
     <a
       target="_blank"
       href={window.location.href
-        .replace("/Search/", "/TagCreatorv1/") // FIXME: use the correct content type
+        .replace("/Search/", "/TagCreator/")
         .replace(
           /[^\/]*\/static\//,
           `${encodeURIComponent(contentType.nodePath)}/static/`
