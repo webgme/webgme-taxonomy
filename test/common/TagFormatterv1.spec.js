@@ -1,5 +1,5 @@
 describe("TagFormatter", function () {
-  const TagFormatter = require("../../src/common/TagFormatter");
+  const TagFormatter = require("../../src/common/TagFormatterv1");
   const assert = require("assert");
   const Utils = require("../Utils");
   let formatter, nodesByGuid, storage, gmeAuth;
