@@ -1,0 +1,4 @@
+/* Hides repetitive label after a drop-down select. */
+.panel-body > .form-group:first-child + .form-group.field-object > fieldset > legend {
+  display: none;
+}

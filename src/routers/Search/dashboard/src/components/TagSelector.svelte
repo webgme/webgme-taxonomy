@@ -61,11 +61,21 @@
     <a
       target="_blank"
       href={window.location.href
-        .replace("/Search/", "/TagCreator/") // FIXME: use the correct content type
+        .replace("/Search/", "/TagCreatorv1/") // FIXME: use the correct content type
         .replace(
           /[^\/]*\/static\//,
           `${encodeURIComponent(contentType.nodePath)}/static/`
         )}>Click to select tags for the {displayTypeName}.</a
+    >
+    <br/>
+    <a
+      target="_blank"
+      href={window.location.href
+        .replace("/Search/", "/TagCreatorv1/") // FIXME: use the correct content type
+        .replace(
+          /[^\/]*\/static\//,
+          `${encodeURIComponent(contentType.nodePath)}/static/`
+        )}>Click to try the new tag form (experimental).</a
     >
 </div>
 
