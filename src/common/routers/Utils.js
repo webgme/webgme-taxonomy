@@ -179,7 +179,7 @@ const Utils = {
           }
 
           const latestTag = tags.reduce((latest, other) =>
-            latest.version.gte(other.version) ? latest : v
+            latest.version.gte(other.version) ? latest : other
           );
 
           const url = req.originalUrl.replace(
