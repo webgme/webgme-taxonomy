@@ -53,7 +53,7 @@
     <!-- TODO: Check if they are actually optional -->
     <p>
       Taxonomy Terms <span style="font-style:italic">(optional)</span>:<br />
-      {metadata ? getTagsDisplayNames(metadata.tags) : ""}
+      {metadata && metadata.tags ? getTagsDisplayNames(metadata.tags) : ""}
       <!-- TODO: how to show these? -->
     </p>
 

@@ -62,11 +62,12 @@
       dispatchError(`${contentType.name} file required.`);
     }
 
-    metadata.displayName = appendName;
+    const appendMetadata = metadata ?? {};
+    appendMetadata.displayName = appendName;
     dispatch("upload");
     let unsubscribers: Unsubscriber[] = [];
     try {
-      uploading = storage.appendArtifact(set, metadata, files);
+      uploading = storage.appendArtifact(set, appendMetadata, files);
       const uploads = await uploading;
       unsubscribers = uploads.map((upload, index) => {
         return upload.subscribe((progress) => (progresses[index] = progress));
