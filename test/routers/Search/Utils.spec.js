@@ -19,6 +19,13 @@ describe("Utils", function () {
       const ten = await retry(async () => 10);
       assert.equal(ten, 10);
     });
+
+    it("should convert thrown error to Err type", async function () {
+      const promise = retry(async () => {
+        throw new Error("hello there!");
+      });
+      await assert.rejects(promise, "hello there!");
+    });
   });
 
   describe("range", function () {

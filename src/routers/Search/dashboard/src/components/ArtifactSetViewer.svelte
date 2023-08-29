@@ -53,7 +53,7 @@
     const uri = await getUri(content, tags);
 
     try {
-      await navigator.clipboard.writeText(uri);
+      await navigator.clipboard.writeText(uri || getDeprecatedID(content));
       dispatch("copyUri", {
         uri: uri || getDeprecatedID(content),
         name: getTagValue(tags, 'Base', 'name', 'value')
@@ -76,7 +76,7 @@
     }
   }
 
-  function getDeprecatedID(content) {
+  function getDeprecatedID(content?) {
     return content ? artifactSet.id + '_' + content.id : artifactSet.id;
 
   }
