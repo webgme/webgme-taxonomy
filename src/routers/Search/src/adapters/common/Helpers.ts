@@ -9,7 +9,8 @@ export function toArtifactMetadatav2(
     tags = metadata.tags;
   } else {
     // Update the old format to the new one
-    tags = deepMerge(...metadata.taxonomyTags);
+    const taxonomyTags = metadata.taxonomyTags || [];
+    tags = deepMerge(...taxonomyTags);
   }
 
   return {

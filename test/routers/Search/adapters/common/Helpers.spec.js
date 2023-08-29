@@ -32,6 +32,18 @@ describe("Helpers", function () {
       assert.deepEqual(updated.tags, metadata.taxonomyTags[0]);
     });
 
+    it("should initialize tags to {} if no taxonomyTags", function () {
+      const metadata = {
+        displayName: "Example",
+        taxonomyVersion,
+        time,
+      };
+      const updated = toArtifactMetadatav2(metadata);
+
+      assert(typeof updated.tags === "object");
+      assert.equal(Object.keys(updated.tags), 0);
+    });
+
     it("should convert multi tax tags correctly", function () {
       const metadata = {
         displayName: "Example",
