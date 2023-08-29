@@ -3,10 +3,8 @@
   import { FilterTag, LeanTag, fromDict } from "./tags";
   import { filterMap } from "./Utils";
   import {
-    getLatestArtifact,
     openUrl,
     encodeQueryParams,
-    readFile,
   } from "./Utils";
   import Textfield from "@smui/textfield";
   import { SvelteToast, toast } from "@zerodevx/svelte-toast";
@@ -14,21 +12,11 @@
   import List, {
     Item,
     Text,
-    Graphic,
     PrimaryText,
     SecondaryText,
   } from "@smui/list";
   import Drawer, { Content, AppContent } from "@smui/drawer";
   import LinearProgress from "@smui/linear-progress";
-  import Select, { Option } from "@smui/select";
-  import Dialog, {
-    Content as DialogContent,
-    Title as DialogTitle,
-    InitialFocus,
-    Actions,
-  } from "@smui/dialog";
-  import Radio from "@smui/radio";
-  import Button, { Label } from "@smui/button";
   import Paper, { Content as PaperContent } from "@smui/paper";
   import {
     AppHeader,
@@ -40,20 +28,24 @@
 
   import TaxonomyData from "./TaxonomyData";
   import TaxonomyReference from "./TaxonomyReference";
+  import Storage, { LoadState, ModelError, RequestError, ModelContext } from "./Storage";
+  import type { PopulatedRepo } from "./Storage";
+  import type ContentType from "./ContentType";
 
   let title: string;
-  let contentType: ContentType = {name: "Data"};
+  let contentType: ContentType = {
+    name: "Data",
+    nodePath: '',
+    vocabularies: []
+  };
   $: title = `${contentType.name} Dashboard`;
   let vocabularies: TaxonomyData[] = [];
 
-  import TagFormatter, { FormatError } from "./Formatter";
-  import Storage, { LoadState, ModelError, RequestError, ModelContext } from "./Storage";
-  import type { PopulatedRepo } from "./Storage";
   const storage = setContext("storage", new Storage());
 
 
-  let allItems: PopulatedRepo = [];
-  let items: PopulatedRepo = [];
+  let allItems: PopulatedRepo[] = [];
+  let items: PopulatedRepo[] = [];
 
   const params = new URLSearchParams(location.search);
   let searchQuery: string = params.get("searchQuery") || "";
@@ -206,7 +198,7 @@
 
   let isLoading = false;
   let configuration;
-  let currentTaxonomy;
+  let currentTaxonomy: TaxonomyReference;
   async function initialize() {
     configuration = await fetchConfiguration();
     currentTaxonomy = TaxonomyReference.from(configuration.project);
