@@ -43,7 +43,7 @@ function initialize(middlewareOpts) {
   var logger = middlewareOpts.logger.fork("TagCreator"),
     ensureAuthenticated = middlewareOpts.ensureAuthenticated;
 
-  generateFormHtml(middlewareOpts.gmeConfig);
+  // generateFormHtml(middlewareOpts.gmeConfig);
   logger.debug("initializing ...");
 
   // Ensure authenticated can be used only after this rule.
@@ -60,7 +60,7 @@ function initialize(middlewareOpts) {
 
   RouterUtils.addLatestVersionRedirect(middlewareOpts, router);
 
-  const staticPath = path.join(__dirname, "form");
+  const staticPath = path.join(__dirname, "form/dist");
   router.use(
     RouterUtils.getContentTypeRoutes("static/"),
     express.static(staticPath),
