@@ -14,6 +14,8 @@
   },
   "devDependencies": {
     "@smui/button": "^7.0.0-beta.14",
+    "@smui/icon-button": "^7.0.0-beta.14",
+    "@smui/snackbar": "^7.0.0-beta.14",
     "@smui/top-app-bar": "^7.0.0-beta.14",
     "@sveltejs/vite-plugin-svelte": "^2.4.4",
     "@tsconfig/svelte": "^5.0.0",
