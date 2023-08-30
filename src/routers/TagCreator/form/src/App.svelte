@@ -38,6 +38,7 @@
         </Section>
       </Row>
     </TopAppBar>
+    <!-- TODO: download an object with a "tags" key set to the form data and "taxonomyVersion" set to "schema.taxonomyVersion" -->
     <SchemaForm {schema} {uischema} {data} let:actions={actions}>
       <Button on:click={() => actions.download("tags")} type="button" variant="raised">
         <Label>Download</Label>
