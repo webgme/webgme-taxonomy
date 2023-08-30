@@ -86,6 +86,11 @@
 </main>
 
 <style lang="scss">
+  :global(.schema-loading),
+  :global(.jsonschema-form) {
+    padding: 8px;
+  }
+
   :global(.jsonschema-form > .smui-paper > .smui-paper__title) {
     display: none;
   }
