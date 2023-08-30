@@ -4,11 +4,7 @@
 
 <div class="schema-loading">
   <CircularProgress indeterminate />
-  <span class="schema-loading-text">
-    <slot>
-      Loading schema
-    </slot>
-  </span>
+  <span class="schema-loading-text"></span>
 </div>
 
 <style lang="scss">
