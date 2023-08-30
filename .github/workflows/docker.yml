@@ -31,6 +31,9 @@ jobs:
           echo "TAG=latest" >> $GITHUB_ENV
         if: github.event_name == 'push'
         
+      - name: "Install Dependencies and Compile TS/Svelte/etc"
+        run: npm ci --legacy-peer-deps
+
       - name: Publish to Docker Hub
         uses: elgohr/Publish-Docker-Github-Action@v4
         with:
