@@ -8,7 +8,7 @@ var express = require("express"),
 const RouterUtils = require("../../common/routers/Utils");
 const Utils = require("../../common/Utils");
 const TagFormatter = require("../../common/TagFormatter");
-const isObject = require("../Search/build/Utils").isObject;
+const { deepMerge, isObject } = require("../Search/build/Utils");
 /**
  * Called when the server is created but before it starts to listening to incoming requests.
  * N.B. gmeAuth, safeStorage and workerManager are not ready to use until the start function is called.
@@ -24,13 +24,11 @@ const isObject = require("../Search/build/Utils").isObject;
  * @param {object} middlewareOpts.workerManager - Spawns and keeps track of "worker" sub-processes.
  */
 function initialize(middlewareOpts) {
-  var logger = middlewareOpts.logger.fork("TagFormat"),
-    ensureAuthenticated = middlewareOpts.ensureAuthenticated;
+  var logger = middlewareOpts.logger.fork("TagFormat");
 
   logger.debug("initializing ...");
 
-  // Ensure authenticated can be used only after this rule.
-  router.use("*", function (req, res, next) {
+  router.use("*", function (_req, res, next) {
     // TODO: set all headers, check rate limit, etc.
 
     // This header ensures that any failures with authentication won't redirect.
@@ -47,42 +45,55 @@ function initialize(middlewareOpts) {
 
   router.get(
     RouterUtils.getProjectScopedRoutes(":format(guid|human)"),
-    async function (req, res) {
-      const { format } = req.params;
-      let { tags } = req.query;
-      try {
-        tags = JSON.parse(tags);
-        if (!isObject(tags) || Array.isArray(tags)) {
-          return res
-            .status(400)
-            .send(`Expected a list of tags. Found ${JSON.stringify(tags)}`);
-        }
-      } catch (err) {
-        return res.status(400).send("Tags are not valid JSON.");
-      }
-      const { root, core } = req.webgmeContext;
-      const node = await Utils.findTaxonomyNode(core, root);
-      const formatter = await TagFormatter.from(core, node);
-
-      try {
-        if (format === "human") {
-          res.json(await formatter.toHumanFormat(tags));
-        } else {
-          res.json(await formatter.toGuidFormat(tags));
-        }
-      } catch (err) {
-        if (err instanceof TagFormatter.FormatError) {
-          res.status(400).send(err.message);
-        } else {
-          logger.error(
-            `Error occurred during tag format conversion: ${err.stack}`,
+    RouterUtils.handleUserErrors(
+      logger,
+      async function formatTags(req, res) {
+        const { format } = req.params;
+        let { tags } = req.query;
+        try {
+          tags = JSON.parse(tags);
+        } catch (err) {
+          throw new RouterUtils.UserError(
+            "Invalid tag format.",
+            400,
           );
-          res
-            .status(500)
-            .send("Internal error occurred. Please try again later.");
         }
-      }
-    },
+
+        if (Array.isArray(tags)) { // Update tags from v1 to v2 format
+          tags = deepMerge(...tags);
+        }
+
+        if (!isObject(tags)) {
+          throw new RouterUtils.UserError(
+            "Invalid tag format.",
+            400,
+          );
+        }
+
+        const { root, core } = req.webgmeContext;
+        const node = await Utils.findTaxonomyNode(core, root);
+        const formatter = await TagFormatter.from(core, node);
+
+        try {
+          if (format === "human") {
+            res.json(await formatter.toHumanFormat(tags));
+          } else {
+            res.json(await formatter.toGuidFormat(tags));
+          }
+        } catch (err) {
+          if (err instanceof TagFormatter.FormatError) {
+            res.status(400).send(err.message);
+          } else {
+            logger.error(
+              `Error occurred during tag format conversion: ${err.stack}`,
+            );
+            res
+              .status(500)
+              .send("Internal error occurred. Please try again later.");
+          }
+        }
+      },
+    ),
   );
 
   logger.debug("ready");

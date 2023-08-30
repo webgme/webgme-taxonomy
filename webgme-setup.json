@@ -97,11 +97,6 @@
         "src": "src/routers/TagCreatorv1",
         "test": "test/routers/TagCreatorv1",
         "mount": "routers/TagCreatorv1"
-      },
-      "TagFormatv1": {
-        "src": "src/routers/TagFormatv1",
-        "test": "test/routers/TagFormatv1",
-        "mount": "routers/TagFormatv1"
       }
     }
   },
