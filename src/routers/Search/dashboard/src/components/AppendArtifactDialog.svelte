@@ -3,6 +3,7 @@
   A dialog for appending artifacts to a set.
 -->
 <script lang="ts">
+  import TagSelector from "./TagSelector.svelte";
   import Dialog, { Content, Title, Actions } from "@smui/dialog";
   import Textfield from "@smui/textfield";
   import Dropzone from "svelte-file-dropzone";
@@ -26,7 +27,7 @@
   const formatter = new TagFormatter();
 
   /** The artifact set to append a new artifact to. Null to hide dialog.*/
-  export let set: { displayName: string; taxonomyTags: any[] } | null = null;
+  export let set: { displayName: string; tags: object } | null = null;
   /** The content type name for the artifact set to append to. */
   export let contentType: ContentType;
 
@@ -35,38 +36,16 @@
   let metadata: any;
   let open = false;
   let uploading: Promise<UploadPromise[]> | null = null;
+  let selectTagDisabled = false;
 
   $: displayName = set?.displayName ?? "";
   $: appendName = displayName;
   $: setOpen(set != null);
-  $: setMetadata(set?.taxonomyTags ?? []);
   $: progresses = uploading ? Array(files.length).fill(0) : [];
+  $: selectTagDisabled = !!uploading;
 
   function setOpen(value: boolean) {
     if (value !== open) open = value;
-  }
-
-  let lastTags = set?.taxonomyTags ?? [];
-  async function setMetadata(tags: any[]) {
-    if (tags === lastTags) {
-      return;
-    }
-
-    try {
-      const taxonomyTags = await formatter.toHumanFormat(tags);
-      metadata = { taxonomyTags };
-    } catch (err) {
-      if (err instanceof FormatError) {
-        console.warn("Latest artifact has invalid taxonomy tags:", err.message);
-      } else {
-        console.error(
-          "An error occurred while setting default tags",
-          err.stack
-        );
-      }
-    }
-
-    lastTags = tags;
   }
 
   function onAppendFileDrop(event: DropEvent) {
@@ -77,23 +56,18 @@
     // TODO: handle rejections
   }
 
-  async function onAppendTagsFileDrop(event: DropEvent) {
-    const [tagsFile] = event.detail.acceptedFiles;
-    if (tagsFile) {
-      metadata = JSON.parse(await readFile(tagsFile));
-    }
-  }
 
   async function onAppendClicked() {
     if (!files.length) {
       dispatchError(`${contentType.name} file required.`);
     }
 
-    metadata.displayName = appendName;
+    const appendMetadata = metadata ?? {};
+    appendMetadata.displayName = appendName;
     dispatch("upload");
     let unsubscribers: Unsubscriber[] = [];
     try {
-      uploading = storage.appendArtifact(set, metadata, files);
+      uploading = storage.appendArtifact(set, appendMetadata, files);
       const uploads = await uploading;
       unsubscribers = uploads.map((upload, index) => {
         return upload.subscribe((progress) => (progresses[index] = progress));
@@ -121,22 +95,6 @@
 
   function dispatchError(error: string) {
     return dispatch("error", { error });
-  }
-
-  function getTagDisplayName(tag) {
-    // FIXME: there is no way to tell the difference btwn terms and compound fields...
-    let currentTag = tag;
-    const tagNames = [];
-    while (currentTag) {
-      const [name, tag] =
-        Object.entries(currentTag).find(([, data]) => isObject(data)) || [];
-      currentTag = tag;
-      if (name) {
-        tagNames.push(name);
-      }
-    }
-
-    return tagNames.pop(); // Only return the most specific one for now...
   }
 
   function closeHandler(e: CustomEvent<{ action: string }>) {
@@ -206,30 +164,11 @@
       </Dropzone>
     {/if}
 
-    <p>
-      Taxonomy Terms <span style="font-style:italic">(optional)</span>:<br />
-      {metadata ? metadata.taxonomyTags.map(getTagDisplayName).join(", ") : ""}
-    </p>
-
-    {#if !uploading}
-      <Dropzone on:drop={onAppendTagsFileDrop} accept=".json">
-        <p>Select tags file for dataset.</p>
-      </Dropzone>
-    {:else}
-      <Dropzone disabled accept=".json">
-        <p>Select tags file for dataset.</p>
-      </Dropzone>
-    {/if}
-
-    <a
-      target="_blank"
-      href={window.location.href
-        .replace("/Search/", "/TagCreator/") // FIXME: use the correct content type
-        .replace(
-          /[^\/]*\/static\//,
-          `${encodeURIComponent(contentType.nodePath)}/static/`
-        )}>Click to select tags for your dataset.</a
-    >
+    <TagSelector 
+      bind:metadata={metadata}
+      bind:contentType
+      bind:disabled={selectTagDisabled}
+    />
   </Content>
   <div class="dialog-actions">
     <Button disabled={uploading} on:click={() => close()}>

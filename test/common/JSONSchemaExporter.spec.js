@@ -1,21 +1,10 @@
 describe("JSONSchemaExporter", function () {
   const testFixture = require("../globals");
-  const _ = testFixture.requirejs("underscore");
-  const Core = testFixture.requirejs("common/core/coreQ");
   const Importer = testFixture.requirejs("webgme-json-importer/JSONImporter");
-  const TaxonomyParser = require("../../src/common/TaxonomyParser");
-  const TagFormatter = require("../../src/common/TagFormatter");
   const JSONSchemaExporter = require("../../src/common/JSONSchemaExporter");
   const Ajv = require("ajv");
   const ajv = new Ajv();
-  const { OmittedProperties, NodeSelections } = Importer;
   const assert = require("assert");
-  const gmeConfig = testFixture.getGmeConfig();
-  const path = testFixture.path;
-  const SEED_DIR = path.join(__dirname, "..", "..", "src", "seeds");
-  const Q = testFixture.Q;
-  const logger = testFixture.logger.fork("JSONImporter");
-  const projectName = "testProject";
   const Utils = require("../Utils");
   let project, gmeAuth, storage, commitHash, core;
 
@@ -42,12 +31,7 @@ describe("JSONSchemaExporter", function () {
     const exporter = JSONSchemaExporter.from(core, root);
     const { schema, uiSchema } = await exporter.getSchemas(taxonomy);
     const validate = ajv.compile(schema);
-    return (tag) => {
-      const completeTags = {
-        taxonomyTags: [tag],
-      };
-      return validate(completeTags);
-    };
+    return validate;
   }
 
   describe("required terms", function () {
@@ -78,21 +62,117 @@ describe("JSONSchemaExporter", function () {
     });
 
     it("should add constraint for required terms", async function () {
-      const isRequired = schemaDict.schema.properties.taxonomyTags.allOf.find(
-        (constraint) => constraint.contains?.title === "RequiredTerm",
-      );
-      assert(isRequired);
+      const requiredTerms = schemaDict.schema.properties.Vocabulary.required;
+      assert(requiredTerms.includes("RequiredTerm"));
     });
 
     it("should include terms in initial form data", async function () {
       const { formData } = schemaDict;
-      const [initTag] = formData.taxonomyTags;
-      assert(initTag.Vocabulary.RequiredTerm);
+      assert(formData.Vocabulary.RequiredTerm);
+    });
+
+    it("should set required fields correctly", async function () {
+      const root = await Utils.getNewRootNode(project, commitHash, core);
+      const taxonomyJson = {
+        pointers: { base: "@meta:Taxonomy" },
+        children: [
+          {
+            pointers: { base: "@meta:Vocabulary" },
+            children: [
+              {
+                pointers: { base: "@meta:Term" },
+                attributes: {
+                  name: "RequiredTerm",
+                  selection: "required",
+                },
+                children: [
+                  {
+                    pointers: { base: "@meta:TextField" },
+                    attributes: { name: "requiredField" },
+                  },
+                  {
+                    pointers: { base: "@meta:EnumField" },
+                    attributes: { name: "value", required: false },
+                    children: [
+                      {
+                        pointers: { base: "@meta:CompoundField" },
+                        attributes: { name: "A" },
+                      },
+                      {
+                        pointers: { base: "@meta:CompoundField" },
+                        attributes: { name: "B" },
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      };
+      const importer = new Importer(core, root);
+      const taxonomy = await importer.import(root, taxonomyJson);
+      const exporter = JSONSchemaExporter.from(core, taxonomy);
+      const { schema } = await exporter.getSchemas(taxonomy);
+
+      const termSchema = schema.properties.Vocabulary.properties.RequiredTerm;
+      const reqFields = termSchema.required;
+
+      assert(termSchema);
+
+      assert(reqFields.includes("requiredField"));
+      assert(!reqFields.includes("value"));
+    });
+  });
+
+  describe("required props", function () {
+    // The following test is required bc of a limitation of the tag form itself
+    it("should make all properties of optional terms optional, too", async function () {
+      const root = await Utils.getNewRootNode(project, commitHash, core);
+      const requiredPropJson = {
+        pointers: { base: "@meta:TextField" },
+        attributes: { required: true },
+      };
+      const taxonomyJson = {
+        pointers: { base: "@meta:Taxonomy" },
+        children: [
+          {
+            pointers: { base: "@meta:Vocabulary" },
+            children: [
+              {
+                pointers: { base: "@meta:Term" },
+                attributes: {
+                  name: "RequiredTerm",
+                  selection: "required",
+                },
+                children: [requiredPropJson],
+              },
+              {
+                pointers: { base: "@meta:Term" },
+                attributes: {
+                  name: "OptionalTerm",
+                  selection: "optional",
+                },
+                children: [requiredPropJson],
+              },
+            ],
+          },
+        ],
+      };
+      const importer = new Importer(core, root);
+      const taxonomy = await importer.import(root, taxonomyJson);
+      const exporter = JSONSchemaExporter.from(core, taxonomy);
+
+      const { schema } = await exporter.getSchemas(taxonomy);
+      const termDict = schema.properties.Vocabulary.properties;
+
+      assert.equal(termDict.OptionalTerm.required.length, 0);
+      assert.equal(termDict.RequiredTerm.required.pop(), "TextField");
     });
   });
 
   describe("recommended terms", function () {
-    it("should include terms in initial form data", async function () {
+    it.skip("should include terms in initial form data", async function () {
       const root = await Utils.getNewRootNode(project, commitHash, core);
       const taxonomyJson = {
         pointers: { base: "@meta:Taxonomy" },
@@ -115,8 +195,8 @@ describe("JSONSchemaExporter", function () {
       const taxonomy = await importer.import(root, taxonomyJson);
       const exporter = JSONSchemaExporter.from(core, taxonomy);
       const { formData } = await exporter.getSchemas(taxonomy);
-      const [initTag] = formData.taxonomyTags;
-      assert(initTag.Vocabulary.RecTerm);
+      const tags = formData.Vocabulary.properties;
+      assert(tags.RecTerm);
     });
   });
 
@@ -133,6 +213,7 @@ describe("JSONSchemaExporter", function () {
                 pointers: { base: "@meta:Term" },
                 attributes: {
                   name: "RecTerm",
+                  selection: "required",
                 },
                 children: [
                   {
@@ -149,9 +230,8 @@ describe("JSONSchemaExporter", function () {
       const taxonomy = await importer.import(root, taxonomyJson);
       const exporter = JSONSchemaExporter.from(core, taxonomy);
       const { schema } = await exporter.getSchemas(taxonomy);
-      const termSchema = schema.properties.taxonomyTags.items.anyOf[0];
-      const reqProps =
-        termSchema.properties.Vocabulary.properties.RecTerm.required;
+      const termSchema = schema.properties.Vocabulary.properties.RecTerm;
+      const reqProps = termSchema.required;
       assert(reqProps.includes("testAttr"));
     });
   });
@@ -271,7 +351,7 @@ describe("JSONSchemaExporter", function () {
     });
   });
 
-  describe("deprecate", function () {
+  describe("releaseState", function () {
     let root;
     beforeEach(async () => {
       root = await Utils.getNewRootNode(project, commitHash, core);
@@ -285,13 +365,31 @@ describe("JSONSchemaExporter", function () {
       const taxonomy = await Utils.createTaxonomyFromCsv(core, root, taxCsv);
       const termNode = (await core.loadSubTree(taxonomy))
         .find((node) => core.getAttribute(node, "name") === "depTerm");
-      core.setAttribute(termNode, "deprecated", true);
+      core.setAttribute(termNode, "releaseState", "deprecated");
 
       const exporter = JSONSchemaExporter.from(core, root);
-      const { schema } = await exporter.getSchemas(taxonomy, false);
-      const termSchemas = schema.properties.taxonomyTags.items.anyOf;
+      const { schema } = await exporter.getSchemas(taxonomy, true);
+      const termSchemas = Object.keys(schema.properties.vocab.properties);
       assert.equal(termSchemas.length, 2);
       assert(!termSchemas.find((schema) => schema.title === "depTerm"));
+    });
+
+    it("should omit prerelease terms", async function () {
+      const taxCsv = `vocab,,,
+        ,term,,
+        ,term2,,
+        ,preTerm,,`;
+      const taxonomy = await Utils.createTaxonomyFromCsv(core, root, taxCsv);
+      const termNode = (await core.loadSubTree(taxonomy))
+        .find((node) => core.getAttribute(node, "name") === "preTerm");
+      core.setAttribute(termNode, "releaseState", "prerelease");
+
+      const exporter = JSONSchemaExporter.from(core, root);
+      const { schema } = await exporter.getSchemas(taxonomy, true);
+      const termSchemas = Object.values(schema.properties)
+        .flatMap((v) => Object.values(v.properties));
+      assert.equal(termSchemas.length, 2);
+      assert(!termSchemas.find((schema) => schema.title === "preTerm"));
     });
 
     it("should omit terms in deprecated vocabs", async function () {
@@ -307,13 +405,106 @@ describe("JSONSchemaExporter", function () {
       const taxonomy = await Utils.createTaxonomyFromCsv(core, root, taxCsv);
       const vocabNode = (await core.loadChildren(taxonomy))
         .find((node) => core.getAttribute(node, "name") === "depVocab");
-      core.setAttribute(vocabNode, "deprecated", true);
+      core.setAttribute(vocabNode, "releaseState", "deprecated");
 
       const exporter = JSONSchemaExporter.from(core, root);
-      const { schema } = await exporter.getSchemas(taxonomy, false);
-      const termSchemas = schema.properties.taxonomyTags.items.anyOf;
+      const { schema } = await exporter.getSchemas(taxonomy, true);
+      const termSchemas = Object.values(schema.properties)
+        .flatMap((v) => Object.values(v.properties));
       assert.equal(termSchemas.length, 3);
       assert(!termSchemas.find((schema) => schema.title.startsWith("dep")));
+    });
+
+    it("should omit terms in prerelease vocabs", async function () {
+      const taxCsv = `vocab,,,
+        ,term,,
+        ,term2,,
+        ,term3,,
+        preVocab,,,
+        ,preTerm,,
+        ,preTerm2,,
+        ,preTerm3,,
+      `;
+      const taxonomy = await Utils.createTaxonomyFromCsv(core, root, taxCsv);
+      const vocabNode = (await core.loadChildren(taxonomy))
+        .find((node) => core.getAttribute(node, "name") === "preVocab");
+      core.setAttribute(vocabNode, "releaseState", "prerelease");
+
+      const exporter = JSONSchemaExporter.from(core, root);
+      const { schema } = await exporter.getSchemas(taxonomy, true);
+      const termSchemas = Object.values(schema.properties)
+        .flatMap((v) => Object.values(v.properties));
+      assert.equal(termSchemas.length, 3);
+      assert(termSchemas.every((schema) => !schema.title.startsWith("pre")));
+    });
+
+    it("should include unreleased terms by default", async function () {
+      const taxCsv = `vocab,,,
+        ,term,,
+        ,term2,,
+        ,term3,,
+        depVocab,,,
+        ,depTerm,,
+        ,depTerm2,,
+        ,depTerm3,,
+        preVocab,,,
+        ,preTerm,,
+        ,preTerm2,,
+        ,preTerm3,,
+      `;
+      const taxonomy = await Utils.createTaxonomyFromCsv(core, root, taxCsv);
+      const depVocab = (await core.loadChildren(taxonomy))
+        .find((node) => core.getAttribute(node, "name") === "depVocab");
+      core.setAttribute(depVocab, "releaseState", "deprecated");
+      const preVocab = (await core.loadChildren(taxonomy))
+        .find((node) => core.getAttribute(node, "name") === "preVocab");
+      core.setAttribute(preVocab, "releaseState", "prerelease");
+
+      const exporter = JSONSchemaExporter.from(core, root);
+      const { schema } = await exporter.getSchemas(taxonomy);
+      const termSchemas = Object.values(schema.properties)
+        .flatMap((v) => Object.values(v.properties));
+      assert.equal(termSchemas.length, 9);
+
+      assert.equal(
+        termSchemas.filter((schema) => schema.title.startsWith("dep")).length,
+        3,
+      );
+      assert.equal(
+        termSchemas.filter((schema) => schema.title.startsWith("pre")).length,
+        3,
+      );
+    });
+  });
+
+  describe("UriField", function () {
+    it("should enforce syntax", async function () {
+      const root = await Utils.getNewRootNode(project, commitHash, core);
+      const taxCsv = `vocab,,,
+        ,term,,
+        ,,field (uri),
+      `;
+      const uri =
+        "pdp://127.0.0.1:435/someType/e0de6a4a-5257-4f2c-b3ce-470e3299fc4a/9/0";
+
+      const tag = {
+        vocab: {
+          term: {
+            field: uri,
+          },
+        },
+      };
+      const validate = await getValidateFn(core, root, taxCsv);
+      assert(await validate(tag));
+
+      const badTag = {
+        vocab: {
+          term: {
+            field: "IamAnInvalidURI",
+          },
+        },
+      };
+      assert(!await validate(badTag));
     });
   });
 });

@@ -18,7 +18,7 @@
     {:then info}
       {#each info.contentTypes as { name, url, path } (path)}
         <Cell>
-          <ContentTypeCard {name} {url} />
+          <ContentTypeCard {name} {path} />
         </Cell>
       {/each}
     {:catch error}

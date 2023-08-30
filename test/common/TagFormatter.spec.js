@@ -51,7 +51,7 @@ describe("TagFormatter", function () {
   });
 
   function check(tag, depth) {
-    const [guidTag] = formatter.toGuidFormat([tag]);
+    const guidTag = formatter.toGuidFormat(tag);
     for (let i = 0; i < depth; i++) {
       const names = keysAtDepth(tag, i);
       keysAtDepth(guidTag, i).forEach((keyGuid) => {
@@ -65,7 +65,7 @@ describe("TagFormatter", function () {
       });
       assert.equal(names.length, 0, `Found names: ${names.join(", ")}`);
     }
-    const [humanTag] = formatter.toHumanFormat([guidTag]);
+    const humanTag = formatter.toHumanFormat(guidTag);
     assert.deepEqual(humanTag, tag);
   }
 
@@ -96,6 +96,22 @@ describe("TagFormatter", function () {
           enumProp: {
             enumItem1: {},
           },
+        },
+      },
+    };
+    check(tag, 4);
+  });
+
+  it("should convert multiple tags", function () {
+    const tag = {
+      vocab: {
+        enumTerm: {
+          enumProp: {
+            enumItem1: {},
+          },
+        },
+        enumTerm3: {
+          enumItem3: "hello",
         },
       },
     };

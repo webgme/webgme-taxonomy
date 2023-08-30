@@ -25,7 +25,7 @@ export class UserError extends Error {
 
 export function handleUserErrors(
   logger: Global.GmeLogger,
-  fn: MiddlewareHandler,
+  ...fn: MiddlewareHandler[]
 ): RequestHandler;
 export function getProjectScopedRoutes(path: string): string[];
 export function addProjectScopeMiddleware(
@@ -37,6 +37,7 @@ export function addLatestVersionRedirect(
   router: Router,
 ): Router;
 export function getObserverIdFromToken(token: string): string;
+export function responseClose(res: Response): Promise<void>;
 export function getContentTypeRoutes(path?: string): string[];
 export function getContentTypeVocabRoutes(path?: string): string[];
 export function addContentTypeMiddleware(

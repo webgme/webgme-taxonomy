@@ -43,7 +43,7 @@ function initialize(middlewareOpts) {
   var logger = middlewareOpts.logger.fork("TagCreator"),
     ensureAuthenticated = middlewareOpts.ensureAuthenticated;
 
-  generateFormHtml(middlewareOpts.gmeConfig);
+  // generateFormHtml(middlewareOpts.gmeConfig);
   logger.debug("initializing ...");
 
   // Ensure authenticated can be used only after this rule.
@@ -60,7 +60,7 @@ function initialize(middlewareOpts) {
 
   RouterUtils.addLatestVersionRedirect(middlewareOpts, router);
 
-  const staticPath = path.join(__dirname, "form");
+  const staticPath = path.join(__dirname, "form/dist");
   router.use(
     RouterUtils.getContentTypeRoutes("static/"),
     express.static(staticPath),
@@ -70,21 +70,23 @@ function initialize(middlewareOpts) {
 
   router.get(
     RouterUtils.getContentTypeRoutes("configuration.json"),
-    async function (req, res) {
-      const { root, core, contentType } = req.webgmeContext;
-      const exporter = JSONSchemaExporter.from(core, root);
-      const vocabularies = await Utils.getVocabulariesFor(core, contentType);
-      const contentName = core.getAttribute(contentType, "name").toString();
-      const title = `${contentName} Terms`;
-      const config = await exporter.getVocabSchemas(
-        vocabularies,
-        title,
-        false,
-      );
-      config.taxonomyVersion = req.webgmeContext.projectVersion;
-      config.taxonomyVersion.url = getHostUrl(req);
-      return res.json(config);
-    },
+    RouterUtils.handleUserErrors(
+      logger,
+      async function getTagFormConfig(req, res) {
+        const { root, core, contentType } = req.webgmeContext;
+        const exporter = JSONSchemaExporter.from(core, root);
+        const vocabularies = await Utils.getVocabulariesFor(core, contentType);
+        const contentName = core.getAttribute(contentType, "name").toString();
+        const config = await exporter.getVocabSchemas(
+          vocabularies,
+          contentName,
+          true,
+        );
+        config.taxonomyVersion = req.webgmeContext.projectVersion;
+        config.taxonomyVersion.url = getHostUrl(req);
+        return res.json(config);
+      },
+    ),
   );
 
   logger.debug("ready");

@@ -17,11 +17,10 @@
   import TagItem from './TagItem.svelte';
 
   export let displayName: string = '';
-  export let taxonomyTags: any[] = [];
+  export let taxonomyTags: object = {};
   export let open = true;
 
-  let sortedTags;
-  $: sortedTags = taxonomyTags.sort((a, b) => getVocabName(a) < getVocabName(b) ? -1 : 1)
+  // FIXME: check that it shows correct tags when item is changed
 
   function close() {
     open = false;
@@ -40,16 +39,14 @@
   <Title id="display-tags-title">Metadata for {displayName}</Title>
   <Content id="display-tags-content">
     <List>
-      {#each sortedTags as tag}
-        <TagItem tag={tag}/>
-      {/each}
+      <TagItem tag={taxonomyTags}/>
     </List>
   </Content>
   <div class="dialog-actions">
     <Button on:click={close}>
       <Label>Close</Label>
     </Button>
-    <Button on:click={downloadJSON(`${displayName}_metadata`, sortedTags)}>
+    <Button on:click={downloadJSON(`${displayName}_metadata`, taxonomyTags)}>
       <Label>Download</Label>
     </Button>
   </div>

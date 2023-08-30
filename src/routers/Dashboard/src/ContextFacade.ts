@@ -14,17 +14,6 @@ export default class ContextFacade {
     );
   }
 
-  getScopedUrl(node: Core.Node) {
-    const { projectVersion, core } = this.context;
-    const path = node ? [core.getPath(node)] : [];
-    const { id, branch, tag, commit } = projectVersion;
-    const version = !commit
-      ? !tag ? ["branch", branch!] : ["tag", tag]
-      : ["commit", commit];
-    const scope = [id, ...version, ...path].map(encodeURIComponent);
-    return ["/routers/Search", ...scope, "static/"].join("/");
-  }
-
   async getProjectInfo() {
     const { project: { projectName }, core } = this.context;
     const contentTypeNodes = await this.getContentTypeNodes();
@@ -33,7 +22,6 @@ export default class ContextFacade {
       contentTypes: contentTypeNodes.map((node) => ({
         name: core.getAttribute(node, "name"),
         path: core.getPath(node),
-        url: this.getScopedUrl(node),
       })),
     };
   }

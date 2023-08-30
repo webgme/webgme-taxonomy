@@ -164,3 +164,12 @@ export function downloadJSON(name: string, object: any) {
   element.click();
   element.remove();
 }
+
+// TODO: combine logic with the other utils in the server code
+export async function sleep(duration: number): Promise<void> {
+  return new Promise((res) => setTimeout(res, duration));
+}
+
+export function getTagValue(tags: any, ...fqn: string[]) {
+  return fqn.reduce((tagData, name) => tagData && tagData[name], tags);
+}
