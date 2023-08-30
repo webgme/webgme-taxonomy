@@ -46,7 +46,7 @@
       </Row>
     </TopAppBar>
     <p>Loading schema...</p>
-  {:then {schema, taxonomyVersion}}}
+  {:then {schema, taxonomyVersion}}
     <TopAppBar variant="static">
       <Row>
         <Section>
