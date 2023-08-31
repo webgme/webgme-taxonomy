@@ -3,6 +3,8 @@
   A component for selecting tags for a repository or content.
 -->
 <script lang="ts">
+  import type { ArtifactMetadatav2 } from '../../../src/adapters/common/types';
+  import { toArtifactMetadatav2 } from '../../../src/Utils';
   import type { default as ContentType } from "../ContentType";
   import Dropzone from "svelte-file-dropzone";
   import {
@@ -10,14 +12,14 @@
     readFile,
   } from "../Utils";
 
-  export let metadata;
+  export let metadata: ArtifactMetadatav2;
   export let contentType: ContentType;
   export let displayTypeName: string = 'content';
   export let disabled: boolean = false;
 
-  function getTagDisplayName(tag) {
+  function getTagDisplayName(tags) {
     // FIXME: there is no way to tell the difference btwn terms and compound fields...
-    let currentTag = tag;
+    let currentTag = tags;
     const tagNames = [];
     while (currentTag) {
       const [name, tag] =
@@ -35,8 +37,7 @@
     const [tagsFile] = event.detail.acceptedFiles;
     console.log('file dropped', tagsFile);
     if (tagsFile) {
-      metadata = JSON.parse(await readFile(tagsFile));
-      console.log({metadata})
+      metadata = toArtifactMetadatav2(JSON.parse(await readFile(tagsFile)));
     }
   }
 
@@ -45,7 +46,7 @@
 <div>
     <p> <!-- TODO: Check if they are actually optional -->
       Taxonomy Terms <span style="font-style:italic">(optional)</span>:<br />
-      {metadata && metadata.taxonomyTags ? metadata.taxonomyTags.map(getTagDisplayName).join(", ") : ""}
+      {metadata && metadata.tags ? getTagDisplayName(metadata.tags).join(", ") : ""}
     </p>
 
     {#if disabled}
