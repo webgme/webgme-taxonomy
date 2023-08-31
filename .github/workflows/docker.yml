@@ -17,18 +17,27 @@ jobs:
         with:
           submodules: true
         
+      # All (regular and prerelease) releases get an "beta" tag
       - name: Get Release Tags
         id: get_release_tags
         run: |
           echo "RELEASE_TAG=$(echo ${GITHUB_REF} | sed -E 's/.*v?([0-9]+)\.([0-9]+)\.([0-9]+)?/\1.\2.\3,\1.\2,\1/')" >> $GITHUB_ENV
-          echo "TAG=stable" >> $GITHUB_ENV
+          echo "TAG=beta" >> $GITHUB_ENV
         if: github.event_name == 'release'
 
+      # Add an extra "latest" tag if not a prerelease
+      - name: Get Release Tags
+        id: get_prerelease_tags
+        run: |
+          echo "EXTRA_TAG=\",latest\"" >> $GITHUB_ENV
+        if: github.event_name == 'release' && !github.event.release.prerelease
+
+      # always push nightly
       - name: Get Push Tags
         id: get_push_tags
         run: |
           echo "RELEASE_TAG=$(echo ${GITHUB_REF:11})" >> $GITHUB_ENV
-          echo "TAG=latest" >> $GITHUB_ENV
+          echo "TAG=nightly" >> $GITHUB_ENV
         if: github.event_name == 'push'
         
       - name: "Install Dependencies and Compile TS/Svelte/etc"
@@ -40,4 +49,4 @@ jobs:
           name: webgme/taxonomy
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_PASSWORD }}
-          tags: "${{ env.TAG }},${{ env.RELEASE_TAG }}"
+          tags: "${{ env.TAG }},${{ env.RELEASE_TAG }}${{ env.EXTRA_TAG }}"
