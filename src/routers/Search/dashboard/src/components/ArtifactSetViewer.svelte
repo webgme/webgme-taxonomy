@@ -56,7 +56,7 @@
       await navigator.clipboard.writeText(uri || getDeprecatedID(content));
       dispatch("copyUri", {
         uri: uri || getDeprecatedID(content),
-        name: getTagValue(tags, 'Base', 'name', 'value')
+        name: getTagValue(tags, 'Base', 'name', 'value') || content.displayName
       })
     } catch (e) {
       console.error(`Unable to copy URI to clipboard:`, e);

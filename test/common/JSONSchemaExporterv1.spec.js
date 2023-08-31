@@ -1,4 +1,4 @@
-describe("JSONSchemaExporter", function () {
+describe("JSONSchemaExporterv1", function () {
   const testFixture = require("../globals");
   const Importer = testFixture.requirejs("webgme-json-importer/JSONImporter");
   const JSONSchemaExporter = require("../../src/common/JSONSchemaExporterv1");
@@ -48,6 +48,7 @@ describe("JSONSchemaExporter", function () {
         children: [
           {
             pointers: { base: "@meta:Vocabulary" },
+            attributes: { name: "vocab" },
             children: [
               {
                 pointers: { base: "@meta:Term" },
@@ -73,10 +74,16 @@ describe("JSONSchemaExporter", function () {
       assert(isRequired);
     });
 
+    it("should include the vocabulary as required property", async function () {
+      const { schema } = schemaDict;
+      const [term] = schema.properties.taxonomyTags.items.anyOf;
+      assert(term.properties.vocab);
+    });
+
     it("should include terms in initial form data", async function () {
       const { formData } = schemaDict;
       const [initTag] = formData.taxonomyTags;
-      assert(initTag.Vocabulary.RequiredTerm);
+      assert(initTag.vocab.RequiredTerm);
     });
   });
 

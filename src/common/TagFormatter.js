@@ -26,11 +26,12 @@ function factory(Importer) {
     _toGuidFormat(node, tag, currentTag = {}) {
       return mapObject(tag, (name, data) => {
         const tagNode = this._findTagNode(node, name);
-        const isNestedData = typeof data === "object";
-        const tagData = isNestedData
-          ? this._toGuidFormat(tagNode, data, currentTag)
-          : data;
+        assert(tagNode, `Could not find node for ${name}.`);
 
+        const tagData = this._convertTagData(
+          data,
+          (datum) => this._toGuidFormat(tagNode, datum, currentTag),
+        );
         return [tagNode.guid, tagData];
       });
     }
@@ -50,13 +51,38 @@ function factory(Importer) {
     _toHumanFormat(tag, nodesByGuid) {
       return mapObject(tag, (guid, data) => {
         const tagNode = nodesByGuid[guid];
-        const isNestedData = typeof data === "object";
-        const tagData = isNestedData
-          ? this._toHumanFormat(data, nodesByGuid)
-          : data;
+        if (!tagNode) {
+          throw new NodeNotFoundError(guid);
+        }
+        const tagData = this._convertTagData(
+          data,
+          (datum) => this._toHumanFormat(datum, nodesByGuid),
+        );
 
         return [tagNode.attributes.name, tagData];
       });
+    }
+
+    _convertTagData(data, fn) {
+      if (Array.isArray(data)) {
+        return data.map((datum) => fn(datum));
+      } else if (typeof data === "object") {
+        return fn(data);
+      } else {
+        return data;
+      }
+    }
+
+    _getGuidTagData(tagNode, data, currentTag) {
+      if (Array.isArray(data)) {
+        return data.map((datum) =>
+          this._getTagData(tagNode, datum, currentTag)
+        );
+      } else if (typeof data === "object") {
+        return this._toGuidFormat(tagNode, data, currentTag);
+      } else {
+        return data;
+      }
     }
 
     static async from(core, taxonomyRoot) {
@@ -175,6 +201,12 @@ function factory(Importer) {
   class TagNotFoundError extends FormatError {
     constructor(tagName) {
       super(`Tag not found: ${tagName}`);
+    }
+  }
+
+  class NodeNotFoundError extends FormatError {
+    constructor(guid) {
+      super(`Could not find tag with GUID: ${guid}`);
     }
   }
   class EnumNotFoundError extends FormatError {

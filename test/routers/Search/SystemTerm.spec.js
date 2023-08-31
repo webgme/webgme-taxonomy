@@ -101,7 +101,7 @@ describe("SystemTerm", function () {
         name: "TestUploadName",
         description: "someDesc",
         tags: [],
-        files: [{ path: "path/to/someFile" }],
+        files: [{ path: "path/to/someFile" }, { path: "path/to/anotherFile" }],
         core,
         contentType,
         project: projectVersion,
@@ -227,12 +227,17 @@ describe("SystemTerm", function () {
 
       const members = tag.Base.attachments.files;
       assert(Array.isArray(members));
-      assert.equal(members.length, 1);
+      assert.equal(members.length, 2);
 
-      const member = members.pop();
-      assert.equal(Object.keys(member).length, 1);
-      assert.equal(Object.keys(member.File).length, 1);
-      assert.equal(member.File.path, "path/to/someFile");
+      members.forEach((member) => {
+        assert.equal(Object.keys(member).length, 1);
+        assert.equal(Object.keys(member.File).length, 1);
+      });
+
+      assert(members.find((member) => member.File.path === "path/to/someFile"));
+      assert(
+        members.find((member) => member.File.path === "path/to/anotherFile"),
+      );
     });
 
     it("should make tag with compound field", async function () {
