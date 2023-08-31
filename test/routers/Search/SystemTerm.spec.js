@@ -101,7 +101,7 @@ describe("SystemTerm", function () {
         name: "TestUploadName",
         description: "someDesc",
         tags: [],
-        files: [{ path: "path/to/someFile" }],
+        files: [{ path: "path/to/someFile" }, { path: "path/to/anotherFile" }],
         core,
         contentType,
         project: projectVersion,
@@ -227,7 +227,7 @@ describe("SystemTerm", function () {
 
       const members = tag.Base.attachments.files;
       assert(Array.isArray(members));
-      assert.equal(members.length, 1);
+      assert.equal(members.length, 2);
 
       const member = members.pop();
       assert.equal(Object.keys(member).length, 1);
