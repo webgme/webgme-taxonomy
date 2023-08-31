@@ -1,7 +1,10 @@
 describe("TagFormatter", function () {
+  const testFixture = require("../globals");
   const TagFormatter = require("../../src/common/TagFormatter");
+  const TaxonomyParser = require("../../src/common/TaxonomyParser");
   const assert = require("assert");
   const Utils = require("../Utils");
+  const Importer = testFixture.requirejs("webgme-json-importer/JSONImporter");
   let formatter, nodesByGuid, storage, gmeAuth;
 
   function keysAtDepth(obj, depth) {
@@ -38,7 +41,18 @@ describe("TagFormatter", function () {
       ,simpleTerm,,
       ,enumTerm3,,
       ,,enumItem3 (text)`;
-    const taxonomy = await Utils.createTaxonomyFromCsv(core, root, csv);
+    const vocabRoots = TaxonomyParser.fromCSV(csv);
+    vocabRoots.forEach(
+      (vocabRoot) => (vocabRoot.pointers.base = "@meta:Vocabulary"),
+    );
+
+    const taxonomyType = Object.values(core.getAllMetaNodes(root))
+      .find((node) => core.getAttribute(node, "name") === "Taxonomy");
+    const taxonomy = core.createNode({ base: taxonomyType, parent: root });
+
+    const importer = new Importer(core, root);
+    await Promise.all(vocabRoots.map((vr) => importer.import(taxonomy, vr)));
+
     formatter = await TagFormatter.from(core, taxonomy);
     nodesByGuid = Object.fromEntries(
       formatter._allNodes(formatter.taxonomy).map((node) => [node.guid, node]),

@@ -229,10 +229,15 @@ describe("SystemTerm", function () {
       assert(Array.isArray(members));
       assert.equal(members.length, 2);
 
-      const member = members.pop();
-      assert.equal(Object.keys(member).length, 1);
-      assert.equal(Object.keys(member.File).length, 1);
-      assert.equal(member.File.path, "path/to/someFile");
+      members.forEach((member) => {
+        assert.equal(Object.keys(member).length, 1);
+        assert.equal(Object.keys(member.File).length, 1);
+      });
+
+      assert(members.find((member) => member.File.path === "path/to/someFile"));
+      assert(
+        members.find((member) => member.File.path === "path/to/anotherFile"),
+      );
     });
 
     it("should make tag with compound field", async function () {
