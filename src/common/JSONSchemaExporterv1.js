@@ -88,7 +88,7 @@ class JSONSchemaExporter {
       parentTerms.map((n) => this.getDefinition(n)),
     );
     zip(parentTerms, termFields).reduce((schema, [parent, fields]) => {
-      const name = this.core.getAttribute(parent, "name");
+      const name = (this.core.getAttribute(parent, "name") || "").toString();
       return (schema.properties[name] = fields);
     }, schema);
 
