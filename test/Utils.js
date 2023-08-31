@@ -16,13 +16,21 @@ const Utils = {
     return await Q.ninvoke(core, "loadRoot", commit.root);
   },
   async createTaxonomyFromCsv(core, root, csv) {
+    const taxMetaNode = Object.values(core.getAllMetaNodes(root))
+      .find((node) => core.getAttribute(node, "name") === "Taxonomy");
+    const tax = core.createNode({ base: taxMetaNode, parent: root });
+
+    // load all the vocabs
     const vocabRoots = TaxonomyParser.fromCSV(csv);
     vocabRoots.forEach(
       (vocabRoot) => (vocabRoot.pointers.base = "@meta:Vocabulary"),
     );
-    const tax = { pointers: { base: "@meta:Taxonomy" }, children: vocabRoots };
     const importer = new Importer(core, root);
-    return await importer.import(root, tax);
+    await Promise.all(
+      vocabRoots.map((vocab) => importer.import(tax, vocab)),
+    );
+
+    return tax;
   },
   async initializeProject(name, seedName, core) {
     const Core = testFixture.requirejs("common/core/coreQ");

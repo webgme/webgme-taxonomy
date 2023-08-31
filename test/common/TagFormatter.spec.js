@@ -19,7 +19,7 @@ describe("TagFormatter", function () {
   before(async () => {
     const params = await Utils.initializeProject(
       "TagFormatter",
-      "TaxonomyProject",
+      "test",
     );
     const { core, project, commitHash } = params;
     storage = params.storage;
@@ -116,5 +116,38 @@ describe("TagFormatter", function () {
       },
     };
     check(tag, 4);
+  });
+
+  it("should set field items (1 item)", function () {
+    const tags = {
+      Base: {
+        attachments: {
+          files: [{
+            File: { path: "testName" },
+          }],
+        },
+      },
+    };
+
+    check(tags, 3);
+  });
+
+  it("should set field items (multi)", function () {
+    const tags = {
+      Base: {
+        attachments: {
+          files: [
+            {
+              File: { path: "testName" },
+            },
+            {
+              File: { path: "secondPath.txt" },
+            },
+          ],
+        },
+      },
+    };
+
+    check(tags, 3);
   });
 });
