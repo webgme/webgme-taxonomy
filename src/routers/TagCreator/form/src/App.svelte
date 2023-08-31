@@ -4,6 +4,7 @@
   import Button, { Label } from '@smui/button';
   import Snackbar, { Label as SBLabel, Actions } from '@smui/snackbar';
   import IconButton from '@smui/icon-button';
+  import SchemaLoading from './SchemaLoading.svelte';
 
   let configuration = fetchSchema();
   let data = {};
@@ -45,7 +46,7 @@
         </Section>
       </Row>
     </TopAppBar>
-    <p>Loading schema...</p>
+    <SchemaLoading />
   {:then {schema, taxonomyVersion}}
     <TopAppBar variant="static">
       <Row>
@@ -85,6 +86,11 @@
 </main>
 
 <style lang="scss">
+  :global(.schema-loading),
+  :global(.jsonschema-form) {
+    padding: 8px;
+  }
+
   :global(.jsonschema-form > .smui-paper > .smui-paper__title) {
     display: none;
   }
