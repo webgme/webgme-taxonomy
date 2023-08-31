@@ -57,11 +57,6 @@ config.rest.components["TagCreatorv1"] = {
   mount: "routers/TagCreatorv1",
   options: {},
 };
-config.rest.components["TagFormatv1"] = {
-  src: __dirname + "/../src/routers/TagFormatv1/TagFormatv1.js",
-  mount: "routers/TagFormatv1",
-  options: {},
-};
 
 // Visualizer descriptors
 config.visualization.visualizerDescriptors.push(
