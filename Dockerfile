@@ -3,10 +3,7 @@ MAINTAINER Brian Broll <brian.broll@vanderbilt.edu>
 
 ADD . /webgme-taxonomy
 WORKDIR /webgme-taxonomy
-# An ugly hack to remove playwright (breaking the docker build). We don't have a way to differentiate
-# between build and test dependencies...
-RUN cat package.json | grep -v playwright > p2.json && \
-  mv p2.json package.json
-RUN npm i --legacy-peer-deps  # Needed until webgme dependency is updated to official release
+# ensure the package has been built (check-docker) before running the build
+RUN bash bin/check-docker && npm ci --omit dev --legacy-peer-deps  # Needed until webgme dependency is updated to official release
 
 CMD ["npm", "start"]

@@ -75,10 +75,11 @@ function initialize(middlewareOpts: MiddlewareOptions) {
   // next();
   // });
 
+  RouterUtils.addLatestVersionRedirect(middlewareOpts, router);
+
   // Use ensureAuthenticated if the routes require authentication. (Can be set explicitly for each route.)
   router.use("*", ensureAuthenticated);
 
-  RouterUtils.addLatestVersionRedirect(middlewareOpts, router);
   router.use(
     RouterUtils.getContentTypeRoutes("static/"),
     express.static(staticPath),
@@ -175,6 +176,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
               reservation,
               gmeContext,
               userId,
+              [], // repos are not initialized with any files
             );
             await toGuidFormat(
               gmeContext,
@@ -209,11 +211,13 @@ function initialize(middlewareOpts: MiddlewareOptions) {
         const appendResult = await storage.withContentReservation(
           async (reservation) => {
             const gmeContext = (<WebgmeRequest> req).webgmeContext;
+            const filenames = req.body.filenames;
             await addChildSystemTags(
               metadata,
               reservation,
               gmeContext,
               userId,
+              filenames,
             );
             await toGuidFormat(
               gmeContext,
@@ -222,7 +226,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
             return await storage.appendArtifact(
               reservation,
               metadata,
-              req.body.filenames,
+              filenames,
             );
           },
           repoId,
@@ -438,7 +442,7 @@ async function addChildSystemTags(
   reservation: UploadReservation,
   gmeContext: WebgmeContext,
   userId: string,
-  filenames: string[] = [],
+  filenames: string[],
 ) {
   const { core, contentType } = gmeContext;
   const childContentType = (await core.loadChildren(contentType))
@@ -465,7 +469,7 @@ async function addSystemTags(
   reservation: UploadReservation,
   gmeContext: WebgmeContext,
   userId: string,
-  filenames: string[] = [],
+  filenames: string[],
 ) {
   const { contentType } = gmeContext;
 
