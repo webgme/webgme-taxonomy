@@ -55,10 +55,10 @@ function initialize(middlewareOpts) {
     next();
   });
 
+  RouterUtils.addLatestVersionRedirect(middlewareOpts, router);
+
   // Use ensureAuthenticated if the routes require authentication. (Can be set explicitly for each route.)
   router.use("*", ensureAuthenticated);
-
-  RouterUtils.addLatestVersionRedirect(middlewareOpts, router);
 
   const staticPath = path.join(__dirname, "form/dist");
   router.use(
