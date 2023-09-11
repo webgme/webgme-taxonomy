@@ -47,6 +47,16 @@ config.rest.components["Profiles"] = {
   mount: "routers/Profiles",
   options: {},
 };
+config.rest.components["JSONSchemav1"] = {
+  src: __dirname + "/../src/routers/JSONSchemav1/JSONSchemav1.js",
+  mount: "routers/JSONSchemav1",
+  options: {},
+};
+config.rest.components["TagCreatorv1"] = {
+  src: __dirname + "/../src/routers/TagCreatorv1/TagCreatorv1.js",
+  mount: "routers/TagCreatorv1",
+  options: {},
+};
 
 // Visualizer descriptors
 config.visualization.visualizerDescriptors.push(

@@ -45,7 +45,7 @@
 <div>
     <p> <!-- TODO: Check if they are actually optional -->
       Taxonomy Terms <span style="font-style:italic">(optional)</span>:<br />
-      {metadata ? metadata.taxonomyTags.map(getTagDisplayName).join(", ") : ""}
+      {metadata && metadata.taxonomyTags ? metadata.taxonomyTags.map(getTagDisplayName).join(", ") : ""}
     </p>
 
     {#if disabled}
@@ -61,11 +61,21 @@
     <a
       target="_blank"
       href={window.location.href
-        .replace("/Search/", "/TagCreator/") // FIXME: use the correct content type
+        .replace("/Search/", "/TagCreatorv1/")
         .replace(
           /[^\/]*\/static\//,
           `${encodeURIComponent(contentType.nodePath)}/static/`
         )}>Click to select tags for the {displayTypeName}.</a
+    >
+    <br/>
+    <a
+      target="_blank"
+      href={window.location.href
+        .replace("/Search/", "/TagCreator/")
+        .replace(
+          /[^\/]*\/static\//,
+          `${encodeURIComponent(contentType.nodePath)}/static/`
+        )}>Click to try the new tag form (experimental).</a
     >
 </div>
 

@@ -43,7 +43,7 @@ function initialize(middlewareOpts) {
   var logger = middlewareOpts.logger.fork("TagCreator"),
     ensureAuthenticated = middlewareOpts.ensureAuthenticated;
 
-  generateFormHtml(middlewareOpts.gmeConfig);
+  // generateFormHtml(middlewareOpts.gmeConfig);
   logger.debug("initializing ...");
 
   // Ensure authenticated can be used only after this rule.
@@ -55,12 +55,12 @@ function initialize(middlewareOpts) {
     next();
   });
 
+  RouterUtils.addLatestVersionRedirect(middlewareOpts, router);
+
   // Use ensureAuthenticated if the routes require authentication. (Can be set explicitly for each route.)
   router.use("*", ensureAuthenticated);
 
-  RouterUtils.addLatestVersionRedirect(middlewareOpts, router);
-
-  const staticPath = path.join(__dirname, "form");
+  const staticPath = path.join(__dirname, "form/dist");
   router.use(
     RouterUtils.getContentTypeRoutes("static/"),
     express.static(staticPath),
@@ -77,10 +77,9 @@ function initialize(middlewareOpts) {
         const exporter = JSONSchemaExporter.from(core, root);
         const vocabularies = await Utils.getVocabulariesFor(core, contentType);
         const contentName = core.getAttribute(contentType, "name").toString();
-        const title = `${contentName} Terms`;
         const config = await exporter.getVocabSchemas(
           vocabularies,
-          title,
+          contentName,
           true,
         );
         config.taxonomyVersion = req.webgmeContext.projectVersion;

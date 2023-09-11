@@ -3,10 +3,8 @@
   import { FilterTag, LeanTag, fromDict } from "./tags";
   import { filterMap } from "./Utils";
   import {
-    getLatestArtifact,
     openUrl,
     encodeQueryParams,
-    readFile,
   } from "./Utils";
   import Textfield from "@smui/textfield";
   import { SvelteToast, toast } from "@zerodevx/svelte-toast";
@@ -14,21 +12,11 @@
   import List, {
     Item,
     Text,
-    Graphic,
     PrimaryText,
     SecondaryText,
   } from "@smui/list";
   import Drawer, { Content, AppContent } from "@smui/drawer";
   import LinearProgress from "@smui/linear-progress";
-  import Select, { Option } from "@smui/select";
-  import Dialog, {
-    Content as DialogContent,
-    Title as DialogTitle,
-    InitialFocus,
-    Actions,
-  } from "@smui/dialog";
-  import Radio from "@smui/radio";
-  import Button, { Label } from "@smui/button";
   import Paper, { Content as PaperContent } from "@smui/paper";
   import {
     AppHeader,
@@ -40,20 +28,24 @@
 
   import TaxonomyData from "./TaxonomyData";
   import TaxonomyReference from "./TaxonomyReference";
+  import Storage, { LoadState, ModelError, RequestError, ModelContext } from "./Storage";
+  import type { PopulatedRepo } from "./Storage";
+  import type ContentType from "./ContentType";
 
   let title: string;
-  let contentType: ContentType = {name: "Data"};
+  let contentType: ContentType = {
+    name: "Data",
+    nodePath: '',
+    vocabularies: []
+  };
   $: title = `${contentType.name} Dashboard`;
   let vocabularies: TaxonomyData[] = [];
 
-  import TagFormatter, { FormatError } from "./Formatter";
-  import Storage, { LoadState, ModelError, RequestError, ModelContext } from "./Storage";
-  import type { PopulatedRepo } from "./Storage";
   const storage = setContext("storage", new Storage());
 
 
-  let allItems: PopulatedRepo = [];
-  let items: PopulatedRepo = [];
+  let allItems: PopulatedRepo[] = [];
+  let items: PopulatedRepo[] = [];
 
   const params = new URLSearchParams(location.search);
   let searchQuery: string = params.get("searchQuery") || "";
@@ -87,12 +79,12 @@
 
   function onFilterUpdate(searchQuery: string, filterTags: FilterTag[]) {
     const filter = (item) => {
-      const { displayName, taxonomyTags = [] } = item;
+      const { displayName, tags = {} } = item;
 
-      const matchingTags = FilterTag.applyFilters(taxonomyTags, filterTags);
+      const matchingTags = FilterTag.applyFilters(tags, filterTags);
       const hasMatchingArtifact = item.children.find((child) => {
-        const { displayName, taxonomyTags = [] } = child;
-        return FilterTag.applyFilters(taxonomyTags, filterTags);
+        const { displayName, tags = {} } = child;
+        return FilterTag.applyFilters(tags, filterTags);
       });
 
       if (matchingTags || hasMatchingArtifact) {
@@ -115,7 +107,8 @@
 
   $: onFilterUpdate(searchQuery, filterTags);
 
-  $: itemTags = items.flatMap((item) => item.taxonomyTags ?? []);
+  // FIXME: what should this be?
+  $: itemTags = items.flatMap((item) => item.tags ?? {});
 
   function setQueryStringParams(newParams: URLSearchParams) {
     const params = new URLSearchParams(location.search);
@@ -205,7 +198,7 @@
 
   let isLoading = false;
   let configuration;
-  let currentTaxonomy;
+  let currentTaxonomy: TaxonomyReference;
   async function initialize() {
     configuration = await fetchConfiguration();
     currentTaxonomy = TaxonomyReference.from(configuration.project);
@@ -266,11 +259,11 @@
   async function fetchData() {
     isLoading = true;
     try {
-      allItems = (await storage.listRepos())
+      allItems = (await storage.listRepos(currentTaxonomy))
         .map(repo => ({
           id: repo.id,
           displayName: repo.displayName,
-          taxonomyTags: repo.taxonomyTags,
+          tags: repo.tags,
           taxonomyVersion: repo.taxonomyVersion,
           children: [],
           loadState: LoadState.Pending,
@@ -469,6 +462,7 @@
           <List twoLine avatarList>
             {#each items as item (item.id)}
               <Item
+                data-testid={item.displayName}
                 selected={item === selectedArtifactSet}
                 on:SMUI:action={() => onItemClicked(item)}
               >
@@ -476,19 +470,6 @@
                   <PrimaryText>{item.displayName}</PrimaryText>
                   <SecondaryText />
                 </Text>
-                {#each item.taxonomyTags as tag}
-                  <!--
-                                                            <Chip chip={tag.id}>
-                    {#if tag.type === 'EnumField'}
-                <Text>{tag.name}</Text>
-                                            {:else if tag.value}
-                <Text>{tag.name}: {tag.value}</Text>
-                    {:else}
-                <Text>{tag.name}</Text>
-                    {/if}
-                                                            </Chip>
-                  -->
-                {/each}
               </Item>
             {/each}
           </List>

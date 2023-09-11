@@ -1,5 +1,5 @@
 import TaxonomyReference, { TaxonomyVersionData } from "./TaxonomyReference";
-import { assert, filterMap, Result, sleep } from "./Utils";
+import { assert, Result, sleep } from "./Utils";
 import { Readable, writable } from "svelte/store";
 
 type UploadParams = {
@@ -22,10 +22,18 @@ class Storage {
     this.baseUrl = chunks.join("/") + "/artifacts/";
   }
 
-  async listRepos(): Promise<Repository[]> {
+  async listRepos(defaultVersion: TaxonomyReference): Promise<Repository[]> {
     const result = await this._fetchJson(this.baseUrl, null, ListError);
-    const items: RepositoryData[] = await result.unwrap();
-    return filterMap(items, (item) => parseRepo(item));
+    const items: RepositoryData[] = (await result.unwrap())
+      .filter((data: any) => {
+        if (isRepositoryData(data)) {
+          return true;
+        } else {
+          console.warn("Found malformed repository:", data);
+          return false;
+        }
+      });
+    return items.map((item) => parseRepo(item, defaultVersion));
   }
 
   async listArtifacts(repoId: string): Promise<Artifact[]> {
@@ -34,8 +42,17 @@ class Storage {
       null,
       ListError,
     );
-    const items: ArtifactData[] = await result.unwrap();
-    return filterMap(items, (item) => parseArtifact(item));
+    const items: ArtifactData[] = (await result.unwrap())
+      .filter((data: any) => {
+        if (isArtifactData(data)) {
+          return true;
+        } else {
+          console.warn("Found malformed data", data);
+          return false;
+        }
+      });
+
+    return items.map((item) => parseArtifact(item));
   }
 
   async getDownloadUrl(parentId, ...ids) {
@@ -133,7 +150,7 @@ class Storage {
 
   async createRepo(metadata) {
     console.log("Creating repo:", metadata);
-    metadata.taxonomyTags = metadata.taxonomyTags || [];
+    metadata.tags = metadata.tags || {};
     const opts = {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -235,24 +252,27 @@ class AppendDataError extends StorageError {
   }
 }
 
-function parseRepo(item: RepositoryData): Repository | undefined {
-  if (!item.displayName) {
-    console.log("Found malformed data. Filtering out. Data:", item);
-  } else {
-    return {
-      id: item.id,
-      displayName: item.displayName,
-      taxonomyTags: item.taxonomyTags,
-      taxonomyVersion: TaxonomyReference.from(item.taxonomyVersion),
-    };
-  }
+function parseRepo(
+  item: RepositoryData,
+  defaultVersion: TaxonomyReference,
+): Repository {
+  return {
+    id: item.id,
+    displayName: item.displayName,
+    tags: item.tags || {},
+    // FIXME: this is a bit of a temp hack
+    taxonomyVersion: item.taxonomyVersion
+      ? TaxonomyReference.from(item.taxonomyVersion)
+      : defaultVersion,
+  };
 }
 
-function parseArtifact(data: ArtifactData): Artifact | undefined {
+function parseArtifact(data: ArtifactData): Artifact {
+  console.log("parse artifact", data);
   return {
     id: data.id,
     displayName: data.displayName,
-    taxonomyTags: data.taxonomyTags,
+    tags: data.tags || {},
     time: data.time,
     taxonomyVersion: TaxonomyReference.from(data.taxonomyVersion),
   };
@@ -269,7 +289,7 @@ enum Status {
 interface RepositoryData {
   id: string;
   displayName: string;
-  taxonomyTags: any[];
+  tags: any[];
   taxonomyVersion: TaxonomyVersionData;
 }
 
@@ -277,16 +297,44 @@ interface ArtifactData {
   parentId?: string;
   id?: string;
   displayName: string;
-  taxonomyTags: any[];
+  tags: any;
   taxonomyVersion: TaxonomyVersionData;
   time: string;
   files?: string[];
 }
 
+function hasKeys(data: any, reqKeys: string[]): boolean {
+  return reqKeys.reduce(
+    (isType, reqKey) => isType && data.hasOwnProperty(reqKey),
+    true,
+  );
+}
+
+function isArtifactData(data: any): data is ArtifactData {
+  const reqKeys = [
+    "tags",
+    "taxonomyVersion",
+  ];
+
+  return hasKeys(data, reqKeys);
+}
+
+function isRepositoryData(data: any): data is RepositoryData {
+  const reqKeys = [
+    "id",
+    "displayName",
+    // Old repositories may not have taxonomy tags
+    //"tags",
+    //"taxonomyVersion",
+  ];
+
+  return hasKeys(data, reqKeys);
+}
+
 export interface Repository {
   id: string;
   displayName: string;
-  taxonomyTags: any[];
+  tags: any;
   taxonomyVersion: TaxonomyReference;
 }
 
@@ -294,7 +342,7 @@ export interface Artifact {
   parentId?: string;
   id?: string;
   displayName: string;
-  taxonomyTags: any[];
+  tags: any;
   taxonomyVersion: TaxonomyReference;
   time: string;
   files?: string[];
@@ -308,7 +356,7 @@ export enum LoadState {
 export interface PopulatedRepo {
   id: string;
   displayName: string;
-  taxonomyTags: any[];
+  tags: any;
   taxonomyVersion: TaxonomyReference;
   children: Artifact[];
   loadState: LoadState;

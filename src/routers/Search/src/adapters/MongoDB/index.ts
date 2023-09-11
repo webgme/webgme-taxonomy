@@ -11,8 +11,11 @@ import type {
   Adapter,
   Artifact,
   ArtifactMetadata,
+  ArtifactMetadatav2,
   DownloadInfo,
+  Metadata,
   Repository,
+  TaxonomyVersion,
   UploadReservation,
 } from "../common/types";
 import type TagFormatter from "../../../../../common/TagFormatter";
@@ -27,10 +30,27 @@ import {
   UploadRequest,
 } from "../common/AppendResult";
 import { WebgmeContext } from "../../../../../common/types";
+import { toArtifactMetadatav2 } from "../common/Helpers";
 import { Pattern } from "../../Utils";
 
 const defaultMongoUri = gmeConfig.mongo.uri;
 const defaultClient = new MongoClient(defaultMongoUri);
+
+type FileId = string;
+interface RepositoryDoc {
+  displayName: string;
+  taxonomyVersion: TaxonomyVersion;
+  tags: any;
+  artifacts: ArtifactDoc[];
+}
+
+interface ArtifactDoc {
+  displayName: string;
+  tags: any;
+  taxonomyVersion: TaxonomyVersion;
+  time: string;
+  files: FileId[];
+}
 
 export default class MongoAdapter implements Adapter {
   private _client: MongoClient;
@@ -75,8 +95,8 @@ export default class MongoAdapter implements Adapter {
   ): any {
     const metadata = repo.artifacts[contentId];
     if (metadata) {
-      metadata.taxonomyTags = formatter.toHumanFormat(
-        metadata.taxonomyTags ?? [],
+      metadata.tags = formatter.toHumanFormat(
+        metadata.tags ?? {},
       );
     }
     return metadata;
@@ -97,7 +117,7 @@ export default class MongoAdapter implements Adapter {
       return {
         id: docId,
         displayName: doc.displayName,
-        taxonomyTags: doc.taxonomyTags,
+        tags: doc.tags,
         taxonomyVersion: doc.taxonomyVersion,
       };
     });
@@ -107,16 +127,18 @@ export default class MongoAdapter implements Adapter {
 
   async listArtifacts(repoId: string): Promise<Artifact[]> {
     const repo = await this.getRepository(repoId);
-    const artifacts = repo.artifacts.map(
-      (data: ArtifactMetadata, index: number) => ({
-        parentId: repoId,
-        id: index.toString(),
-        displayName: data.displayName,
-        taxonomyTags: data.taxonomyTags,
-        taxonomyVersion: data.taxonomyVersion,
-        time: data.time,
-      }),
-    );
+    const artifacts = repo.artifacts
+      .map(toArtifactMetadatav2)
+      .map(
+        (data: ArtifactMetadatav2, index: number) => ({
+          parentId: repoId,
+          id: index.toString(),
+          displayName: data.displayName,
+          tags: data.tags,
+          taxonomyVersion: data.taxonomyVersion,
+          time: data.time,
+        }),
+      );
     return artifacts;
   }
 
@@ -149,12 +171,12 @@ export default class MongoAdapter implements Adapter {
     }
   }
 
-  async createArtifact(res: RepoReservation, metadata: ArtifactMetadata) {
+  async createArtifact(res: RepoReservation, metadata: ArtifactMetadatav2) {
     const artifactSet = {
       _id: new ObjectId(res.repoId),
       displayName: metadata.displayName,
       taxonomyVersion: metadata.taxonomyVersion,
-      taxonomyTags: [],
+      tags: metadata.tags,
       artifacts: [],
     };
     const result = await this._collection.insertOne(artifactSet);
@@ -182,14 +204,14 @@ export default class MongoAdapter implements Adapter {
 
   async appendArtifact(
     res: ContentReservation,
-    metadata: ArtifactMetadata,
+    metadata: ArtifactMetadatav2,
     filenames: string[],
   ) {
     const repoId = res.repoId;
     const fileIds = _.range(filenames.length).map(() => new ObjectId());
     const artifact: Artifact = {
       displayName: metadata.displayName,
-      taxonomyTags: metadata.taxonomyTags,
+      tags: metadata.tags,
       taxonomyVersion: metadata.taxonomyVersion,
       time: (new Date()).toString(),
       files: fileIds.map((id) => id.toString()),
@@ -240,32 +262,49 @@ export default class MongoAdapter implements Adapter {
     formatter: TagFormatter,
     targetDir: string,
   ): Promise<void> {
-    const repo = await this._collection.findOne({
+    const repoDoc = await this._collection.findOne({
       _id: new ObjectId(repoId),
     });
-    if (!repo) {
+    if (!repoDoc) {
       // TODO: throw an error
       return;
     }
 
+    const repo: RepositoryDoc = {
+      displayName: repoDoc.displayName,
+      taxonomyVersion: repoDoc.taxonomyVersion,
+      tags: repoDoc.tags,
+      artifacts: repoDoc.artifacts,
+    };
+
     await Promise.all(
-      ids.map(async (idx) => {
-        const metadata = repo.artifacts[idx];
+      ids.map(async (id) => {
+        const idx = parseInt(id);
+        const artifact = repo.artifacts[idx];
         const artifactPath = path.join(targetDir, idx.toString());
-        if (metadata) {
+        if (artifact) {
           const metadataPath = path.join(artifactPath, "metadata.json");
+          const amd = toArtifactMetadatav2(artifact);
           try {
-            metadata.taxonomyTags = formatter.toHumanFormat(
-              metadata.taxonomyTags ?? [],
+            amd.tags = formatter.toHumanFormat(
+              amd.tags ?? {},
             );
-            await writeJsonData(metadataPath, metadata);
+            const metadata = {
+              tags: amd.tags,
+              taxonomyVersion: amd.taxonomyVersion,
+            };
+            await writeMetadata(metadataPath, metadata);
           } catch (err) {
             const logPath = path.join(artifactPath, `warnings.txt`);
             if (err instanceof FormatError) {
-              await writeJsonData(metadataPath, metadata);
+              const metadata = {
+                tags: amd.tags,
+                taxonomyVersion: amd.taxonomyVersion,
+              };
+              await writeMetadata(metadataPath, metadata);
               writeData(
                 logPath,
-                `An error occurred when converting the taxonomy tags: ${err.message}\n\nThe internal format has been saved in metadata.json.`,
+                `An error occurred when converting the taxonomy tags: ${err.message}\n\nThe internal format has been saved in artifact.json.`,
               );
             } else {
               const message = (err instanceof Error)
@@ -273,14 +312,15 @@ export default class MongoAdapter implements Adapter {
                 : err?.toString();
               writeData(
                 logPath,
-                `An error occurred when generating metadata.json: ${message}`,
+                `An error occurred when generating artifact.json: ${message}`,
               );
             }
           }
           await Promise.all(
-            metadata.files.map((fileId: ObjectId) =>
-              this._downloadFile(fileId, artifactPath)
-            ),
+            artifact.files.map((fileIdStr: string) => {
+              const fileId = new ObjectId(fileIdStr);
+              return this._downloadFile(fileId, artifactPath);
+            }),
           );
         }
       }),
@@ -375,6 +415,10 @@ async function writeData(filePath: string, data: string) {
   const dirPath = path.dirname(filePath) + path.sep;
   await fsp.mkdir(dirPath, { recursive: true });
   await fsp.writeFile(filePath, data);
+}
+
+async function writeMetadata(filePath: string, metadata: Metadata) {
+  writeData(filePath, JSON.stringify(metadata));
 }
 
 async function writeJsonData(filePath: string, metadata: ArtifactMetadata) {

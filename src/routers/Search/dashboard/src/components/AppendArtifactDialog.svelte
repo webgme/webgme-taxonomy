@@ -27,7 +27,7 @@
   const formatter = new TagFormatter();
 
   /** The artifact set to append a new artifact to. Null to hide dialog.*/
-  export let set: { displayName: string; taxonomyTags: any[] } | null = null;
+  export let set: { displayName: string; tags: object } | null = null;
   /** The content type name for the artifact set to append to. */
   export let contentType: ContentType;
 
@@ -41,35 +41,11 @@
   $: displayName = set?.displayName ?? "";
   $: appendName = displayName;
   $: setOpen(set != null);
-  $: setMetadata(set?.taxonomyTags ?? []);
   $: progresses = uploading ? Array(files.length).fill(0) : [];
   $: selectTagDisabled = !!uploading;
 
   function setOpen(value: boolean) {
     if (value !== open) open = value;
-  }
-
-  let lastTags = set?.taxonomyTags ?? [];
-  async function setMetadata(tags: any[]) {
-    if (tags === lastTags) {
-      return;
-    }
-
-    try {
-      const taxonomyTags = await formatter.toHumanFormat(tags);
-      metadata = { taxonomyTags };
-    } catch (err) {
-      if (err instanceof FormatError) {
-        console.warn("Latest artifact has invalid taxonomy tags:", err.message);
-      } else {
-        console.error(
-          "An error occurred while setting default tags",
-          err.stack
-        );
-      }
-    }
-
-    lastTags = tags;
   }
 
   function onAppendFileDrop(event: DropEvent) {
@@ -86,11 +62,12 @@
       dispatchError(`${contentType.name} file required.`);
     }
 
-    metadata.displayName = appendName;
+    const appendMetadata = metadata ?? {};
+    appendMetadata.displayName = appendName;
     dispatch("upload");
     let unsubscribers: Unsubscriber[] = [];
     try {
-      uploading = storage.appendArtifact(set, metadata, files);
+      uploading = storage.appendArtifact(set, appendMetadata, files);
       const uploads = await uploading;
       unsubscribers = uploads.map((upload, index) => {
         return upload.subscribe((progress) => (progresses[index] = progress));

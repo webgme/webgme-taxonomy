@@ -16,11 +16,13 @@ const Utils = {
     return await Q.ninvoke(core, "loadRoot", commit.root);
   },
   async createTaxonomyFromCsv(core, root, csv) {
+    // load all the vocabs
     const vocabRoots = TaxonomyParser.fromCSV(csv);
     vocabRoots.forEach(
       (vocabRoot) => (vocabRoot.pointers.base = "@meta:Vocabulary"),
     );
     const tax = { pointers: { base: "@meta:Taxonomy" }, children: vocabRoots };
+
     const importer = new Importer(core, root);
     return await importer.import(root, tax);
   },
