@@ -53,6 +53,7 @@ import {
   UploadRequest,
 } from "../common/AppendResult";
 import { toArtifactMetadatav2 } from "../common/Helpers";
+import ScopedFnQueue from "../../ScopedFnQueue";
 const UPLOAD_HEADERS = {
   Accept: "application/xml",
   "Content-Type": "application/octet-stream",
@@ -84,6 +85,7 @@ export default class PDP implements Adapter {
   private _token: string;
   private _readToken: string;
   private _hostUri: string;
+  private _repoLocks: ScopedFnQueue;
   processType: string;
 
   constructor(
@@ -98,6 +100,7 @@ export default class PDP implements Adapter {
     this.processType = processType;
     this._hostUri = hostUri;
     this._readToken = readToken || token;
+    this._repoLocks = new ScopedFnQueue();
   }
 
   async listRepos(): Promise<Repository[]> {
@@ -251,24 +254,28 @@ export default class PDP implements Adapter {
     fn: (res: ObservationReservation) => Promise<T>,
     repoId: string,
   ): Promise<T> {
-    const processId = newtype<ProcessID>(repoId);
-    const procInfo = await this._getProcessState(processId);
-    const index = procInfo.numObservations;
-    const version = 0;
-    const reservation = new ObservationReservation(
-      this._hostUri,
-      processId,
-      index,
-      version,
-    );
+    return await this._repoLocks.run(repoId, async () => {
+      const processId = newtype<ProcessID>(repoId);
+      const procInfo = await this._getProcessState(processId);
+      const index = procInfo.numObservations;
+      const version = 0;
+      const reservation = new ObservationReservation(
+        this._hostUri,
+        processId,
+        index,
+        version,
+      );
 
-    try {
-      return await fn(reservation);
-    } catch (err) {
-      // TODO: clean up the reservation?
-      throw err;
-      // TODO: release the reservation
-    }
+      try {
+        const result = await fn(reservation);
+        return result;
+      } catch (err) {
+        throw err;
+      } finally {
+        // TODO: disable the reservation
+        // TODO: probably should make it a generic
+      }
+    });
   }
 
   async createArtifact(
