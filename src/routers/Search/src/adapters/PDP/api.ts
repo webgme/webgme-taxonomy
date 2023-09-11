@@ -1,14 +1,21 @@
+import { TestEnvOnlyError } from "../../../../../common/routers/Utils";
+import CreateRequestLogger from "./CreateRequestLogger";
+const logFilePath = process.env.CREATE_LOG_PATH || "./CreateProcesses.jsonl";
+const reqLogger = new CreateRequestLogger(logFilePath);
 import {
   AppendObservationResponse,
   GetObservationFilesResponse,
+  newtype,
   Observation,
   Process,
   ProcessID,
   ProcessState,
   TransferState,
+  TransferStatus,
 } from "./types";
 import { retry } from "../../Utils";
 import { Ok, Option, Result } from "oxide.ts";
+import { ArtifactMetadata } from "../common/types";
 
 interface RequestOpts {
   token?: string;
@@ -29,6 +36,11 @@ interface ListProcessOpts extends RequestOpts {
 
 export interface PdpProvider {
   listProcesses(opts?: ListProcessOpts): Promise<Result<Process[], Error>>;
+  createProcess(
+    observerId: string,
+    processType: string,
+    metadata: ArtifactMetadata,
+  ): Promise<string>;
   getProcessState(
     id: ProcessID,
     opts?: RequestOpts,
@@ -213,19 +225,28 @@ export default class PdpApi implements PdpProvider {
     return state;
   }
 
-  // async createProcess(type: string): Promise<ProcessOwnerPermissions> {
-  //   //TODO we probably need description field
-  //   const queryDict = {
-  //     isFunction: false.toString(),
-  //     isVirtual: false.toString(),
-  //     processType: encodeURIComponent(type),
-  //     processDescription: encodeURIComponent(
-  //       "A process created from webgme-taxonomy",
-  //     ),
-  //   };
-  //   const url = addQueryParams("v2/Process/CreateProcess", queryDict);
-  //   return await this._fetchJson(url, { headers: {}, method: "put" });
-  // }
+  async createProcess(
+    observerId: string,
+    _processType: string,
+    metadata: ArtifactMetadata,
+  ): Promise<string> {
+    reqLogger.log(observerId, metadata);
+
+    //   //TODO we probably need description field
+    //   const queryDict = {
+    //     isFunction: false.toString(),
+    //     isVirtual: false.toString(),
+    //     processType: encodeURIComponent(type),
+    //     processDescription: encodeURIComponent(
+    //       "A process created from webgme-taxonomy",
+    //     ),
+    //   };
+    //   const url = addQueryParams("v2/Process/CreateProcess", queryDict);
+    //   return await this._fetchJson(url, { headers: {}, method: "put" });
+    // }
+
+    return "Submitted create request!";
+  }
 
   private async _fetch(
     url: string,
@@ -290,4 +311,221 @@ function setAuthToken(opts: FetchOpts, token: string): FetchOpts {
     "Bearer " + token;
 
   return opts;
+}
+
+///////////////////////// In-Memory PDP Storage /////////////////////////
+interface ProcessData {
+  metadata: Process;
+  state: ProcessState;
+  observations: ObservationData[];
+}
+
+interface ObservationData {
+  data: Observation;
+  fileData: GetObservationFilesResponse;
+}
+
+interface InMemoryData {
+  processes: ProcessData[];
+  transfers: { [id: string]: TransferState };
+  counter: number;
+}
+
+const InMemoryPdpData: InMemoryData = {
+  processes: [],
+  transfers: {},
+  counter: 1,
+};
+
+export class InMemoryPdp implements PdpProvider {
+  private data: InMemoryData;
+
+  constructor() {
+    TestEnvOnlyError.check("In-Memory PDP storage");
+    this.data = InMemoryPdpData;
+  }
+
+  async listProcesses(
+    _opts: ListProcessOpts = {},
+  ): Promise<Result<Process[], Error>> {
+    return Result.from(this.data.processes.map((data) => data.metadata));
+  }
+
+  async getProcessState(
+    id: ProcessID,
+    _opts: RequestOpts = {},
+  ): Promise<Result<ProcessState, Error>> {
+    return this.getProcessData(id).map((data) => data.state);
+  }
+
+  async getObservations(
+    id: ProcessID,
+    startIndex: number,
+    limit: number = 20,
+    _opts: RequestOpts = {},
+  ): Promise<Result<Observation[], Error>> {
+    return this.getProcessData(id)
+      .map((data) => data.observations.slice(startIndex, startIndex + limit))
+      .map((obsData) => obsData.map((d) => d.data));
+  }
+
+  async getObservation(
+    id: ProcessID,
+    obsIndex: number,
+    _version: number,
+    _opts: RequestOpts = {},
+  ): Promise<Result<Observation, Error>> {
+    return this.getObservationData(id, obsIndex)
+      .map((obsDatum) => obsDatum.data);
+  }
+
+  async getObservationFiles(
+    id: ProcessID,
+    index: number,
+    _version: number,
+    _opts: RequestOpts = {},
+  ): Promise<Result<GetObservationFilesResponse, Error>> {
+    return this.getObservationData(id, index)
+      .map((obsDatum) => obsDatum.fileData);
+  }
+
+  async appendObservation(
+    processId: ProcessID,
+    observation: Observation,
+    _opts: RequestOpts = {},
+  ): Promise<Result<AppendObservationResponse, Error>> {
+    return this.getProcessData(processId)
+      .map((data) => { // add the observation
+        const transferId = `transfer_${Date.now()}_${this.data.counter++}`;
+        const obsDatum = {
+          data: observation,
+          fileData: {
+            processId,
+            directoryId: "test-dat/",
+            transferId,
+            expiresOn: "unused",
+            files: observation.dataFiles.map((name) => ({
+              name,
+              sasUrl: `http://sasUrl.com/${name}`,
+              hash: `hashFor${name}`,
+              length: Math.floor(10000 * Math.random()),
+            })),
+          },
+        };
+        data.observations.push(obsDatum);
+        data.state.numObservations = data.observations.length;
+        const response: AppendObservationResponse = Object.assign(
+          {},
+          observation,
+          { // the new field in the append response
+            uploadDataFiles: {
+              files: obsDatum.fileData.files.map((fdata) => ({
+                name: fdata.name,
+                sasUrl: fdata.sasUrl,
+              })),
+            },
+          },
+        );
+
+        this.startTransfer(
+          transferId,
+          obsDatum.fileData.files.map((fdata) => fdata.name),
+        );
+
+        return response;
+      });
+  }
+
+  async getTransferState(
+    _processId: ProcessID,
+    _directoryId: string,
+    transferId: string,
+    _opts: RequestOpts = {},
+  ): Promise<Result<TransferState, Error>> {
+    return Option.from(this.data.transfers[transferId])
+      .okOr(new Error("Transfer not found."));
+  }
+
+  async createProcess(
+    observerId: string,
+    processType: string,
+    metadata: ArtifactMetadata,
+  ): Promise<string> {
+    const processId = newtype<ProcessID>(`process_${this.data.counter++}`);
+    this.data.processes.push({
+      metadata: {
+        processType,
+        processId, // FIXME
+      },
+      state: {
+        isFunction: false,
+        processType,
+        processId,
+        numObservations: 1,
+        lastVersionIndex: 0,
+      },
+      observations: [{
+        data: {
+          isFunction: false,
+          processType,
+          processId,
+          isMeasure: false,
+          index: 0,
+          version: 0,
+          observerId,
+          startTime: new Date().toString(),
+          endTime: new Date().toString(),
+          data: [metadata],
+          dataFiles: [],
+          applicationDependencies: [],
+          processDependencies: [],
+        },
+        fileData: {
+          processId,
+          directoryId: "test-data/",
+          transferId: "",
+          expiresOn: "unused",
+          files: [],
+        },
+      }],
+    });
+    return "Created!";
+  }
+
+  private getProcessData(id: ProcessID): Result<ProcessData, Error> {
+    return Option.from(
+      this.data.processes.find((d) => d.metadata.processId === id),
+    )
+      .okOrElse(() => new Error("Process not found"));
+  }
+
+  private getObservationData(
+    id: ProcessID,
+    index: number,
+  ): Result<ObservationData, Error> {
+    return this.getProcessData(id)
+      .andThen((data) =>
+        Option(data.observations[index]).okOrElse(() =>
+          new Error("Observation not found.")
+        )
+      );
+  }
+
+  private startTransfer(transferId: string, filenames: string[]) {
+    const start = new Date().toString();
+    this.data.transfers[transferId] = {
+      operation: "upload",
+      files: filenames,
+      runStart: start,
+      lastUpdate: start,
+      runEnd: "",
+      runDurationMs: -1,
+      status: TransferStatus.Pending,
+    };
+    setTimeout(() => {
+      this.data.transfers[transferId].runEnd = new Date().toString();
+      this.data.transfers[transferId].runDurationMs = 500;
+      this.data.transfers[transferId].status = TransferStatus.Success;
+    }, 500);
+  }
 }

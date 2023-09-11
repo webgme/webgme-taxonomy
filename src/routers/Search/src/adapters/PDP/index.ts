@@ -43,15 +43,12 @@ import type {
   UploadReservation,
 } from "../common/types";
 import { filterMap, intervals, Pattern, sleep } from "../../Utils";
-import CreateRequestLogger from "./CreateRequestLogger";
-const logFilePath = process.env.CREATE_LOG_PATH || "./CreateProcesses.jsonl";
-const reqLogger = new CreateRequestLogger(logFilePath);
 import {
   AppendResult,
   UploadParams,
   UploadRequest,
 } from "../common/AppendResult";
-import PdpApi, { PdpProvider } from "./api";
+import PdpApi, { InMemoryPdp, PdpProvider } from "./api";
 import { toArtifactMetadatav2 } from "../common/Helpers";
 const UPLOAD_HEADERS = {
   Accept: "application/xml",
@@ -68,17 +65,17 @@ export default class PDP implements Adapter {
   private api: PdpProvider;
 
   constructor(
-    baseUrl: string,
+    api: PdpProvider,
     processType: string,
     hostUri: string,
-    token: string,
-    readToken: string | undefined,
+    observerId: string,
+    readToken: string,
   ) {
-    this.observerId = RouterUtils.getObserverIdFromToken(token);
+    this.observerId = observerId;
     this.processType = processType;
     this._hostUri = hostUri;
-    this._readToken = readToken || token;
-    this.api = new PdpApi(baseUrl, token);
+    this._readToken = readToken;
+    this.api = api;
   }
 
   async listRepos(): Promise<Repository[]> {
@@ -190,15 +187,12 @@ export default class PDP implements Adapter {
     _res: ProcessReservation,
     metadata: ArtifactMetadata,
   ): Promise<string> {
-    reqLogger.log(this.observerId, metadata);
-
-    // TODO: update this to actually create the processes
-    //const newProc = await this._createProcess(type);
-    //await this._appendObservation(newProc.processId, type, metadata);
-
-    //return newProc;
-    // TODO: upload the data file
-    return "Submitted create request!";
+    // TODO: we should set the ID based on the reservation
+    return await this.api.createProcess(
+      this.observerId,
+      this.processType,
+      metadata,
+    );
   }
 
   // TODO: update method signature to be more generic
@@ -590,12 +584,25 @@ export default class PDP implements Adapter {
       )
       .unwrap();
 
+    // This doesn't yet work (doesn't support file uploads)
+    const isInMemorySandbox =
+      baseUrl.toString().toLowerCase().trim() === "memory";
+
+    let api, observerId;
+    if (isInMemorySandbox) {
+      api = new InMemoryPdp();
+      observerId = "testUsername";
+    } else {
+      api = new PdpApi(baseUrl.toString(), processType.toString());
+      observerId = RouterUtils.getObserverIdFromToken(userToken);
+    }
+
     return new PDP(
-      baseUrl.toString(),
+      api,
       processType.toString(),
       hostUri,
-      userToken,
-      readToken,
+      observerId,
+      readToken || userToken,
     );
   }
 
