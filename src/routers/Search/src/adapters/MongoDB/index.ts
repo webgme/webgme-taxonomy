@@ -32,6 +32,7 @@ import {
 import { WebgmeContext } from "../../../../../common/types";
 import { toArtifactMetadatav2 } from "../common/Helpers";
 import { Pattern } from "../../Utils";
+import ScopedFnQueue from "../../ScopedFnQueue";
 
 const defaultMongoUri = gmeConfig.mongo.uri;
 const defaultClient = new MongoClient(defaultMongoUri);
@@ -57,6 +58,7 @@ export default class MongoAdapter implements Adapter {
   private _files: GridFSBucket;
   private _collection: Collection<Document>;
   private _hostUri: string;
+  private _repoLocks: ScopedFnQueue;
 
   constructor(client: MongoClient, collectionName: string, hostUri: string) {
     this._client = client;
@@ -65,6 +67,7 @@ export default class MongoAdapter implements Adapter {
     this._collection = db.collection(name);
     this._files = new GridFSBucket(db, { bucketName: name });
     this._hostUri = hostUri;
+    this._repoLocks = new ScopedFnQueue();
   }
 
   async getMetadata(
@@ -158,17 +161,20 @@ export default class MongoAdapter implements Adapter {
     fn: (res: ContentReservation) => Promise<T>,
     repoId: string,
   ): Promise<T> {
-    // TODO: this needs to use a queue for each repository
-    const repo = await this.getRepository(repoId);
-    const index: number = repo?.artifacts.length ?? 0;
-    const reservation = new ContentReservation(this._hostUri, repoId, index);
+    return await this._repoLocks.run(repoId, async () => {
+      const repo = await this.getRepository(repoId);
+      const index: number = repo?.artifacts.length ?? 0;
+      const reservation = new ContentReservation(this._hostUri, repoId, index);
 
-    try {
-      return await fn(reservation);
-    } catch (err) {
-      throw err;
-      // TODO: release the reservation
-    }
+      try {
+        const result = await fn(reservation);
+        // TODO: disable the reservation
+        // reservation.active = false;
+        return result;
+      } catch (err) {
+        throw err;
+      }
+    });
   }
 
   async createArtifact(res: RepoReservation, metadata: ArtifactMetadatav2) {

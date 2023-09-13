@@ -246,6 +246,18 @@ class TagNotFoundError extends UserError {
   }
 }
 
+class TestEnvOnlyError extends UserError {
+  constructor(name) {
+    super(`${name} is only allowed on a test deployment`, 403);
+  }
+
+  static check(name) {
+    if (typeof process !== "undefined" && process.env.ENV !== "test") {
+      throw new TestEnvOnlyError(name);
+    }
+  }
+}
+
 async function eventEmitted(emitter, eventName) {
   return new Promise((resolve) => {
     emitter.on(eventName, resolve);
@@ -253,6 +265,7 @@ async function eventEmitted(emitter, eventName) {
 }
 
 Utils.UserError = UserError;
+Utils.TestEnvOnlyError = TestEnvOnlyError;
 Utils.handleUserErrors = handleUserErrors;
 Utils.responseClose = (res) => {
   return eventEmitted(res, "close");

@@ -1,13 +1,18 @@
 describe("MongoDB", function () {
   const MongoDB =
     require("../../../../../src/routers/Search/build/adapters/MongoDB").default;
-  const { range, Pattern } = require(
+  const { range, Pattern, sleep } = require(
     "../../../../../src/routers/Search/build/Utils",
   );
   const assert = require("assert");
   const gmeConfig = require("../../../../../config");
   const { MongoClient } = require("mongodb");
   const defaultMongoUri = gmeConfig.mongo.uri;
+  const collection = "__testCollection";
+  const hostUri = MongoDB.getHostUri(
+    "mongodb://127.0.0.1:27017/",
+    collection,
+  );
 
   describe("getUriPatterns", function () {
     const Ajv = require("ajv");
@@ -18,12 +23,6 @@ describe("MongoDB", function () {
       pattern: Pattern.exact(Pattern.anyIn(...patterns)),
     };
     const validate = ajv.compile(urlSchema);
-
-    const collection = "__testCollection";
-    const hostUri = MongoDB.getHostUri(
-      "mongodb://127.0.0.1:27017/",
-      collection,
-    );
 
     let client, mongo;
     before(() => {
@@ -64,6 +63,66 @@ describe("MongoDB", function () {
             repoId,
           )
         ),
+      );
+    });
+  });
+
+  describe("concurrent uploads", function () {
+    let client, mongo;
+    before(() => {
+      client = new MongoClient(defaultMongoUri);
+      mongo = new MongoDB(client, collection, hostUri);
+    });
+    after(() => client.close());
+
+    it("should queue concurrent upload requests", async function () {
+      const repoId = await mongo.withRepoReservation(async (res) => {
+        const metadata = {
+          displayName: "hello",
+          taxonomyTags: [],
+          taxonomyVersion: {
+            id: "guest+TaxonomyProject",
+            tag: "v1.0.0",
+            commit: "abadae3",
+          },
+          time: new Date().toString(),
+        };
+        await mongo.createArtifact(res, metadata);
+        return res.repoId;
+      });
+      const taxonomyVersion = {
+        id: "someProjectId",
+        commit: "someCommit",
+      };
+
+      const [metadata1, metadata2] = ["first", "second"]
+        .map((displayName) => ({
+          displayName,
+          tags: {},
+          taxonomyVersion,
+          time: new Date().toString(),
+        }));
+
+      const firstUpload = mongo.withContentReservation(
+        async (res) => {
+          await sleep(75);
+          return await mongo.appendArtifact(res, metadata1, []);
+        },
+        repoId,
+      );
+
+      const secondUpload = mongo.withContentReservation(
+        async (res) => await mongo.appendArtifact(res, metadata2, []),
+        repoId,
+      );
+
+      const [result1, result2] = await Promise.all([firstUpload, secondUpload]);
+      assert.equal(
+        result1.index + 1,
+        result2.index,
+        `Second upload index should be ${
+          result1.index + 1
+        } (found ${result2.index})`,
       );
     });
   });

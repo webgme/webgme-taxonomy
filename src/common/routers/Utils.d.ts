@@ -23,6 +23,10 @@ export class UserError extends Error {
   sendVia(response: Response): void;
 }
 
+export class TestEnvOnlyError extends Error {
+  static check(name: string): void;
+}
+
 export function handleUserErrors(
   logger: Global.GmeLogger,
   ...fn: MiddlewareHandler[]

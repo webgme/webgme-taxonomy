@@ -9,6 +9,20 @@ export function range(start: number, end: number, step: number = 1): number[] {
   return [...new Array(len)].map((_v, index) => start + step * index);
 }
 
+/**
+ * Convert from a result into "regular TS error handling".
+ *
+ * Unfortunately, Result.unwrap() throws an opaque error.
+ * This is really a workaround for that...
+ */
+export function fromResult<T, E>(result: Result<T, E>): T {
+  if (result.isOk()) {
+    return result.unwrap();
+  } else {
+    throw result.unwrapErr();
+  }
+}
+
 export async function retry<T>(
   fn: () => Promise<T>,
   maxAttempts: number = 2,
@@ -42,7 +56,7 @@ export async function retry<T>(
       Promise.resolve(initError),
     );
 
-  return result.unwrap();
+  return fromResult(result);
 }
 
 /**
