@@ -355,6 +355,7 @@ export class InMemoryPdp implements PdpProvider {
     id: ProcessID,
     _opts: RequestOpts = {},
   ): Promise<Result<ProcessState, Error>> {
+    console.log(id);
     return this.getProcessData(id).map((data) => data.state);
   }
 
@@ -431,6 +432,8 @@ export class InMemoryPdp implements PdpProvider {
           transferId,
           obsDatum.fileData.files.map((fdata) => fdata.name),
         );
+        // TODO: add dataFiles
+        console.log(JSON.stringify(response));
 
         return response;
       });
