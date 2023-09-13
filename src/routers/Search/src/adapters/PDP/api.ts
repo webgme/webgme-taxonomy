@@ -421,7 +421,7 @@ export class InMemoryPdp implements PdpProvider {
           { // the new field in the append response
             uploadDataFiles: {
               files: obsDatum.fileData.files.map((fdata) => ({
-                name: fdata.name,
+                name: `dat/${fdata.name}`,
                 sasUrl: fdata.sasUrl,
               })),
             },
@@ -544,10 +544,14 @@ export class InMemoryPdp implements PdpProvider {
       runDurationMs: -1,
       status: TransferStatus.Pending,
     };
+
     setTimeout(() => {
-      this.data.transfers[transferId].runEnd = new Date().toString();
-      this.data.transfers[transferId].runDurationMs = 500;
-      this.data.transfers[transferId].status = TransferStatus.Success;
+      const transferData = this.data.transfers[transferId];
+      if (transferData) {
+        transferData.runEnd = new Date().toString();
+        transferData.runDurationMs = 500;
+        transferData.status = TransferStatus.Success;
+      }
     }, 500);
   }
 }

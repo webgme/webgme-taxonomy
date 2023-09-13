@@ -4,16 +4,14 @@ describe.only("PDP", function () {
   const { InMemoryPdp } = require(
     "../../../../../src/routers/Search/build/adapters/PDP/api",
   );
-  const { sleep, range, Pattern } = require(
+  const { sleep, Pattern } = require(
     "../../../../../src/routers/Search/build/Utils",
   );
   const assert = require("assert");
-  const sinon = require("sinon");
+  const processType = "someProcessType";
 
   describe("appendArtifact", function () {
-    const processType = "someProcessType";
-
-    before(() => {
+    beforeEach(() => {
       const api = new InMemoryPdp();
       api.dropData();
       const hostUri = PDP.getHostUri("memory", processType);
@@ -26,7 +24,7 @@ describe.only("PDP", function () {
       );
     });
 
-    it.only("should preserve upload file names", async function () {
+    it("should preserve upload file names", async function () {
       const metadata = {};
       const filenames = ["a.txt", "b.csv"];
 
@@ -40,9 +38,8 @@ describe.only("PDP", function () {
         async (res) => await storage.appendArtifact(res, metadata, filenames),
         repoId,
       );
-      console.log(result.files);
       const missingFile = filenames.find((name) =>
-        !result.files.find((file) => file.name.endsWith("/" + name))
+        !result.files.find((file) => file.name === name)
       );
       assert(!missingFile);
     });
@@ -66,128 +63,79 @@ describe.only("PDP", function () {
     });
 
     it("should use read token on listRepos", async function () {
-      storage._getObserverId = sinon.fake.returns("observer");
-      storage._fetchJson = (url, opts) => {
-        const isReadToken = opts.headers.Authorization.includes("readToken");
-        assert(isReadToken);
-
-        if (url.includes("ListProcesses")) {
-          const ids = [...new Array(10)].map((_, i) => `process_${i}`);
-          return ids.map((processId) => ({
-            processId,
-            processType: storage.processType,
-          }));
-        } else if (url.includes("GetProcessState")) {
-          return { numObservations: 1 };
-        } else if (url.includes("GetObservation")) {
-          const processId = url.split("processId=")[1].split("&").shift();
-          const taxonomyVersion = {
-            commit: "someCommit",
-            tag: "v1.0.0",
-          };
-          const taxonomyTags = [];
-          const displayName = `Artifact for ${processId}`;
-          const data = { taxonomyTags, taxonomyVersion, displayName };
-
-          return storage._createObservationData(
-            processId,
-            storage.processType,
-            data,
-          );
-        } else {
-          throw new Error(`Unknown request: ${url}`);
-        }
+      let called = 0;
+      const listProcesses = storage.api.listProcesses.bind(storage.api);
+      storage.api.listProcesses = function (opts) {
+        called++;
+        assert.equal(opts?.token, "readToken");
+        return listProcesses(...arguments);
       };
-      const repos = await storage.listRepos();
-      assert.equal(repos.length, 10);
+      await storage.listRepos();
+      assert.equal(called, 1);
     });
 
     it("should use read token on listArtifacts", async function () {
-      storage._getObserverId = sinon.fake.returns("observer");
-      storage.getObservations = (processId, start, limit, token) => {
-        const isReadToken = token.includes("readToken");
-        assert(isReadToken);
-        const taxonomyVersion = {
-          commit: "someCommit",
-          tag: "v1.0.0",
-        };
-        const taxonomyTags = [];
-        const displayName = `Artifact for ${processId}`;
-        const data = { taxonomyTags, taxonomyVersion, displayName };
-
-        return range(start, start + limit).map((index) =>
-          storage._createObservationData(
-            processId,
-            storage.processType,
-            data,
+      // Create the test fixtures
+      const repoId = await storage.api.createProcessHelper(
+        "observerId",
+        processType,
+        { displayName: "someRepo" },
+      );
+      const contentMetadata = [...new Array(10)].map((i) => ({
+        displayName: `content_${i}`,
+      }));
+      await Promise.all(
+        contentMetadata.map((metadata) =>
+          storage.withContentReservation(
+            (res) => storage.appendArtifact(res, metadata, []),
+            repoId,
           )
-        );
+        ),
+      );
+
+      // Try to list them
+      const getObservations = storage.api.getObservations.bind(storage.api);
+      storage.api.getObservations = function (_id, _index, _version, opts) {
+        assert.equal(opts?.token, "readToken");
+        return getObservations(...arguments);
       };
-
-      storage._fetchJson = (url, opts) => {
-        const isReadToken = opts.headers.Authorization.includes("readToken");
-        assert(isReadToken);
-
-        if (url.includes("ListProcesses")) {
-          const ids = [...new Array(10)].map((_, i) => `process_${i}`);
-          return ids.map((processId) => ({
-            processId,
-            processType: storage.processType,
-          }));
-        } else if (url.includes("GetProcessState")) {
-          return { numObservations: 11 };
-        } else if (url.includes("GetObservation")) {
-          const processId = url.split("processId=")[1].split("&").shift();
-          const taxonomyVersion = {
-            commit: "someCommit",
-            tag: "v1.0.0",
-          };
-          const taxonomyTags = [];
-          const displayName = `Artifact for ${processId}`;
-          const data = { taxonomyTags, taxonomyVersion, displayName };
-
-          return storage._createObservationData(
-            processId,
-            storage.processType,
-            data,
-          );
-        } else {
-          throw new Error(`Unknown request: ${url}`);
-        }
-      };
-      const repos = await storage.listArtifacts("repoId");
-      assert.equal(repos.length, 10);
+      const contents = await storage.listArtifacts(repoId);
+      assert.equal(contents.length, 10);
     });
 
-    it("should use user token on createArtifact", async function () {
-      storage._fetchJson = (_url, opts) => {
-        const isReadToken = opts.headers.Authorization.includes("readToken");
-        assert(!isReadToken);
+    it("should use user token on content upload", async function () {
+      // Setup mocks
+      let called = 0;
+      const appendObservation = storage.api.appendObservation.bind(storage.api);
+      storage.api.appendObservation = function (_id, _index, _limit, opts) {
+        assert(!opts?.token); // don't use any special token
+        called++;
+        return appendObservation(...arguments);
       };
-      storage._getObserverId = sinon.fake.returns("observer");
 
+      // Add fixtures
+      const repoId = await storage.api.createProcessHelper(
+        "observerId",
+        processType,
+        { displayName: "someRepo" },
+      );
+
+      // Run test
       const metadata = {
-        displayName: "example artifact",
+        displayName: "example repo",
         taxonomyTags: [],
         taxonomyVersion: { commit: "commithash", tag: "v1.0.2" },
         time: new Date().toString(),
       };
-      await storage.createArtifact(metadata);
+      await storage.withContentReservation(
+        (res) => storage.appendArtifact(res, metadata, []),
+        repoId,
+      );
+      assert.equal(called, 1);
     });
 
     // The following are trickier to mock and are likely to change
     it.skip("should use user token on download", function () {
-    });
-
-    it("should use user token on appendArtifact", async function () {
-      storage._fetchJson = async (_url, opts) => {
-        const isReadToken = opts.headers.Authorization?.includes("readToken");
-        assert(!isReadToken);
-      };
-      const processId = "processId";
-      const obs = {};
-      // FIXME
-      await storage._appendObservation(processId, obs);
     });
   });
 

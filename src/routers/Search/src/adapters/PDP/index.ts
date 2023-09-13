@@ -321,11 +321,13 @@ export default class PDP implements Adapter {
     );
 
     // Lets download the actual files associated with this observation,index
-    const response = (await this.api.getObservationFiles(
-      processId,
-      obsIndex,
-      version,
-    )).unwrap();
+    const response = fromResult(
+      await this.api.getObservationFiles(
+        processId,
+        obsIndex,
+        version,
+      ),
+    );
     if (response.files.length === 0) {
       return;
     }
@@ -458,15 +460,18 @@ export default class PDP implements Adapter {
     const procInfo = fromResult(await this.api.getProcessState(processId));
     const index = procInfo.numObservations;
     const version = 0;
-    const result = await this._appendObservationWithFiles(
-      processId,
-      index,
-      version,
-      this.processType,
-      metadata,
-      filenames,
+    const result = fromResult(
+      await this._appendObservationWithFiles(
+        processId,
+        index,
+        version,
+        this.processType,
+        metadata,
+        filenames,
+      ),
     );
 
+    console.log(JSON.stringify(result));
     const files = result.uploadDataFiles.files.map((file) => {
       // name is prefixed with dat/index/version/<rest of path>
       const name = file.name.split("/").slice(3).join("/");
@@ -541,7 +546,7 @@ export default class PDP implements Adapter {
     type: string,
     data: ArtifactMetadata,
     files: string[],
-  ): Promise<AppendObservationResponse> {
+  ): Promise<Result<AppendObservationResponse, Error>> {
     const observation = this._createObservationData(processId, type, data);
     observation.index = index;
     observation.version = version;
@@ -552,7 +557,7 @@ export default class PDP implements Adapter {
     observation.dataFiles = files
       .map((filename: string) => uploadDir + filename);
 
-    return (await this.api.appendObservation(processId, observation)).unwrap();
+    return await this.api.appendObservation(processId, observation);
   }
 
   static async from(
