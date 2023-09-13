@@ -3,7 +3,7 @@
   "scripts": {
     "start": "node app.js",
     "debug": "NODE_ENV=azure node --inspect app.js",
-    "test-tax": "npx mocha --recursive test",
+    "test-tax": "ENV=test npx mocha --recursive test",
     "test": "npm run test-tax && npm run test-dash",
     "test-dash": "cd src/routers/Search/dashboard && npm t",
     "setup-e2e": "npm run import -- src/seeds/test/test.webgmex -p e2e_tests",

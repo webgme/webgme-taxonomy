@@ -451,6 +451,20 @@ export class InMemoryPdp implements PdpProvider {
     processType: string,
     metadata: ArtifactMetadata,
   ): Promise<string> {
+    console.log("createProcess", metadata);
+    this.createProcessHelper(observerId, processType, metadata);
+    return "Created!";
+  }
+
+  /**
+   * A helper function to be used by the testing suite to make processes and return
+   * the process ID without modifying the method signature of createProcess.
+   */
+  createProcessHelper(
+    observerId: string,
+    processType: string,
+    metadata: ArtifactMetadata,
+  ): ProcessID {
     const processId = newtype<ProcessID>(`process_${this.data.counter++}`);
     this.data.processes.push({
       metadata: {
@@ -489,7 +503,12 @@ export class InMemoryPdp implements PdpProvider {
         },
       }],
     });
-    return "Created!";
+    return processId;
+  }
+
+  dropData() {
+    this.data.processes = [];
+    this.data.transfers = {};
   }
 
   private getProcessData(id: ProcessID): Result<ProcessData, Error> {

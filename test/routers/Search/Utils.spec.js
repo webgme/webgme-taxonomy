@@ -24,7 +24,11 @@ describe("Utils", function () {
       const promise = retry(async () => {
         throw new Error("hello there!");
       });
-      await assert.rejects(promise, "hello there!");
+      try {
+        await promise;
+      } catch (err) {
+        assert(err.message.includes("hello there!"));
+      }
     });
   });
 

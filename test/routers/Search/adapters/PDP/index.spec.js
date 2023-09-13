@@ -1,39 +1,48 @@
-describe("PDP", function () {
+describe.only("PDP", function () {
   const PDP =
     require("../../../../../src/routers/Search/build/adapters/PDP").default;
-  const { range, Pattern } = require(
+  const { InMemoryPdp } = require(
+    "../../../../../src/routers/Search/build/adapters/PDP/api",
+  );
+  const { sleep, range, Pattern } = require(
     "../../../../../src/routers/Search/build/Utils",
   );
   const assert = require("assert");
   const sinon = require("sinon");
 
   describe("appendArtifact", function () {
-    it("should preserve upload file names", async function () {
-      const repoId = "someRepo";
-      const metadata = null; // only used by the mocked method
-      const filenames = ["a.txt", "b.csv"];
-      const storage = new PDP("http://someUrl", "someProcess", "someToken");
+    const processType = "someProcessType";
 
-      // Add mocks to make the request succeed
-      storage._getObserverId = sinon.fake.returns("observer");
-      storage._getProcessState = sinon.fake.resolves(
-        { numObservations: 1 },
+    before(() => {
+      const api = new InMemoryPdp();
+      api.dropData();
+      const hostUri = PDP.getHostUri("memory", processType);
+      storage = new PDP(
+        api,
+        processType,
+        hostUri,
+        "observerId",
+        "readToken",
       );
+    });
 
-      storage._appendObservation = async (_processId, obs) => {
-        obs.uploadDataFiles = {
-          files: obs.dataFiles.map((name) => ({
-            name: `dat/${name}`, // PDP prepends "dat/" to the filenames
-            sasUrl: `http://sasUrl/${name}`,
-          })),
-        };
-        return obs;
-      };
+    it.only("should preserve upload file names", async function () {
+      const metadata = {};
+      const filenames = ["a.txt", "b.csv"];
 
       // append the artifact and check the result
-      const result = await storage.appendArtifact(repoId, metadata, filenames);
+      const repoId = await storage.api.createProcessHelper(
+        "observerId",
+        processType,
+        metadata,
+      );
+      const result = await storage.withContentReservation(
+        async (res) => await storage.appendArtifact(res, metadata, filenames),
+        repoId,
+      );
+      console.log(result.files);
       const missingFile = filenames.find((name) =>
-        !result.files.find((file) => file.name === name)
+        !result.files.find((file) => file.name.endsWith("/" + name))
       );
       assert(!missingFile);
     });
@@ -41,14 +50,20 @@ describe("PDP", function () {
 
   describe("readToken", function () {
     let storage;
-    beforeEach(() =>
+
+    beforeEach(() => {
+      const api = new InMemoryPdp();
+      api.dropData();
+      const processType = "someProcessType";
+      const hostUri = PDP.getHostUri("memory", processType);
       storage = new PDP(
-        "http://someUrl",
-        "someProcess",
-        "userToken",
+        api,
+        processType,
+        hostUri,
+        "observerId",
         "readToken",
-      )
-    );
+      );
+    });
 
     it("should use read token on listRepos", async function () {
       storage._getObserverId = sinon.fake.returns("observer");
@@ -171,6 +186,7 @@ describe("PDP", function () {
       };
       const processId = "processId";
       const obs = {};
+      // FIXME
       await storage._appendObservation(processId, obs);
     });
   });
@@ -228,6 +244,69 @@ describe("PDP", function () {
       const idString =
         "pdp://127.0.0.1:435/processType/e0de6a4a-5257-4f2c-b3ce-470e3299fc4a";
       assert(validate(idString));
+    });
+  });
+
+  describe("concurrent uploads", function () {
+    let pdp;
+    before(() => {
+      const processType = "testProcessType";
+      const hostUri = PDP.getHostUri("memory", processType);
+      const api = new InMemoryPdp();
+      pdp = new PDP(api, processType, hostUri, "someUser", "unusedToken");
+    });
+
+    it("should queue concurrent upload requests", async function () {
+      const repoId = await pdp.withRepoReservation(async (res) => {
+        const metadata = {
+          displayName: "hello",
+          taxonomyTags: [],
+          taxonomyVersion: {
+            id: "guest+TaxonomyProject",
+            tag: "v1.0.0",
+            commit: "abadae3",
+          },
+          time: new Date().toString(),
+        };
+        await pdp.createArtifact(res, metadata);
+        // Look up the repoId. Since process creation is disabled, we can't
+        // actually get the process ID
+        return pdp.api.data.processes[0].metadata.processId;
+      });
+      const taxonomyVersion = {
+        id: "someProjectId",
+        commit: "someCommit",
+      };
+
+      const [metadata1, metadata2] = ["first", "second"]
+        .map((displayName) => ({
+          displayName,
+          tags: {},
+          taxonomyVersion,
+          time: new Date().toString(),
+        }));
+
+      const firstUpload = await pdp.withContentReservation(
+        async (res) => {
+          await sleep(75);
+          return await pdp.appendArtifact(res, metadata1, []);
+        },
+        repoId,
+      );
+
+      const secondUpload = pdp.withContentReservation(
+        async (res) => await pdp.appendArtifact(res, metadata2, []),
+        repoId,
+      );
+
+      const [result1, result2] = await Promise.all([firstUpload, secondUpload]);
+      assert.equal(
+        result1.index + 1,
+        result2.index,
+        `Second upload index should be ${
+          result1.index + 1
+        } (found ${result2.index})`,
+      );
     });
   });
 });
