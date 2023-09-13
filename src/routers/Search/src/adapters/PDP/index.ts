@@ -10,13 +10,12 @@ import fs from "fs";
 import _ from "underscore";
 import path from "path";
 import fsp from "fs/promises";
-import { newtype } from "./types";
+import { newtype, TransferStatus } from "./types";
 import { Result } from "oxide.ts";
 import type {
   AppendObservationResponse,
   GetObservationFilesResponse,
   Observation,
-  Process,
   ProcessID,
 } from "./types";
 import RouterUtils from "../../../../../common/routers/Utils";
@@ -43,15 +42,13 @@ import type {
   Repository,
   UploadReservation,
 } from "../common/types";
-import { filterMap, intervals, Pattern, retry, sleep } from "../../Utils";
-import CreateRequestLogger from "./CreateRequestLogger";
-const logFilePath = process.env.CREATE_LOG_PATH || "./CreateProcesses.jsonl";
-const reqLogger = new CreateRequestLogger(logFilePath);
+import { filterMap, fromResult, intervals, Pattern, sleep } from "../../Utils";
 import {
   AppendResult,
   UploadParams,
   UploadRequest,
 } from "../common/AppendResult";
+import PdpApi, { InMemoryPdp, PdpProvider } from "./api";
 import { toArtifactMetadatav2 } from "../common/Helpers";
 import ScopedFnQueue from "../../ScopedFnQueue";
 const UPLOAD_HEADERS = {
@@ -61,62 +58,50 @@ const UPLOAD_HEADERS = {
   "x-ms-encryption-algorithm": "AES256",
 };
 
-interface FetchOpts {
-  headers?: { [key: string]: string };
-  method?: string;
-  body?: string;
-}
-
-const DefaultFetchOpts = () => ({
-  headers: {},
-  method: "GET",
-});
-
-function setAuthToken(opts: FetchOpts, token: string): FetchOpts {
-  opts.headers = opts.headers || {};
-  opts.headers.Authorization = opts.headers.Authorization ||
-    "Bearer " + token;
-
-  return opts;
-}
-
 export default class PDP implements Adapter {
-  private _baseUrl: string;
-  private _token: string;
+  private observerId: string;
   private _readToken: string;
   private _hostUri: string;
   private _repoLocks: ScopedFnQueue;
   processType: string;
+  private api: PdpProvider;
 
   constructor(
-    baseUrl: string,
+    api: PdpProvider,
     processType: string,
     hostUri: string,
-    token: string,
-    readToken: string | undefined,
+    observerId: string,
+    readToken: string,
   ) {
-    this._baseUrl = baseUrl;
-    this._token = token;
+    this.observerId = observerId;
     this.processType = processType;
     this._hostUri = hostUri;
-    this._readToken = readToken || token;
+    this._readToken = readToken;
+    this.api = api;
     this._repoLocks = new ScopedFnQueue();
   }
 
   async listRepos(): Promise<Repository[]> {
-    const allProcesses: Process[] = await this._fetchJson(
-      "v2/Process/ListProcesses?permission=read",
-      setAuthToken(DefaultFetchOpts(), this._readToken),
-    );
-
-    // fetch the first observation for each to get the repo metadata
-    const processMetadata = await Promise.all(
-      allProcesses
-        .filter(({ processType }) => processType === this.processType)
-        .map(({ processId }) =>
-          this.getObservation(processId, 0, 0, this._readToken)
-        ),
-    );
+    const processes = (await this.api.listProcesses({ token: this._readToken }))
+      .map((allProcesses) =>
+        allProcesses.filter(({ processType }) =>
+          processType === this.processType
+        )
+      );
+    const processMetadata = Result.all(
+      ...await processes
+        // fetch the first observation for each to get the repo metadata
+        .map((processes): Promise<Result<Observation, Error>[]> =>
+          Promise.all(
+            processes.map(({ processId }) =>
+              this.api.getObservation(processId, 0, 0, {
+                token: this._readToken,
+              })
+            ),
+          )
+        ).unwrap(),
+    )
+      .unwrap();
 
     const repos: Repository[] = filterMap(
       processMetadata,
@@ -138,9 +123,10 @@ export default class PDP implements Adapter {
   }
 
   private async getProcessObservations(pid: ProcessID): Promise<Observation[]> {
-    const obsInfo = await this._fetchJson(
-      `v2/Process/GetProcessState?processId=${pid}`,
-      setAuthToken(DefaultFetchOpts(), this._readToken),
+    const obsInfo = fromResult(
+      await this.api.getProcessState(pid, {
+        token: this._readToken,
+      }),
     );
 
     if (obsInfo.numObservations === 0) {
@@ -152,88 +138,16 @@ export default class PDP implements Adapter {
     const observations = await Promise.all(
       intervals(start, obsInfo.numObservations, 20)
         .map(([start, len]) =>
-          this.getObservations(
+          this.api.getObservations(
             pid,
             start,
             len,
-            this._readToken,
+            { token: this._readToken },
           )
         ),
     );
 
-    return observations.flat();
-  }
-
-  private async getObservations(
-    processId: ProcessID,
-    startIndex: number,
-    limit: number = 20,
-    token: string = this._token,
-  ): Promise<Observation[]> {
-    const observations: Observation[] = await this._fetchJson(
-      `v2/Process/PeekObservations?processId=${processId}&obsIndex=${startIndex}` +
-        `&maxReturn=${limit}`,
-      setAuthToken(DefaultFetchOpts(), token),
-    );
-
-    return observations;
-  }
-
-  private async getObservation(
-    processId: ProcessID,
-    obsIndex: number,
-    version: number,
-    token: string = this._token,
-  ): Promise<Observation> {
-    const queryDict = {
-      processId: processId.toString(),
-      obsIndex: obsIndex.toString(),
-      version: version.toString(),
-    };
-    const url = PDP._addQueryParams("v2/Process/GetObservation", queryDict);
-    const opts = setAuthToken(DefaultFetchOpts(), token);
-    return await this._fetchJson(url, opts);
-  }
-
-  async _getObsFiles(
-    processId: ProcessID,
-    obsIndex: number,
-    version: number,
-  ): Promise<GetObservationFilesResponse> {
-    const queryDict = {
-      processId: processId.toString(),
-      obsIndex: obsIndex.toString(),
-      version: version.toString(),
-      endObsIndex: obsIndex.toString(),
-      filePattern: "**/*",
-    };
-    const url = PDP._addQueryParams("v3/Files/GetObservationFiles", queryDict);
-    const opts = {
-      method: "put",
-    };
-    return await this._fetchJson(url, opts);
-  }
-
-  async _getFileTransferStatus(
-    processId: ProcessID,
-    directoryId: string,
-    transferId: string,
-  ) {
-    const queryDict = {
-      processId: processId.toString(),
-      directoryId: directoryId.toString(),
-      transferId: transferId.toString(),
-    };
-    const url = PDP._addQueryParams("v2/Files/GetTransferState", queryDict);
-    return await this._fetchJson(url);
-  }
-
-  async _getProcessState(pid: ProcessID) {
-    return await this._fetchJson(`v2/Process/GetProcessState?processId=${pid}`);
-  }
-
-  _getObserverId(): string {
-    return RouterUtils.getObserverIdFromToken(this._token);
+    return Result.all(...observations).unwrap().flat();
   }
 
   async withRepoReservation<T>(
@@ -256,7 +170,7 @@ export default class PDP implements Adapter {
   ): Promise<T> {
     return await this._repoLocks.run(repoId, async () => {
       const processId = newtype<ProcessID>(repoId);
-      const procInfo = await this._getProcessState(processId);
+      const procInfo = fromResult(await this.api.getProcessState(processId));
       const index = procInfo.numObservations;
       const version = 0;
       const reservation = new ObservationReservation(
@@ -282,15 +196,12 @@ export default class PDP implements Adapter {
     _res: ProcessReservation,
     metadata: ArtifactMetadata,
   ): Promise<string> {
-    reqLogger.log(this._getObserverId(), metadata);
-
-    // TODO: update this to actually create the processes
-    //const newProc = await this._createProcess(type);
-    //await this._appendObservation(newProc.processId, type, metadata);
-
-    //return newProc;
-    // TODO: upload the data file
-    return "Submitted create request!";
+    // TODO: we should set the ID based on the reservation
+    return await this.api.createProcess(
+      this.observerId,
+      this.processType,
+      metadata,
+    );
   }
 
   // TODO: update method signature to be more generic
@@ -358,7 +269,11 @@ export default class PDP implements Adapter {
     const response = await Promise.all(
       obsIdxAndVersions.map(async ([index, version]) => {
         // Lets download the actual files associated with this observation,index
-        const response = await this._getObsFiles(processId, index, version);
+        const response = (await this.api.getObservationFiles(
+          processId,
+          index,
+          version,
+        )).unwrap();
         if (response.files.length === 0) {
           return {
             repoId: processId.toString(),
@@ -370,22 +285,8 @@ export default class PDP implements Adapter {
         // return the file name and urls
         console.log(response.files);
         // wait for the transfer to complete and the files to be available
-        if (response.transferId != null) {
-          let transferStatus = await this._getFileTransferStatus(
-            response.processId,
-            response.directoryId,
-            response.transferId,
-          );
-          while (transferStatus && transferStatus.status != "Succeeded") {
-            console.log("Ctx: About to wait for the download...");
-            await sleep(1000);
-            transferStatus = await this._getFileTransferStatus(
-              response.processId,
-              response.directoryId,
-              response.transferId,
-            );
-          }
-        }
+        await this.waitForTransfer(response);
+
         return {
           repoId: processId.toString(),
           id: `${index}_${version}`,
@@ -420,28 +321,17 @@ export default class PDP implements Adapter {
     );
 
     // Lets download the actual files associated with this observation,index
-    const response = await this._getObsFiles(processId, obsIndex, version);
+    const response = (await this.api.getObservationFiles(
+      processId,
+      obsIndex,
+      version,
+    )).unwrap();
     if (response.files.length === 0) {
       return;
     }
 
     // wait for the transfer to complete and the files to be available
-    if (response.transferId != null) {
-      let transferStatus = await this._getFileTransferStatus(
-        response.processId,
-        response.directoryId,
-        response.transferId,
-      );
-      while (transferStatus && transferStatus.status != "Succeeded") {
-        console.log("Ctx: About to wait for the download...");
-        await sleep(1000);
-        transferStatus = await this._getFileTransferStatus(
-          response.processId,
-          response.directoryId,
-          response.transferId,
-        );
-      }
-    }
+    await this.waitForTransfer(response);
 
     await Promise.all(
       response.files.map((file) =>
@@ -458,17 +348,44 @@ export default class PDP implements Adapter {
     );
   }
 
+  private async waitForTransfer(
+    response: GetObservationFilesResponse,
+  ): Promise<void> {
+    if (response.transferId != null) {
+      // TODO: refactor this
+      let status = (await this.api.getTransferState(
+        response.processId,
+        response.directoryId,
+        response.transferId,
+      ))
+        .map((state) => state.status)
+        .unwrapOr(TransferStatus.Pending);
+
+      while (status !== TransferStatus.Success) {
+        console.log("Ctx: About to wait for the download...");
+        await sleep(1000);
+        status = (await this.api.getTransferState(
+          response.processId,
+          response.directoryId,
+          response.transferId,
+        ))
+          .map((state) => state.status)
+          .unwrapOr(TransferStatus.Pending);
+      }
+    }
+  }
+
   private async getObsMetadata(
     processId: ProcessID,
     obsIndex: number,
     version: number,
     formatter: TagFormatter,
   ): Promise<any> {
-    const responseObservation = await this.getObservation(
+    const responseObservation = (await this.api.getObservation(
       processId,
       obsIndex,
       version,
-    );
+    )).unwrap();
     const metadata = toArtifactMetadatav2(responseObservation.data[0]);
     metadata.tags = formatter.toHumanFormat(
       metadata.tags ?? {},
@@ -484,11 +401,11 @@ export default class PDP implements Adapter {
     formatter: TagFormatter,
     downloadDir: string,
   ) {
-    const responseObservation = await this.getObservation(
+    const responseObservation = (await this.api.getObservation(
       processId,
       obsIndex,
       version,
-    );
+    )).unwrap();
     try {
       const metadata = toArtifactMetadatav2(responseObservation.data[0]);
       metadata.tags = formatter.toHumanFormat(
@@ -538,7 +455,7 @@ export default class PDP implements Adapter {
     filenames: string[],
   ): Promise<AppendResult> {
     const processId = res.processId;
-    const procInfo = await this._getProcessState(processId);
+    const procInfo = fromResult(await this.api.getProcessState(processId));
     const index = procInfo.numObservations;
     const version = 0;
     const result = await this._appendObservationWithFiles(
@@ -604,7 +521,7 @@ export default class PDP implements Adapter {
       isFunction: false,
       processType: type,
       processId,
-      observerId: this._getObserverId(),
+      observerId: this.observerId,
       isMeasure: true,
       index: 0,
       version: 0,
@@ -635,69 +552,7 @@ export default class PDP implements Adapter {
     observation.dataFiles = files
       .map((filename: string) => uploadDir + filename);
 
-    return await this._appendObservation(processId, observation);
-  }
-
-  async _appendObservation(
-    processId: ProcessID,
-    observation: Observation,
-  ): Promise<AppendObservationResponse> {
-    return await this._fetchJson(
-      `v3/Process/AppendObservation?processId=${processId}&uploadExpiresInMins=180`,
-      {
-        method: "post",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(observation),
-      },
-    );
-  }
-
-  private async _createProcess(type: string): Promise<ProcessOwnerPermissions> {
-    //TODO we probably need description field
-    const queryDict = {
-      isFunction: false.toString(),
-      isVirtual: false.toString(),
-      processType: encodeURIComponent(type),
-      processDescription: encodeURIComponent(
-        "A process created from webgme-taxonomy",
-      ),
-    };
-    const url = PDP._addQueryParams("v2/Process/CreateProcess", queryDict);
-    return await this._fetchJson(url, { headers: {}, method: "put" });
-  }
-
-  static _addQueryParams(
-    baseUrl: string,
-    queryDict: { [key: string]: string },
-  ): string {
-    const queryString = Object.entries(queryDict)
-      .map((part) => part.join("="))
-      .join("&");
-    return baseUrl.replace(/\??$/, "?") + queryString;
-  }
-
-  async _fetch(url: string, opts: FetchOpts = DefaultFetchOpts()) {
-    url = this._baseUrl + url;
-    opts.headers = opts.headers || {};
-    opts.headers.Authorization = opts.headers.Authorization ||
-      "Bearer " + this._token;
-    opts.headers.accept = opts.headers.accept || "application/json";
-    return await retry(async () => {
-      const response = await fetch(url, opts);
-      if (response.status > 399) {
-        const msg = `${opts.method || "GET"} ${url} failed: ${await response
-          .text()} (${response.status})`;
-        throw new Error(msg);
-      }
-      return response;
-    });
-  }
-
-  async _fetchJson(url: string, opts: FetchOpts = DefaultFetchOpts()) {
-    const response = await this._fetch(url, opts);
-    return await response.json();
+    return (await this.api.appendObservation(processId, observation)).unwrap();
   }
 
   static async from(
@@ -738,12 +593,25 @@ export default class PDP implements Adapter {
       )
       .unwrap();
 
+    // This doesn't yet work (doesn't support file uploads)
+    const isInMemorySandbox =
+      baseUrl.toString().toLowerCase().trim() === "memory";
+
+    let api, observerId;
+    if (isInMemorySandbox) {
+      api = new InMemoryPdp();
+      observerId = "testUsername";
+    } else {
+      api = new PdpApi(baseUrl.toString(), processType.toString());
+      observerId = RouterUtils.getObserverIdFromToken(userToken);
+    }
+
     return new PDP(
-      baseUrl.toString(),
+      api,
       processType.toString(),
       hostUri,
-      userToken,
-      readToken,
+      observerId,
+      readToken || userToken,
     );
   }
 
@@ -843,14 +711,6 @@ function parseArtifact(obs: Observation): Artifact | undefined {
       time: obs.startTime,
     };
   }
-}
-
-interface ProcessOwnerPermissions {
-  isFunction: boolean;
-  processType: string;
-  processId: ProcessID;
-  principalId: string;
-  permission: string;
 }
 
 function isFormatError(err: any): err is FormatError {
