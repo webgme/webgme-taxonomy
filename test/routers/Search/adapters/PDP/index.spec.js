@@ -1,4 +1,4 @@
-describe.only("PDP", function () {
+describe("PDP", function () {
   const PDP =
     require("../../../../../src/routers/Search/build/adapters/PDP").default;
   const { InMemoryPdp } = require(
