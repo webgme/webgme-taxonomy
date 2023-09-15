@@ -157,11 +157,10 @@ const Utils = {
         if (tag === "latest") {
           const { safeStorage } = middlewareOpts;
           const userId = projectId.split("+").shift();
-          const project = await safeStorage.openProject({
-            username: userId,
+          const tagDict = await safeStorage.getTags({
             projectId,
+            username: userId,
           });
-          const tagDict = await project.getTags();
           const tags = filterMap(Object.keys(tagDict), (tagName) => {
             try {
               const version = SemanticVersion.parse(tagName);
