@@ -1,4 +1,3 @@
-import { ArtifactMetadata, ArtifactMetadatav2 } from "./adapters/common/types";
 import { Err, None, Ok, Option, Result, Some } from "oxide.ts";
 
 export async function sleep(duration: number): Promise<void> {
@@ -212,24 +211,4 @@ export namespace Pattern {
   const DOMAIN_NAME = "[a-zA-Z_\.-]+";
   const PORT = ":[0-9]+";
   export const URL = `(${anyIn(DOMAIN_NAME, IP_ADDRESS)})(${PORT})?`;
-}
-
-export function toArtifactMetadatav2(
-  metadata: ArtifactMetadata,
-): ArtifactMetadatav2 {
-  let tags;
-  if ("tags" in metadata) { // updated metadata
-    tags = metadata.tags;
-  } else {
-    // Update the old format to the new one
-    const taxonomyTags = metadata.taxonomyTags || [];
-    tags = deepMerge(...taxonomyTags);
-  }
-
-  return {
-    tags,
-    displayName: metadata.displayName,
-    taxonomyVersion: metadata.taxonomyVersion,
-    time: metadata.time,
-  };
 }
