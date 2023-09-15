@@ -1,4 +1,7 @@
-import { ArtifactMetadata, ArtifactMetadatav2 } from "./adapters/common/types";
+import type {
+  ArtifactMetadata,
+  ArtifactMetadatav2,
+} from "./adapters/common/types";
 import { Err, None, Ok, Option, Result, Some } from "oxide.ts";
 
 export async function sleep(duration: number): Promise<void> {
@@ -48,6 +51,8 @@ export async function retry<T>(
             const error: Error = errThing instanceof Error
               ? errThing
               : new Error(
+                // FIXME: do this the right way...
+                // @ts-ignore
                 errThing?.toString() || "Error occurred during retry attempt.",
               );
             return Err(error);
