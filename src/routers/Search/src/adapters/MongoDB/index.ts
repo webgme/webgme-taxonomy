@@ -315,6 +315,7 @@ export default class MongoAdapter implements Adapter {
             } else {
               const message = (err instanceof Error)
                 ? err.message
+                // @ts-ignore
                 : err?.toString();
               writeData(
                 logPath,
