@@ -30,7 +30,7 @@
       }
     }
 
-    return tagNames.pop(); // Only return the most specific one for now...
+    return tagNames.pop() || ''; // Only return the most specific one for now...
   }
 
   async function onTagsFileDrop(event) {
@@ -46,7 +46,7 @@
 <div>
     <p> <!-- TODO: Check if they are actually optional -->
       Taxonomy Terms <span style="font-style:italic">(optional)</span>:<br />
-      {metadata && metadata.tags ? getTagDisplayName(metadata.tags).join(", ") : ""}
+      {metadata && metadata.tags ? getTagDisplayName(metadata.tags) : ""}
     </p>
 
     {#if disabled}
