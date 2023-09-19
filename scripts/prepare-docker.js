@@ -8,6 +8,6 @@ pkgJson.testDependencies.forEach((dep) => {
 });
 
 fs.writeFileSync(
-  path.join(__dirname, "..", "package.json"),
+  path.join(__dirname, "..", "package-docker.json"),
   JSON.stringify(pkgJson, null, 2),
 );
