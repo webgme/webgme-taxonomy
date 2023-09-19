@@ -19,6 +19,7 @@
     "clean_up": "node ./node_modules/webgme-engine/src/bin/clean_up.js",
     "build": "tsc --build",
     "prepublish": "husky install",
+    "prepare-docker": "node scripts/prepare-docker.js",
     "prepare": "npm run build && cd src/routers/Dashboard/app && npm install && cd ../../Search/dashboard && npm install && cd ../../TagCreator/form && npm install"
   },
   "version": "1.2.2",
@@ -55,6 +56,11 @@
     "webgme-transformations": "^0.5.1",
     "zip-a-folder": "^1.1.5"
   },
+  "testDependencies": [
+    "playwright",
+    "husky",
+    "@playwright/test"
+  ],
   "lint-staged": {
     "src/**/*.{js,css,md,svelte}": "prettier --write --plugin-search-dir=."
   }

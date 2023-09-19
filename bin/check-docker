@@ -1,6 +1,0 @@
-MISSING_BUILD_FILES=$(stat src/routers/Search/build/index.js; echo $?)
-
-if [ $MISSING_BUILD_FILES -eq 1 ]; then
-	echo "No build files found. Please run \"npm install\" before building the docker container."
-	exit 1
-fi
