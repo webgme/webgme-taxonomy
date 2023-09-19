@@ -11,7 +11,7 @@ import _ from "underscore";
 import path from "path";
 import fsp from "fs/promises";
 import { newtype, TransferStatus } from "./types";
-import { Result } from "oxide.ts";
+import { Option, Result } from "oxide.ts";
 import type {
   AppendObservationResponse,
   GetObservationFilesResponse,
@@ -38,7 +38,9 @@ import type {
   Adapter,
   Artifact,
   ArtifactMetadata,
+  ArtifactMetadatav2,
   DownloadInfo,
+  FileStreamDict,
   Repository,
   UploadReservation,
 } from "../common/types";
@@ -204,54 +206,41 @@ export default class PDP implements Adapter {
     );
   }
 
-  // TODO: update method signature to be more generic
-  async download(
+  async getFileStreams(
     repoId: string,
-    ids: string[],
-    formatter: TagFormatter,
-    downloadDir: string,
-  ) {
-    const processId = newtype<ProcessID>(repoId);
-    const obsIdxAndVersions = ids.map((idString) =>
-      idString.split("_").map((n) => +n)
+    id: string,
+  ): Promise<FileStreamDict> {
+    const [downloadInfo] = await this.downloadFileURLs(repoId, [id]);
+
+    const entries = await Promise.all(
+      downloadInfo.files.map(async (fileInfo) => {
+        const { name, url } = fileInfo;
+        const response = await fetch(url);
+        return [name, response.body];
+      }),
     );
-    // obsIdxAndVersions is now a list of tuples (index, version) for each observation
-    // to download
-    await Promise.all(
-      obsIdxAndVersions.map(([index, version]) =>
-        this._downloadObservation(
-          processId,
-          index,
-          version,
-          downloadDir,
-          formatter,
-        )
-      ),
-    );
+    return Object.fromEntries(entries);
   }
 
   async getMetadata(
     repoId: string,
     contentId: string,
-    formatter: TagFormatter,
-  ): Promise<any> {
+  ): Promise<Option<ArtifactMetadatav2>> {
     const processId = newtype<ProcessID>(repoId);
     const [index, version] = contentId.split("_").map((n) => +n);
     return await this.getObsMetadata(
       processId,
       index,
       version,
-      formatter,
     );
   }
 
   async getBulkMetadata(
     repoId: string,
     contentIds: string[],
-    formatter: TagFormatter,
   ): Promise<any> {
     return await Promise.all(
-      contentIds.map((id) => this.getMetadata(repoId, id, formatter)),
+      contentIds.map((id) => this.getMetadata(repoId, id)),
     );
   }
 
@@ -304,52 +293,6 @@ export default class PDP implements Adapter {
     return response as unknown as DownloadInfo[];
   }
 
-  async _downloadObservation(
-    processId: ProcessID,
-    obsIndex: number,
-    version: number,
-    downloadDir: string,
-    formatter: TagFormatter,
-  ) {
-    // Let's first get the observation metadata
-    await this.writeObsMetadata(
-      processId,
-      obsIndex,
-      version,
-      formatter,
-      downloadDir,
-    );
-
-    // Lets download the actual files associated with this observation,index
-    const response = fromResult(
-      await this.api.getObservationFiles(
-        processId,
-        obsIndex,
-        version,
-      ),
-    );
-    if (response.files.length === 0) {
-      return;
-    }
-
-    // wait for the transfer to complete and the files to be available
-    await this.waitForTransfer(response);
-
-    await Promise.all(
-      response.files.map((file) =>
-        this._downloadFile(
-          PDP._correctFilePath(
-            downloadDir,
-            file.name,
-            obsIndex,
-            version,
-          ),
-          file.sasUrl,
-        )
-      ),
-    );
-  }
-
   private async waitForTransfer(
     response: GetObservationFilesResponse,
   ): Promise<void> {
@@ -381,74 +324,15 @@ export default class PDP implements Adapter {
     processId: ProcessID,
     obsIndex: number,
     version: number,
-    formatter: TagFormatter,
-  ): Promise<any> {
+  ): Promise<Option<ArtifactMetadatav2>> {
     const responseObservation = (await this.api.getObservation(
       processId,
       obsIndex,
       version,
-    )).unwrap();
-    const metadata = toArtifactMetadatav2(responseObservation.data[0]);
-    metadata.tags = formatter.toHumanFormat(
-      metadata.tags ?? {},
-    );
-
-    return metadata;
-  }
-
-  private async writeObsMetadata(
-    processId: ProcessID,
-    obsIndex: number,
-    version: number,
-    formatter: TagFormatter,
-    downloadDir: string,
-  ) {
-    const responseObservation = (await this.api.getObservation(
-      processId,
-      obsIndex,
-      version,
-    )).unwrap();
-    try {
-      const metadata = toArtifactMetadatav2(responseObservation.data[0]);
-      metadata.tags = formatter.toHumanFormat(
-        metadata.tags ?? {},
-      );
-      const metadataPath = path.join(
-        downloadDir,
-        `${obsIndex}`,
-        `${version}`,
-        `metadata.json`,
-      );
-      //let's save the observation metadata to a file metada.json
-      await this._writeJsonData(metadataPath, metadata);
-    } catch (err) {
-      const logPath = path.join(
-        downloadDir,
-        `${obsIndex}`,
-        `${version}`,
-        `warnings.txt`,
-      );
-      if (isFormatError(err)) {
-        const metadata = responseObservation.data[0];
-        const metadataPath = path.join(
-          downloadDir,
-          `${obsIndex}`,
-          `${version}`,
-          `metadata.json`,
-        );
-        await this._writeJsonData(metadataPath, metadata);
-        await this._writeData(
-          logPath,
-          `An error occurred when converting the taxonomy tags: ${err.message}\n\nThe internal format has been saved in metadata.json.`,
-        );
-      } else {
-        let msg = err instanceof Error ? err.message : err;
-        await this._writeData(
-          logPath,
-          `An error occurred when generating metadata.json: ${msg}`,
-        );
-      }
-    }
+    )).ok();
+    return responseObservation
+      .andThen((obs) => Option.from(obs.data[0]))
+      .map(toArtifactMetadatav2);
   }
 
   async appendArtifact(
@@ -483,6 +367,7 @@ export default class PDP implements Adapter {
   }
 
   async _downloadFile(filePath: string, url: string) {
+    // TODO: should downloading just get a read stream?
     const dirPath = path.dirname(filePath) + path.sep;
     await fsp.mkdir(dirPath, { recursive: true });
 

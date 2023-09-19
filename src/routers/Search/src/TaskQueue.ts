@@ -6,6 +6,10 @@ import os from "os";
 import fsp from "fs/promises";
 import fs from "fs";
 import path from "path";
+import type { Option } from "oxide.ts";
+import { pipeline } from "stream";
+import { promisify } from "util";
+const streamPipeline = promisify(pipeline);
 
 export enum Status {
   Created,
@@ -55,7 +59,8 @@ export class DownloadTask implements Runnable<FilePath> {
     this.formatter = formatter;
     this.logger = logger;
     this.repoId = repoId;
-    this.contentIds = contentIds;
+    // TODO: test this
+    this.contentIds = contentIds.sort((id1, id2) => +id1 < +id2 ? -1 : 1);
   }
 
   async run(): Promise<string> {
@@ -63,15 +68,49 @@ export class DownloadTask implements Runnable<FilePath> {
       path.join(os.tmpdir(), "webgme-taxonomy-"),
     );
     const downloadDir = path.join(tmpDir, "download");
-    console.log(">>> about to download to", downloadDir);
-    await this.storage.download(
-      this.repoId,
-      this.contentIds,
-      this.formatter,
-      downloadDir,
-    );
-    console.log(">>> about to zip", downloadDir);
+    const contentNames = new Set();
 
+    console.log(">>> about to download to", downloadDir);
+    // TODO: get file stream?
+    // TODO: write the metadata to a file
+    // TODO: get the files for each content ID
+    // TODO: flatten into contentId, fileId then map into streams
+    // TODO: sort the contentIds
+    await this.contentIds.reduce(async (prevTask, contentId) => {
+      await prevTask;
+      // TODO: convert metadata to human format
+      const uniqName: Option<string> =
+        (await this.storage.getMetadata(this.repoId, contentId))
+          .map((metadata) =>
+            metadata.tags.Base?.name?.value || metadata.displayName
+          )
+          .map((basename: string) => {
+            let i = 2;
+            let name = basename;
+            while (contentNames.has(name)) {
+              name = `${basename} (${i++})`;
+            }
+            contentNames.add(name);
+            return name;
+          });
+
+      if (uniqName.isSome()) {
+        const contentDir = uniqName.unwrap();
+        const streamDict = await this.storage.getFileStreams(
+          this.repoId,
+          contentId,
+        );
+        await Promise.all(
+          Object.entries(streamDict).map(async ([name, dataStream]) => {
+            const filePath = path.join(downloadDir, contentDir, name);
+            const writeStream = fs.createWriteStream(filePath);
+            await streamPipeline(dataStream, writeStream);
+          }),
+        );
+      }
+    }, Promise.resolve());
+
+    console.log(">>> about to zip", downloadDir);
     const zipPath = path.join(tmpDir, `${this.repoId}.zip`);
     await zip(downloadDir, zipPath, {
       compression: COMPRESSION_LEVEL.medium,

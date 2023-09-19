@@ -301,7 +301,6 @@ function initialize(middlewareOpts: MiddlewareOptions) {
       logger,
       async function getMetadata(req, res) {
         const { parentId, id } = req.params;
-        const formatter = await getFormatter(req.webgmeContext);
         const storage = await StorageAdapter.from(
           req.webgmeContext,
           req,
@@ -310,8 +309,10 @@ function initialize(middlewareOpts: MiddlewareOptions) {
         const metadata = await storage.getMetadata(
           parentId,
           id,
-          formatter,
         );
+
+        const formatter = await getFormatter(req.webgmeContext);
+        // TODO: apply it to the formatter
 
         res.json(metadata);
       },
