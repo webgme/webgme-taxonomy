@@ -58,7 +58,6 @@
   },
   "testDependencies": [
     "playwright",
-    "husky",
     "@playwright/test"
   ],
   "lint-staged": {
