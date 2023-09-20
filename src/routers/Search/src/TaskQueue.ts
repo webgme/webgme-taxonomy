@@ -79,35 +79,31 @@ export class DownloadTask implements Runnable<FilePath> {
     await this.contentIds.reduce(async (prevTask, contentId) => {
       await prevTask;
       // TODO: convert metadata to human format
-      const uniqName: Option<string> =
+      const basename: string =
         (await this.storage.getMetadata(this.repoId, contentId))
           .map((metadata) =>
             metadata.tags.Base?.name?.value || metadata.displayName
-          )
-          .map((basename: string) => {
-            let i = 2;
-            let name = basename;
-            while (contentNames.has(name)) {
-              name = `${basename} (${i++})`;
-            }
-            contentNames.add(name);
-            return name;
-          });
+          ).unwrapOrElse(() => contentId.toString());
 
-      if (uniqName.isSome()) {
-        const contentDir = uniqName.unwrap();
-        const streamDict = await this.storage.getFileStreams(
-          this.repoId,
-          contentId,
-        );
-        await Promise.all(
-          Object.entries(streamDict).map(async ([name, dataStream]) => {
-            const filePath = path.join(downloadDir, contentDir, name);
-            const writeStream = fs.createWriteStream(filePath);
-            await streamPipeline(dataStream, writeStream);
-          }),
-        );
+      // TODO: refactor this
+      let i = 2;
+      let uniqName = basename;
+      while (contentNames.has(uniqName)) {
+        uniqName = `${basename} (${i++})`;
       }
+      contentNames.add(uniqName);
+
+      const streamDict = await this.storage.getFileStreams(
+        this.repoId,
+        contentId,
+      );
+      await Promise.all(
+        Object.entries(streamDict).map(async ([name, dataStream]) => {
+          const filePath = path.join(downloadDir, uniqName, name);
+          const writeStream = fs.createWriteStream(filePath);
+          await streamPipeline(dataStream, writeStream);
+        }),
+      );
     }, Promise.resolve());
 
     console.log(">>> about to zip", downloadDir);
