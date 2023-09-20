@@ -22,7 +22,7 @@
     "prepare-docker": "node scripts/prepare-docker.js",
     "prepare": "npm run build && cd src/routers/Dashboard/app && npm install && cd ../../Search/dashboard && npm install && cd ../../TagCreator/form && npm install"
   },
-  "version": "1.2.2",
+  "version": "1.3.0",
   "devDependencies": {
     "@playwright/test": "^1.36.0",
     "@smui/icon-button": "^6.1.0",
