@@ -1,6 +1,6 @@
 describe("TaskQueue", function () {
   const assert = require("assert");
-  const { default: TaskQueue, Task, Status } = require(
+  const { default: TaskQueue, Status } = require(
     "../../../src/routers/Search/build/TaskQueue",
   );
   const { UserError } = require("../../../src/common/routers/Utils");

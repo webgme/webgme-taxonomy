@@ -158,7 +158,9 @@ export default class MongoAdapter implements Adapter {
   ): Promise<T> {
     return await this._repoLocks.run(repoId, async () => {
       const repo = await this.getRepository(repoId);
-      const index: number = repo?.artifacts.length ?? 0;
+      const index: number = repo
+        .map((repo) => repo.artifacts.length)
+        .unwrapOr(0);
       const reservation = new ContentReservation(this._hostUri, repoId, index);
 
       try {

@@ -147,4 +147,4 @@ export interface FileURLInfo {
   url: string;
 }
 
-export type FileStreamDict = { [filename: string]: ReadableStream };
+export type FileStreamDict = { [filename: string]: NodeJS.ReadableStream };
