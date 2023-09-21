@@ -1,0 +1,76 @@
+[
+  {
+    "displayName": "Content1",
+    "tags": {
+      "Subject": { "Sex": { "value": { "Other": {} } } },
+      "DataSystemTerms": { "isData": {} },
+      "Base": {
+        "uploadedBy": { "user": "guest" },
+        "uploadedAt": {
+          "time": "Thu Sep 21 2023 11:53:24 GMT-0500 (Central Daylight Time)"
+        },
+        "attachments": {
+          "files": [
+            { "File": { "path": "main.js" } },
+            { "File": { "path": "index.html" } },
+            { "File": { "path": "iframe-phone.js" } }
+          ]
+        },
+        "URI": {
+          "value": "mongoDoc://127.0.0.1:27017/webgme_taxonomy/testCollection/650c74e5705629859d3034e0/0"
+        },
+        "name": { "value": "Content1" },
+        "description": { "value": "" },
+        "content": { "type": { "name": "Data", "ID": "/C/y" } },
+        "taxonomy": {
+          "commit": "#1781eb397e16231c65a6b51b22b5effb755ee327",
+          "project": "guest+test"
+        }
+      }
+    },
+    "taxonomyVersion": {
+      "id": "guest+test",
+      "branch": "master",
+      "commit": "#1781eb397e16231c65a6b51b22b5effb755ee327"
+    },
+    "time": "Thu Sep 21 2023 11:53:24 GMT-0500 (Central Daylight Time)"
+  },
+  {
+    "displayName": "FirstData",
+    "tags": {
+      "Subject": { "Sex": { "value": { "Other": {} } } },
+      "DataSystemTerms": { "isData": {} },
+      "Base": {
+        "uploadedBy": { "user": "guest" },
+        "uploadedAt": {
+          "time": "Thu Sep 21 2023 12:46:15 GMT-0500 (Central Daylight Time)"
+        },
+        "attachments": {
+          "files": [
+            { "File": { "path": "codap.zip" } },
+            { "File": { "path": "My Starter Template blocks.xml" } },
+            { "File": { "path": "tags (1).json" } },
+            { "File": { "path": "716849483.3gp" } },
+            { "File": { "path": "BrollSinclair_5960.jpg" } }
+          ]
+        },
+        "URI": {
+          "value": "mongoDoc://127.0.0.1:27017/webgme_taxonomy/testCollection/650c8133705629859d3034e7/0"
+        },
+        "name": { "value": "FirstData" },
+        "description": { "value": "" },
+        "content": { "type": { "name": "Data", "ID": "/C/y" } },
+        "taxonomy": {
+          "commit": "#1781eb397e16231c65a6b51b22b5effb755ee327",
+          "project": "guest+test"
+        }
+      }
+    },
+    "taxonomyVersion": {
+      "id": "guest+test",
+      "branch": "master",
+      "commit": "#1781eb397e16231c65a6b51b22b5effb755ee327"
+    },
+    "time": "Thu Sep 21 2023 12:46:15 GMT-0500 (Central Daylight Time)"
+  }
+]

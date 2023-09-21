@@ -5,9 +5,18 @@
 // http://expressjs.com/en/guide/routing.html
 const nop = () => {};
 const path = require("path");
+const assert = require("assert");
 const fsp = require("fs/promises");
 const staticPath = path.join(__dirname, "..", "dashboard", "public");
-const StorageAdapter = require("../Search/build/adapters");
+const StorageAdapter = require("../Search/build/adapters").default;
+const Utils = require("../../common/Utils");
+const { uniqWithKey, filterMap } = require("../Search/build/Utils");
+const TagFormatter = require("../../common/TagFormatter");
+const RouterUtils = require("../../common/routers/Utils");
+const {
+  MetaNodeNotFoundError,
+  TaxNodeNotFoundError,
+} = require("../Search/build/adapters/common/ModelError");
 var express = require("express"),
   router = express.Router();
 
@@ -27,8 +36,8 @@ var express = require("express"),
  */
 function initialize(middlewareOpts) {
   var logger = middlewareOpts.logger.fork("Insights"),
-    ensureAuthenticated = middlewareOpts.ensureAuthenticated,
-    getUserId = middlewareOpts.getUserId;
+    ensureAuthenticated = middlewareOpts.ensureAuthenticated;
+  const mainConfig = middlewareOpts.gmeConfig;
 
   logger.debug("initializing ...");
 
@@ -56,10 +65,11 @@ function initialize(middlewareOpts) {
   }
 
   router.get(
-    RouterUtils.getProjectScopedRoutes("/metadata/"),
+    RouterUtils.getProjectScopedRoutes("metadata/"),
     RouterUtils.handleUserErrors(
       logger,
       async function dumpContentMetadata(req, res) {
+        console.log(">>> dumpContentMetadata");
         const gmeContext = req.webgmeContext;
         const { core, root } = gmeContext;
         // Get all the storage adapters for each (unique) storage node in the project
@@ -69,12 +79,15 @@ function initialize(middlewareOpts) {
         assert(storageType, new MetaNodeNotFoundError(gmeContext, "Storage"));
 
         const allStorageNodes = (await core.loadSubTree(root))
-          .filter((node) => core.isTypeOf(node, storageType));
+          .filter((node) =>
+            core.isTypeOf(node, storageType) && !core.isMetaNode(node)
+          );
         const storageNodes = uniqWithKey(
           allStorageNodes,
           (node) => getNormalStorageNode(core, node),
         );
 
+        // Fetch all the contents
         const storageAdapters = await Promise.all(
           storageNodes.map((node) =>
             StorageAdapter.fromStorageNode(
@@ -85,7 +98,7 @@ function initialize(middlewareOpts) {
           ),
         );
 
-        const repos = (await Promise.all(
+        const allContents = (await Promise.all(
           storageAdapters
             .map(async (adapter) => {
               const repos = await adapter.listRepos().catch(nop);
@@ -94,22 +107,60 @@ function initialize(middlewareOpts) {
               );
               return contents.flat();
             }),
-        )).map();
+        )).flat();
+        console.log("found contents:", allContents.length);
 
-        // TODO: load all the repos
-        const allContents = await Promise.all(
-          storageAdapters
-            .map((adapter) => adapter.listArtifacts(repo).catch(nop)),
-        );
+        // Convert all tags to human format
+        const formatter = await getFormatter(gmeContext);
+        const metadata = filterMap(allContents, (content) => {
+          try {
+            return {
+              displayName: content.displayName,
+              tags: formatter.toHumanFormat(content.tags),
+              taxonomyVersion: content.taxonomyVersion,
+              time: content.time,
+            };
+          } catch (err) {
+            logger.warn("Unable to convert tags to human format:", err);
+          }
+        });
 
-        // TODO: fetch the data for each
-
-        res.json({ userId: userId, message: "get request was handled" });
+        res.json(metadata);
       },
     ),
   );
 
   logger.debug("ready");
+}
+
+/**
+ * Convert the taxonomy tags in the metadata to human format.
+ */
+async function toHumanFormat(
+  gmeContext,
+  metadata,
+) {
+  const formatter = await getFormatter(gmeContext);
+  try {
+    metadata.tags = formatter.toHumanFormat(metadata.tags);
+    return metadata;
+  } catch (err) {
+    // A stop-gap solution until FormatError actually inherits from UserError
+    if (err instanceof TagFormatter.FormatError) {
+      throw new UserError(err.message);
+    } else {
+      throw err;
+    }
+  }
+}
+
+async function getFormatter(gmeContext) {
+  const { root, core } = gmeContext;
+  const node = await Utils.findTaxonomyNode(core, root);
+  if (node == null) {
+    throw new TaxNodeNotFoundError(gmeContext);
+  }
+  return await TagFormatter.from(core, node);
 }
 
 /**

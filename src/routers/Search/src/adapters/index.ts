@@ -29,7 +29,7 @@ export default class Adapters {
     if (!storageNode) {
       throw new StorageNotFoundError(gmeContext, contentType);
     }
-    return Adapters.fromStorageNode(req, gmeContext, storageNode, config);
+    return Adapters.fromStorageNode(req, storageNode, config);
   }
 
   static async fromStorageNode(
