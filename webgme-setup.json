@@ -97,6 +97,11 @@
         "src": "src/routers/TagCreatorv1",
         "test": "test/routers/TagCreatorv1",
         "mount": "routers/TagCreatorv1"
+      },
+      "Insights": {
+        "src": "src/routers/Insights",
+        "test": "test/routers/Insights",
+        "mount": "routers/Insights"
       }
     }
   },

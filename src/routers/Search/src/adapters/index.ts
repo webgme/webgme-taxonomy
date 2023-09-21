@@ -29,7 +29,16 @@ export default class Adapters {
     if (!storageNode) {
       throw new StorageNotFoundError(gmeContext, contentType);
     }
+    return Adapters.fromStorageNode(req, gmeContext, storageNode, config);
+  }
 
+  static async fromStorageNode(
+    req: WebgmeRequest,
+    storageNode: Core.Node,
+    config: any,
+  ): Promise<Adapter> {
+    const gmeContext = req.webgmeContext;
+    const { core } = gmeContext;
     const adapterType = core.getAttribute(
       core.getMetaType(storageNode),
       "name",

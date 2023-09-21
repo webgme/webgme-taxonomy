@@ -199,6 +199,18 @@ export function unique<T>(arr: T[]): T[] {
   return [...new Set(arr)];
 }
 
+export function uniqWithKey<T, K>(arr: T[], key: (item: T) => K): T[] {
+  const contents: K[] = [];
+  return arr.reduce((result: T[], nextItem: T) => {
+    const itemKey = key(nextItem);
+    if (!contents.includes(itemKey)) {
+      result.push(nextItem);
+      contents.push(itemKey);
+    }
+    return result;
+  }, []);
+}
+
 export namespace Pattern {
   /*
    * Combine a list of JSON schema patterns into a single pattern that

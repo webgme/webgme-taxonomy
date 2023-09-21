@@ -1,8 +1,30 @@
 describe("Utils", function () {
   const assert = require("assert");
-  const { retry, range, intervals, Pattern, toArtifactMetadatav2 } = require(
+  const {
+    retry,
+    uniqWithKey,
+    range,
+    intervals,
+    Pattern,
+    toArtifactMetadatav2,
+  } = require(
     "../../../src/routers/Search/build/Utils",
   );
+
+  describe("uniqWithKey", function () {
+    it("should remove duplicates using fn", function () {
+      const nums = [1, -2, 1, -1, 3, 5, -5];
+      const uniq = uniqWithKey(nums, Math.abs);
+      assert.equal(uniq.length, 4);
+      assert.deepEqual(uniq, [1, -2, 3, 5]);
+    });
+
+    it("should keep the untransformed item", function () {
+      const nums = [-1];
+      const uniq = uniqWithKey(nums, Math.abs);
+      assert.deepEqual(uniq, [-1]);
+    });
+  });
 
   describe("retry", function () {
     it("should throw error if all attempts fail", async function () {
