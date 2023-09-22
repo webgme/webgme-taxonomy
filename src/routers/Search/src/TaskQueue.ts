@@ -6,6 +6,7 @@ import os from "os";
 import fsp from "fs/promises";
 import fs from "fs";
 import path from "path";
+import { Result } from "oxide.ts";
 
 export enum Status {
   Created,
@@ -99,7 +100,7 @@ class TaskNotCompleteError extends UserError {
 export default class TaskQueue<R extends Runnable<O>, O> {
   private tasks: Task<R, O>[];
   private currentTasks: Task<R, O>[];
-  private taskResults: { [id: TaskID]: O };
+  private taskResults: { [id: TaskID]: Result<O, Error> };
   private maxConcurrentTasks: number;
 
   constructor() {
@@ -141,7 +142,7 @@ export default class TaskQueue<R extends Runnable<O>, O> {
   }
 
   private async runTask(task: Task<R, O>) {
-    const result = await task.run();
+    const result = await Result.safe(task.run());
     this.taskResults[task.id] = result;
   }
 
@@ -157,7 +158,7 @@ export default class TaskQueue<R extends Runnable<O>, O> {
     }
   }
 
-  getResult(id: TaskID): O {
+  getResult(id: TaskID): Result<O, Error> {
     const result = this.taskResults[id];
 
     if (!result) {

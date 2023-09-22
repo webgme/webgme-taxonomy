@@ -14,8 +14,11 @@ import {
   TransferStatus,
 } from "./types";
 import { retry } from "../../Utils";
-import { Ok, Option, Result } from "oxide.ts";
+import { Err, Ok, Option, Result } from "oxide.ts";
 import { ArtifactMetadata } from "../common/types";
+import { UserError } from "../../../../../common/routers/Utils";
+
+class PdpApiError extends UserError {}
 
 interface RequestOpts {
   token?: string;
@@ -35,7 +38,9 @@ interface ListProcessOpts extends RequestOpts {
 }
 
 export interface PdpProvider {
-  listProcesses(opts?: ListProcessOpts): Promise<Result<Process[], Error>>;
+  listProcesses(
+    opts?: ListProcessOpts,
+  ): Promise<Result<Process[], PdpApiError>>;
   createProcess(
     observerId: string,
     processType: string,
@@ -44,35 +49,35 @@ export interface PdpProvider {
   getProcessState(
     id: ProcessID,
     opts?: RequestOpts,
-  ): Promise<Result<ProcessState, Error>>;
+  ): Promise<Result<ProcessState, PdpApiError>>;
   getObservation(
     processId: ProcessID,
     obsIndex: number,
     version: number,
     opts?: RequestOpts,
-  ): Promise<Result<Observation, Error>>;
+  ): Promise<Result<Observation, PdpApiError>>;
   getObservations(
     processId: ProcessID,
     startIndex: number,
     limit?: number,
     opts?: RequestOpts,
-  ): Promise<Result<Observation[], Error>>;
+  ): Promise<Result<Observation[], PdpApiError>>;
   getObservationFiles(
     id: ProcessID,
     index: number,
     version: number,
     opts?: RequestOpts,
-  ): Promise<Result<GetObservationFilesResponse, Error>>;
+  ): Promise<Result<GetObservationFilesResponse, PdpApiError>>;
   appendObservation(
     processId: ProcessID,
     observation: Observation,
     opts?: RequestOpts,
-  ): Promise<Result<AppendObservationResponse, Error>>;
+  ): Promise<Result<AppendObservationResponse, PdpApiError>>;
   getTransferState(
     processId: ProcessID,
     directoryId: string,
     transferId: string,
-  ): Promise<Result<TransferState, Error>>;
+  ): Promise<Result<TransferState, PdpApiError>>;
 }
 
 export default class PdpApi implements PdpProvider {
@@ -86,14 +91,14 @@ export default class PdpApi implements PdpProvider {
 
   async listProcesses(
     opts: ListProcessOpts = {},
-  ): Promise<Result<Process[], Error>> {
+  ): Promise<Result<Process[], PdpApiError>> {
     const permission = opts.permission || "read";
     const url = `v2/Process/ListProcesses?permission=${permission}`;
     const token = Option.from(opts.token);
     const fetchOpts = token.map((token) =>
       setAuthToken(DefaultFetchOpts(), token)
     );
-    const processes: Result<Process[], Error> = await this._fetchJson(
+    const processes: Result<Process[], PdpApiError> = await this._fetchJson(
       url,
       fetchOpts.unwrapOrElse(DefaultFetchOpts),
     );
@@ -103,11 +108,11 @@ export default class PdpApi implements PdpProvider {
   async getProcessState(
     id: ProcessID,
     opts: RequestOpts = {},
-  ): Promise<Result<ProcessState, Error>> {
+  ): Promise<Result<ProcessState, PdpApiError>> {
     const fetchOpts = Option.from(opts.token).map((token) =>
       setAuthToken(DefaultFetchOpts(), token)
     );
-    const state: Result<ProcessState, Error> = await this._fetchJson(
+    const state: Result<ProcessState, PdpApiError> = await this._fetchJson(
       `v2/Process/GetProcessState?processId=${id}`,
       fetchOpts.unwrapOrElse(DefaultFetchOpts),
     );
@@ -120,15 +125,16 @@ export default class PdpApi implements PdpProvider {
     startIndex: number,
     limit: number = 20,
     opts: RequestOpts = {},
-  ): Promise<Result<Observation[], Error>> {
+  ): Promise<Result<Observation[], PdpApiError>> {
     const fetchOpts = Option.from(opts.token).map((token) =>
       setAuthToken(DefaultFetchOpts(), token)
     );
-    const observations: Result<Observation[], Error> = await this._fetchJson(
-      `v2/Process/PeekObservations?processId=${processId}&obsIndex=${startIndex}` +
-        `&maxReturn=${limit}`,
-      fetchOpts.unwrapOrElse(DefaultFetchOpts),
-    );
+    const observations: Result<Observation[], PdpApiError> = await this
+      ._fetchJson(
+        `v2/Process/PeekObservations?processId=${processId}&obsIndex=${startIndex}` +
+          `&maxReturn=${limit}`,
+        fetchOpts.unwrapOrElse(DefaultFetchOpts),
+      );
 
     return observations;
   }
@@ -138,7 +144,7 @@ export default class PdpApi implements PdpProvider {
     obsIndex: number,
     version: number,
     opts: RequestOpts = {},
-  ): Promise<Result<Observation, Error>> {
+  ): Promise<Result<Observation, PdpApiError>> {
     const queryDict = {
       processId: processId.toString(),
       obsIndex: obsIndex.toString(),
@@ -148,7 +154,7 @@ export default class PdpApi implements PdpProvider {
     const fetchOpts = Option.from(opts.token).map((token) =>
       setAuthToken(DefaultFetchOpts(), token)
     );
-    const obsResult: Result<Observation, Error> = await this._fetchJson(
+    const obsResult: Result<Observation, PdpApiError> = await this._fetchJson(
       url,
       fetchOpts.unwrapOrElse(DefaultFetchOpts),
     );
@@ -161,7 +167,7 @@ export default class PdpApi implements PdpProvider {
     index: number,
     version: number,
     opts: RequestOpts = {},
-  ): Promise<Result<GetObservationFilesResponse, Error>> {
+  ): Promise<Result<GetObservationFilesResponse, PdpApiError>> {
     const queryDict = {
       processId: id.toString(),
       obsIndex: index.toString(),
@@ -174,8 +180,9 @@ export default class PdpApi implements PdpProvider {
       method: "put",
     };
     Option.from(opts.token).map((token) => setAuthToken(fetchOpts, token));
-    const obsFiles: Result<GetObservationFilesResponse, Error> = await this
-      ._fetchJson(url, fetchOpts);
+    const obsFiles: Result<GetObservationFilesResponse, PdpApiError> =
+      await this
+        ._fetchJson(url, fetchOpts);
     return obsFiles;
   }
 
@@ -183,7 +190,7 @@ export default class PdpApi implements PdpProvider {
     processId: ProcessID,
     observation: Observation,
     opts: RequestOpts = {},
-  ): Promise<Result<AppendObservationResponse, Error>> {
+  ): Promise<Result<AppendObservationResponse, PdpApiError>> {
     // TODO: use token in opts
     const fetchOpts = {
       method: "post",
@@ -194,7 +201,7 @@ export default class PdpApi implements PdpProvider {
     };
     Option.from(opts.token).map((token) => setAuthToken(fetchOpts, token));
 
-    const response: Result<AppendObservationResponse, Error> = await this
+    const response: Result<AppendObservationResponse, PdpApiError> = await this
       ._fetchJson(
         `v3/Process/AppendObservation?processId=${processId}&uploadExpiresInMins=180`,
         fetchOpts,
@@ -208,7 +215,7 @@ export default class PdpApi implements PdpProvider {
     directoryId: string,
     transferId: string,
     opts: RequestOpts = {},
-  ): Promise<Result<TransferState, Error>> {
+  ): Promise<Result<TransferState, PdpApiError>> {
     const queryDict = {
       processId: processId.toString(),
       directoryId: directoryId.toString(),
@@ -218,7 +225,7 @@ export default class PdpApi implements PdpProvider {
     const fetchOpts = Option.from(opts.token).map((token) =>
       setAuthToken(DefaultFetchOpts(), token)
     );
-    const state: Result<TransferState, Error> = await this._fetchJson(
+    const state: Result<TransferState, PdpApiError> = await this._fetchJson(
       url,
       fetchOpts.unwrapOrElse(DefaultFetchOpts),
     );
@@ -251,29 +258,47 @@ export default class PdpApi implements PdpProvider {
   private async _fetch(
     url: string,
     opts: FetchOpts = DefaultFetchOpts(),
-  ): Promise<Result<Response, Error>> {
+  ): Promise<Result<Response, PdpApiError>> {
     url = this.url + url;
     opts.headers = opts.headers || {};
     opts.headers.Authorization = opts.headers.Authorization ||
       "Bearer " + this.token;
     opts.headers.accept = opts.headers.accept || "application/json";
-    return await Result.safe(
-      retry(async () => {
+
+    try {
+      const response = await retry(async () => {
         const response = await fetch(url, opts);
+        const method = opts.method || "GET";
+        console.log(
+          `${method} ${url} ${JSON.stringify(opts)} ${response.status}`,
+        );
         if (response.status > 399) {
-          const msg = `${opts.method || "GET"} ${url} failed: ${await response
-            .text()} (${response.status})`;
-          throw new Error(msg);
+          const bodyText = (await response.text()) || response.statusText;
+          const message = `Received error from PDP: ${bodyText}`;
+          throw new PdpApiError(message, response.status);
         }
         return response;
-      }),
-    );
+      });
+      return Ok(response);
+    } catch (err) {
+      if (err instanceof PdpApiError) {
+        return Err(err);
+      } else {
+        console.warn("Error occurred in PDP API:", err);
+        return Err(
+          new PdpApiError(
+            "Internal error occurred. Please try again later.",
+            500,
+          ),
+        );
+      }
+    }
   }
 
   private async _fetchJson(
     url: string,
     opts: FetchOpts,
-  ): Promise<Result<any, Error>> {
+  ): Promise<Result<any, PdpApiError>> {
     const respRes = await this._fetch(url, opts);
     const response = respRes.map((resp) => resp.json());
     if (response.isOk()) {
@@ -347,14 +372,14 @@ export class InMemoryPdp implements PdpProvider {
 
   async listProcesses(
     _opts: ListProcessOpts = {},
-  ): Promise<Result<Process[], Error>> {
+  ): Promise<Result<Process[], PdpApiError>> {
     return Result.from(this.data.processes.map((data) => data.metadata));
   }
 
   async getProcessState(
     id: ProcessID,
     _opts: RequestOpts = {},
-  ): Promise<Result<ProcessState, Error>> {
+  ): Promise<Result<ProcessState, PdpApiError>> {
     console.log(id);
     return this.getProcessData(id).map((data) => data.state);
   }
@@ -364,7 +389,7 @@ export class InMemoryPdp implements PdpProvider {
     startIndex: number,
     limit: number = 20,
     _opts: RequestOpts = {},
-  ): Promise<Result<Observation[], Error>> {
+  ): Promise<Result<Observation[], PdpApiError>> {
     return this.getProcessData(id)
       .map((data) => data.observations.slice(startIndex, startIndex + limit))
       .map((obsData) => obsData.map((d) => d.data));
@@ -375,7 +400,7 @@ export class InMemoryPdp implements PdpProvider {
     obsIndex: number,
     _version: number,
     _opts: RequestOpts = {},
-  ): Promise<Result<Observation, Error>> {
+  ): Promise<Result<Observation, PdpApiError>> {
     return this.getObservationData(id, obsIndex)
       .map((obsDatum) => obsDatum.data);
   }
@@ -385,7 +410,7 @@ export class InMemoryPdp implements PdpProvider {
     index: number,
     _version: number,
     _opts: RequestOpts = {},
-  ): Promise<Result<GetObservationFilesResponse, Error>> {
+  ): Promise<Result<GetObservationFilesResponse, PdpApiError>> {
     return this.getObservationData(id, index)
       .map((obsDatum) => obsDatum.fileData);
   }
@@ -394,7 +419,7 @@ export class InMemoryPdp implements PdpProvider {
     processId: ProcessID,
     observation: Observation,
     _opts: RequestOpts = {},
-  ): Promise<Result<AppendObservationResponse, Error>> {
+  ): Promise<Result<AppendObservationResponse, PdpApiError>> {
     return this.getProcessData(processId)
       .map((data) => { // add the observation
         const transferId = `transfer_${Date.now()}_${this.data.counter++}`;
@@ -444,9 +469,9 @@ export class InMemoryPdp implements PdpProvider {
     _directoryId: string,
     transferId: string,
     _opts: RequestOpts = {},
-  ): Promise<Result<TransferState, Error>> {
+  ): Promise<Result<TransferState, PdpApiError>> {
     return Option.from(this.data.transfers[transferId])
-      .okOr(new Error("Transfer not found."));
+      .okOr(new PdpApiError("Transfer not found.", 404));
   }
 
   async createProcess(
@@ -514,21 +539,21 @@ export class InMemoryPdp implements PdpProvider {
     this.data.transfers = {};
   }
 
-  private getProcessData(id: ProcessID): Result<ProcessData, Error> {
+  private getProcessData(id: ProcessID): Result<ProcessData, PdpApiError> {
     return Option.from(
       this.data.processes.find((d) => d.metadata.processId === id),
     )
-      .okOrElse(() => new Error("Process not found"));
+      .okOrElse(() => new PdpApiError("Process not found", 404));
   }
 
   private getObservationData(
     id: ProcessID,
     index: number,
-  ): Result<ObservationData, Error> {
+  ): Result<ObservationData, PdpApiError> {
     return this.getProcessData(id)
       .andThen((data) =>
         Option(data.observations[index]).okOrElse(() =>
-          new Error("Observation not found.")
+          new PdpApiError("Observation not found.", 404)
         )
       );
   }
