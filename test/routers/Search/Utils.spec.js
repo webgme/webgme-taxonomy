@@ -7,9 +7,28 @@ describe("Utils", function () {
     intervals,
     Pattern,
     toArtifactMetadatav2,
+    shiftWhile,
   } = require(
     "../../../src/routers/Search/build/Utils",
   );
+
+  describe("shiftWhile", function () {
+    it("should return matching items", function () {
+      const list = shiftWhile([1, 2, 3, 4, 5], (i) => i < 5);
+      assert.deepEqual(list, [1, 2, 3, 4]);
+    });
+
+    it("should stop matching after first false", function () {
+      const list = shiftWhile([1, 2, 3, 4, 5, 1], (i) => i < 5);
+      assert.deepEqual(list, [1, 2, 3, 4]);
+    });
+
+    it("should remove matching items", function () {
+      const original = [1, 2, 3, 4, 5, 1];
+      shiftWhile(original, (i) => i < 5);
+      assert.deepEqual(original, [5, 1]);
+    });
+  });
 
   describe("uniqWithKey", function () {
     it("should remove duplicates using fn", function () {

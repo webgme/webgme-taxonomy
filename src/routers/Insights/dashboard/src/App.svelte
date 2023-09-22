@@ -17,7 +17,7 @@
     Chart,
    } from "./components";
   import type {ArtifactMetadatav2} from "../../Search/src/adapters/common/types";
-  import { groupBy } from "../../Search/src/Utils";
+  import { groupBy, shiftWhile } from "../../../Search/src/Utils";
 
   const projectId = decodeURIComponent(location.href.split('/Insights/').pop().split('/').shift());
   let title: string = `Platform Insights: ${projectId.split('+').pop()}`;
@@ -35,16 +35,18 @@
       data: [],
     },
     xAxis: {
+      name: 'Uploaded At',
+      nameLocation: 'middle',
+      nameTextStyle: {fontWeight: 'bold'},
       data: [],
     },
-    yAxis: {},
-    series: [
-      {
-        name: "sales",
-        type: "bar",
-        data: [5, 20, 36, 10, 10, 20],
-      },
-    ],
+    yAxis: {
+      name: 'Uploads (Cumulative)',
+      nameLocation: 'middle',
+      minInterval: 1,  // integers only
+      nameTextStyle: {fontWeight: 'bold'},
+    },
+    series: []
   };
 
   async function fetchData(): Promise<ArtifactMetadatav2[]> {
@@ -57,14 +59,10 @@
 
   async function initialize(): Promise<void> {
     metadata = await fetchData();
-    console.log({metadata});
-    // TODO: convert the metadata to the correct format
 
-    // TODO: groupBy userId
     // TODO: For each group, count within given time windows
     // TODO: maybe weeks?
 
-    // TODO:
     const timeDates = metadata
       .map(md => new Date(md.tags.Base.uploadedAt.time))
       .sort();
@@ -73,29 +71,39 @@
 
     // TODO: add label to y axis about cumulative uploads
     // TODO: start time, end time
-    const now = new Date();
-    const startTime = Math.min(now, ...timeDates);
-    const endTime = Math.max(now, ...timeDates);
-    const timestamps = getTimepoints(startTime, endTime);
+    const timestamps = getTimepoints(timeDates);
 
     options.legend.data = userIds;
-    options.xAxis.data = timestamps.map(ts => new Date(ts));
-    options.series // TODO
+    options.xAxis.data = timestamps.map(ts => new Date(ts).toString());
+    options.series = Object.entries(uploadsByUser).map(([userId, uploads]) => {
+      const uploadTimes = uploads
+        .map(upload => new Date(upload.tags.Base?.uploadedAt?.time))
+        .map(date => +date);
+
+     return {
+        name: userId,
+        type: 'line',
+        stack: 'Total',
+        data: timestamps
+          .map(timestamp => shiftWhile(uploadTimes, time => time < timestamp).length)
+      };
+    });
 
     isLoading = false
   }
 
-  function getTimepoints(startTime: number, endTime: number): number[] {
-    const day = 1000 * 60 * 60 * 24;
-    // TODO: get a reasonable x-axis
-    const times = [startTime];
-    let last = startTime;
+  function getTimepoints(timeDates: number[]): number[] {
+    // const day = 1000 * 60 * 60 * 24;
+    // // TODO: get a reasonable x-axis
+    // const times = [startTime];
+    // let last = startTime;
 
-    while (last !== endTime) {
-      last = Math.min(last + day, endTime);
-      times.push(last);
-    }
-    return times;
+    // while (last !== endTime) {
+    //   last = Math.min(last + day, endTime);
+    //   times.push(last);
+    // }
+    // return times;
+    return timeDates;
   }
   initialize();
 

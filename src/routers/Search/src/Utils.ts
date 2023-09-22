@@ -32,6 +32,22 @@ export function groupBy<T>(
 }
 
 /**
+ * Mutable takeWhile.
+ */
+export function shiftWhile<T>(items: T[], fn: (item: T) => boolean): T[] {
+  const result: T[] = [];
+  while (items.length && fn(items[0])) {
+    const item = items.shift();
+    // Unfortunately, I am ignoring the next line since item is guaranteed to be T
+    // and checking if the item is undefined would change the behavior in the (admittedly
+    // a bit trivial) case where undefined is an item in the list
+    // @ts-ignore
+    result.push(item);
+  }
+  return result;
+}
+
+/**
  * Convert from a result into "regular TS error handling".
  *
  * Unfortunately, Result.unwrap() throws an opaque error.

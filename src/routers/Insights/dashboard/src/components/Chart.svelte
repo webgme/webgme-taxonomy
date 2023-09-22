@@ -9,7 +9,6 @@
     if (chart) {
       chart.setOption(options)
     }
-    console.log({chart, options})
   }
 
   async function render() {
@@ -17,8 +16,8 @@
     if (options) {
       onOptionsChange(options);
     }
-    console.log({chartEl, chart})
   }
+  window.addEventListener('resize', () => chart.resize());
 
 </script>
 
