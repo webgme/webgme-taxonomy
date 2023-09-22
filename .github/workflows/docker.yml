@@ -17,7 +17,7 @@ jobs:
         with:
           submodules: true
         
-      # All (regular and prerelease) releases get an "beta" tag
+      # All (regular and prerelease) releases get a "beta" tag
       - name: Get Release Tags
         id: get_release_tags
         run: |
@@ -29,7 +29,7 @@ jobs:
       - name: Get Release Tags
         id: get_prerelease_tags
         run: |
-          echo "EXTRA_TAG=\",latest\"" >> $GITHUB_ENV
+          echo "EXTRA_TAG=,latest" >> $GITHUB_ENV
         if: github.event_name == 'release' && !github.event.release.prerelease
 
       # always push nightly
