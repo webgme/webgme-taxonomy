@@ -1,10 +1,10 @@
 describe("TaskQueue", function () {
   const assert = require("assert");
-  const { default: TaskQueue, Task, Status } = require(
+  const { default: TaskQueue, Status } = require(
     "../../../src/routers/Search/build/TaskQueue",
   );
   const { UserError } = require("../../../src/common/routers/Utils");
-  const { sleep } = require(
+  const { sleep, fromResult } = require(
     "../../../src/routers/Search/build/Utils",
   );
 
@@ -17,6 +17,12 @@ describe("TaskQueue", function () {
     async run() {
       await sleep(this.delay);
       return this.fn();
+    }
+  }
+
+  class ThrowingRunnable {
+    async run() {
+      throw new Error("throw!");
     }
   }
 
@@ -58,6 +64,16 @@ describe("TaskQueue", function () {
       } catch (err) {
         assert(err instanceof UserError);
       }
+    });
+
+    it("should get error it task throws error", async function () {
+      const queue = new TaskQueue();
+      const t1 = new ThrowingRunnable();
+      const id1 = queue.submitTask(t1);
+      await sleep(5);
+      const result = queue.getResult(id1);
+      assert(result.isErr());
+      assert.throws(() => fromResult(result));
     });
   });
 

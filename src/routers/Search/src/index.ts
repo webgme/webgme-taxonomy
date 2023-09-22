@@ -27,7 +27,7 @@ import type {
 } from "../../../common/types";
 import { toArtifactMetadatav2 } from "./adapters/common/Helpers";
 import Utils from "../../../common/Utils";
-import { deepMerge, isString } from "./Utils";
+import { deepMerge, fromResult, isString } from "./Utils";
 import DashboardConfiguration from "../../../common/SearchFilterDataExporter";
 import TagFormatter from "../../../common/TagFormatter";
 import path from "path";
@@ -414,7 +414,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
       logger,
       async function getDownloadContent(req, res) {
         const { taskId } = req.params;
-        const zipPath = downloadQueue.getResult(parseInt(taskId));
+        const zipPath = fromResult(downloadQueue.getResult(parseInt(taskId)));
         const tmpDir = path.dirname(zipPath);
 
         res.download(
