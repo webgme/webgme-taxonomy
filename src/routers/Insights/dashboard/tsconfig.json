@@ -4,6 +4,6 @@
   "include": ["src/**/*"],
   "exclude": ["node_modules/*", "__sapper__/*", "public/*"],
   "references": [
-    { "path": "../../Search/src/" }
+    { "path": "../../Search/" }
   ]
 }

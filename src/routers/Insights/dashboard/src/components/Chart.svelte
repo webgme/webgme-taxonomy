@@ -3,10 +3,21 @@
   let chartEl;
   let chart;
 
-  $: console.log(options);
+  $: onOptionsChange(options);
+
+  function onOptionsChange(options) {
+    if (chart) {
+      chart.setOption(options)
+    }
+    console.log({chart, options})
+  }
+
   async function render() {
-  console.log('render!');
     chart = echarts.init(chartEl);
+    if (options) {
+      onOptionsChange(options);
+    }
+    console.log({chartEl, chart})
   }
 
 </script>

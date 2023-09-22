@@ -17,6 +17,7 @@
     Chart,
    } from "./components";
   import type {ArtifactMetadatav2} from "../../Search/src/adapters/common/types";
+  import { groupBy } from "../../Search/src/Utils";
 
   const projectId = decodeURIComponent(location.href.split('/Insights/').pop().split('/').shift());
   let title: string = `Platform Insights: ${projectId.split('+').pop()}`;
@@ -25,14 +26,16 @@
   let metadata = [];
   let options = {
     title: {
-      text: "ECharts Getting Started Example",
+      text: "Content Uploads by User",
     },
-    tooltip: {},
+    tooltip: {
+      trigger: 'axis'
+    },
     legend: {
-      data: ["sales"],
+      data: [],
     },
     xAxis: {
-      data: ["Shirts", "Cardigans", "Chiffons", "Pants", "Heels", "Socks"],
+      data: [],
     },
     yAxis: {},
     series: [
@@ -56,12 +59,43 @@
     metadata = await fetchData();
     console.log({metadata});
     // TODO: convert the metadata to the correct format
+
     // TODO: groupBy userId
     // TODO: For each group, count within given time windows
     // TODO: maybe weeks?
 
+    // TODO:
+    const timeDates = metadata
+      .map(md => new Date(md.tags.Base.uploadedAt.time))
+      .sort();
+    const uploadsByUser = groupBy(metadata, md => md.tags.Base.uploadedBy?.user);
+    const userIds = Object.keys(uploadsByUser);
+
+    // TODO: add label to y axis about cumulative uploads
+    // TODO: start time, end time
+    const now = new Date();
+    const startTime = Math.min(now, ...timeDates);
+    const endTime = Math.max(now, ...timeDates);
+    const timestamps = getTimepoints(startTime, endTime);
+
+    options.legend.data = userIds;
+    options.xAxis.data = timestamps.map(ts => new Date(ts));
+    options.series // TODO
+
     isLoading = false
-    // TODO: convert the data to the correct format
+  }
+
+  function getTimepoints(startTime: number, endTime: number): number[] {
+    const day = 1000 * 60 * 60 * 24;
+    // TODO: get a reasonable x-axis
+    const times = [startTime];
+    let last = startTime;
+
+    while (last !== endTime) {
+      last = Math.min(last + day, endTime);
+      times.push(last);
+    }
+    return times;
   }
   initialize();
 
@@ -79,7 +113,6 @@
   {#if isLoading}
     <LinearProgress indeterminate />
   {:else}
-  <span>loaded. is the chart coming?</span>
     <Chart {options} />
   {/if}
   <SvelteToast options={{ classes: ["log"] }} />
