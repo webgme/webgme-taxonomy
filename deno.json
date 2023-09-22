@@ -1,7 +1,10 @@
 {
   "fmt": {
     "exclude": [
-      "**.min.js"
+      "src/routers/Insights/dashboard/public/echarts.min.js",
+      "src/routers/Insights/dashboard/src/components/echarts.min.js",
+      "src/visualizers/widgets/TagCreator/lib/react-dom.production.min.js",
+      "src/visualizers/widgets/TagCreator/lib/react.production.min.js"
     ]
   }
 }
