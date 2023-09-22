@@ -37,8 +37,8 @@ describe("TaskQueue", function () {
       while (queue.getStatus(id2) !== Status.Complete) {
         await sleep(5);
       }
-      const r1 = queue.getResult(id1);
-      const r2 = queue.getResult(id2);
+      const r1 = fromResult(queue.getResult(id1));
+      const r2 = fromResult(queue.getResult(id2));
       assert(r1 < r2);
     });
 
