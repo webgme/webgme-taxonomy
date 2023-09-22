@@ -268,10 +268,6 @@ export default class PdpApi implements PdpProvider {
     try {
       const response = await retry(async () => {
         const response = await this._rawFetch(url, opts);
-        const method = opts.method || "GET";
-        console.log(
-          `${method} ${url} ${JSON.stringify(opts)} ${response.status}`,
-        );
         if (response.status > 399) {
           const bodyText = (await response.text()) || response.statusText;
           const message = `Received error from PDP: ${bodyText}`;

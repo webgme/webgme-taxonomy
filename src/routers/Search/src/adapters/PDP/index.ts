@@ -608,7 +608,7 @@ export default class PDP implements Adapter {
       api = new InMemoryPdp();
       observerId = "testUsername";
     } else {
-      api = new PdpApi(baseUrl.toString(), processType.toString());
+      api = new PdpApi(baseUrl.toString(), userToken);
       observerId = RouterUtils.getObserverIdFromToken(userToken);
     }
 
