@@ -267,7 +267,7 @@ export default class PdpApi implements PdpProvider {
 
     try {
       const response = await retry(async () => {
-        const response = await fetch(url, opts);
+        const response = await this._rawFetch(url, opts);
         if (response.status > 399) {
           const bodyText = (await response.text()) || response.statusText;
           const message = `Received error from PDP: ${bodyText}`;
@@ -289,6 +289,10 @@ export default class PdpApi implements PdpProvider {
         );
       }
     }
+  }
+
+  private async _rawFetch(url: string, opts: RequestInit): Promise<Response> {
+    return await fetch(url, opts);
   }
 
   private async _fetchJson(
