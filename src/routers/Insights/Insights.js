@@ -7,7 +7,7 @@ const nop = () => {};
 const path = require("path");
 const assert = require("assert");
 const fsp = require("fs/promises");
-const staticPath = path.join(__dirname, "..", "dashboard", "public");
+const staticPath = path.join(__dirname, "dashboard", "public");
 const StorageAdapter = require("../Search/build/adapters").default;
 const Utils = require("../../common/Utils");
 const { uniqWithKey, filterMap } = require("../Search/build/Utils");

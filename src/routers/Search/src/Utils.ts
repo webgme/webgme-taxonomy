@@ -13,6 +13,24 @@ export function range(start: number, end: number, step: number = 1): number[] {
   return [...new Array(len)].map((_v, index) => start + step * index);
 }
 
+export function groupBy<T>(
+  items: T[],
+  fn: (item: T) => string,
+): { [key: string]: T[] } {
+  const groups: { [k: string]: T[] } = {};
+
+  items.forEach((item: T) => {
+    const key = fn(item);
+    if (!groups.hasOwnProperty(key)) {
+      groups[key] = [];
+    }
+
+    groups[key].push(item);
+  });
+
+  return groups;
+}
+
 /**
  * Convert from a result into "regular TS error handling".
  *
