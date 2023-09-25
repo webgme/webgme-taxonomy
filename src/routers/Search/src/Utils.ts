@@ -245,6 +245,24 @@ export function uniqWithKey<T, K>(arr: T[], key: (item: T) => K): T[] {
   }, []);
 }
 
+// TODO: group these using different functions until within a given range
+export function getTimepoints(timeDates: Date[]): Date[] {
+    // const day = 1000 * 60 * 60 * 24;
+    // // TODO: get a reasonable x-axis
+    // // TODO: Given a few reasonable steps, split accordingly
+    // // TODO: hour, day, week, month, year
+    // // if > year, start grouping them (2, 3, 4 years)
+    // const times = [startTime];
+    // let last = startTime;
+
+    // while (last !== endTime) {
+    //   last = Math.min(last + day, endTime);
+    //   times.push(last);
+    // }
+    // return times;
+    return timeDates;
+  }
+
 export namespace Pattern {
   /*
    * Combine a list of JSON schema patterns into a single pattern that

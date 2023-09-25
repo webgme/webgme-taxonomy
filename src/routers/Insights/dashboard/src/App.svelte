@@ -1,23 +1,13 @@
 <script lang="ts">
-  import { setContext } from "svelte";
-  import Textfield from "@smui/textfield";
   import { SvelteToast, toast } from "@zerodevx/svelte-toast";
   /*import Chip from "@smui/chips";*/
-  import List, {
-    Item,
-    Text,
-    PrimaryText,
-    SecondaryText,
-  } from "@smui/list";
-  import Drawer, { Content, AppContent } from "@smui/drawer";
   import LinearProgress from "@smui/linear-progress";
-  import Paper, { Content as PaperContent } from "@smui/paper";
   import {
     AppHeader,
     Chart,
    } from "./components";
   import type {ArtifactMetadatav2} from "../../Search/src/adapters/common/types";
-  import { groupBy, shiftWhile } from "../../../Search/src/Utils";
+  import { getTimepoints, groupBy, shiftWhile } from "../../../Search/src/Utils";
 
   const projectId = decodeURIComponent(location.href.split('/Insights/').pop().split('/').shift());
   let title: string = `Platform Insights: ${projectId.split('+').pop()}`;
@@ -77,8 +67,7 @@
     options.xAxis.data = timestamps.map(ts => new Date(ts).toString());
     options.series = Object.entries(uploadsByUser).map(([userId, uploads]) => {
       const uploadTimes = uploads
-        .map(upload => new Date(upload.tags.Base?.uploadedAt?.time))
-        .map(date => +date);
+        .map(upload => new Date(upload.tags.Base?.uploadedAt?.time));
 
      return {
         name: userId,
@@ -92,19 +81,7 @@
     isLoading = false
   }
 
-  function getTimepoints(timeDates: number[]): number[] {
-    // const day = 1000 * 60 * 60 * 24;
-    // // TODO: get a reasonable x-axis
-    // const times = [startTime];
-    // let last = startTime;
-
-    // while (last !== endTime) {
-    //   last = Math.min(last + day, endTime);
-    //   times.push(last);
-    // }
-    // return times;
-    return timeDates;
-  }
+  // TODO: finish this and test it
   initialize();
 
 </script>
