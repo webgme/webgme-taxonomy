@@ -20,7 +20,7 @@
     "build": "tsc --build",
     "prepublish": "husky install",
     "prepare-docker": "node scripts/prepare-docker.js",
-    "prepare": "npm run build && cd src/routers/Dashboard/app && npm install && cd ../../Search/dashboard && npm install && cd ../../TagCreator/form && npm install"
+    "prepare": "npm run build && cd src/routers/Dashboard/app && npm install && cd ../../Search/dashboard && npm install && cd ../../TagCreator/form && npm install && cd ../../Insights/dashboard && npm install"
   },
   "version": "1.3.1",
   "devDependencies": {

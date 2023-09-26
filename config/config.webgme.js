@@ -57,6 +57,11 @@ config.rest.components["TagCreatorv1"] = {
   mount: "routers/TagCreatorv1",
   options: {},
 };
+config.rest.components["Insights"] = {
+  src: __dirname + "/../src/routers/Insights/Insights.js",
+  mount: "routers/Insights",
+  options: {},
+};
 
 // Visualizer descriptors
 config.visualization.visualizerDescriptors.push(
