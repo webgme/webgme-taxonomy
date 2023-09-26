@@ -10,7 +10,7 @@
   import { getTimepoints, groupBy, shiftWhile } from "../../../Search/src/Utils";
 
   const projectId = decodeURIComponent(location.href.split('/Insights/').pop().split('/').shift());
-  let title: string = `Platform Insights: ${projectId.split('+').pop()}`;
+  let title: string = `Content Insights: ${projectId.split('+').pop()}`;
 
   let isLoading = true;
   let metadata = [];
