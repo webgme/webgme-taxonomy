@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { SvelteToast, toast } from "@zerodevx/svelte-toast";
+  import { SvelteToast } from "@zerodevx/svelte-toast";
   /*import Chip from "@smui/chips";*/
   import LinearProgress from "@smui/linear-progress";
   import {
@@ -69,14 +69,19 @@
       const uploadTimes = uploads
         .map(upload => new Date(upload.tags.Base?.uploadedAt?.time));
 
-     return {
-        name: userId,
-        type: 'line',
-        stack: 'Total',
-        data: timestamps
-          .map(timestamp => shiftWhile(uploadTimes, time => time < timestamp).length)
-      };
-    });
+    let total = 0;
+    const counts = timestamps
+        .map(timestamp => shiftWhile(uploadTimes, time => time < timestamp).length);
+
+    const cumulative = counts.map(c => total += c);
+
+    return {
+      name: userId,
+      type: 'line',
+      stack: 'Total',
+      data: cumulative,
+    };
+  });
 
     isLoading = false
   }

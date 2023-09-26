@@ -245,22 +245,148 @@ export function uniqWithKey<T, K>(arr: T[], key: (item: T) => K): T[] {
   }, []);
 }
 
-// TODO: group these using different functions until within a given range
-export function getTimepoints(timeDates: Date[]): Date[] {
-  // const day = 1000 * 60 * 60 * 24;
-  // // TODO: get a reasonable x-axis
-  // // TODO: Given a few reasonable steps, split accordingly
-  // // TODO: hour, day, week, month, year
-  // // if > year, start grouping them (2, 3, 4 years)
-  // const times = [startTime];
-  // let last = startTime;
+export namespace DateTimeIter {
+  function interval(start: Date, ms: number): Generator<Date> {
+    return lazy.iter(start, (d) => new Date(+d + ms));
+  }
 
-  // while (last !== endTime) {
-  //   last = Math.min(last + day, endTime);
-  //   times.push(last);
-  // }
-  // return times;
-  return timeDates;
+  export function minutes(start: Date): Generator<Date> {
+    const minute = 1000 * 60;
+    return interval(start, minute);
+  }
+
+  export function hours(start: Date): Generator<Date> {
+    const hour = 1000 * 60 * 60;
+    return interval(start, hour);
+  }
+
+  export function days(start: Date): Generator<Date> {
+    const day = 1000 * 60 * 60 * 24;
+    return interval(start, day);
+  }
+
+  export function weeks(start: Date): Generator<Date> {
+    const day = 1000 * 60 * 60 * 24;
+    return interval(start, 7 * day);
+  }
+
+  export function months(start: Date): Generator<Date> {
+    return lazy.iter(start, (d) => {
+      const newDate = new Date(d);
+      newDate.setMonth(d.getMonth() + 1);
+      return newDate;
+    });
+  }
+
+  export function years(start: Date, delta: number = 1): Generator<Date> {
+    return lazy.iter(start, (d) => {
+      const newDate = new Date(d);
+      newDate.setFullYear(d.getFullYear() + delta);
+      return newDate;
+    });
+  }
+}
+
+export namespace lazy {
+  export function* iter<T>(start: T, nextFn: (i: T) => T): Generator<T> {
+    let i = start;
+    while (true) {
+      yield i;
+      i = nextFn(i);
+    }
+  }
+
+  export function* chain<T>(...generators: Generator<T>[]): Generator<T> {
+    for (const gen of generators) {
+      for (const i of gen) {
+        yield i;
+      }
+    }
+  }
+
+  export function takeWhile<T>(
+    gen: Generator<T>,
+    fn: (item: T) => boolean,
+  ): T[] {
+    const results: T[] = [];
+    for (const item of gen) {
+      if (fn(item)) {
+        results.push(item);
+      } else {
+        return results;
+      }
+    }
+
+    return results;
+  }
+
+  export function* map<T, O>(
+    gen: Generator<T>,
+    fn: (item: T) => O,
+  ): Generator<O> {
+    for (const item of gen) {
+      yield fn(item);
+    }
+  }
+
+  export function find<T>(
+    gen: Generator<T>,
+    fn: (item: T) => boolean,
+  ): T | undefined {
+    for (const item of gen) {
+      if (fn(item)) {
+        return item;
+      }
+    }
+  }
+
+  export function* fromArray<T>(array: T[]): Generator<T> {
+    for (const item of array) {
+      yield item;
+    }
+  }
+}
+
+export function getTimepoints(timeDates: Date[], maxTicks = 100): Date[] {
+  const startTime = () => new Date(timeDates[0]);
+
+  const iters: Generator<Generator<Date>> = lazy.fromArray([
+    DateTimeIter.minutes(startTime()),
+    DateTimeIter.hours(startTime()),
+    DateTimeIter.days(startTime()),
+    DateTimeIter.weeks(startTime()),
+    DateTimeIter.months(startTime()),
+    DateTimeIter.years(startTime()),
+    DateTimeIter.years(startTime(), 5),
+    DateTimeIter.years(startTime(), 10),
+    DateTimeIter.years(startTime(), 25),
+    DateTimeIter.years(startTime(), 100),
+    DateTimeIter.years(startTime(), 1000), // :)
+  ]);
+
+  const lbls = ["minutes", "hours", "days", "weeks", "months", "years"];
+  const endTime = timeDates[timeDates.length - 1];
+  const pointsForEachInterval: Generator<Date[]> = lazy.map(iters, (iter) => {
+    let numPoints = 0;
+    const points = lazy.takeWhile(
+      iter,
+      // Allow it to collect up to one extra so we know it has too many
+      // but don't waste time computing a ton of extraneous points
+      (d: Date) => ++numPoints < (maxTicks + 1) && d < endTime,
+    );
+    console.log(lbls.shift(), { points });
+    if (points[points.length - 1] !== endTime) {
+      points.push(endTime);
+    }
+    return points;
+  });
+
+  const points = lazy.find(
+    pointsForEachInterval,
+    (points) => points.length < maxTicks,
+  ) || timeDates;
+
+  return points;
 }
 
 export namespace Pattern {

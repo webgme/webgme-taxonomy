@@ -8,9 +8,151 @@ describe("Utils", function () {
     Pattern,
     toArtifactMetadatav2,
     shiftWhile,
+    lazy,
+    getTimepoints,
+    DateTimeIter,
   } = require(
     "../../../src/routers/Search/build/Utils",
   );
+
+  describe("lazy.iter", function () {
+    it("should start with initial value", function () {
+      const i = lazy.iter(1, () => 1);
+      assert.equal(i.next().value, 1);
+    });
+
+    it("should compute subsequent values using next fn", function () {
+      let i = lazy.iter(1, (i) => i + 1);
+      i.next();
+      assert.equal(i.next().value, 2);
+    });
+
+    it("should return 1000 values", function () {
+      let i = lazy.iter(1, (i) => i + 1);
+      [...new Array(1000)].forEach(() => i.next());
+    });
+  });
+
+  describe("DateTimeIter", function () {
+    it("should get minutes", function () {
+      const mins = DateTimeIter.minutes(
+        new Date("2023-09-25T20:00:00.306Z"),
+      );
+      [...new Array(61)].forEach((_, i) =>
+        assert.equal(i % 60, mins.next().value.getMinutes())
+      );
+    });
+
+    it("should get hours", function () {
+      const hrs = DateTimeIter.hours(
+        new Date("2023-09-25T00:00:00.306Z"),
+      );
+      [...new Array(61)].forEach((_, i) =>
+        assert.equal(i % 24, hrs.next().value.getUTCHours())
+      );
+    });
+
+    it("should get weeks", function () {
+      const weeks = DateTimeIter.weeks(
+        new Date("2023-09-01T01:00:00.306Z"),
+      );
+      const expected = [1, 8, 15, 22, 29, 6];
+      expected.forEach((day) => {
+        const actual = weeks.next().value.getUTCDate();
+        assert.equal(day, actual);
+      });
+    });
+
+    it("should get months", function () {
+      const months = DateTimeIter.months(
+        new Date("2023-01-01T01:00:00.306Z"),
+      );
+      [...new Array(61)].forEach((_, i) =>
+        assert.equal(i % 12, months.next().value.getUTCMonth())
+      );
+    });
+
+    it("should get months", function () {
+      const months = DateTimeIter.months(
+        new Date("2023-01-01T01:00:00.306Z"),
+      );
+      [...new Array(61)].forEach((_, i) =>
+        assert.equal(i % 12, months.next().value.getUTCMonth())
+      );
+    });
+  });
+
+  describe("getTimepoints", function () {
+    it("should get minutes", function () {
+      const dates = [
+        new Date("2023-09-25T20:13:53.306Z"),
+        new Date("2023-09-25T20:23:53.306Z"),
+      ];
+      const ticks = getTimepoints(dates);
+      const delta = ticks[1] - ticks[0];
+      assert.equal(delta, 60 * 1000);
+    });
+
+    it("should get hours", function () {
+      const dates = [
+        new Date("2023-09-25T02:13:53.306Z"),
+        new Date("2023-09-25T20:23:53.306Z"),
+      ];
+      const ticks = getTimepoints(dates, 25);
+      const delta = ticks[1] - ticks[0];
+      assert.equal(delta, 60 * 60 * 1000);
+    });
+
+    it("should get days", function () {
+      const dates = [
+        new Date("2023-09-05T02:13:53.306Z"),
+        new Date("2023-09-25T20:23:53.306Z"),
+      ];
+      const ticks = getTimepoints(dates, 25);
+      const delta = ticks[1] - ticks[0];
+      assert.equal(delta, 24 * 60 * 60 * 1000);
+    });
+
+    it("should get weeks", function () {
+      const dates = [
+        new Date("2023-08-05T02:13:53.306Z"),
+        new Date("2023-09-25T20:23:53.306Z"),
+      ];
+      const ticks = getTimepoints(dates, 25);
+      const delta = ticks[1] - ticks[0];
+      assert.equal(delta, 7 * 24 * 60 * 60 * 1000);
+    });
+
+    it("should get months", function () {
+      const dates = [
+        new Date("2023-01-05T02:13:53.306Z"),
+        new Date("2023-11-25T20:23:53.306Z"),
+      ];
+      const ticks = getTimepoints(dates, 25);
+      const delta = ticks[1] - ticks[0];
+      assert.equal(delta, 31 * 24 * 60 * 60 * 1000);
+    });
+
+    it("should get years", function () {
+      const dates = [
+        new Date("2000-01-05T02:13:53.306Z"),
+        new Date("2023-11-25T20:23:53.306Z"),
+      ];
+      const ticks = getTimepoints(dates);
+      const delta = ticks[1] - ticks[0];
+      assert.equal(delta, 366 * 24 * 60 * 60 * 1000);
+    });
+
+    it("should get multi-years", function () {
+      const dates = [
+        new Date("1800-01-05T02:13:53.306Z"),
+        new Date("2023-11-25T20:23:53.306Z"),
+      ];
+      const ticks = getTimepoints(dates);
+      const delta = ticks[1] - ticks[0];
+      assert.equal(delta, (4 * 365 + 366) * 24 * 60 * 60 * 1000);
+    });
+  });
 
   describe("shiftWhile", function () {
     it("should return matching items", function () {
