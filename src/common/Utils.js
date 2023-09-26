@@ -30,13 +30,15 @@ function factory() {
       const container = children.find((node) => {
         const typeNode = core.getBase(node);
         return core.getAttribute(typeNode, "name") === "Vocabularies";
-      });
+      }) || Utils.getMetaNode(core, contentType, "Taxonomy"); // fallback to default/base vocabularies if none specified
+
       if (container) {
         return await core.loadChildren(container);
       } else {
         return [];
       }
     },
+
     isTypeNamed(core, node, typeName) {
       node = core.getBase(node);
       while (node) {
@@ -46,6 +48,13 @@ function factory() {
         node = core.getBase(node);
       }
       return false;
+    },
+
+    getMetaNode(core, node, name) {
+      const metanode = Object.values(core.getAllMetaNodes(node))
+        .find((node) => core.getAttribute(node, "name") === name);
+
+      return metanode;
     },
   };
 

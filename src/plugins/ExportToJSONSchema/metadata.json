@@ -11,5 +11,14 @@
   "disableBrowserSideExecution": true,
   "dependencies": [],
   "writeAccessRequired": false,
-  "configStructure": []
+  "configStructure": [
+    {
+      "name": "onlyReleased",
+      "displayName": "Omit Unstable Terms",
+      "description": "If true, the JSON schema will omit deprecated and pre-release terms/vocabularies.",
+      "value": false,
+      "valueType": "boolean",
+      "readOnly": false
+    }
+  ]
 }
