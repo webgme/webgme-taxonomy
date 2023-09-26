@@ -27,8 +27,14 @@ describe("ExportToJSONSchema", function () {
       .then(function () {
         var importParam = {
           projectSeed: testFixture.path.join(
-            testFixture.SEED_DIR,
-            "EmptyProject.webgmex",
+            __dirname,
+            "..",
+            "..",
+            "..",
+            "src",
+            "seeds",
+            "test",
+            "test.webgmex",
           ),
           projectName: projectName,
           branchName: "master",
@@ -54,14 +60,49 @@ describe("ExportToJSONSchema", function () {
       .nodeify(done);
   });
 
-  it("should run plugin and not update the branch", function (done) {
+  it("should run plugin on content type", function (done) {
     var manager = new PluginCliManager(null, logger, gmeConfig),
       pluginConfig = {},
       context = {
         project: project,
         commitHash: commitHash,
         branchName: "test",
-        activeNode: "/1",
+        activeNode: "/C",
+        namespace: "taxonomy",
+      };
+
+    manager.executePlugin(
+      pluginName,
+      pluginConfig,
+      context,
+      function (err, pluginResult) {
+        try {
+          expect(err).to.equal(null);
+          expect(typeof pluginResult).to.equal("object");
+          expect(pluginResult.success).to.equal(true);
+        } catch (e) {
+          done(e);
+          return;
+        }
+
+        project.getBranchHash("test")
+          .then(function (branchHash) {
+            expect(branchHash).to.equal(commitHash);
+          })
+          .nodeify(done);
+      },
+    );
+  });
+
+  it("should run plugin on taxonomy", function (done) {
+    var manager = new PluginCliManager(null, logger, gmeConfig),
+      pluginConfig = {},
+      context = {
+        project: project,
+        commitHash: commitHash,
+        branchName: "test",
+        activeNode: "/s",
+        namespace: "taxonomy",
       };
 
     manager.executePlugin(

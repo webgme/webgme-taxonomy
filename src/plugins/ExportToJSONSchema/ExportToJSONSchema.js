@@ -42,7 +42,10 @@ define([
         schema = schemas.schema;
         uiSchema = schemas.uiSchema;
       } else { // assume content type-like thing
-        const vocabs = await Utils.getVocabulariesFor(this.activeNode);
+        const vocabs = await Utils.getVocabulariesFor(
+          this.core,
+          this.activeNode,
+        );
         const schemas = await exporter.getVocabSchemas(
           vocabs,
           taxonomyName,
