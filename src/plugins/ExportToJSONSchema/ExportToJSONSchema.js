@@ -17,6 +17,9 @@ define([
   const JSONSchemaExporter = require.nodeRequire(
     path.join(SRC_DIR, "common", "JSONSchemaExporter"),
   );
+  const Utils = require.nodeRequire(
+    path.join(SRC_DIR, "common", "Utils"),
+  );
   pluginMetadata = JSON.parse(pluginMetadata);
 
   class ExportToJSONSchema extends PluginBase {
@@ -39,12 +42,7 @@ define([
         schema = schemas.schema;
         uiSchema = schemas.uiSchema;
       } else { // assume content type-like thing
-        const vocabContainer = (await this.core.loadChildren(this.activeNode))
-          .find((c) => this.core.isTypeOf(c, this.META.Vocabularies)) ||
-          this.META.Taxonomy; // fallback to default/base vocabularies if none specified
-
-        const vocabs = await this.core.loadChildren(vocabContainer);
-
+        const vocabs = await Utils.getVocabulariesFor(this.activeNode);
         const schemas = await exporter.getVocabSchemas(
           vocabs,
           taxonomyName,

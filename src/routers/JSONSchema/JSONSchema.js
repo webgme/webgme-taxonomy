@@ -59,14 +59,23 @@ function initialize(middlewareOpts) {
   });
 
   router.get(
-    RouterUtils.getContentTypeVocabRoutes("schema.json"),
-    async (request, response) => {
-      const { root, core, contentType } = request.webgmeContext;
-      const exporter = JSONSchemaExporter.from(core, root);
-      const vocabularies = await Utils.getVocabulariesFor(core, contentType);
-      const { schema } = await exporter.getVocabSchemas(vocabularies);
-      return response.json(schema);
-    },
+    RouterUtils.getContentTypeRoutes("schema.json"),
+    RouterUtils.handleUserErrors(
+      logger,
+      async function getJSONSchema(request, response) {
+        const onlyReleased = request.params.hasOwnProperty("onlyReleased");
+        const { root, core, contentType } = request.webgmeContext;
+        const exporter = JSONSchemaExporter.from(core, root);
+        const vocabularies = await Utils.getVocabulariesFor(core, contentType);
+        const name = core.getAttribute(contentType, "name");
+        const { schema } = await exporter.getVocabSchemas(
+          vocabularies,
+          name,
+          onlyReleased,
+        );
+        return response.json(schema);
+      },
+    ),
   );
 
   logger.debug("ready");
