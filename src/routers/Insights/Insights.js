@@ -69,7 +69,6 @@ function initialize(middlewareOpts) {
     RouterUtils.handleUserErrors(
       logger,
       async function dumpContentMetadata(req, res) {
-        console.log(">>> dumpContentMetadata");
         const gmeContext = req.webgmeContext;
         const { core, root } = gmeContext;
         // Get all the storage adapters for each (unique) storage node in the project
@@ -108,7 +107,6 @@ function initialize(middlewareOpts) {
               return contents.flat();
             }),
         )).flat();
-        console.log("found contents:", allContents.length);
 
         // Convert all tags to human format
         const formatter = await getFormatter(gmeContext);
