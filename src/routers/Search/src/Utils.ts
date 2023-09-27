@@ -374,7 +374,6 @@ export function getTimepoints(timeDates: Date[], maxTicks = 100): Date[] {
       // but don't waste time computing a ton of extraneous points
       (d: Date) => ++numPoints < (maxTicks + 1) && d < endTime,
     );
-    console.log(lbls.shift(), { points });
     if (points[points.length - 1] !== endTime) {
       points.push(endTime);
     }
