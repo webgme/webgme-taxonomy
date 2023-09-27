@@ -100,9 +100,9 @@ function initialize(middlewareOpts) {
         const allContents = (await Promise.all(
           storageAdapters
             .map(async (adapter) => {
-              const repos = await adapter.listRepos().catch(nop);
+              const repos = (await adapter.listRepos().catch(nop)) || [];
               const contents = await Promise.all(
-                repos.map((repo) => adapter.listArtifacts(repo)),
+                repos.map((repo) => adapter.listArtifacts(repo.id)),
               );
               return contents.flat();
             }),
