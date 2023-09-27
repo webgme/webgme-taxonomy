@@ -48,15 +48,14 @@
   }
 
   async function initialize(): Promise<void> {
-    metadata = await fetchData();
-
-    // TODO: For each group, count within given time windows
-    // TODO: maybe weeks?
+    const allMetadata = await fetchData();
+    metadata = allMetadata.filter(md => md.tags.Base?.uploadedAt?.time && md.tags.Base?.uploadedBy?.user);
+    console.log('Found', allMetadata.length, 'content items (' + (allMetadata.length - metadata.length), 'missing required Base terms)');
 
     const timeDates = metadata
       .map(md => new Date(md.tags.Base.uploadedAt.time))
       .sort();
-    const uploadsByUser = groupBy(metadata, md => md.tags.Base.uploadedBy?.user);
+    const uploadsByUser = groupBy(metadata, md => md.tags.Base.uploadedBy.user);
     const userIds = Object.keys(uploadsByUser);
 
     // TODO: add label to y axis about cumulative uploads
@@ -67,7 +66,7 @@
     options.xAxis.data = timestamps.map(ts => new Date(ts).toString());
     options.series = Object.entries(uploadsByUser).map(([userId, uploads]) => {
       const uploadTimes = uploads
-        .map(upload => new Date(upload.tags.Base?.uploadedAt?.time));
+        .map(upload => new Date(upload.tags.Base.uploadedAt.time));
 
     let total = 0;
     const counts = timestamps
