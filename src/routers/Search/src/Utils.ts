@@ -347,43 +347,58 @@ export namespace lazy {
   }
 }
 
-export function getTimepoints(timeDates: Date[], maxTicks = 100): Date[] {
+export enum DateTimeInterval {
+  Minute = 0,
+  Hour = 1,
+  Day = 2,
+  Week = 3,
+  Month = 4,
+  Year = 5,
+  Decade = 6,
+  Century = 7,
+  Millenium = 8,
+}
+
+export function getTimepoints(
+  timeDates: Date[],
+  maxTicks = 100,
+): [DateTimeInterval, Date[]] {
   const startTime = () => new Date(timeDates[0]);
 
-  const iters: Generator<Generator<Date>> = lazy.fromArray([
-    DateTimeIter.minutes(startTime()),
-    DateTimeIter.hours(startTime()),
-    DateTimeIter.days(startTime()),
-    DateTimeIter.weeks(startTime()),
-    DateTimeIter.months(startTime()),
-    DateTimeIter.years(startTime()),
-    DateTimeIter.years(startTime(), 5),
-    DateTimeIter.years(startTime(), 10),
-    DateTimeIter.years(startTime(), 25),
-    DateTimeIter.years(startTime(), 100),
-    DateTimeIter.years(startTime(), 1000), // :)
+  const iters: Generator<[DateTimeInterval, Generator<Date>]> = lazy.fromArray([
+    [DateTimeInterval.Minute, DateTimeIter.minutes(startTime())],
+    [DateTimeInterval.Hour, DateTimeIter.hours(startTime())],
+    [DateTimeInterval.Day, DateTimeIter.days(startTime())],
+    [DateTimeInterval.Week, DateTimeIter.weeks(startTime())],
+    [DateTimeInterval.Month, DateTimeIter.months(startTime())],
+    [DateTimeInterval.Year, DateTimeIter.years(startTime())],
+    [DateTimeInterval.Decade, DateTimeIter.years(startTime(), 10)],
+    [DateTimeInterval.Century, DateTimeIter.years(startTime(), 100)],
+    [DateTimeInterval.Millenium, DateTimeIter.years(startTime(), 1000)], // :)
   ]);
 
-  const lbls = ["minutes", "hours", "days", "weeks", "months", "years"];
   const endTime = timeDates[timeDates.length - 1];
-  const pointsForEachInterval: Generator<Date[]> = lazy.map(iters, (iter) => {
-    let numPoints = 0;
-    const points = lazy.takeWhile(
-      iter,
-      // Allow it to collect up to one extra so we know it has too many
-      // but don't waste time computing a ton of extraneous points
-      (d: Date) => ++numPoints < (maxTicks + 1) && d < endTime,
-    );
-    if (points[points.length - 1] !== endTime) {
-      points.push(endTime);
-    }
-    return points;
-  });
+  const pointsForEachInterval: Generator<[DateTimeInterval, Date[]]> = lazy.map(
+    iters,
+    ([interval, iter]) => {
+      let numPoints = 0;
+      const points = lazy.takeWhile(
+        iter,
+        // Allow it to collect up to one extra so we know it has too many
+        // but don't waste time computing a ton of extraneous points
+        (d: Date) => ++numPoints < (maxTicks + 1) && d < endTime,
+      );
+      if (points[points.length - 1] !== endTime) {
+        points.push(endTime);
+      }
+      return [interval, points];
+    },
+  );
 
   const points = lazy.find(
     pointsForEachInterval,
-    (points) => points.length < maxTicks,
-  ) || timeDates;
+    ([_interval, points]) => points.length < maxTicks,
+  ) || [DateTimeInterval.Millenium, timeDates];
 
   return points;
 }
