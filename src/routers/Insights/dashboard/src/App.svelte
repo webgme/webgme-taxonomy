@@ -56,12 +56,13 @@
       .map(md => new Date(md.tags.Base.uploadedAt.time))
       .sort();
     const uploadsByUser = groupBy(metadata, md => md.tags.Base.uploadedBy.user);
+
+    if (Object.keys(uploadsByUser).length > 1) {
+      uploadsByUser['Total Uploads'] = metadata.slice();
+    }
     const userIds = Object.keys(uploadsByUser);
 
-    // TODO: add label to y axis about cumulative uploads
-    // TODO: start time, end time
     const [interval, timestamps] = getTimepoints(timeDates);
-
     options.legend.data = userIds;
     const showTime = interval < DateTimeInterval.Day;
     const showDay = interval < DateTimeInterval.Month;
@@ -80,7 +81,8 @@
     });
     options.series = Object.entries(uploadsByUser).map(([userId, uploads]) => {
       const uploadTimes = uploads
-        .map(upload => new Date(upload.tags.Base.uploadedAt.time));
+        .map(upload => new Date(upload.tags.Base.uploadedAt.time))
+        .sort();
 
     const counts = timestamps
         .map(timestamp => shiftWhile(uploadTimes, time => time < timestamp).length);
