@@ -7,7 +7,7 @@
     Chart,
    } from "./components";
   import type {ArtifactMetadatav2} from "../../Search/src/adapters/common/types";
-  import { DateTimeInterval, getTimepoints, groupBy, shiftWhile } from "../../../Search/src/Utils";
+  import { DateTimeInterval, getTimepoints, groupBy, shiftWhile, sortDates } from "../../../Search/src/Utils";
 
   const projectId = decodeURIComponent(location.href.split('/Insights/').pop().split('/').shift());
   let title: string = `Content Insights: ${projectId.split('+').pop()}`;
@@ -52,9 +52,9 @@
     metadata = allMetadata.filter(md => md.tags.Base?.uploadedAt?.time && md.tags.Base?.uploadedBy?.user);
     console.log('Found', allMetadata.length, 'content items (' + (allMetadata.length - metadata.length), 'missing required Base terms)');
 
-    const timeDates = metadata
+    const timeDates = sortDates(metadata
       .map(md => new Date(md.tags.Base.uploadedAt.time))
-      .sort();
+      );
     const uploadsByUser = groupBy(metadata, md => md.tags.Base.uploadedBy.user);
 
     if (Object.keys(uploadsByUser).length > 1) {
@@ -80,9 +80,10 @@
       }
     });
     options.series = Object.entries(uploadsByUser).map(([userId, uploads]) => {
-      const uploadTimes = uploads
-        .map(upload => new Date(upload.tags.Base.uploadedAt.time))
-        .sort();
+      const uploadTimes = sortDates(
+        uploads
+          .map(upload => new Date(upload.tags.Base.uploadedAt.time))
+      );
 
     const counts = timestamps
         .map(timestamp => shiftWhile(uploadTimes, time => time < timestamp).length);
