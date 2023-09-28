@@ -39,7 +39,7 @@ export default class TestMethods {
    * @param {string} name
    * @param {string} extension
    * @param {TextGeneratorCall} text_generator
-   * @param {string} [temp_dir]
+   * @param {string} [tempDir]
    * @return {*}  {string}
    * @memberof TestMethods
    */
@@ -47,11 +47,11 @@ export default class TestMethods {
     name: string,
     extension: string,
     text_generator?: () => Promise<string>,
-    temp_dir?: string,
+    tempDir?: string,
   ): Promise<string> {
-    temp_dir = temp_dir ? temp_dir : os.tmpdir();
+    tempDir = tempDir ? tempDir : os.tmpdir();
     const temp_file_path = path.join(
-      temp_dir,
+      tempDir,
       `${name}${crypto.randomBytes(16).toString("hex")}.${extension}`,
     );
     if (text_generator != null) {
