@@ -59,7 +59,7 @@
 
   async function onAppendClicked() {
     if (!files.length) {
-      dispatchError(`${contentType.name} file required.`);
+      return dispatchError(`${contentType.name} file required.`);
     }
 
     const appendMetadata = metadata ?? {};
