@@ -11,6 +11,7 @@ describe("Utils", function () {
     lazy,
     getTimepoints,
     DateTimeIter,
+    DateTimeInterval,
   } = require(
     "../../../src/routers/Search/build/Utils",
   );
@@ -88,7 +89,7 @@ describe("Utils", function () {
         new Date("2023-09-25T20:13:53.306Z"),
         new Date("2023-09-25T20:23:53.306Z"),
       ];
-      const ticks = getTimepoints(dates);
+      const [, ticks] = getTimepoints(dates);
       const delta = ticks[1] - ticks[0];
       assert.equal(delta, 60 * 1000);
     });
@@ -98,7 +99,7 @@ describe("Utils", function () {
         new Date("2023-09-25T02:13:53.306Z"),
         new Date("2023-09-25T20:23:53.306Z"),
       ];
-      const ticks = getTimepoints(dates, 25);
+      const [, ticks] = getTimepoints(dates, 25);
       const delta = ticks[1] - ticks[0];
       assert.equal(delta, 60 * 60 * 1000);
     });
@@ -108,7 +109,7 @@ describe("Utils", function () {
         new Date("2023-09-05T02:13:53.306Z"),
         new Date("2023-09-25T20:23:53.306Z"),
       ];
-      const ticks = getTimepoints(dates, 25);
+      const [, ticks] = getTimepoints(dates, 25);
       const delta = ticks[1] - ticks[0];
       assert.equal(delta, 24 * 60 * 60 * 1000);
     });
@@ -118,7 +119,7 @@ describe("Utils", function () {
         new Date("2023-08-05T02:13:53.306Z"),
         new Date("2023-09-25T20:23:53.306Z"),
       ];
-      const ticks = getTimepoints(dates, 25);
+      const [, ticks] = getTimepoints(dates, 25);
       const delta = ticks[1] - ticks[0];
       assert.equal(delta, 7 * 24 * 60 * 60 * 1000);
     });
@@ -128,7 +129,7 @@ describe("Utils", function () {
         new Date("2023-01-05T02:13:53.306Z"),
         new Date("2023-11-25T20:23:53.306Z"),
       ];
-      const ticks = getTimepoints(dates, 25);
+      const [, ticks] = getTimepoints(dates, 25);
       const delta = ticks[1] - ticks[0];
       assert.equal(delta, 31 * 24 * 60 * 60 * 1000);
     });
@@ -138,7 +139,7 @@ describe("Utils", function () {
         new Date("2000-01-05T02:13:53.306Z"),
         new Date("2023-11-25T20:23:53.306Z"),
       ];
-      const ticks = getTimepoints(dates);
+      const [, ticks] = getTimepoints(dates);
       const delta = ticks[1] - ticks[0];
       assert.equal(delta, 366 * 24 * 60 * 60 * 1000);
     });
@@ -148,9 +149,8 @@ describe("Utils", function () {
         new Date("1800-01-05T02:13:53.306Z"),
         new Date("2023-11-25T20:23:53.306Z"),
       ];
-      const ticks = getTimepoints(dates);
-      const delta = ticks[1] - ticks[0];
-      assert.equal(delta, (4 * 365 + 366) * 24 * 60 * 60 * 1000);
+      const [interval, ticks] = getTimepoints(dates);
+      assert.equal(interval, DateTimeInterval.Decade);
     });
   });
 

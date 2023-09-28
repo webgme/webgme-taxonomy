@@ -7,7 +7,7 @@
     Chart,
    } from "./components";
   import type {ArtifactMetadatav2} from "../../Search/src/adapters/common/types";
-  import { getTimepoints, groupBy, shiftWhile } from "../../../Search/src/Utils";
+  import { DateTimeInterval, getTimepoints, groupBy, shiftWhile } from "../../../Search/src/Utils";
 
   const projectId = decodeURIComponent(location.href.split('/Insights/').pop().split('/').shift());
   let title: string = `Content Insights: ${projectId.split('+').pop()}`;
@@ -60,24 +60,37 @@
 
     // TODO: add label to y axis about cumulative uploads
     // TODO: start time, end time
-    const timestamps = getTimepoints(timeDates);
+    const [interval, timestamps] = getTimepoints(timeDates);
 
     options.legend.data = userIds;
-    options.xAxis.data = timestamps.map(ts => new Date(ts).toString());
+    const showTime = interval < DateTimeInterval.Day;
+    const showDay = interval < DateTimeInterval.Month;
+    const showMonth = interval < DateTimeInterval.Year;
+
+    options.xAxis.data = timestamps.map(ts => {
+      if (showTime) {
+          return new Date(ts).toLocaleString();
+      } else if (showDay) {
+          return new Date(ts).toLocaleDateString();
+      } else if (showMonth) {
+          return new Date(ts).toLocaleDateString(undefined, {month: 'numeric', year: 'numeric'});
+      } else {
+          return new Date(ts).toLocaleDateString(undefined, {year: 'numeric'});
+      }
+    });
     options.series = Object.entries(uploadsByUser).map(([userId, uploads]) => {
       const uploadTimes = uploads
         .map(upload => new Date(upload.tags.Base.uploadedAt.time));
 
-    let total = 0;
     const counts = timestamps
         .map(timestamp => shiftWhile(uploadTimes, time => time < timestamp).length);
 
+    let total = 0;
     const cumulative = counts.map(c => total += c);
 
     return {
       name: userId,
       type: 'line',
-      stack: 'Total',
       data: cumulative,
     };
   });

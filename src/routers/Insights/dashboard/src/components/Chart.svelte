@@ -7,6 +7,7 @@
 
   function onOptionsChange(options) {
     if (chart) {
+      console.log('Updating chart:', options);
       chart.setOption(options)
     }
   }
