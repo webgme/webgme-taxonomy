@@ -403,6 +403,10 @@ export function getTimepoints(
   return points;
 }
 
+export function sortDates(dates: Date[]): Date[] {
+  return dates.slice().sort((d1, d2) => +d1 < +d2 ? -1 : 1);
+}
+
 export namespace Pattern {
   /*
    * Combine a list of JSON schema patterns into a single pattern that

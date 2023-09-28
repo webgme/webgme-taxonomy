@@ -3,6 +3,7 @@ describe("Utils", function () {
   const {
     retry,
     uniqWithKey,
+    sortDates,
     range,
     intervals,
     Pattern,
@@ -15,6 +16,19 @@ describe("Utils", function () {
   } = require(
     "../../../src/routers/Search/build/Utils",
   );
+
+  describe("sortDates", function () {
+    it("should sort chronologically", function () {
+      const dates = [
+        new Date("2023-09-14T17:50:04.000Z"), // Thursday
+        new Date("2023-08-25T22:12:53.000Z"), // Friday (a few weeks earlier)
+      ];
+      const sorted = sortDates(dates);
+      assert.equal(sorted.length, dates.length);
+      assert.equal(sorted[0], dates[1]);
+      assert.equal(sorted[1], dates[0]);
+    });
+  });
 
   describe("lazy.iter", function () {
     it("should start with initial value", function () {
