@@ -62,22 +62,22 @@
   <li>
     {#if tree.type === "TextField"}
       <FormField>
-        <Checkbox bind:checked indeterminate={checked === null} />
+        <Checkbox aria-label="{name} checkbox" bind:checked indeterminate={checked === null} />
         <Autocomplete combobox label={name} bind:value {search} />
       </FormField>
     {:else if tree.type === "UriField"}
       <FormField>
-        <Checkbox bind:checked indeterminate={checked === null} />
+        <Checkbox aria-label="{name} checkbox" bind:checked indeterminate={checked === null} />
         <Autocomplete combobox label={name} bind:value {search} />
       </FormField>
     {:else if tree.type === "IntegerField"}
       <FormField>
-        <Checkbox bind:checked indeterminate={checked === null} />
+        <Checkbox aria-label="{name} checkbox" bind:checked indeterminate={checked === null} />
         <Textfield label={name} bind:value type="number" />
       </FormField>
     {:else if tree.type === "EnumField"}
       <FormField>
-        <Checkbox bind:checked indeterminate={checked === null} />
+        <Checkbox aria-label="{name} checkbox" bind:checked indeterminate={checked === null} />
         <Select bind:value label={name}>
           {#each children as child}
             <Option value={child.id}>{child.name}</Option>
@@ -86,7 +86,7 @@
       </FormField>
     {:else if tree.type === "SetField"}
       <FormField>
-        <Checkbox bind:checked indeterminate={checked === null} />
+        <Checkbox aria-label="{name} checkbox" bind:checked indeterminate={checked === null} />
         <Multiselect
           label={name}
           options={children.map(({ name, id }) => ({ label: name, value: id }))}
@@ -95,7 +95,7 @@
       </FormField>
     {:else}
       <FormField>
-        <Checkbox bind:checked indeterminate={checked === null} />
+        <Checkbox aria-label="{name} checkbox" bind:checked indeterminate={checked === null} />
         <span slot="label">
           {name}
         </span>
