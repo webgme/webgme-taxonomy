@@ -70,7 +70,14 @@ export class DownloadTask implements Runnable<FilePath> {
       this.contentIds.map(async (contentId) => {
         const metadata = await this.storage.getMetadata(this.repoId, contentId);
         return metadata.map((md) => {
-          md.tags = this.formatter.toHumanFormat(md.tags);
+          try {
+            md.tags = this.formatter.toHumanFormat(md.tags);
+          } catch (err) {
+            this.logger.warn(
+              `Unable to convert tags to human format: ${contentId} (${this.repoId})`,
+            );
+            throw err;
+          }
           return md;
         });
       }),
