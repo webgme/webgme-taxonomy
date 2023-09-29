@@ -110,11 +110,7 @@ export class DownloadTask implements Runnable<FilePath> {
           contentId,
         );
 
-        console.log();
-        console.log("file streams for", contentName + ":");
-        console.log(Object.keys(streamDict));
-
-        // create the directories and hook up the file pipelines
+        // create the directories
         const contentDir = path.join(downloadDir, contentName);
         await fsp.mkdir(contentDir);
         const dirs = new Set(
@@ -126,11 +122,26 @@ export class DownloadTask implements Runnable<FilePath> {
           [...dirs].map((dir) => fsp.mkdir(dir, { recursive: true })),
         );
 
+        // add the metadata file
+        const contentMetadata = metadata[index];
+        if (contentMetadata.isSome()) {
+          const metadataPath = path.join(contentDir, "metadata.json");
+          const metadata = contentMetadata.unwrap();
+          await fsp.writeFile(
+            metadataPath,
+            JSON.stringify(metadata.tags, null, 2),
+          );
+        } else {
+          this.logger.warn(
+            `No metadata found for ${contentId} (${this.repoId})`,
+          );
+        }
+
+        // hook up the streaming file pipelines
         await Promise.all(
           Object.entries(streamDict).map(async ([name, dataStream]) => {
             const filePath = path.join(downloadDir, contentName, name);
             const writeStream = fs.createWriteStream(filePath);
-            console.log(name, "->", filePath);
             await streamPipeline(dataStream, writeStream);
           }),
         );
@@ -152,7 +163,6 @@ export class DownloadTask implements Runnable<FilePath> {
     await fsp.rm(downloadDir, { recursive: true });
     await fsp.access(zipPath, fs.constants.R_OK);
 
-    console.log("created zip archive:", zipPath, "from", downloadDir);
     return zipPath;
   }
 
