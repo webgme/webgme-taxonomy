@@ -6,7 +6,11 @@ import os from "os";
 import fsp from "fs/promises";
 import fs from "fs";
 import path from "path";
-import { Result } from "oxide.ts";
+import { pipeline } from "stream";
+import { promisify } from "util";
+const streamPipeline = promisify(pipeline);
+import { Option, Result } from "oxide.ts";
+import { cmp, UniqueNames } from "./Utils";
 
 export enum Status {
   Created,
@@ -56,32 +60,129 @@ export class DownloadTask implements Runnable<FilePath> {
     this.formatter = formatter;
     this.logger = logger;
     this.repoId = repoId;
-    this.contentIds = contentIds;
+    // TODO: test this
+    this.contentIds = contentIds.sort((id1, id2) => +id1 < +id2 ? -1 : 1);
   }
 
   async run(): Promise<string> {
+    // Fetch all the metadata
+    const metadata = await Promise.all(
+      this.contentIds.map(async (contentId) => {
+        const metadata = await this.storage.getMetadata(this.repoId, contentId);
+        return metadata.map((md) => {
+          try {
+            md.tags = this.formatter.toHumanFormat(md.tags);
+          } catch (err) {
+            this.logger.warn(
+              `Unable to convert tags to human format: ${contentId} (${this.repoId})`,
+            );
+            throw err;
+          }
+          return md;
+        });
+      }),
+    );
+
+    // Get unique names for each
+    const namer = new UniqueNames();
+    const names: string[] = metadata.map((metadataOpt, index) => {
+      return metadataOpt.map((metadata) =>
+        metadata.tags.Base?.name?.value || metadata.displayName
+      ).unwrapOrElse(() => {
+        const contentId = this.contentIds[index];
+        this.logger.info(
+          `No "Base.name" tag found for ${contentId} (${this.repoId})`,
+        );
+        return contentId.toString();
+      });
+    });
+
+    const uniqNames = names.reduce(
+      (names, name) => names.concat(namer.unique(name)),
+      <string[]> [],
+    );
+
+    // Write data to files
     const tmpDir = await fsp.mkdtemp(
       path.join(os.tmpdir(), "webgme-taxonomy-"),
     );
     const downloadDir = path.join(tmpDir, "download");
-    console.log(">>> about to download to", downloadDir);
-    await this.storage.download(
-      this.repoId,
-      this.contentIds,
-      this.formatter,
-      downloadDir,
-    );
-    console.log(">>> about to zip", downloadDir);
+    await fsp.mkdir(downloadDir);
 
-    const zipPath = path.join(tmpDir, `${this.repoId}.zip`);
-    await zip(downloadDir, zipPath, {
+    const fileWriteTasks = uniqNames.map(
+      async (contentName, index) => {
+        const contentId = this.contentIds[index];
+        const streamDict = await this.storage.getFileStreams(
+          this.repoId,
+          contentId,
+        );
+
+        // create the directories
+        const contentDir = path.join(downloadDir, contentName);
+        await fsp.mkdir(contentDir);
+        const dirs = new Set(
+          Object.keys(streamDict)
+            .map((filepath) => path.dirname(filepath))
+            .sort(cmp.length),
+        );
+        await Promise.all(
+          [...dirs].map((dir) => fsp.mkdir(dir, { recursive: true })),
+        );
+
+        // add the metadata file
+        const contentMetadata = metadata[index];
+        if (contentMetadata.isSome()) {
+          const metadataPath = path.join(contentDir, "metadata.json");
+          const metadata = contentMetadata.unwrap();
+          await fsp.writeFile(
+            metadataPath,
+            JSON.stringify(metadata.tags, null, 2),
+          );
+        } else {
+          this.logger.warn(
+            `No metadata found for ${contentId} (${this.repoId})`,
+          );
+        }
+
+        // hook up the streaming file pipelines
+        await Promise.all(
+          Object.entries(streamDict).map(async ([name, dataStream]) => {
+            const filePath = path.join(downloadDir, contentName, name);
+            const writeStream = fs.createWriteStream(filePath);
+            await streamPipeline(dataStream, writeStream);
+          }),
+        );
+      },
+    );
+
+    await Promise.all(fileWriteTasks);
+
+    // Zip the downloaded files. If only a single content, download just that one
+    const [archiveName, dataDir]: [string, string] =
+      this.contentIds.length === 1
+        ? [uniqNames[0], path.join(downloadDir, uniqNames[0])]
+        : [await this.getRepositoryName(this.repoId), downloadDir];
+
+    const zipPath = path.join(tmpDir, `${archiveName}.zip`);
+    await zip(dataDir, zipPath, {
       compression: COMPRESSION_LEVEL.medium,
     });
     await fsp.rm(downloadDir, { recursive: true });
-
     await fsp.access(zipPath, fs.constants.R_OK);
-    console.log("created zip archive:", zipPath, "from", downloadDir);
+
     return zipPath;
+  }
+
+  async getRepositoryName(repoId: string): Promise<string> {
+    const metadata = await this.storage.getRepoMetadata(repoId);
+    const tags = this.formatter.toHumanFormat(metadata.tags);
+    return Option.from(tags.Base?.name?.value as string)
+      .unwrapOrElse(() => {
+        this.logger.info(
+          `No "Base.name" tag found for ${this.repoId}. Using ID instead.`,
+        );
+        return repoId;
+      });
   }
 }
 

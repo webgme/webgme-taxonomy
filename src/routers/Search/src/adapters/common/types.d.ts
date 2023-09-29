@@ -1,9 +1,11 @@
 import type { AppendResult } from "./AppendResult";
 import type TagFormatter from "../../../../../common/TagFormatter";
 import type { WebgmeContext, WebgmeRequest } from "../../../../../common/types";
+import type { Option } from "oxide.ts";
 
 export interface Adapter {
   listRepos(): Promise<Repository[]>;
+  getRepoMetadata(repoId: string): Promise<Repository>;
   listArtifacts(repoId: string): Promise<Artifact[]>;
   createArtifact(
     res: UploadReservation,
@@ -15,12 +17,10 @@ export interface Adapter {
     filenames: string[],
   ): Promise<AppendResult>;
   // returns fileUploadInfo
-  download(
+  getFileStreams(
     repoId: string,
-    ids: string[],
-    formatter: TagFormatter,
-    downloadDir: string,
-  ): Promise<void>;
+    id: string,
+  ): Promise<FileStreamDict>;
   downloadFileURLs(
     repoId: string,
     contentIds: string[],
@@ -28,8 +28,7 @@ export interface Adapter {
   getMetadata(
     repoId: string,
     contentId: string,
-    formatter: TagFormatter,
-  ): Promise<any>;
+  ): Promise<Option<ArtifactMetadatav2>>;
   getBulkMetadata(
     repoId: string,
     contentIds: string[],
@@ -148,3 +147,5 @@ export interface FileURLInfo {
   name: string;
   url: string;
 }
+
+export type FileStreamDict = { [filename: string]: NodeJS.ReadableStream };
