@@ -58,7 +58,7 @@
   }
 </script>
 
-<ul>
+<ul aria-label="{name} field">
   <li>
     {#if tree.type === "TextField"}
       <FormField>
@@ -103,7 +103,7 @@
     {/if}
 
     {#if showChildren}
-      <div class="arrow" aria-label="{name} arrow" class:arrowDown on:click={toggleExpansion}>
+      <div class="arrow" aria-label="{name} arrow" aria-labelledby="{name} field" class:arrowDown on:click={toggleExpansion}>
         &#x25b6
       </div>
       {#if tree.expanded}
