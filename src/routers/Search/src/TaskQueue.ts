@@ -9,7 +9,7 @@ import path from "path";
 import { pipeline } from "stream";
 import { promisify } from "util";
 const streamPipeline = promisify(pipeline);
-import { Result } from "oxide.ts";
+import { Option, Result } from "oxide.ts";
 import { cmp, UniqueNames } from "./Utils";
 
 export enum Status {
@@ -114,7 +114,7 @@ export class DownloadTask implements Runnable<FilePath> {
         console.log("file streams for", contentName + ":");
         console.log(Object.keys(streamDict));
 
-        // hook up the file pipelines
+        // create the directories and hook up the file pipelines
         const contentDir = path.join(downloadDir, contentName);
         await fsp.mkdir(contentDir);
         const dirs = new Set(
@@ -129,7 +129,6 @@ export class DownloadTask implements Runnable<FilePath> {
         await Promise.all(
           Object.entries(streamDict).map(async ([name, dataStream]) => {
             const filePath = path.join(downloadDir, contentName, name);
-            // TODO: ensure the directory exists
             const writeStream = fs.createWriteStream(filePath);
             console.log(name, "->", filePath);
             await streamPipeline(dataStream, writeStream);
@@ -139,11 +138,15 @@ export class DownloadTask implements Runnable<FilePath> {
     );
 
     await Promise.all(fileWriteTasks);
-    console.log("file writes should be complete");
 
-    // Zip the downloaded files...
-    const zipPath = path.join(tmpDir, `${this.repoId}.zip`);
-    await zip(downloadDir, zipPath, {
+    // Zip the downloaded files. If only a single content, download just that one
+    const [archiveName, dataDir]: [string, string] =
+      this.contentIds.length === 1
+        ? [uniqNames[0], path.join(downloadDir, uniqNames[0])]
+        : [await this.getRepositoryName(this.repoId), downloadDir];
+
+    const zipPath = path.join(tmpDir, `${archiveName}.zip`);
+    await zip(dataDir, zipPath, {
       compression: COMPRESSION_LEVEL.medium,
     });
     await fsp.rm(downloadDir, { recursive: true });
@@ -151,6 +154,18 @@ export class DownloadTask implements Runnable<FilePath> {
 
     console.log("created zip archive:", zipPath, "from", downloadDir);
     return zipPath;
+  }
+
+  async getRepositoryName(repoId: string): Promise<string> {
+    const metadata = await this.storage.getRepoMetadata(repoId);
+    const tags = this.formatter.toHumanFormat(metadata.tags);
+    return Option.from(tags.Base?.name?.value as string)
+      .unwrapOrElse(() => {
+        this.logger.info(
+          `No "Base.name" tag found for ${this.repoId}. Using ID instead.`,
+        );
+        return repoId;
+      });
   }
 }
 

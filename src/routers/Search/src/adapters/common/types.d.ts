@@ -5,6 +5,7 @@ import type { Option } from "oxide.ts";
 
 export interface Adapter {
   listRepos(): Promise<Repository[]>;
+  getRepoMetadata(repoId: string): Promise<Repository>;
   listArtifacts(repoId: string): Promise<Artifact[]>;
   createArtifact(
     res: UploadReservation,

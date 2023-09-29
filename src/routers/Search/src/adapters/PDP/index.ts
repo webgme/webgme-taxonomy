@@ -21,8 +21,6 @@ import type {
 import RouterUtils from "../../../../../common/routers/Utils";
 import withTokens from "./tokens";
 import type { AuthenticatedRequest } from "../../../../../common/routers/Utils";
-import type TagFormatter from "../../../../../common/TagFormatter";
-import { FormatError } from "../../../../../common/TagFormatter";
 import type {
   AzureGmeConfig,
   WebgmeContext,
@@ -34,6 +32,7 @@ import {
   InvalidAttributeError,
   MissingAttributeError,
 } from "../common/ModelError";
+import { RepositoryNotFound } from "../common/StorageError";
 import type {
   Adapter,
   Artifact,
@@ -90,23 +89,30 @@ export default class PDP implements Adapter {
     const processes = allProcesses.filter(({ processType }) =>
       processType === this.processType
     );
-    const processMetadataResults = await Promise.all(
-      processes
-        .map(({ processId }): Promise<Result<Observation, Error>> =>
-          // fetch the first observation for each to get the repo metadata
-          this.api.getObservation(processId, 0, 0, {
-            token: this._readToken,
-          })
-        ),
+    const processIds = processes.map(({ processId }) => processId);
+    return await Promise.all(
+      processIds.map(async (id) =>
+        fromResult(await this._getRepositoryMetadata(id))
+      ),
     );
-    const processMetadata = fromResult(Result.all(...processMetadataResults));
+  }
 
-    const repos: Repository[] = filterMap(
-      processMetadata,
-      parseRepository,
+  async getRepoMetadata(id: string): Promise<Repository> {
+    const processId = newtype<ProcessID>(id);
+    return fromResult(await this._getRepositoryMetadata(processId));
+  }
+
+  private async _getRepositoryMetadata(
+    id: ProcessID,
+  ): Promise<Result<Repository, RouterUtils.UserError>> {
+    // fetch the first observation for each to get the repo metadata
+    const metadataR = await this.api.getObservation(id, 0, 0, {
+      token: this._readToken,
+    });
+    const metadata = metadataR.andThen((metadata) =>
+      parseRepository(metadata).okOr(new RepositoryNotFound(id.toString()))
     );
-
-    return repos;
+    return metadata;
   }
 
   async listArtifacts(repoId: string): Promise<Artifact[]> {
@@ -572,9 +578,8 @@ class ObservationReservation implements PdpReservation {
 
 function parseRepository(
   obs: Observation,
-): Repository | undefined {
-  const metadata = obs.data && obs.data[0];
-  if (metadata) {
+): Option<Repository> {
+  return Option.from(obs.data[0]).map((metadata) => {
     const md = toArtifactMetadatav2(metadata);
     return {
       id: obs.processId.toString(),
@@ -582,7 +587,7 @@ function parseRepository(
       tags: md.tags,
       taxonomyVersion: md.taxonomyVersion,
     };
-  }
+  });
 }
 
 function parseArtifact(obs: Observation): Artifact | undefined {
@@ -598,8 +603,4 @@ function parseArtifact(obs: Observation): Artifact | undefined {
       time: obs.startTime,
     };
   }
-}
-
-function isFormatError(err: any): err is FormatError {
-  return err instanceof FormatError;
 }

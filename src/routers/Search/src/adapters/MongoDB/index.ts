@@ -32,14 +32,16 @@ import {
 } from "../common/AppendResult";
 import { WebgmeContext } from "../../../../../common/types";
 import { toArtifactMetadatav2 } from "../common/Helpers";
-import { filterMap, Pattern } from "../../Utils";
+import { filterMap, fromResult, Pattern } from "../../Utils";
 import ScopedFnQueue from "../../ScopedFnQueue";
+import { RepositoryNotFound } from "../common/StorageError";
 
 const defaultMongoUri = gmeConfig.mongo.uri;
 const defaultClient = new MongoClient(defaultMongoUri);
 
 type FileId = string;
 interface RepositoryDoc {
+  _id: ObjectId;
   displayName: string;
   taxonomyVersion: TaxonomyVersion;
   tags: any;
@@ -105,19 +107,16 @@ export default class MongoAdapter implements Adapter {
   }
 
   async listRepos(): Promise<Repository[]> {
-    const documents = await this._collection.find({}).toArray();
-    const repos: Repository[] = documents.map((doc) => {
-      const docId = doc._id.toString();
-
-      return {
-        id: docId,
-        displayName: doc.displayName,
-        tags: doc.tags,
-        taxonomyVersion: doc.taxonomyVersion,
-      };
-    });
+    const documents = (await this._collection.find({})
+      .toArray()) as RepositoryDoc[];
+    const repos: Repository[] = documents.map(toRepository);
 
     return repos;
+  }
+
+  async getRepoMetadata(id: string): Promise<Repository> {
+    const doc = await this.getRepository(id);
+    return fromResult(doc.map(toRepository).okOr(new RepositoryNotFound(id)));
   }
 
   async listArtifacts(repoId: string): Promise<Artifact[]> {
@@ -188,21 +187,11 @@ export default class MongoAdapter implements Adapter {
   }
 
   private async getRepository(repoId: string): Promise<Option<RepositoryDoc>> {
-    const repoDoc = Option.from(
+    return Option.from(
       await this._collection.findOne({
         _id: new ObjectId(repoId),
       }),
-    );
-
-    return repoDoc.map((repoDoc) => {
-      const repo: RepositoryDoc = {
-        displayName: repoDoc.displayName,
-        taxonomyVersion: repoDoc.taxonomyVersion,
-        tags: repoDoc.tags,
-        artifacts: repoDoc.artifacts,
-      };
-      return repo;
-    });
+    ) as Option<RepositoryDoc>;
   }
 
   async getContentIds(repoId: string): Promise<Option<string[]>> {
@@ -400,4 +389,15 @@ async function writeJsonData(filePath: string, metadata: ArtifactMetadata) {
 
 async function streamClose(stream: stream.Stream): Promise<void> {
   return new Promise((res, _rej) => stream.on("close", res));
+}
+
+function toRepository(doc: RepositoryDoc): Repository {
+  const docId = doc._id.toString();
+
+  return {
+    id: docId,
+    displayName: doc.displayName,
+    tags: doc.tags,
+    taxonomyVersion: doc.taxonomyVersion,
+  };
 }
