@@ -13,9 +13,15 @@ const TIMEOUT_TO_WAIT_FOR_CREATED_TOAST_POPUP = 5000;
 const ROUND_ONE = "round_1";
 const ROUND_TWO = "round_2";
 const contentName = "ExampleContent";
-const SOURCE_TEST_FILE = "./e2e/resources/test-file.txt"
+const SOURCE_TEST_FILE = "./e2e/resources/test-file.txt";
 
-async function testCanUpload(page: Page, repoName: string, repoIndex: string, testFileIndex: number, testFileList: string[]) {
+async function testCanUpload(
+  page: Page,
+  repoName: string,
+  repoIndex: string,
+  testFileIndex: number,
+  testFileList: string[]
+) {
   await page.getByText(repoName, { exact: true }).click();
   await page.getByRole("button", { name: "Upload", exact: true }).click();
 
@@ -26,13 +32,16 @@ async function testCanUpload(page: Page, repoName: string, repoIndex: string, te
   await page.getByText("Select dataset to upload.").click();
   const fileChooser = await fileChooserPromise;
 
-  // Create copy of test file into temp location, 
-  // then reference temp file; permits for numbered
-  // instances for later validation and disambiguation
-  // for testing
+  /**
+  Create copy of test file into temp location,
+  then reference temp file; permits for numbered
+  instances for later validation and disambiguation
+  for testing.
+   */
   const tempFile = await fs.readFile(SOURCE_TEST_FILE);
   const tempDirFolder = os.tmpdir();
-  const newTestFileName = `test-file_${testFileIndex}.txt`;
+  const currentTimestamp = Date.now();
+  const newTestFileName = `${currentTimestamp}-test-file_${testFileIndex}.txt`;
   const newTestFilePath = path.join(tempDirFolder, newTestFileName);
   testFileList.push(newTestFilePath);
   await fs.writeFile(newTestFilePath, tempFile);
@@ -182,31 +191,35 @@ test.describe(`Data dashboard`, function () {
     // let listOfRepos = await page.getByRole("list").locator("li:visible");
     let listOfRepos = await page.locator('ul[role="list"] li:visible');
     let visibleReposCount = await listOfRepos.count();
-    expect((visibleReposCount)).toStrictEqual(1);
-    expect(listOfRepos.getByText(repoName)).toBeTruthy()
+    expect(visibleReposCount).toStrictEqual(1);
+    expect(listOfRepos.getByText(repoName)).toBeTruthy();
 
     await searchTextBox.fill(repoName.substring(0, 5));
     visibleReposCount = await listOfRepos.count();
     expect(visibleReposCount).toBeGreaterThanOrEqual(1);
-    
-    expect(listOfRepos.getByText(repoName)).toBeTruthy()
+
+    expect(listOfRepos.getByText(repoName)).toBeTruthy();
   });
 
   test("can filter repo using text tag", async () => {
-    // await page.getByText("Base").click()
-    // const parent = await page.locator('li div[class="mdc-form-field"]', { has: page.getByText("Base") });
-    const topLevel = await page.getByText("▶").nth(2)
-    await topLevel.click();
-    await topLevel.locator("ul:nth-child(5) > li > .arrow").click();
-    const files = await page.getByLabel("files");
-    await files.click()
-    
-    const randomInt = (min, max) =>
-      Math.floor(Math.random() * (max - min + 1)) + min;
-    const testFileIndex = randomInt(0, testFileList.length);
-    const testFilePath = testFileList[testFileIndex]
-    const testFileName = path.basename(testFilePath)
-    await files.fill(testFileName)
+    // const subjectArrow = page.locator('div[aria-label="Base arrow"]')
+    // await subjectArrow.click();
+
+    // const attachmentsArrow = page.locator('div[aria-label="attachments arrow"]');
+    // await attachmentsArrow.click();
+
+
+    // const attachmentsField = page.locator('div[aria-label="attachments field"]');
+    // const filesTextField = attachmentsField.locator('div[aria-label="files field"] input.mdc-text-field__input');
+    // await filesTextField.click()
+    // await filesTextField.fill("test")
+
+    // const randomInt = (min, max) =>
+    //   Math.floor(Math.random() * (max - min + 1)) + min;
+    // const testFileIndex = randomInt(0, testFileList.length);
+    // const testFilePath = testFileList[testFileIndex];
+    // const testFileName = path.basename(testFilePath);
+    // await files.fill(testFileName);
 
     test.fixme();
   });
@@ -223,6 +236,3 @@ test.describe(`Data dashboard`, function () {
     test.fixme();
   });
 });
-
-
-
