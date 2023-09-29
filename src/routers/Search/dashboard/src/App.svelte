@@ -7,7 +7,7 @@
     encodeQueryParams,
   } from "./Utils";
   import Textfield from "@smui/textfield";
-  import { SvelteToast, toast } from "@zerodevx/svelte-toast";
+  import { SvelteToast, SvelteToastOptions, toast } from "@zerodevx/svelte-toast";
   /*import Chip from "@smui/chips";*/
   import List, {
     Item,
@@ -181,8 +181,13 @@
     }
   }
 
-  function displayMessage(msg: string) {
-    toast.push(msg, { classes: ["info"] }); // background green
+  function clearMessage(id: number) {
+    return toast.pop(id);
+  }
+
+  function displayMessage(msg: string, opts: SvelteToastOptions = {}): number {
+    opts.classes = opts.classes || ['info'];  // background green
+    return toast.push(msg, opts);
   }
 
   function displayProgressMessage(msg: string, duration: number = 60000) {
@@ -368,30 +373,28 @@
   //////// Download ////////
   async function onDownload(event) {
     const { artifactSet, artifactIds } = event;
+    if (artifactIds.length === 0) {
+      return displayError("Nothing to download: No data found.");
+    }
+    const msgId = displayMessage(
+      `Downloading ${artifactIds.length} from ${artifactSet.displayName}...`,
+      {initial: 0}
+    );
+
     try {
-      if (artifactIds.length === 0) {
-        return displayError("Nothing to download: No data found.");
-      }
-      displayMessage(
-        `Downloading ${artifactIds.length} from ${artifactSet.displayName}...`
-      );
       const url = await storage.getDownloadUrl(artifactSet.id, ...artifactIds);
       openUrl(url);
+
     } catch (err) {
+      clearMessage(msgId);
       return displayError(err);
     }
   }
 
   //////// Artifact Sets ////////
-  let artifactSets = [];
-  $: artifactSets = getArtifactSets(items);
   let selectedArtifactSet;
   $: if (!items.includes(selectedArtifactSet)) {
     selectedArtifactSet = null;
-  }
-
-  function getArtifactSets(items) {
-    return [];
   }
 
   //////// Edit taxonomy ////////
