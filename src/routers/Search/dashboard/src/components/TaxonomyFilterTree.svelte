@@ -103,7 +103,7 @@
     {/if}
 
     {#if showChildren}
-      <div class="arrow" class:arrowDown on:click={toggleExpansion}>
+      <div class="arrow" aria-label="{name} arrow" class:arrowDown on:click={toggleExpansion}>
         &#x25b6
       </div>
       {#if tree.expanded}
