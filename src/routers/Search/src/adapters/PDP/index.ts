@@ -84,26 +84,22 @@ export default class PDP implements Adapter {
   }
 
   async listRepos(): Promise<Repository[]> {
-    const processes = (await this.api.listProcesses({ token: this._readToken }))
-      .map((allProcesses) =>
-        allProcesses.filter(({ processType }) =>
-          processType === this.processType
-        )
-      );
-    const processMetadata = Result.all(
-      ...await processes
-        // fetch the first observation for each to get the repo metadata
-        .map((processes): Promise<Result<Observation, Error>[]> =>
-          Promise.all(
-            processes.map(({ processId }) =>
-              this.api.getObservation(processId, 0, 0, {
-                token: this._readToken,
-              })
-            ),
-          )
-        ).unwrap(),
-    )
-      .unwrap();
+    const allProcesses = fromResult(
+      await this.api.listProcesses({ token: this._readToken }),
+    );
+    const processes = allProcesses.filter(({ processType }) =>
+      processType === this.processType
+    );
+    const processMetadataResults = await Promise.all(
+      processes
+        .map(({ processId }): Promise<Result<Observation, Error>> =>
+          // fetch the first observation for each to get the repo metadata
+          this.api.getObservation(processId, 0, 0, {
+            token: this._readToken,
+          })
+        ),
+    );
+    const processMetadata = fromResult(Result.all(...processMetadataResults));
 
     const repos: Repository[] = filterMap(
       processMetadata,
@@ -149,7 +145,7 @@ export default class PDP implements Adapter {
         ),
     );
 
-    return Result.all(...observations).unwrap().flat();
+    return fromResult(Result.all(...observations)).flat();
   }
 
   async withRepoReservation<T>(
@@ -258,11 +254,13 @@ export default class PDP implements Adapter {
     const response = await Promise.all(
       obsIdxAndVersions.map(async ([index, version]) => {
         // Lets download the actual files associated with this observation,index
-        const response = (await this.api.getObservationFiles(
-          processId,
-          index,
-          version,
-        )).unwrap();
+        const response = fromResult(
+          await this.api.getObservationFiles(
+            processId,
+            index,
+            version,
+          ),
+        );
         if (response.files.length === 0) {
           return {
             repoId: processId.toString(),
@@ -480,8 +478,7 @@ export default class PDP implements Adapter {
     )
       .mapErr((err) =>
         new InvalidAttributeError(gmeContext, storageNode, "URL", err.message)
-      )
-      .unwrap();
+      );
 
     // This doesn't yet work (doesn't support file uploads)
     const isInMemorySandbox =
@@ -492,14 +489,14 @@ export default class PDP implements Adapter {
       api = new InMemoryPdp();
       observerId = "testUsername";
     } else {
-      api = new PdpApi(baseUrl.toString(), processType.toString());
+      api = new PdpApi(baseUrl.toString(), userToken);
       observerId = RouterUtils.getObserverIdFromToken(userToken);
     }
 
     return new PDP(
       api,
       processType.toString(),
-      hostUri,
+      fromResult(hostUri),
       observerId,
       readToken || userToken,
     );

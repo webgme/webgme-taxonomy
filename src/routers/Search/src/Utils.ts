@@ -13,6 +13,40 @@ export function range(start: number, end: number, step: number = 1): number[] {
   return [...new Array(len)].map((_v, index) => start + step * index);
 }
 
+export function groupBy<T>(
+  items: T[],
+  fn: (item: T) => string,
+): { [key: string]: T[] } {
+  const groups: { [k: string]: T[] } = {};
+
+  items.forEach((item: T) => {
+    const key = fn(item);
+    if (!groups.hasOwnProperty(key)) {
+      groups[key] = [];
+    }
+
+    groups[key].push(item);
+  });
+
+  return groups;
+}
+
+/**
+ * Mutable takeWhile.
+ */
+export function shiftWhile<T>(items: T[], fn: (item: T) => boolean): T[] {
+  const result: T[] = [];
+  while (items.length && fn(items[0])) {
+    const item = items.shift();
+    // Unfortunately, I am ignoring the next line since item is guaranteed to be T
+    // and checking if the item is undefined would change the behavior in the (admittedly
+    // a bit trivial) case where undefined is an item in the list
+    // @ts-ignore
+    result.push(item);
+  }
+  return result;
+}
+
 /**
  * Convert from a result into "regular TS error handling".
  *
@@ -197,6 +231,180 @@ export class OptionDict<V> {
 
 export function unique<T>(arr: T[]): T[] {
   return [...new Set(arr)];
+}
+
+export function uniqWithKey<T, K>(arr: T[], key: (item: T) => K): T[] {
+  const contents: K[] = [];
+  return arr.reduce((result: T[], nextItem: T) => {
+    const itemKey = key(nextItem);
+    if (!contents.includes(itemKey)) {
+      result.push(nextItem);
+      contents.push(itemKey);
+    }
+    return result;
+  }, []);
+}
+
+export namespace DateTimeIter {
+  function interval(start: Date, ms: number): Generator<Date> {
+    return lazy.iter(start, (d) => new Date(+d + ms));
+  }
+
+  export function minutes(start: Date): Generator<Date> {
+    const minute = 1000 * 60;
+    return interval(start, minute);
+  }
+
+  export function hours(start: Date): Generator<Date> {
+    const hour = 1000 * 60 * 60;
+    return interval(start, hour);
+  }
+
+  export function days(start: Date): Generator<Date> {
+    const day = 1000 * 60 * 60 * 24;
+    return interval(start, day);
+  }
+
+  export function weeks(start: Date): Generator<Date> {
+    const day = 1000 * 60 * 60 * 24;
+    return interval(start, 7 * day);
+  }
+
+  export function months(start: Date): Generator<Date> {
+    return lazy.iter(start, (d) => {
+      const newDate = new Date(d);
+      newDate.setMonth(d.getMonth() + 1);
+      return newDate;
+    });
+  }
+
+  export function years(start: Date, delta: number = 1): Generator<Date> {
+    return lazy.iter(start, (d) => {
+      const newDate = new Date(d);
+      newDate.setFullYear(d.getFullYear() + delta);
+      return newDate;
+    });
+  }
+}
+
+export namespace lazy {
+  export function* iter<T>(start: T, nextFn: (i: T) => T): Generator<T> {
+    let i = start;
+    while (true) {
+      yield i;
+      i = nextFn(i);
+    }
+  }
+
+  export function* chain<T>(...generators: Generator<T>[]): Generator<T> {
+    for (const gen of generators) {
+      for (const i of gen) {
+        yield i;
+      }
+    }
+  }
+
+  export function takeWhile<T>(
+    gen: Generator<T>,
+    fn: (item: T) => boolean,
+  ): T[] {
+    const results: T[] = [];
+    for (const item of gen) {
+      if (fn(item)) {
+        results.push(item);
+      } else {
+        return results;
+      }
+    }
+
+    return results;
+  }
+
+  export function* map<T, O>(
+    gen: Generator<T>,
+    fn: (item: T) => O,
+  ): Generator<O> {
+    for (const item of gen) {
+      yield fn(item);
+    }
+  }
+
+  export function find<T>(
+    gen: Generator<T>,
+    fn: (item: T) => boolean,
+  ): T | undefined {
+    for (const item of gen) {
+      if (fn(item)) {
+        return item;
+      }
+    }
+  }
+
+  export function* fromArray<T>(array: T[]): Generator<T> {
+    for (const item of array) {
+      yield item;
+    }
+  }
+}
+
+export enum DateTimeInterval {
+  Minute = 0,
+  Hour = 1,
+  Day = 2,
+  Week = 3,
+  Month = 4,
+  Year = 5,
+  Decade = 6,
+  Century = 7,
+  Millenium = 8,
+}
+
+export function getTimepoints(
+  timeDates: Date[],
+  maxTicks = 100,
+): [DateTimeInterval, Date[]] {
+  const startTime = () => new Date(timeDates[0]);
+
+  const iters: Generator<[DateTimeInterval, Generator<Date>]> = lazy.fromArray([
+    [DateTimeInterval.Minute, DateTimeIter.minutes(startTime())],
+    [DateTimeInterval.Hour, DateTimeIter.hours(startTime())],
+    [DateTimeInterval.Day, DateTimeIter.days(startTime())],
+    [DateTimeInterval.Week, DateTimeIter.weeks(startTime())],
+    [DateTimeInterval.Month, DateTimeIter.months(startTime())],
+    [DateTimeInterval.Year, DateTimeIter.years(startTime())],
+    [DateTimeInterval.Decade, DateTimeIter.years(startTime(), 10)],
+    [DateTimeInterval.Century, DateTimeIter.years(startTime(), 100)],
+    [DateTimeInterval.Millenium, DateTimeIter.years(startTime(), 1000)], // :)
+  ]);
+
+  const endTime = timeDates[timeDates.length - 1];
+  const pointsForEachInterval: Generator<[DateTimeInterval, Date[]]> = lazy.map(
+    iters,
+    ([interval, iter]) => {
+      let numPoints = 0;
+      const points = lazy.takeWhile(
+        iter,
+        // Allow it to collect up to one extra so we know it has too many
+        // but don't waste time computing a ton of extraneous points
+        (d: Date) => ++numPoints < (maxTicks + 1) && d < endTime,
+      );
+      if (points[points.length - 1] !== endTime) {
+        points.push(endTime);
+      }
+      return [interval, points];
+    },
+  );
+
+  const points = lazy.find(
+    pointsForEachInterval,
+    ([_interval, points]) => points.length < maxTicks,
+  ) || [DateTimeInterval.Millenium, timeDates];
+
+  return points;
+}
+
+export function sortDates(dates: Date[]): Date[] {
+  return dates.slice().sort((d1, d2) => +d1 < +d2 ? -1 : 1);
 }
 
 export namespace Pattern {

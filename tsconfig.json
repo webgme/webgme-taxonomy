@@ -4,6 +4,7 @@
   "files": [],
   "references": [
     { "path": "src/routers/Dashboard" },
+    { "path": "src/routers/Insights/dashboard" },
     { "path": "src/routers/Search" }
   ]
 }

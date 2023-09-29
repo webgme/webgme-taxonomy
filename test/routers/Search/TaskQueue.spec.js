@@ -4,7 +4,7 @@ describe("TaskQueue", function () {
     "../../../src/routers/Search/build/TaskQueue",
   );
   const { UserError } = require("../../../src/common/routers/Utils");
-  const { sleep } = require(
+  const { sleep, fromResult } = require(
     "../../../src/routers/Search/build/Utils",
   );
 
@@ -20,6 +20,12 @@ describe("TaskQueue", function () {
     }
   }
 
+  class ThrowingRunnable {
+    async run() {
+      throw new Error("throw!");
+    }
+  }
+
   describe("submitTask", function () {
     it("should run tasks in order", async function () {
       const queue = new TaskQueue();
@@ -31,8 +37,8 @@ describe("TaskQueue", function () {
       while (queue.getStatus(id2) !== Status.Complete) {
         await sleep(5);
       }
-      const r1 = queue.getResult(id1);
-      const r2 = queue.getResult(id2);
+      const r1 = fromResult(queue.getResult(id1));
+      const r2 = fromResult(queue.getResult(id2));
       assert(r1 < r2);
     });
 
@@ -58,6 +64,16 @@ describe("TaskQueue", function () {
       } catch (err) {
         assert(err instanceof UserError);
       }
+    });
+
+    it("should get error it task throws error", async function () {
+      const queue = new TaskQueue();
+      const t1 = new ThrowingRunnable();
+      const id1 = queue.submitTask(t1);
+      await sleep(5);
+      const result = queue.getResult(id1);
+      assert(result.isErr());
+      assert.throws(() => fromResult(result));
     });
   });
 

@@ -17,7 +17,7 @@ jobs:
         with:
           submodules: true
         
-      # All (regular and prerelease) releases get an "beta" tag
+      # All (regular and prerelease) releases get a "beta" tag
       - name: Get Release Tags
         id: get_release_tags
         run: |
@@ -29,7 +29,7 @@ jobs:
       - name: Get Release Tags
         id: get_prerelease_tags
         run: |
-          echo "EXTRA_TAG=\",latest\"" >> $GITHUB_ENV
+          echo "EXTRA_TAG=,latest" >> $GITHUB_ENV
         if: github.event_name == 'release' && !github.event.release.prerelease
 
       # always push nightly
@@ -40,8 +40,8 @@ jobs:
           echo "TAG=nightly" >> $GITHUB_ENV
         if: github.event_name == 'push'
         
-      - name: "Install Dependencies and Compile TS/Svelte/etc"
-        run: npm ci --legacy-peer-deps
+      - name: "Remove test dependencies incompatible with base docker image"
+        run: npm run prepare-docker
 
       - name: Publish to Docker Hub
         uses: elgohr/Publish-Docker-Github-Action@v4

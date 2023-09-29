@@ -19,9 +19,10 @@
     "clean_up": "node ./node_modules/webgme-engine/src/bin/clean_up.js",
     "build": "tsc --build",
     "prepublish": "husky install",
-    "prepare": "npm run build && cd src/routers/Dashboard/app && npm install && cd ../../Search/dashboard && npm install && cd ../../TagCreator/form && npm install"
+    "prepare-docker": "node scripts/prepare-docker.js",
+    "prepare": "npm run build && cd src/routers/Dashboard/app && npm install && cd ../../Search/dashboard && npm install && cd ../../TagCreator/form && npm install && cd ../../Insights/dashboard && npm install"
   },
-  "version": "1.2.2",
+  "version": "1.4.4",
   "devDependencies": {
     "@playwright/test": "^1.36.0",
     "@smui/icon-button": "^6.1.0",
@@ -51,10 +52,15 @@
     "node-fetch": "^2.6.6",
     "svelte": "^3.50.0",
     "webgme": "github:webgme/webgme#azure",
+    "webgme-engine": "github:webgme/webgme-engine#azure",
     "webgme-json-importer": "^1.4.1",
     "webgme-transformations": "^0.5.1",
     "zip-a-folder": "^1.1.5"
   },
+  "testDependencies": [
+    "playwright",
+    "@playwright/test"
+  ],
   "lint-staged": {
     "src/**/*.{js,css,md,svelte}": "prettier --write --plugin-search-dir=."
   }

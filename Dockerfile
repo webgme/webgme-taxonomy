@@ -2,8 +2,9 @@ FROM node:lts
 MAINTAINER Brian Broll <brian.broll@vanderbilt.edu>
 
 ADD . /webgme-taxonomy
+# If the following line fails, run `npm run prepare-docker` to remove test dependencies
+ADD package-docker.json /webgme-taxonomy/package.json
 WORKDIR /webgme-taxonomy
-# ensure the package has been built (check-docker) before running the build
-RUN bash bin/check-docker && npm ci --ignore-scripts --omit dev --legacy-peer-deps  # Needed until webgme dependency is updated to official release
+RUN npm ci --legacy-peer-deps  # Needed until webgme dependency is updated to official release
 
 CMD ["npm", "start"]
