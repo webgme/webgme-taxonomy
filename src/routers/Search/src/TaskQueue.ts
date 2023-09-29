@@ -10,6 +10,7 @@ import { pipeline } from "stream";
 import { promisify } from "util";
 const streamPipeline = promisify(pipeline);
 import { Result } from "oxide.ts";
+import { cmp, UniqueNames } from "./Utils";
 
 export enum Status {
   Created,
@@ -64,56 +65,90 @@ export class DownloadTask implements Runnable<FilePath> {
   }
 
   async run(): Promise<string> {
+    // Fetch all the metadata
+    const metadata = await Promise.all(
+      this.contentIds.map(async (contentId) => {
+        const metadata = await this.storage.getMetadata(this.repoId, contentId);
+        return metadata.map((md) => {
+          md.tags = this.formatter.toHumanFormat(md.tags);
+          return md;
+        });
+      }),
+    );
+
+    // Get unique names for each
+    const namer = new UniqueNames();
+    const names: string[] = metadata.map((metadataOpt, index) => {
+      return metadataOpt.map((metadata) =>
+        metadata.tags.Base?.name?.value || metadata.displayName
+      ).unwrapOrElse(() => {
+        const contentId = this.contentIds[index];
+        this.logger.info(
+          `No "Base.name" tag found for ${contentId} (${this.repoId})`,
+        );
+        return contentId.toString();
+      });
+    });
+
+    const uniqNames = names.reduce(
+      (names, name) => names.concat(namer.unique(name)),
+      <string[]> [],
+    );
+
+    // Write data to files
     const tmpDir = await fsp.mkdtemp(
       path.join(os.tmpdir(), "webgme-taxonomy-"),
     );
     const downloadDir = path.join(tmpDir, "download");
-    const contentNames = new Set();
+    await fsp.mkdir(downloadDir);
 
-    console.log(">>> about to download to", downloadDir);
-    // TODO: get file stream?
-    // TODO: write the metadata to a file
-    // TODO: get the files for each content ID
-    // TODO: flatten into contentId, fileId then map into streams
-    // TODO: sort the contentIds
-    await this.contentIds.reduce(async (prevTask, contentId) => {
-      await prevTask;
-      // TODO: convert metadata to human format
-      const basename: string =
-        (await this.storage.getMetadata(this.repoId, contentId))
-          .map((metadata) =>
-            metadata.tags.Base?.name?.value || metadata.displayName
-          ).unwrapOrElse(() => contentId.toString());
+    const fileWriteTasks = uniqNames.map(
+      async (contentName, index) => {
+        const contentId = this.contentIds[index];
+        const streamDict = await this.storage.getFileStreams(
+          this.repoId,
+          contentId,
+        );
 
-      // TODO: refactor this
-      let i = 2;
-      let uniqName = basename;
-      while (contentNames.has(uniqName)) {
-        uniqName = `${basename} (${i++})`;
-      }
-      contentNames.add(uniqName);
+        console.log();
+        console.log("file streams for", contentName + ":");
+        console.log(Object.keys(streamDict));
 
-      const streamDict = await this.storage.getFileStreams(
-        this.repoId,
-        contentId,
-      );
-      await Promise.all(
-        Object.entries(streamDict).map(async ([name, dataStream]) => {
-          const filePath = path.join(downloadDir, uniqName, name);
-          const writeStream = fs.createWriteStream(filePath);
-          await streamPipeline(dataStream, writeStream);
-        }),
-      );
-    }, Promise.resolve());
+        // hook up the file pipelines
+        const contentDir = path.join(downloadDir, contentName);
+        await fsp.mkdir(contentDir);
+        const dirs = new Set(
+          Object.keys(streamDict)
+            .map((filepath) => path.dirname(filepath))
+            .sort(cmp.length),
+        );
+        await Promise.all(
+          [...dirs].map((dir) => fsp.mkdir(dir, { recursive: true })),
+        );
 
-    console.log(">>> about to zip", downloadDir);
+        await Promise.all(
+          Object.entries(streamDict).map(async ([name, dataStream]) => {
+            const filePath = path.join(downloadDir, contentName, name);
+            // TODO: ensure the directory exists
+            const writeStream = fs.createWriteStream(filePath);
+            console.log(name, "->", filePath);
+            await streamPipeline(dataStream, writeStream);
+          }),
+        );
+      },
+    );
+
+    await Promise.all(fileWriteTasks);
+    console.log("file writes should be complete");
+
+    // Zip the downloaded files...
     const zipPath = path.join(tmpDir, `${this.repoId}.zip`);
     await zip(downloadDir, zipPath, {
       compression: COMPRESSION_LEVEL.medium,
     });
     await fsp.rm(downloadDir, { recursive: true });
-
     await fsp.access(zipPath, fs.constants.R_OK);
+
     console.log("created zip archive:", zipPath, "from", downloadDir);
     return zipPath;
   }
