@@ -13,9 +13,33 @@ describe("Utils", function () {
     getTimepoints,
     DateTimeIter,
     DateTimeInterval,
+    UniqueNames,
   } = require(
     "../../../src/routers/Search/build/Utils",
   );
+
+  describe("UniqueNames", function () {
+    it("should keep name if no collisions", function () {
+      const namer = new UniqueNames();
+      const names = ["a", "b", "c"];
+      const newNames = names.map((n) => namer.unique(n));
+      assert.deepEqual(names, newNames);
+    });
+
+    it("should rename duplicates", function () {
+      const namer = new UniqueNames();
+      const names = ["a", "a", "a"];
+      const newNames = names.map((n) => namer.unique(n));
+      assert.equal(new Set(newNames).size, names.length);
+    });
+
+    it("should preserve name (as prefix)", function () {
+      const namer = new UniqueNames();
+      const names = ["a", "a", "a"];
+      const newNames = names.map((n) => namer.unique(n));
+      assert(newNames.filter((n) => n.startsWith("a")).length, names.length);
+    });
+  });
 
   describe("sortDates", function () {
     it("should sort chronologically", function () {

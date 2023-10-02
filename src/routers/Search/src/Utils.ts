@@ -403,10 +403,6 @@ export function getTimepoints(
   return points;
 }
 
-export function sortDates(dates: Date[]): Date[] {
-  return dates.slice().sort((d1, d2) => +d1 < +d2 ? -1 : 1);
-}
-
 export namespace Pattern {
   /*
    * Combine a list of JSON schema patterns into a single pattern that
@@ -425,6 +421,55 @@ export namespace Pattern {
   const DOMAIN_NAME = "[a-zA-Z_\.-]+";
   const PORT = ":[0-9]+";
   export const URL = `(${anyIn(DOMAIN_NAME, IP_ADDRESS)})(${PORT})?`;
+}
+
+export class UniqueNames {
+  private _names: Set<string> = new Set();
+
+  unique(name: string): string {
+    let i = 2;
+    let uniqName = name;
+    while (this._names.has(uniqName)) {
+      uniqName = `${name} (${i++})`;
+    }
+    this._names.add(uniqName);
+    return uniqName;
+  }
+}
+
+export namespace cmp {
+  export enum Order {
+    Before = -1,
+    Equal = 0,
+    After = 1,
+  }
+
+  type hasLength = { length: number };
+  export function length(a: hasLength, b: hasLength): Order {
+    return a.length < b.length ? Order.Before : Order.After;
+  }
+
+  export function chrono(d1: Date, d2: Date): Order {
+    return +d1 < +d2 ? Order.Before : Order.After;
+  }
+
+  export function reverse<T>(
+    cmp: (a: T, b: T) => Order,
+  ): (a: T, b: T) => Order {
+    return (a: T, b: T) => {
+      if (cmp(a, b) === Order.Before) {
+        return Order.After;
+      } else if (cmp(a, b) === Order.After) {
+        return Order.Before;
+      } else {
+        return cmp(a, b);
+      }
+    };
+  }
+}
+
+export function sortDates(dates: Date[]): Date[] {
+  return dates.slice().sort(cmp.chrono);
 }
 
 export function toArtifactMetadatav2(

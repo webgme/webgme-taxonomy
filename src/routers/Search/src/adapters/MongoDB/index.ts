@@ -5,6 +5,7 @@
 import fs from "fs";
 import stream from "stream";
 import _ from "underscore";
+import { Option } from "oxide.ts";
 import path from "path";
 import fsp from "fs/promises";
 import type {
@@ -13,13 +14,13 @@ import type {
   ArtifactMetadata,
   ArtifactMetadatav2,
   DownloadInfo,
+  FileStreamDict,
   Metadata,
   Repository,
   TaxonomyVersion,
   UploadReservation,
 } from "../common/types";
 import type TagFormatter from "../../../../../common/TagFormatter";
-import { FormatError } from "../../../../../common/TagFormatter";
 import { MissingAttributeError } from "../common/ModelError";
 import { GridFSBucket, MongoClient, ObjectId } from "mongodb";
 import type { Collection, Document } from "mongodb";
@@ -31,14 +32,16 @@ import {
 } from "../common/AppendResult";
 import { WebgmeContext } from "../../../../../common/types";
 import { toArtifactMetadatav2 } from "../common/Helpers";
-import { Pattern } from "../../Utils";
+import { filterMap, fromResult, Pattern } from "../../Utils";
 import ScopedFnQueue from "../../ScopedFnQueue";
+import { RepositoryNotFound } from "../common/StorageError";
 
 const defaultMongoUri = gmeConfig.mongo.uri;
 const defaultClient = new MongoClient(defaultMongoUri);
 
 type FileId = string;
 interface RepositoryDoc {
+  _id: ObjectId;
   displayName: string;
   taxonomyVersion: TaxonomyVersion;
   tags: any;
@@ -68,15 +71,6 @@ export default class MongoAdapter implements Adapter {
     this._files = new GridFSBucket(db, { bucketName: name });
     this._hostUri = hostUri;
     this._repoLocks = new ScopedFnQueue();
-  }
-
-  async getMetadata(
-    repoId: string,
-    contentId: string,
-    formatter: TagFormatter,
-  ): Promise<any> {
-    const repo = await this.getRepository(repoId);
-    return this.getMetadataFor(repo, contentId, formatter);
   }
 
   async getBulkMetadata(
@@ -113,35 +107,35 @@ export default class MongoAdapter implements Adapter {
   }
 
   async listRepos(): Promise<Repository[]> {
-    const documents = await this._collection.find({}).toArray();
-    const repos: Repository[] = documents.map((doc) => {
-      const docId = doc._id.toString();
-
-      return {
-        id: docId,
-        displayName: doc.displayName,
-        tags: doc.tags,
-        taxonomyVersion: doc.taxonomyVersion,
-      };
-    });
+    const documents = (await this._collection.find({})
+      .toArray()) as RepositoryDoc[];
+    const repos: Repository[] = documents.map(toRepository);
 
     return repos;
   }
 
+  async getRepoMetadata(id: string): Promise<Repository> {
+    const doc = await this.getRepository(id);
+    return fromResult(doc.map(toRepository).okOr(new RepositoryNotFound(id)));
+  }
+
   async listArtifacts(repoId: string): Promise<Artifact[]> {
-    const repo = await this.getRepository(repoId);
-    const artifacts = repo.artifacts
-      .map(toArtifactMetadatav2)
-      .map(
-        (data: ArtifactMetadatav2, index: number) => ({
-          parentId: repoId,
-          id: index.toString(),
-          displayName: data.displayName,
-          tags: data.tags,
-          taxonomyVersion: data.taxonomyVersion,
-          time: data.time,
-        }),
-      );
+    const artifacts = (await this.getRepository(repoId))
+      .map((repo) =>
+        repo.artifacts
+          .map(toArtifactMetadatav2)
+          .map(
+            (data: ArtifactMetadatav2, index: number) => ({
+              parentId: repoId,
+              id: index.toString(),
+              displayName: data.displayName,
+              tags: data.tags,
+              taxonomyVersion: data.taxonomyVersion,
+              time: data.time,
+            }),
+          )
+      ).unwrapOr([]); // TODO: convert to an error instead?
+
     return artifacts;
   }
 
@@ -163,7 +157,9 @@ export default class MongoAdapter implements Adapter {
   ): Promise<T> {
     return await this._repoLocks.run(repoId, async () => {
       const repo = await this.getRepository(repoId);
-      const index: number = repo?.artifacts.length ?? 0;
+      const index: number = repo
+        .map((repo) => repo.artifacts.length)
+        .unwrapOr(0);
       const reservation = new ContentReservation(this._hostUri, repoId, index);
 
       try {
@@ -190,22 +186,17 @@ export default class MongoAdapter implements Adapter {
     return "Created!";
   }
 
-  private async getRepository(repoId: string): Promise<any> {
-    // TODO: throw error if not found? Or use option type?
-    return await this._collection.findOne({
-      _id: new ObjectId(repoId),
-    });
+  private async getRepository(repoId: string): Promise<Option<RepositoryDoc>> {
+    return Option.from(
+      await this._collection.findOne({
+        _id: new ObjectId(repoId),
+      }),
+    ) as Option<RepositoryDoc>;
   }
 
-  async getContentIds(repoId: string): Promise<string[]> {
+  async getContentIds(repoId: string): Promise<Option<string[]>> {
     const repo = await this.getRepository(repoId);
-
-    if (!repo) {
-      // TODO: throw an error
-      return [];
-    }
-
-    return Object.keys(repo.artifacts);
+    return repo.map((repo) => Object.keys(repo.artifacts));
   }
 
   async appendArtifact(
@@ -261,77 +252,41 @@ export default class MongoAdapter implements Adapter {
     await streamClose(stream);
   }
 
-  // TODO: update method signature to be more generic
-  async download(
+  async getMetadata(
     repoId: string,
-    ids: string[],
-    formatter: TagFormatter,
-    targetDir: string,
-  ): Promise<void> {
-    const repoDoc = await this._collection.findOne({
-      _id: new ObjectId(repoId),
+    contentId: string,
+  ): Promise<Option<ArtifactMetadatav2>> {
+    const idx = parseInt(contentId);
+    return (await this.getRepository(repoId))
+      .andThen((repo) => Option.from(repo.artifacts[idx]))
+      .map(toArtifactMetadatav2);
+  }
+
+  async getFileStreams(
+    repoId: string,
+    id: string,
+  ): Promise<FileStreamDict> {
+    const idx = parseInt(id);
+    const fileIds = (await this.getRepository(repoId))
+      .andThen((repo) => Option(repo.artifacts[idx]))
+      .map((artifact) =>
+        artifact.files.map((fileIdStr: string) => new ObjectId(fileIdStr))
+      );
+
+    const metadataPromise = fileIds
+      .map((ids) => ids.map((id) => this._files.find({ _id: id }).next()))
+      .unwrapOr([]);
+
+    const metadata = await Promise.all(metadataPromise);
+    const entries = filterMap(metadata, (fileMd) => {
+      if (fileMd) {
+        return [
+          fileMd.filename,
+          this._files.openDownloadStream(fileMd._id),
+        ];
+      }
     });
-    if (!repoDoc) {
-      // TODO: throw an error
-      return;
-    }
-
-    const repo: RepositoryDoc = {
-      displayName: repoDoc.displayName,
-      taxonomyVersion: repoDoc.taxonomyVersion,
-      tags: repoDoc.tags,
-      artifacts: repoDoc.artifacts,
-    };
-
-    await Promise.all(
-      ids.map(async (id) => {
-        const idx = parseInt(id);
-        const artifact = repo.artifacts[idx];
-        const artifactPath = path.join(targetDir, idx.toString());
-        if (artifact) {
-          const metadataPath = path.join(artifactPath, "metadata.json");
-          const amd = toArtifactMetadatav2(artifact);
-          try {
-            amd.tags = formatter.toHumanFormat(
-              amd.tags ?? {},
-            );
-            const metadata = {
-              tags: amd.tags,
-              taxonomyVersion: amd.taxonomyVersion,
-            };
-            await writeMetadata(metadataPath, metadata);
-          } catch (err) {
-            const logPath = path.join(artifactPath, `warnings.txt`);
-            if (err instanceof FormatError) {
-              const metadata = {
-                tags: amd.tags,
-                taxonomyVersion: amd.taxonomyVersion,
-              };
-              await writeMetadata(metadataPath, metadata);
-              writeData(
-                logPath,
-                `An error occurred when converting the taxonomy tags: ${err.message}\n\nThe internal format has been saved in artifact.json.`,
-              );
-            } else {
-              const message = (err instanceof Error)
-                ? err.message
-                // @ts-ignore
-                : err?.toString();
-              writeData(
-                logPath,
-                `An error occurred when generating artifact.json: ${message}`,
-              );
-            }
-          }
-          await Promise.all(
-            artifact.files.map((fileIdStr: string) => {
-              const fileId = new ObjectId(fileIdStr);
-              return this._downloadFile(fileId, artifactPath);
-            }),
-          );
-        }
-      }),
-    );
+    return Object.fromEntries(entries);
   }
 
   async _downloadFile(fileId: ObjectId, targetDir: string) {
@@ -434,4 +389,15 @@ async function writeJsonData(filePath: string, metadata: ArtifactMetadata) {
 
 async function streamClose(stream: stream.Stream): Promise<void> {
   return new Promise((res, _rej) => stream.on("close", res));
+}
+
+function toRepository(doc: RepositoryDoc): Repository {
+  const docId = doc._id.toString();
+
+  return {
+    id: docId,
+    displayName: doc.displayName,
+    tags: doc.tags,
+    taxonomyVersion: doc.taxonomyVersion,
+  };
 }
