@@ -1,4 +1,4 @@
-import { expect, type Page, test, ElementHandle } from "@playwright/test";
+import { ElementHandle, expect, type Page, test } from "@playwright/test";
 // import { repoTest } from "./tests/repo-test";
 import RepoImpl from "./_archive/fixtures/RepoImpl";
 import { poll } from "./test-helper";
@@ -20,7 +20,6 @@ async function getCurrentTimestampLong() {
 }
 
 /**
- *
  * @param page
  * @param repoName
  * @param repoIndex
@@ -32,14 +31,15 @@ async function testUpload(
   repoName: string,
   repoIndex: string,
   testFileIndex: number,
-  testFileList: string[]
+  testFileList: string[],
 ) {
   await page.getByText(repoName, { exact: true }).click();
   await page.getByRole("button", { name: "Upload", exact: true }).click();
 
   const nameInput = page.getByRole("textbox", { name: "Name" });
   const uniqueTimestampForRepoName = await getCurrentTimestampLong();
-  const currentRepoName = `${contentName}-${uniqueTimestampForRepoName}-${repoIndex}`;
+  const currentRepoName =
+    `${contentName}-${uniqueTimestampForRepoName}-${repoIndex}`;
   nameInput.fill(currentRepoName);
 
   const fileChooserPromise = page.waitForEvent("filechooser");
@@ -55,7 +55,8 @@ async function testUpload(
   const tempFile = await fs.readFile(SOURCE_TEST_FILE);
   const tempDirFolder = os.tmpdir();
   const uniqueTimestampForTestFileName = await getCurrentTimestampLong();
-  const newTestFileName = `${uniqueTimestampForTestFileName}-test-file_${testFileIndex}.txt`;
+  const newTestFileName =
+    `${uniqueTimestampForTestFileName}-test-file_${testFileIndex}.txt`;
   const newTestFilePath = path.join(tempDirFolder, newTestFileName);
   testFileList.push(newTestFilePath);
   await fs.writeFile(newTestFilePath, tempFile);
@@ -70,7 +71,7 @@ async function testUpload(
     {
       interval: 100,
       timeout: 20000,
-    }
+    },
   );
   expect(isUploadComplete).toBeTruthy();
 
@@ -92,7 +93,7 @@ async function testIfUploadWorked(page: Page, currentRepoName: string) {
 
 async function gotoPage(page: Page, baseURL: string | undefined) {
   await page.goto(
-    `${baseURL}routers/Search/guest%2Be2e_tests/branch/master/%2FC/static/`
+    `${baseURL}routers/Search/guest%2Be2e_tests/branch/master/%2FC/static/`,
   );
 }
 
@@ -122,12 +123,12 @@ test.describe(`Data dashboard`, function () {
       () => textBoxLocator.isVisible(),
       {
         timeout: TIMEOUT_TO_WAIT_FOR_LOCATOR_CHECK_TO_COMPLETE,
-      }
+      },
     );
 
     if (!textBoxLocatorIsVisible) {
       throw new Error(
-        `Repository didn't show up after ${TIMEOUT_TO_WAIT_FOR_PROJECT_CREATION_MS} ms (possible "Error: Not authorized to read project [guest+taxonomy]")`
+        `Repository didn't show up after ${TIMEOUT_TO_WAIT_FOR_PROJECT_CREATION_MS} ms (possible "Error: Not authorized to read project [guest+taxonomy]")`,
       );
     }
 
@@ -156,7 +157,7 @@ test.describe(`Data dashboard`, function () {
       // FIXME -- apply aria-label to strongly bind to heading
       page.getByRole("heading", {
         name: `TestContentUploads in ${repoName.trim()}`,
-      })
+      }),
     ).toBeDefined();
   });
 
@@ -166,7 +167,7 @@ test.describe(`Data dashboard`, function () {
       repoName,
       ROUND_ONE,
       testFileIndex,
-      testFileList
+      testFileList,
     );
     testFileIndex++;
   });
@@ -181,7 +182,7 @@ test.describe(`Data dashboard`, function () {
       repoName,
       ROUND_TWO,
       testFileIndex,
-      testFileList
+      testFileList,
     );
     testFileIndex++;
   });
@@ -209,7 +210,7 @@ test.describe(`Data dashboard`, function () {
       {
         interval: 100,
         timeout: 20000,
-      }
+      },
     );
     expect(isDownloading).toBeTruthy();
 
@@ -247,7 +248,7 @@ test.describe(`Data dashboard`, function () {
     expect(page.getByTestId(repoName).getByText(repoName)).toBeTruthy();
 
     expect(page.locator("div.mdc-drawer-app-content main ul li")).toHaveCount(
-      1
+      1,
     );
   });
 
