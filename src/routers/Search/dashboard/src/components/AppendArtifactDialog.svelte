@@ -37,7 +37,10 @@
   let open = false;
   let uploading: Promise<UploadPromise[]> | null = null;
   let selectTagDisabled = false;
+  let isReference = false;
 
+  $: isReference = !!metadata?.tags?.Base?.Location;
+  $: console.log({isReference, metadata});
   $: displayName = set?.displayName ?? "";
   $: appendName = displayName;
   $: setOpen(set != null);
@@ -154,7 +157,18 @@
       {/each}
     </ul>
 
-    {#if !uploading}
+    <TagSelector 
+      bind:metadata={metadata}
+      bind:contentType
+      bind:disabled={selectTagDisabled}
+    />
+
+    {#if isReference}
+      <!-- TODO: show the display name of the ref? -->
+      <Dropzone disabled multiple={true}>
+        <p>Tags reference existing data</p>
+      </Dropzone>
+    {:else if !uploading}
       <Dropzone on:drop={onAppendFileDrop} multiple={true}>
         <p>Select dataset to upload.</p>
       </Dropzone>
@@ -163,12 +177,6 @@
         <p>Select dataset to upload.</p>
       </Dropzone>
     {/if}
-
-    <TagSelector 
-      bind:metadata={metadata}
-      bind:contentType
-      bind:disabled={selectTagDisabled}
-    />
   </Content>
   <div class="dialog-actions">
     <Button disabled={uploading} on:click={() => close()}>
