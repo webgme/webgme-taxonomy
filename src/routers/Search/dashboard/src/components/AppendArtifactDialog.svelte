@@ -61,7 +61,7 @@
 
 
   async function onAppendClicked() {
-    if (!files.length) {
+    if (!files.length && !isReference) {
       return dispatchError(`${contentType.name} file required.`);
     }
 
@@ -117,8 +117,13 @@
   <Title id="append-artifact-title">Append data to {displayName}</Title>
   <Content id="append-artifact-content">
     <Textfield label="Name" bind:value={appendName} disabled={!!uploading} />
-    <p>{contentType.name} file(s):</p>
+    <TagSelector 
+      bind:metadata={metadata}
+      bind:contentType
+      bind:disabled={selectTagDisabled}
+    />
 
+    <p>{contentType.name} file(s):</p>
     <ul class="append-files">
       {#each files as file, index (file.name + "-" + file.lastModified)}
         <li transition:fade={{ duration: 200 }}>
@@ -156,12 +161,6 @@
         </li>
       {/each}
     </ul>
-
-    <TagSelector 
-      bind:metadata={metadata}
-      bind:contentType
-      bind:disabled={selectTagDisabled}
-    />
 
     {#if isReference}
       <!-- TODO: show the display name of the ref? -->

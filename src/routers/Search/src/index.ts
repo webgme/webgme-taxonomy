@@ -361,15 +361,15 @@ function initialize(middlewareOpts: MiddlewareOptions) {
 
   const downloadQueue: TaskQueue<DownloadTask, FilePath> = new TaskQueue();
   router.post(
-    RouterUtils.getContentTypeRoutes("artifacts/:parentId/downloads/"),
+    RouterUtils.getContentTypeRoutes("artifacts/:repoId/downloads/"),
     RouterUtils.handleUserErrors(
       logger,
       async function downloadContent(req, res) {
-        const { parentId } = req.params;
+        const { repoId } = req.params;
         // TODO: get the IDs for the specific observations to get
         let ids;
         if (isString(req.query.ids)) {
-          ids = JSON.parse(req.query.ids);
+          ids = JSON.parse(req.query.ids) as string[];
         } else {
           res.status(400).send("List of artifact IDs required");
           return;
@@ -380,12 +380,32 @@ function initialize(middlewareOpts: MiddlewareOptions) {
           req,
           mainConfig,
         );
+        // Fetch all the metadata
+        const contentIds = ids.sort((id1, id2) => +id1 < +id2 ? -1 : 1);
+        const metadata = await Promise.all(
+          contentIds.map(async (contentId) => {
+            const metadata = await storage.getMetadata(
+              repoId,
+              contentId,
+            );
+            return metadata.map((md) => {
+              try {
+                md.tags = formatter.toHumanFormat(md.tags);
+              } catch (err) {
+                logger.warn(
+                  `Unable to convert tags to human format: ${contentId} (${repoId})`,
+                );
+                throw err;
+              }
+              return md;
+            });
+          }),
+        );
+
+        // get all the metadata in human format
         const task = new DownloadTask(
           logger,
-          storage,
-          formatter,
-          parentId,
-          ids,
+          metadata,
         );
         const id = downloadQueue.submitTask(task);
         res.json(id);
