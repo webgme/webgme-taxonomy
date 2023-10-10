@@ -59,42 +59,62 @@ function initialize(middlewareOpts) {
           );
         }
 
-        if (Array.isArray(tags)) { // Update tags from v1 to v2 format
-          tags = deepMerge(...tags);
-        }
-
-        if (!isObject(tags)) {
-          throw new RouterUtils.UserError(
-            "Invalid tag format.",
-            400,
-          );
-        }
-
-        const { root, core } = req.webgmeContext;
-        const node = await Utils.findTaxonomyNode(core, root);
-        const formatter = await TagFormatter.from(core, node);
-
-        try {
-          if (format === "human") {
-            res.json(await formatter.toHumanFormat(tags));
-          } else {
-            res.json(await formatter.toGuidFormat(tags));
-          }
-        } catch (err) {
-          if (err instanceof TagFormatter.FormatError) {
-            res.status(400).send(err.message);
-          } else {
-            logger.error(
-              `Error occurred during tag format conversion: ${err.stack}`,
-            );
-            res
-              .status(500)
-              .send("Internal error occurred. Please try again later.");
-          }
-        }
+        const formattedTags = await convertTagsFormat(
+          req.webgmeContext,
+          tags,
+          format,
+        );
+        res.json(formattedTags);
       },
     ),
   );
+
+  router.post(
+    RouterUtils.getProjectScopedRoutes(":format(guid|human)"),
+    express.json(),
+    RouterUtils.handleUserErrors(
+      logger,
+      async function formatTags(req, res) {
+        const { format } = req.params;
+        let tags = req.body;
+
+        const formattedTags = await convertTagsFormat(
+          req.webgmeContext,
+          tags,
+          format,
+        );
+        res.json(formattedTags);
+      },
+    ),
+  );
+
+  async function convertTagsFormat(gmeContext, tags, format) {
+    if (Array.isArray(tags)) { // Update tags from v1 to v2 format
+      tags = deepMerge(...tags);
+    }
+
+    if (!isObject(tags)) {
+      throw new RouterUtils.UserError("Invalid tag format.");
+    }
+
+    const { root, core } = gmeContext;
+    const node = await Utils.findTaxonomyNode(core, root);
+    const formatter = await TagFormatter.from(core, node);
+
+    try {
+      if (format === "human") {
+        return formatter.toHumanFormat(tags);
+      } else {
+        return formatter.toGuidFormat(tags);
+      }
+    } catch (err) {
+      if (err instanceof TagFormatter.FormatError) {
+        throw new RouterUtils.UserError(err.message);
+      } else {
+        throw err;
+      }
+    }
+  }
 
   logger.debug("ready");
 }
