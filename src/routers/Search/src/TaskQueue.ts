@@ -1,6 +1,6 @@
 import { UserError } from "../../../common/routers/Utils";
-import type TagFormatter from "../../../common/TagFormatter";
-import type { Adapter } from "./adapters/common/types";
+import type { ArtifactMetadatav2 } from "./adapters/common/types";
+import StorageAdapter from "./adapters";
 import { COMPRESSION_LEVEL, zip } from "zip-a-folder";
 import os from "os";
 import fsp from "fs/promises";
@@ -9,7 +9,7 @@ import path from "path";
 import { pipeline } from "stream";
 import { promisify } from "util";
 const streamPipeline = promisify(pipeline);
-import { Option, Result } from "oxide.ts";
+import { Result } from "oxide.ts";
 import { cmp, UniqueNames } from "./Utils";
 
 export enum Status {
@@ -43,59 +43,32 @@ interface Runnable<O> {
 
 export type FilePath = string;
 export class DownloadTask implements Runnable<FilePath> {
-  storage: Adapter;
-  formatter: TagFormatter;
   logger: Global.GmeLogger;
-  repoId: string;
-  contentIds: string[];
+  metadata: ArtifactMetadatav2[];
+  getRepoName: () => Promise<string>;
 
   constructor(
     logger: Global.GmeLogger,
-    storage: Adapter,
-    formatter: TagFormatter,
-    repoId: string,
-    contentIds: string[],
+    metadata: ArtifactMetadatav2[],
+    getRepoName: () => Promise<string>,
   ) {
-    this.storage = storage;
-    this.formatter = formatter;
+    this.getRepoName = getRepoName;
     this.logger = logger;
-    this.repoId = repoId;
-    // TODO: test this
-    this.contentIds = contentIds.sort((id1, id2) => +id1 < +id2 ? -1 : 1);
+    this.metadata = metadata;
   }
 
   async run(): Promise<string> {
-    // Fetch all the metadata
-    const metadata = await Promise.all(
-      this.contentIds.map(async (contentId) => {
-        const metadata = await this.storage.getMetadata(this.repoId, contentId);
-        return metadata.map((md) => {
-          try {
-            md.tags = this.formatter.toHumanFormat(md.tags);
-          } catch (err) {
-            this.logger.warn(
-              `Unable to convert tags to human format: ${contentId} (${this.repoId})`,
-            );
-            throw err;
-          }
-          return md;
-        });
-      }),
-    );
-
+    // TODO: guarantee that the Base.URI term exists?
+    // What do we fall back on if the taxonomy doesn't support URIs?
+    const contentUris = this.metadata
+      .map((metadata) =>
+        metadata.tags.Base?.Location?.URI || metadata.tags.Base?.URI?.value
+      );
     // Get unique names for each
     const namer = new UniqueNames();
-    const names: string[] = metadata.map((metadataOpt, index) => {
-      return metadataOpt.map((metadata) =>
-        metadata.tags.Base?.name?.value || metadata.displayName
-      ).unwrapOrElse(() => {
-        const contentId = this.contentIds[index];
-        this.logger.info(
-          `No "Base.name" tag found for ${contentId} (${this.repoId})`,
-        );
-        return contentId.toString();
-      });
-    });
+    const names: string[] = this.metadata.map((metadata) =>
+      metadata.tags.Base?.name?.value || metadata.displayName
+    );
 
     const uniqNames = names.reduce(
       (names, name) => names.concat(namer.unique(name)),
@@ -111,11 +84,10 @@ export class DownloadTask implements Runnable<FilePath> {
 
     const fileWriteTasks = uniqNames.map(
       async (contentName, index) => {
-        const contentId = this.contentIds[index];
-        const streamDict = await this.storage.getFileStreams(
-          this.repoId,
-          contentId,
-        );
+        const uri = contentUris[index];
+        const storage = StorageAdapter.fromUri(uri);
+        const [repoId, id] = storage.resolveUri(uri);
+        const streamDict = await storage.getFileStreams(repoId, id);
 
         // create the directories
         const contentDir = path.join(downloadDir, contentName);
@@ -130,19 +102,12 @@ export class DownloadTask implements Runnable<FilePath> {
         );
 
         // add the metadata file
-        const contentMetadata = metadata[index];
-        if (contentMetadata.isSome()) {
-          const metadataPath = path.join(contentDir, "metadata.json");
-          const metadata = contentMetadata.unwrap();
-          await fsp.writeFile(
-            metadataPath,
-            JSON.stringify(metadata.tags, null, 2),
-          );
-        } else {
-          this.logger.warn(
-            `No metadata found for ${contentId} (${this.repoId})`,
-          );
-        }
+        const metadata = this.metadata[index];
+        const metadataPath = path.join(contentDir, "metadata.json");
+        await fsp.writeFile(
+          metadataPath,
+          JSON.stringify(metadata.tags, null, 2),
+        );
 
         // hook up the streaming file pipelines
         await Promise.all(
@@ -158,10 +123,9 @@ export class DownloadTask implements Runnable<FilePath> {
     await Promise.all(fileWriteTasks);
 
     // Zip the downloaded files. If only a single content, download just that one
-    const [archiveName, dataDir]: [string, string] =
-      this.contentIds.length === 1
-        ? [uniqNames[0], path.join(downloadDir, uniqNames[0])]
-        : [await this.getRepositoryName(this.repoId), downloadDir];
+    const [archiveName, dataDir]: [string, string] = this.metadata.length === 1
+      ? [uniqNames[0], path.join(downloadDir, uniqNames[0])]
+      : [await this.getRepoName(), downloadDir];
 
     const zipPath = path.join(tmpDir, `${archiveName}.zip`);
     await zip(dataDir, zipPath, {
@@ -171,18 +135,6 @@ export class DownloadTask implements Runnable<FilePath> {
     await fsp.access(zipPath, fs.constants.R_OK);
 
     return zipPath;
-  }
-
-  async getRepositoryName(repoId: string): Promise<string> {
-    const metadata = await this.storage.getRepoMetadata(repoId);
-    const tags = this.formatter.toHumanFormat(metadata.tags);
-    return Option.from(tags.Base?.name?.value as string)
-      .unwrapOrElse(() => {
-        this.logger.info(
-          `No "Base.name" tag found for ${this.repoId}. Using ID instead.`,
-        );
-        return repoId;
-      });
   }
 }
 

@@ -40,6 +40,10 @@ export interface Adapter {
     fileId: string,
     req: WebgmeRequest,
   ): Promise<void>;
+  /**
+   * Convert a URI to a repo and content ID.
+   */
+  resolveUri(uri: string): [string, string];
   /*
    * RAII-style reservations for uploading data
    */
@@ -64,6 +68,7 @@ export interface AdapterStatic {
     request: WebgmeRequest,
     config: any,
   ): Promise<Adapter>;
+  fromUri(uri: string): Adapter;
   getUriPatterns(): string[];
 }
 

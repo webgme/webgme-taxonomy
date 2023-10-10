@@ -41,7 +41,9 @@ import {
 } from "./adapters/common/ModelError";
 import JSONSchemaExporter from "../../../common/JSONSchemaExporter";
 import TaskQueue, { DownloadTask, FilePath } from "./TaskQueue";
+import { Option } from "oxide.ts";
 import {
+  Adapter,
   ArtifactMetadata,
   ArtifactMetadatav2,
   UploadReservation,
@@ -382,7 +384,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
         );
         // Fetch all the metadata
         const contentIds = ids.sort((id1, id2) => +id1 < +id2 ? -1 : 1);
-        const metadata = await Promise.all(
+        const allMetadata = await Promise.all(
           contentIds.map(async (contentId) => {
             const metadata = await storage.getMetadata(
               repoId,
@@ -401,17 +403,38 @@ function initialize(middlewareOpts: MiddlewareOptions) {
             });
           }),
         );
+        const metadata = allMetadata
+          .filter((metadata) => metadata.isSome())
+          .map((metadata) => metadata.unwrap());
 
         // get all the metadata in human format
         const task = new DownloadTask(
           logger,
           metadata,
+          () => getRepositoryName(logger, repoId, storage, formatter),
         );
         const id = downloadQueue.submitTask(task);
         res.json(id);
       },
     ),
   );
+
+  async function getRepositoryName(
+    logger: Global.GmeLogger,
+    repoId: string,
+    storage: Adapter,
+    formatter: TagFormatter,
+  ): Promise<string> {
+    const metadata = await storage.getRepoMetadata(repoId);
+    const tags = formatter.toHumanFormat(metadata.tags);
+    return Option.from(tags.Base?.name?.value as string)
+      .unwrapOrElse(() => {
+        logger.info(
+          `No "Base.name" tag found for ${repoId}. Using ID instead.`,
+        );
+        return repoId;
+      });
+  }
 
   router.get(
     RouterUtils.getContentTypeRoutes(

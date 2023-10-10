@@ -313,16 +313,38 @@ export default class MongoAdapter implements Adapter {
     }
 
     const mongoUri = core.getAttribute(storageNode, "URI");
+    return MongoAdapter.fromUriAndCollection(
+      mongoUri ? mongoUri.toString() : defaultMongoUri,
+      collection.toString(),
+    );
+  }
+
+  static fromUri(uri: string): MongoAdapter {
+    // TODO: How can we handle repo IDs?
+    // TODO: they are ambiguous if we don't know if they are for a repo or individual content item
+    // TODO: for now, we will assume they are content IDs
+    const chunks = uri.split("/");
+    chunks.pop(); // content ID
+    chunks.pop(); // document ID
+    const collection = chunks.pop() as string;
+    const mongoUri = chunks.join("/").replace(/^mongoDoc/, "mongodb");
+    return MongoAdapter.fromUriAndCollection(mongoUri, collection);
+  }
+
+  static fromUriAndCollection(
+    mongoUri: string,
+    collection: string,
+  ): MongoAdapter {
     let hostUri, client;
-    if (mongoUri) {
+    if (mongoUri === defaultMongoUri) {
+      client = defaultClient;
+      hostUri = MongoAdapter.getHostUri(defaultMongoUri, collection.toString());
+    } else {
       client = new MongoClient(mongoUri.toString());
       hostUri = MongoAdapter.getHostUri(
         mongoUri.toString(),
         collection.toString(),
       );
-    } else {
-      client = defaultClient;
-      hostUri = MongoAdapter.getHostUri(defaultMongoUri, collection.toString());
     }
 
     return new MongoAdapter(client, collection.toString(), hostUri);
@@ -335,8 +357,16 @@ export default class MongoAdapter implements Adapter {
     return `mongoDoc://${hostAddr}/${collection}`;
   }
 
+  resolveUri(uri: string): [string, string] {
+    const chunks = uri.split("/");
+    const content = chunks.pop() as string;
+    const repo = chunks.pop() as string;
+    return [repo, content];
+  }
+
   static getUriPatterns(): string[] {
-    const hostPattern = `mongoDoc://${Pattern.URL}/[a-zA-Z_]+/`;
+    const hostPattern =
+      `mongoDoc://${Pattern.URL}/([a-zA-Z0-9_]+/)?[a-zA-Z_]+/`;
     const repoPattern = "[a-f0-9]{24}";
     const contentPattern = "[0-9]+";
     return [
