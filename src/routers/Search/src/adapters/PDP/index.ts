@@ -449,10 +449,10 @@ export default class PDP implements Adapter {
   }
 
   static async from(
-    gmeContext: WebgmeContext,
-    storageNode: Core.Node,
     req: AuthenticatedRequest,
     gmeConfig: AzureGmeConfig,
+    gmeContext: WebgmeContext,
+    storageNode: Core.Node,
   ) {
     const { core } = gmeContext;
     const baseUrl = core.getAttribute(storageNode, "URL");
@@ -464,17 +464,6 @@ export default class PDP implements Adapter {
     if (!processType) {
       throw new MissingAttributeError(gmeContext, storageNode, "processType");
     }
-
-    const userToken =
-      req.cookies[gmeConfig.authentication.azureActiveDirectory.cookieId];
-
-    // We currently allow setting a different token used only for read operations.
-    // This is a temporary workaround for the lack of read-only permissions in PDP.
-    const projectId = gmeContext.project.projectId;
-    const readToken = await withTokens(
-      gmeConfig,
-      (tokens) => tokens.get(projectId),
-    );
 
     const hostUri = fromResult(
       Result.safe(
@@ -492,11 +481,22 @@ export default class PDP implements Adapter {
     );
   }
 
-  static fromParameters(
+  static async fromParameters(
+    req: AuthenticatedRequest,
+    gmeConfig: AzureGmeConfig,
+    projectId: Option<string>,
     hostUri: HostUri,
-    userToken: string,
-    readToken: string,
-  ): PDP {
+  ): Promise<PDP> {
+    const userToken =
+      req.cookies[gmeConfig.authentication.azureActiveDirectory.cookieId];
+
+    // We currently allow setting a different token used only for read operations.
+    // This is a temporary workaround for the lack of read-only permissions in PDP.
+    const readToken = await withTokens(
+      gmeConfig,
+      (tokens) => tokens.get(projectId),
+    );
+
     // This doesn't yet work (doesn't support file uploads)
     const isInMemorySandbox = hostUri.baseUrl.toLowerCase().trim() === "memory";
     let api, observerId;
@@ -516,7 +516,11 @@ export default class PDP implements Adapter {
     );
   }
 
-  static fromUri(uri: string): PDP {
+  static fromUri(
+    req: AuthenticatedRequest,
+    gmeConfig: AzureGmeConfig,
+    uri: string,
+  ): PDP {
     const chunks = uri.split("/");
     const version = chunks.pop() as string;
     const index = chunks.pop() as string;
@@ -524,7 +528,13 @@ export default class PDP implements Adapter {
     const processType = chunks.pop() as string;
     const baseUrl = chunks.join("/").replace(/^pdp/, "https");
 
+    // FIXME: How can I get the read token?
     const hostUri = new HostUri(baseUrl, processType);
+    const userToken =
+      req.cookies[gmeConfig.authentication.azureActiveDirectory.cookieId];
+    // TODO: can we get the read token?
+    const readToken = userToken;
+
     return PDP.fromParameters(
       hostUri,
       userToken,
