@@ -218,6 +218,18 @@ export default class PDP implements Adapter {
       downloadInfo.files.map(async (fileInfo) => {
         const { name, url } = fileInfo;
         const response = await fetch(url);
+        console.log(
+          "fetching",
+          name,
+          "from",
+          url,
+          "is response ok?",
+          response.ok,
+        );
+        if (!response.ok) {
+          // FIXME: should this be a user error?
+          throw new RouterUtils.UserError("Unable to retrieve file: " + name);
+        }
         return [name, response.body];
       }),
     );

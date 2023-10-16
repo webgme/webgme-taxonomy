@@ -149,6 +149,7 @@ export class DownloadTask implements Runnable<FilePath> {
           Object.entries(streamDict).map(async ([name, dataStream]) => {
             const filePath = path.join(downloadDir, contentName, name);
             const writeStream = fs.createWriteStream(filePath);
+            console.log("writing to", filePath);
             await streamPipeline(dataStream, writeStream);
           }),
         );
