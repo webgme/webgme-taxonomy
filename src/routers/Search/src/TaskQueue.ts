@@ -117,17 +117,9 @@ export class DownloadTask implements Runnable<FilePath> {
           contentId,
         );
 
-        // create the directories
+        // create the main content directory
         const contentDir = path.join(downloadDir, contentName);
         await fsp.mkdir(contentDir);
-        const dirs = new Set(
-          Object.keys(streamDict)
-            .map((filepath) => path.dirname(filepath))
-            .sort(cmp.length),
-        );
-        await Promise.all(
-          [...dirs].map((dir) => fsp.mkdir(dir, { recursive: true })),
-        );
 
         // add the metadata file
         const contentMetadata = metadata[index];
@@ -148,8 +140,8 @@ export class DownloadTask implements Runnable<FilePath> {
         await Promise.all(
           Object.entries(streamDict).map(async ([name, dataStream]) => {
             const filePath = path.join(downloadDir, contentName, name);
+            await fsp.mkdir(path.dirname(filePath), { recursive: true });
             const writeStream = fs.createWriteStream(filePath);
-            console.log("writing to", filePath);
             await streamPipeline(dataStream, writeStream);
           }),
         );

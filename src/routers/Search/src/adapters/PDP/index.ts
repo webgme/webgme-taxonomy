@@ -216,16 +216,9 @@ export default class PDP implements Adapter {
 
     const entries = await Promise.all(
       downloadInfo.files.map(async (fileInfo) => {
-        const { name, url } = fileInfo;
+        const { url } = fileInfo;
+        const name = PDP.getOriginalFilePath(fileInfo.name);
         const response = await fetch(url);
-        console.log(
-          "fetching",
-          name,
-          "from",
-          url,
-          "is response ok?",
-          response.ok,
-        );
         if (!response.ok) {
           // FIXME: should this be a user error?
           throw new RouterUtils.UserError("Unable to retrieve file: " + name);
@@ -373,13 +366,20 @@ export default class PDP implements Adapter {
 
     console.log(JSON.stringify(result));
     const files = result.uploadDataFiles.files.map((file) => {
-      // name is prefixed with dat/index/version/<rest of path>
-      const name = file.name.split("/").slice(3).join("/");
+      const name = PDP.getOriginalFilePath(file.name);
       const params = new UploadParams(file.sasUrl, "PUT", UPLOAD_HEADERS);
       return new UploadRequest(name, params);
     });
 
     return new AppendResult(index, files);
+  }
+
+  /**
+   * Files stored on PDP have a prefix appended: "dat/<index>/<version>/<original>".
+   * This method strips this prefix from the string.
+   */
+  static getOriginalFilePath(pdpPath: string): string {
+    return pdpPath.replace(/^dat\/\d+\/\d+\//, "");
   }
 
   async _downloadFile(filePath: string, url: string) {
