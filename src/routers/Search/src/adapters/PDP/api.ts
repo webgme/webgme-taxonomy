@@ -438,8 +438,6 @@ export class InMemoryPdp implements PdpProvider {
             })),
           },
         };
-        const index = data.observations.length;
-        const version = 0;
         data.observations.push(obsDatum);
         data.state.numObservations = data.observations.length;
         const response: AppendObservationResponse = Object.assign(
