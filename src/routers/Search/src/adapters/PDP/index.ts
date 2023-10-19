@@ -216,13 +216,14 @@ export default class PDP implements Adapter {
 
     const entries = await Promise.all(
       downloadInfo.files.map(async (fileInfo) => {
-        const { name, url } = fileInfo;
+        const { url } = fileInfo;
+        const name = PDP.getOriginalFilePath(fileInfo.name);
         const response = await fetch(url);
         if (!response.ok) {
           // FIXME: should this be a user error?
           throw new RouterUtils.UserError("Unable to retrieve file: " + name);
         }
-        return [PDP.getOriginalFilePath(name), response.body];
+        return [name, response.body];
       }),
     );
     return Object.fromEntries(entries);
