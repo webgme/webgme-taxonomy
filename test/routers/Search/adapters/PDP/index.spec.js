@@ -10,6 +10,14 @@ describe("PDP", function () {
   const assert = require("assert");
   const processType = "someProcessType";
 
+  describe("getOriginalFilePath", function () {
+    it("should strip prefix from filenames", function () {
+      const original = "a/b/cat.txt";
+      const filename = "dat/0/100/" + original;
+      assert.equal(PDP.getOriginalFilePath(filename), original);
+    });
+  });
+
   describe("appendArtifact", function () {
     beforeEach(() => {
       const api = new InMemoryPdp();

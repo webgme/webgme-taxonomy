@@ -438,6 +438,8 @@ export class InMemoryPdp implements PdpProvider {
             })),
           },
         };
+        const index = data.observations.length;
+        const version = 0;
         data.observations.push(obsDatum);
         data.state.numObservations = data.observations.length;
         const response: AppendObservationResponse = Object.assign(
@@ -446,7 +448,7 @@ export class InMemoryPdp implements PdpProvider {
           { // the new field in the append response
             uploadDataFiles: {
               files: obsDatum.fileData.files.map((fdata) => ({
-                name: `dat/${fdata.name}`,
+                name: `dat/${index}/${version}/${fdata.name}`,
                 sasUrl: fdata.sasUrl,
               })),
             },
