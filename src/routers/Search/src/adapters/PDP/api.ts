@@ -448,7 +448,7 @@ export class InMemoryPdp implements PdpProvider {
           { // the new field in the append response
             uploadDataFiles: {
               files: obsDatum.fileData.files.map((fdata) => ({
-                name: `dat/${index}/${version}/${fdata.name}`,
+                name: `dat/${fdata.name}`,
                 sasUrl: fdata.sasUrl,
               })),
             },
