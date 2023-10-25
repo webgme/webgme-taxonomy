@@ -24,6 +24,7 @@ const JSONSchemaExporter = require("../../common/JSONSchemaExporter");
 const RouterUtils = require("../../common/routers/Utils");
 const Utils = require("../../common/Utils");
 const webgmeVersion = require("webgme/package.json").version;
+const SugarLevel = JSONSchemaExporter.SugarLevel;
 
 /**
  * Called when the server is created but before it starts to listening to incoming requests.
@@ -74,7 +75,11 @@ function initialize(middlewareOpts) {
       logger,
       async function getTagFormConfig(req, res) {
         const { root, core, contentType } = req.webgmeContext;
-        const exporter = JSONSchemaExporter.from(core, root);
+        const exporter = JSONSchemaExporter.from(
+          core,
+          root,
+          SugarLevel.Sugared,
+        );
         const vocabularies = await Utils.getVocabulariesFor(core, contentType);
         const contentName = core.getAttribute(contentType, "name").toString();
         const config = await exporter.getVocabSchemas(

@@ -19,6 +19,15 @@
       "value": false,
       "valueType": "boolean",
       "readOnly": false
+    },
+
+    {
+      "name": "sugarLevel",
+      "displayName": "Syntactic Sugar Level",
+      "description": "Require, allow, or reject syntactic sugar in JSON tags",
+      "value": "Any",
+      "valueType": "string",
+      "valueItems": ["Sugared", "Any", "Desugared"]
     }
   ]
 }

@@ -29,8 +29,8 @@ define([
     }
 
     async main() {
-      const { onlyReleased } = this.getCurrentConfig();
-      const exporter = new JSONSchemaExporter(this.core, this.META);
+      const { onlyReleased, sugarLevel } = this.getCurrentConfig();
+      const exporter = new JSONSchemaExporter(this.core, this.META, sugarLevel);
       const taxonomyName = this.core.getAttribute(this.activeNode, "name");
       let schema, uiSchema;
 

@@ -39,7 +39,9 @@ import {
   MetaNodeNotFoundError,
   TaxNodeNotFoundError,
 } from "./adapters/common/ModelError";
-import JSONSchemaExporter from "../../../common/JSONSchemaExporter";
+import JSONSchemaExporter, {
+  SugarLevel,
+} from "../../../common/JSONSchemaExporter";
 import TaskQueue, { DownloadTask, FilePath } from "./TaskQueue";
 import {
   ArtifactMetadata,
@@ -109,7 +111,11 @@ function initialize(middlewareOpts: MiddlewareOptions) {
     RouterUtils.getContentTypeRoutes("schema.json"),
     RouterUtils.handleUserErrors(logger, async (request, response) => {
       const { root, core, contentType } = request.webgmeContext;
-      const exporter = JSONSchemaExporter.from(core, root);
+      const exporter = JSONSchemaExporter.from(
+        core,
+        root,
+        SugarLevel.Desugared,
+      );
       const vocabularies = await Utils.getVocabulariesFor(core, contentType);
       const name = core.getAttribute(contentType, "name")?.toString() ?? "";
       const { schema } = await exporter.getVocabSchemas(

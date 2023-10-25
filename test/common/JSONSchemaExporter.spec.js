@@ -2,6 +2,7 @@ describe("JSONSchemaExporter", function () {
   const testFixture = require("../globals");
   const Importer = testFixture.requirejs("webgme-json-importer/JSONImporter");
   const JSONSchemaExporter = require("../../src/common/JSONSchemaExporter");
+  const SugarLevel = JSONSchemaExporter.SugarLevel;
   const Ajv = require("ajv");
   const ajv = new Ajv();
   const assert = require("assert");
@@ -26,9 +27,14 @@ describe("JSONSchemaExporter", function () {
     await gmeAuth.unload();
   });
 
-  async function getValidateFn(core, root, csv) {
+  async function getValidateFn(
+    core,
+    root,
+    csv,
+    sugarLevel = SugarLevel.Desugared,
+  ) {
     const taxonomy = await Utils.createTaxonomyFromCsv(core, root, csv);
-    const exporter = JSONSchemaExporter.from(core, root);
+    const exporter = JSONSchemaExporter.from(core, root, sugarLevel);
     const { schema, uiSchema } = await exporter.getSchemas(taxonomy);
     const validate = ajv.compile(schema);
     return validate;
@@ -262,6 +268,159 @@ describe("JSONSchemaExporter", function () {
       const validate = await getValidateFn(core, root, taxCsv);
       assert(await validate(tag));
     });
+
+    /**
+     * A helper function for making tests for sugar levels and enum/sets
+     */
+    function testSugarTag(testName, tag, sugarLevel, isValid = true) {
+      it(testName, async function () {
+        const taxCsv = `vocab,,,
+          ,enumTerm,,
+          ,,enumProp (enum),
+          ,,,Option1
+          ,,,Option2
+          ,,,,name(text)
+          ,,,Option3
+          ,setTerm,,
+          ,,setProp (set),
+          ,,,Option1
+          ,,,Option2
+          ,,,,name(text)
+          ,,,Option3
+          `;
+        const validate = await getValidateFn(
+          core,
+          root,
+          taxCsv,
+          sugarLevel,
+        );
+        assert.equal(await validate(tag), isValid);
+      });
+    }
+
+    testSugarTag(
+      "should allow sugared enums (level = sugared)",
+      {
+        vocab: {
+          enumTerm: {
+            enumProp: "Option1",
+          },
+        },
+      },
+      SugarLevel.Sugared,
+    );
+
+    testSugarTag(
+      "should not allow desugared enums (level = sugared)",
+      {
+        vocab: {
+          enumTerm: {
+            enumProp: { Option1: {} },
+          },
+        },
+      },
+      SugarLevel.Sugared,
+      false,
+    );
+
+    testSugarTag("should not sugar compound enums (level = sugared)", {
+      vocab: {
+        enumTerm: {
+          enumProp: { Option2: { name: "hello" } },
+        },
+      },
+    }, SugarLevel.Sugared);
+
+    testSugarTag("should allow sugared enums (level = any)", {
+      vocab: {
+        enumTerm: {
+          enumProp: "Option1",
+        },
+      },
+    }, SugarLevel.Any);
+
+    testSugarTag("should allow desugared enums (level = any)", {
+      vocab: {
+        enumTerm: {
+          enumProp: { Option1: {} },
+        },
+      },
+    }, SugarLevel.Any);
+
+    testSugarTag(
+      "should not allow different (sugared) variant",
+      {
+        vocab: {
+          enumTerm: {
+            enumProp: "Option4",
+          },
+        },
+      },
+      SugarLevel.Sugared,
+      false,
+    );
+
+    testSugarTag(
+      "should allow sugared sets (level = sugared)",
+      {
+        vocab: {
+          setTerm: {
+            setProp: ["Option1"],
+          },
+        },
+      },
+      SugarLevel.Sugared,
+    );
+
+    testSugarTag(
+      "should not allow desugared sets (level = sugared)",
+      {
+        vocab: {
+          setTerm: {
+            setProp: [{ Option1: {} }],
+          },
+        },
+      },
+      SugarLevel.Sugared,
+      false,
+    );
+
+    testSugarTag("should not sugar compound sets (level = sugared)", {
+      vocab: {
+        setTerm: {
+          setProp: [{ Option2: { name: "hello" } }],
+        },
+      },
+    }, SugarLevel.Sugared);
+
+    testSugarTag("should allow sugared sets (level = any)", {
+      vocab: {
+        setTerm: {
+          setProp: ["Option1"],
+        },
+      },
+    }, SugarLevel.Any);
+
+    testSugarTag("should allow desugared sets (level = any)", {
+      vocab: {
+        setTerm: {
+          setProp: [{ Option1: {} }],
+        },
+      },
+    }, SugarLevel.Any);
+
+    testSugarTag(
+      "should not allow different (sugared) variant (set)",
+      {
+        vocab: {
+          setTerm: {
+            setProp: ["Option4"],
+          },
+        },
+      },
+      SugarLevel.Sugared,
+      false,
+    );
 
     it("should support compound enums", async function () {
       const taxCsv = `vocab,,,,
