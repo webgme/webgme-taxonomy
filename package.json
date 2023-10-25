@@ -31,7 +31,6 @@
     "@types/node-fetch": "^2.6.2",
     "@types/underscore": "^1.11.4",
     "@zerodevx/svelte-toast": "^0.7.2",
-    "ajv": "^8.11.0",
     "chai": "^4.3.6",
     "fp-ts": "^2.13.1",
     "husky": "^8.0.1",
@@ -54,6 +53,7 @@
     "webgme": "github:webgme/webgme#azure",
     "webgme-engine": "github:webgme/webgme-engine#azure",
     "webgme-json-importer": "^1.4.1",
+    "ajv": "^8.11.0",
     "webgme-transformations": "^0.5.1",
     "zip-a-folder": "^1.1.5"
   },

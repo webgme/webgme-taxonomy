@@ -92,7 +92,6 @@ Visitor.call = async function (core, node, data) {
 class DesugarJson {
   constructor(core, taxonomy) {
     this.core = core;
-    // TODO: check that the node is a taxonomy node
     this.taxonomy = taxonomy;
   }
 
