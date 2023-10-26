@@ -1,6 +1,10 @@
 import type { AppendResult } from "./AppendResult";
 import type TagFormatter from "../../../../../common/TagFormatter";
-import type { WebgmeContext, WebgmeRequest } from "../../../../../common/types";
+import type {
+  AzureGmeConfig,
+  WebgmeContext,
+  WebgmeRequest,
+} from "../../../../../common/types";
 import type { Option } from "oxide.ts";
 
 export interface Adapter {
@@ -68,7 +72,11 @@ export interface AdapterStatic {
     request: WebgmeRequest,
     config: any,
   ): Promise<Adapter>;
-  fromUri(uri: string): Adapter;
+  fromUri(
+    config: AzureGmeConfig,
+    req: WebgmeRequest,
+    uri: string,
+  ): Promise<Adapter>;
   getUriPatterns(): string[];
 }
 

@@ -30,7 +30,11 @@ import {
   UploadParams,
   UploadRequest,
 } from "../common/AppendResult";
-import { WebgmeContext } from "../../../../../common/types";
+import {
+  AzureGmeConfig,
+  WebgmeContext,
+  WebgmeRequest,
+} from "../../../../../common/types";
 import { toArtifactMetadatav2 } from "../common/Helpers";
 import { filterMap, fromResult, Pattern } from "../../Utils";
 import ScopedFnQueue from "../../ScopedFnQueue";
@@ -319,7 +323,11 @@ export default class MongoAdapter implements Adapter {
     );
   }
 
-  static fromUri(uri: string): MongoAdapter {
+  static async fromUri(
+    _config: AzureGmeConfig,
+    _req: WebgmeRequest,
+    uri: string,
+  ): Promise<MongoAdapter> {
     // TODO: How can we handle repo IDs?
     // TODO: they are ambiguous if we don't know if they are for a repo or individual content item
     // TODO: for now, we will assume they are content IDs

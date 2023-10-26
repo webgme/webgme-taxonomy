@@ -90,4 +90,10 @@ export interface ProjectVersion {
   commit: string;
 }
 
-export type WebgmeRequest = Request & { webgmeContext: WebgmeContext };
+export interface RequestWithCookies extends Request {
+  cookies: { [key: string]: string };
+}
+
+export type WebgmeRequest = RequestWithCookies & {
+  webgmeContext: WebgmeContext;
+};

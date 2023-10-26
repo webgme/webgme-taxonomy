@@ -21,6 +21,7 @@ import SystemTerm from "./SystemTerm";
 import UploadContext, { FileUpload } from "./UploadContext";
 import RouterUtils, { UserError } from "../../../common/routers/Utils";
 import type {
+  AzureGmeConfig,
   MiddlewareOptions,
   WebgmeContext,
   WebgmeRequest,
@@ -409,7 +410,9 @@ function initialize(middlewareOpts: MiddlewareOptions) {
 
         // get all the metadata in human format
         const task = new DownloadTask(
+          mainConfig as AzureGmeConfig,
           logger,
+          req,
           metadata,
           () => getRepositoryName(logger, repoId, storage, formatter),
         );

@@ -20,10 +20,10 @@ import type {
 } from "./types";
 import RouterUtils from "../../../../../common/routers/Utils";
 import withTokens from "./tokens";
-import type { AuthenticatedRequest } from "../../../../../common/routers/Utils";
 import type {
   AzureGmeConfig,
   WebgmeContext,
+  WebgmeRequest,
 } from "../../../../../common/types";
 import { pipeline } from "stream";
 import { promisify } from "util";
@@ -363,7 +363,6 @@ export default class PDP implements Adapter {
       ),
     );
 
-    console.log(JSON.stringify(result));
     const files = result.uploadDataFiles.files.map((file) => {
       const name = PDP.getOriginalFilePath(file.name);
       const params = new UploadParams(file.sasUrl, "PUT", UPLOAD_HEADERS);
@@ -461,7 +460,7 @@ export default class PDP implements Adapter {
   }
 
   static async from(
-    req: AuthenticatedRequest,
+    req: WebgmeRequest,
     gmeConfig: AzureGmeConfig,
     gmeContext: WebgmeContext,
     storageNode: Core.Node,
@@ -487,18 +486,18 @@ export default class PDP implements Adapter {
     );
 
     return PDP.fromParameters(
+      req,
+      gmeConfig,
       hostUri,
-      userToken,
-      readToken,
     );
   }
 
   static async fromParameters(
-    req: AuthenticatedRequest,
+    req: WebgmeRequest,
     gmeConfig: AzureGmeConfig,
-    projectId: Option<string>,
     hostUri: HostUri,
   ): Promise<PDP> {
+    const gmeContext = req.webgmeContext;
     const userToken =
       req.cookies[gmeConfig.authentication.azureActiveDirectory.cookieId];
 
@@ -506,7 +505,7 @@ export default class PDP implements Adapter {
     // This is a temporary workaround for the lack of read-only permissions in PDP.
     const readToken = await withTokens(
       gmeConfig,
-      (tokens) => tokens.get(projectId),
+      (tokens) => tokens.get(gmeContext.project.projectId),
     );
 
     // This doesn't yet work (doesn't support file uploads)
@@ -528,29 +527,23 @@ export default class PDP implements Adapter {
     );
   }
 
-  static fromUri(
-    req: AuthenticatedRequest,
+  static async fromUri(
     gmeConfig: AzureGmeConfig,
+    req: WebgmeRequest,
     uri: string,
-  ): PDP {
+  ): Promise<PDP> {
     const chunks = uri.split("/");
     const version = chunks.pop() as string;
     const index = chunks.pop() as string;
     const contentId = `${index}/${version}`;
     const processType = chunks.pop() as string;
     const baseUrl = chunks.join("/").replace(/^pdp/, "https");
-
-    // FIXME: How can I get the read token?
     const hostUri = new HostUri(baseUrl, processType);
-    const userToken =
-      req.cookies[gmeConfig.authentication.azureActiveDirectory.cookieId];
-    // TODO: can we get the read token?
-    const readToken = userToken;
 
     return PDP.fromParameters(
+      req,
+      gmeConfig,
       hostUri,
-      userToken,
-      readToken,
     );
   }
 

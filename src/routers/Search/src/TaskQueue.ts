@@ -10,7 +10,8 @@ import { pipeline } from "stream";
 import { promisify } from "util";
 const streamPipeline = promisify(pipeline);
 import { Result } from "oxide.ts";
-import { cmp, UniqueNames } from "./Utils";
+import { UniqueNames } from "./Utils";
+import { AzureGmeConfig, WebgmeRequest } from "../../../common/types";
 
 export enum Status {
   Created,
@@ -43,16 +44,22 @@ interface Runnable<O> {
 
 export type FilePath = string;
 export class DownloadTask implements Runnable<FilePath> {
+  private config: AzureGmeConfig;
+  private req: WebgmeRequest;
   logger: Global.GmeLogger;
   metadata: ArtifactMetadatav2[];
   getRepoName: () => Promise<string>;
 
   constructor(
+    config: AzureGmeConfig,
     logger: Global.GmeLogger,
+    req: WebgmeRequest,
     metadata: ArtifactMetadatav2[],
     getRepoName: () => Promise<string>,
   ) {
     this.getRepoName = getRepoName;
+    this.config = config;
+    this.req = req;
     this.logger = logger;
     this.metadata = metadata;
   }
@@ -85,7 +92,11 @@ export class DownloadTask implements Runnable<FilePath> {
     const fileWriteTasks = uniqNames.map(
       async (contentName, index) => {
         const uri = contentUris[index];
-        const storage = StorageAdapter.fromUri(uri);
+        const storage = await StorageAdapter.fromUri(
+          this.req,
+          uri,
+          this.config,
+        );
         const [repoId, id] = storage.resolveUri(uri);
         const streamDict = await storage.getFileStreams(repoId, id);
 

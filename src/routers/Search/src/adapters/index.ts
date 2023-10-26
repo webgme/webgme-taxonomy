@@ -1,6 +1,10 @@
 // TODO: load the different adapter types
 
-import type { WebgmeContext, WebgmeRequest } from "../../../../common/types";
+import type {
+  AzureGmeConfig,
+  WebgmeContext,
+  WebgmeRequest,
+} from "../../../../common/types";
 import RouterUtils from "../../../../common/routers/Utils";
 import { StorageNotFoundError } from "./common/ModelError";
 import fs from "fs";
@@ -72,7 +76,11 @@ export default class Adapters {
     return await AdapterType.from(gmeContext, storageNode, req, config);
   }
 
-  static fromUri(uri: string): Adapter {
+  static async fromUri(
+    req: WebgmeRequest,
+    uri: string,
+    config: AzureGmeConfig,
+  ): Promise<Adapter> {
     const AdapterType = Object.values(SUPPORTED_ADAPTERS)
       .find((adapter) =>
         adapter.getUriPatterns().find((pattern) => {
@@ -85,7 +93,7 @@ export default class Adapters {
       throw new UnsupportedUriFormat(uri);
     }
 
-    return AdapterType.fromUri(uri);
+    return AdapterType.fromUri(config, req, uri);
   }
 
   static getUriPatterns(): string[] {
