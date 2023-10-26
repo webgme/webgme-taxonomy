@@ -576,7 +576,7 @@ export default class PDP implements Adapter {
   }
 }
 
-class HostUri {
+export class HostUri {
   baseUrl: string;
   processType: string;
 

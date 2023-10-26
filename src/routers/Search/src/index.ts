@@ -149,6 +149,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
           req,
           mainConfig,
         );
+        // TODO: add support for repos that just reference another repo
         const artifacts = await storage.listArtifacts(repoId);
         res.status(200).json(artifacts).end();
       },
