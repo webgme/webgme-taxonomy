@@ -417,8 +417,8 @@ class JSONSchemaExporter {
         // rather than the empty object notation
         if (isEmptyCompound) {
           const sugarySchema = {
+            const: this.core.getAttribute(child, "name"),
             type: "string",
-            pattern: "^" + this.core.getAttribute(child, "name") + "$",
           };
 
           if (this.sugarLevel === SugarLevel.Sugared) {
