@@ -310,13 +310,20 @@ function initialize(middlewareOpts: MiddlewareOptions) {
           req,
           mainConfig,
         );
-        const metadata = await storage.getMetadata(
+        const metadataOpt = await storage.getMetadata(
           parentId,
           id,
         );
 
         const formatter = await getFormatter(req.webgmeContext);
-        // TODO: apply it to the formatter
+        const metadata = fromResult(
+          metadataOpt
+            .map((md) => {
+              md.tags = formatter.toHumanFormat(md.tags);
+              return md;
+            })
+            .okOrElse(() => new UserError("Metadata not found", 404)),
+        );
 
         res.json(metadata);
       },
