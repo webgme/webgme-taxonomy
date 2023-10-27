@@ -1,6 +1,10 @@
 import type { AppendResult } from "./AppendResult";
 import type TagFormatter from "../../../../../common/TagFormatter";
-import type { WebgmeContext, WebgmeRequest } from "../../../../../common/types";
+import type {
+  AzureGmeConfig,
+  WebgmeContext,
+  WebgmeRequest,
+} from "../../../../../common/types";
 import type { Option } from "oxide.ts";
 
 export interface Adapter {
@@ -40,6 +44,10 @@ export interface Adapter {
     fileId: string,
     req: WebgmeRequest,
   ): Promise<void>;
+  /**
+   * Convert a URI to a repo and content ID.
+   */
+  resolveUri(uri: string): [string, string];
   /*
    * RAII-style reservations for uploading data
    */
@@ -63,6 +71,11 @@ export interface AdapterStatic {
     storageNode: Core.Node,
     request: WebgmeRequest,
     config: any,
+  ): Promise<Adapter>;
+  fromUri(
+    config: AzureGmeConfig,
+    req: WebgmeRequest,
+    uri: string,
   ): Promise<Adapter>;
   getUriPatterns(): string[];
 }

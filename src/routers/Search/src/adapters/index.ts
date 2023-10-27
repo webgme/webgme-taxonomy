@@ -1,10 +1,16 @@
 // TODO: load the different adapter types
 
-import type { WebgmeContext, WebgmeRequest } from "../../../../common/types";
+import type {
+  AzureGmeConfig,
+  WebgmeContext,
+  WebgmeRequest,
+} from "../../../../common/types";
 import RouterUtils from "../../../../common/routers/Utils";
 import { StorageNotFoundError } from "./common/ModelError";
 import fs from "fs";
 import type { Adapter, AdapterStatic } from "./common/types";
+import assert from "assert";
+import { UnsupportedUriFormat } from "./common/StorageError";
 
 const SUPPORTED_ADAPTERS: { [type: string]: AdapterStatic } = Object
   .fromEntries(
@@ -13,7 +19,20 @@ const SUPPORTED_ADAPTERS: { [type: string]: AdapterStatic } = Object
       .filter((entry) => entry.isDirectory() && (entry.name !== "common"))
       .map(({ name }) => [name.toLowerCase(), require(`./${name}`).default]),
   );
-import assert from "assert";
+const prefixRegex = /^[a-zA-Z]+:\/\//;
+const AdaptersByPrefix = Object.values(SUPPORTED_ADAPTERS)
+  .find((adapter) => {
+    const pattern = adapter.getUriPatterns()
+      .find((ptrn) => prefixRegex.test(ptrn));
+
+    if (!pattern) {
+      throw new Error(
+        "Could not find prefix for adapter: " + JSON.stringify(adapter),
+      );
+    }
+
+    return pattern.split("://").shift();
+  });
 
 export default class Adapters {
   static async from(
@@ -56,6 +75,27 @@ export default class Adapters {
     );
     return await AdapterType.from(gmeContext, storageNode, req, config);
   }
+
+  static async fromUri(
+    req: WebgmeRequest,
+    uri: string,
+    config: AzureGmeConfig,
+  ): Promise<Adapter> {
+    const AdapterType = Object.values(SUPPORTED_ADAPTERS)
+      .find((adapter) =>
+        adapter.getUriPatterns().find((pattern) => {
+          const regex = new RegExp(pattern);
+          return regex.test(uri);
+        })
+      );
+
+    if (!AdapterType) {
+      throw new UnsupportedUriFormat(uri);
+    }
+
+    return AdapterType.fromUri(config, req, uri);
+  }
+
   static getUriPatterns(): string[] {
     return Object.values(SUPPORTED_ADAPTERS).flatMap((adapter) =>
       adapter.getUriPatterns()
@@ -73,4 +113,7 @@ function isTypeOf(core: WebgmeContext["core"], node: Core.Node, name: string) {
   }
 
   return false;
+}
+
+export namespace Storage {
 }

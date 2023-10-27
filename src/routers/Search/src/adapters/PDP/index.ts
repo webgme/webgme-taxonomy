@@ -20,10 +20,10 @@ import type {
 } from "./types";
 import RouterUtils from "../../../../../common/routers/Utils";
 import withTokens from "./tokens";
-import type { AuthenticatedRequest } from "../../../../../common/routers/Utils";
 import type {
   AzureGmeConfig,
   WebgmeContext,
+  WebgmeRequest,
 } from "../../../../../common/types";
 import { pipeline } from "stream";
 import { promisify } from "util";
@@ -69,14 +69,13 @@ export default class PDP implements Adapter {
 
   constructor(
     api: PdpProvider,
-    processType: string,
-    hostUri: string,
+    hostUri: HostUri,
     observerId: string,
     readToken: string,
   ) {
     this.observerId = observerId;
-    this.processType = processType;
-    this._hostUri = hostUri;
+    this.processType = hostUri.processType;
+    this._hostUri = hostUri.toString();
     this._readToken = readToken;
     this.api = api;
     this._repoLocks = new ScopedFnQueue();
@@ -364,7 +363,6 @@ export default class PDP implements Adapter {
       ),
     );
 
-    console.log(JSON.stringify(result));
     const files = result.uploadDataFiles.files.map((file) => {
       const name = PDP.getOriginalFilePath(file.name);
       const params = new UploadParams(file.sasUrl, "PUT", UPLOAD_HEADERS);
@@ -462,10 +460,10 @@ export default class PDP implements Adapter {
   }
 
   static async from(
+    req: WebgmeRequest,
+    gmeConfig: AzureGmeConfig,
     gmeContext: WebgmeContext,
     storageNode: Core.Node,
-    req: AuthenticatedRequest,
-    gmeConfig: AzureGmeConfig,
   ) {
     const { core } = gmeContext;
     const baseUrl = core.getAttribute(storageNode, "URL");
@@ -478,57 +476,84 @@ export default class PDP implements Adapter {
       throw new MissingAttributeError(gmeContext, storageNode, "processType");
     }
 
+    const hostUri = fromResult(
+      Result.safe(
+        () => new HostUri(baseUrl.toString(), processType.toString()),
+      )
+        .mapErr((err) =>
+          new InvalidAttributeError(gmeContext, storageNode, "URL", err.message)
+        ),
+    );
+
+    return PDP.fromParameters(
+      req,
+      gmeConfig,
+      hostUri,
+    );
+  }
+
+  static async fromParameters(
+    req: WebgmeRequest,
+    gmeConfig: AzureGmeConfig,
+    hostUri: HostUri,
+  ): Promise<PDP> {
+    const gmeContext = req.webgmeContext;
     const userToken =
       req.cookies[gmeConfig.authentication.azureActiveDirectory.cookieId];
 
     // We currently allow setting a different token used only for read operations.
     // This is a temporary workaround for the lack of read-only permissions in PDP.
-    const projectId = gmeContext.project.projectId;
     const readToken = await withTokens(
       gmeConfig,
-      (tokens) => tokens.get(projectId),
+      (tokens) => tokens.get(gmeContext.project.projectId),
     );
 
-    const hostUri = Result.safe(
-      PDP.getHostUri,
-      baseUrl.toString(),
-      processType.toString(),
-    )
-      .mapErr((err) =>
-        new InvalidAttributeError(gmeContext, storageNode, "URL", err.message)
-      );
-
     // This doesn't yet work (doesn't support file uploads)
-    const isInMemorySandbox =
-      baseUrl.toString().toLowerCase().trim() === "memory";
-
+    const isInMemorySandbox = hostUri.baseUrl.toLowerCase().trim() === "memory";
     let api, observerId;
     if (isInMemorySandbox) {
       api = new InMemoryPdp();
       observerId = "testUsername";
     } else {
-      api = new PdpApi(baseUrl.toString(), userToken);
+      api = new PdpApi(hostUri.baseUrl, userToken);
       observerId = RouterUtils.getObserverIdFromToken(userToken);
     }
 
     return new PDP(
       api,
-      processType.toString(),
-      fromResult(hostUri),
+      hostUri,
       observerId,
       readToken || userToken,
     );
   }
 
-  static getHostUri(baseUrl: string, processType: string): string {
-    if (baseUrl.startsWith("http://")) {
-      throw new Error("URL must use https");
-    }
+  static async fromUri(
+    gmeConfig: AzureGmeConfig,
+    req: WebgmeRequest,
+    uri: string,
+  ): Promise<PDP> {
+    const chunks = uri.split("/");
+    const version = chunks.pop() as string;
+    const index = chunks.pop() as string;
+    const contentId = `${index}/${version}`;
+    const processType = chunks.pop() as string;
+    const baseUrl = chunks.join("/").replace(/^pdp/, "https");
+    const hostUri = new HostUri(baseUrl, processType);
 
-    const hostAddr = baseUrl
-      .replace(/^(https:\/\/)?/, "")
-      .replace(/\/$/, "");
-    return `pdp://${hostAddr}/${processType}`;
+    return PDP.fromParameters(
+      req,
+      gmeConfig,
+      hostUri,
+    );
+  }
+
+  resolveUri(uri: string): [string, string] {
+    const chunks = uri.split("/");
+    const version = chunks.pop() as string;
+    const index = chunks.pop() as string;
+    const content = `${index}/${version}`;
+    const repo = chunks.pop() as string;
+    return [repo, content];
   }
 
   static getUriPatterns(): string[] {
@@ -551,6 +576,24 @@ export default class PDP implements Adapter {
   }
 }
 
+export class HostUri {
+  baseUrl: string;
+  processType: string;
+
+  constructor(baseUrl: string, processType: string) {
+    if (baseUrl.startsWith("http://")) {
+      throw new Error("URL must use https"); // FIXME: better error type
+    }
+    this.baseUrl = baseUrl.replace(/\/$/, "");
+    this.processType = processType;
+  }
+
+  toString() {
+    const hostAddr = this.baseUrl
+      .replace(/^(https:\/\/)?/, "");
+    return `pdp://${hostAddr}/${this.processType}`;
+  }
+}
 interface PdpReservation extends UploadReservation {
   uri: string;
   repoId: string;
