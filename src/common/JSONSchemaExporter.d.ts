@@ -4,6 +4,11 @@ type VocabSchemas = {
   formData: any;
 };
 
+export enum SugarLevel {
+  Sugared = "Sugared",
+  Desugared = "Desugared",
+  Any = "Any",
+}
 export default class JSONSchemaExporter {
   getSchemas(
     taxonomyNode: Core.Node,
@@ -15,5 +20,9 @@ export default class JSONSchemaExporter {
     onlyReleased?: boolean,
   ): Promise<VocabSchemas>;
 
-  static from(core: GmeClasses.Core, node: Core.Node): JSONSchemaExporter;
+  static from(
+    core: GmeClasses.Core,
+    node: Core.Node,
+    sugarLevel: SugarLevel,
+  ): JSONSchemaExporter;
 }

@@ -7,18 +7,31 @@ const StorageAdapters =
 const { Pattern, unique } = require("../routers/Search/build/Utils");
 const optionTypes = ["EnumField", "SetField"];
 
+const SugarLevel = {};
+SugarLevel.Sugared = "Sugared";
+SugarLevel.Desugared = "Desugared";
+SugarLevel.Any = "Any";
+
 class JSONSchemaExporter {
   /**
    * Creates an instance of JSONSchemaExporter.
    * @param {GmeClasses.Core & { getMetaType(node: Core.Node): Core.Node }} core
    * @param {any} META
+   * @param {string} sugarLevel
    * @memberof JSONSchemaExporter
    */
-  constructor(core, META) {
+  constructor(core, META, sugarLevel) {
     this.core = core;
     this.META = META;
+    this.sugarLevel = sugarLevel;
   }
 
+  /**
+   * Get the JSON (and UI) schemas for a taxonomy.
+   * @param {Core.Node} taxonomyNode
+   * @param {boolean} onlyReleased
+   * @memberof JSONSchemaExporter
+   */
   async getSchemas(taxonomyNode, onlyReleased = false) {
     const taxonomyName = this.core.getAttribute(taxonomyNode, "name");
     const vocabs = await this.core.loadChildren(taxonomyNode);
@@ -379,9 +392,45 @@ class JSONSchemaExporter {
       return { type: "null" };
     }
 
-    const childSchemas = await Promise.all(
-      children.map((c) => this.getFieldSchema(c)),
+    // if the child is an empty compound field, we may need to support
+    // a string with the name (syntactic sugar)
+    const childSchemaTuples = await Promise.all(
+      children.map(async (c) => {
+        const schema = await this.getFieldSchema(c);
+        return [c, schema];
+      }),
     );
+
+    const childSchemas = childSchemaTuples
+      .flatMap(([child, schema]) => {
+        let schemas = [schema];
+
+        if (this.sugarLevel === SugarLevel.Desugared) {
+          return schemas;
+        }
+
+        // If it is an empty compound field, add support for the name as syntactic sugar
+        const isEmptyCompound = this.isTypeOf(child, "CompoundField") &&
+          this.core.getChildrenPaths(child).length == 0;
+
+        // Empty compounds in enums or sets can be expressed with just the text name
+        // rather than the empty object notation
+        if (isEmptyCompound) {
+          const sugarySchema = {
+            const: this.core.getAttribute(child, "name"),
+            type: "string",
+          };
+
+          if (this.sugarLevel === SugarLevel.Sugared) {
+            schemas = [sugarySchema];
+          } else if (this.sugarLevel === SugarLevel.Any) {
+            schemas.push(sugarySchema);
+          }
+        }
+
+        return schemas;
+      });
+
     let type = unique(childSchemas.map((s) => s.type));
     if (type.length < 2) {
       type = type[0];
@@ -408,12 +457,12 @@ class JSONSchemaExporter {
     }
   }
 
-  static from(core, node) {
+  static from(core, node, sugarLevel) {
     const metanodes = Object.values(core.getAllMetaNodes(node));
     const meta = Object.fromEntries(
       metanodes.map((n) => [core.getAttribute(n, "name"), n]),
     );
-    return new JSONSchemaExporter(core, meta);
+    return new JSONSchemaExporter(core, meta, sugarLevel);
   }
 }
 
@@ -527,3 +576,4 @@ class Term {
 }
 
 module.exports = JSONSchemaExporter;
+module.exports.SugarLevel = SugarLevel;

@@ -286,6 +286,10 @@ define([
   TagCreatorControl.prototype._getJSONSchemas = async function () {
     const pluginId = "JSONSchemaExporter";
     const context = this._client.getCurrentPluginContext(pluginId);
+    context.pluginConfig = {
+      onlyReleased: false,
+      sugarLevel: "Sugared",
+    };
     const results = await Q.ninvoke(
       this._client,
       "runServerPlugin",

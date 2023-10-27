@@ -19,6 +19,7 @@ var express = require("express"),
 const RouterUtils = require("../../common/routers/Utils");
 const Utils = require("../../common/Utils");
 const JSONSchemaExporter = require("../../common/JSONSchemaExporter");
+const SugarLevel = JSONSchemaExporter.SugarLevel;
 
 /**
  * Called when the server is created but before it starts to listening to incoming requests.
@@ -64,8 +65,10 @@ function initialize(middlewareOpts) {
       logger,
       async function getJSONSchema(request, response) {
         const onlyReleased = request.params.hasOwnProperty("onlyReleased");
+        const sugarLevel = SugarLevel[request.params.sugarLevel] ||
+          SugarLevel.Any;
         const { root, core, contentType } = request.webgmeContext;
-        const exporter = JSONSchemaExporter.from(core, root);
+        const exporter = JSONSchemaExporter.from(core, root, sugarLevel);
         const vocabularies = await Utils.getVocabulariesFor(core, contentType);
         const name = core.getAttribute(contentType, "name");
         const { schema } = await exporter.getVocabSchemas(
