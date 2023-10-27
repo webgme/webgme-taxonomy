@@ -21,6 +21,7 @@ import SystemTerm from "./SystemTerm";
 import UploadContext, { FileUpload } from "./UploadContext";
 import RouterUtils, { UserError } from "../../../common/routers/Utils";
 import type {
+  AzureGmeConfig,
   MiddlewareOptions,
   WebgmeContext,
   WebgmeRequest,
@@ -41,7 +42,9 @@ import {
 } from "./adapters/common/ModelError";
 import JSONSchemaExporter from "../../../common/JSONSchemaExporter";
 import TaskQueue, { DownloadTask, FilePath } from "./TaskQueue";
+import { Option } from "oxide.ts";
 import {
+  Adapter,
   ArtifactMetadata,
   ArtifactMetadatav2,
   UploadReservation,
@@ -146,6 +149,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
           req,
           mainConfig,
         );
+        // TODO: add support for repos that just reference another repo
         const artifacts = await storage.listArtifacts(repoId);
         res.status(200).json(artifacts).end();
       },
@@ -361,15 +365,15 @@ function initialize(middlewareOpts: MiddlewareOptions) {
 
   const downloadQueue: TaskQueue<DownloadTask, FilePath> = new TaskQueue();
   router.post(
-    RouterUtils.getContentTypeRoutes("artifacts/:parentId/downloads/"),
+    RouterUtils.getContentTypeRoutes("artifacts/:repoId/downloads/"),
     RouterUtils.handleUserErrors(
       logger,
       async function downloadContent(req, res) {
-        const { parentId } = req.params;
+        const { repoId } = req.params;
         // TODO: get the IDs for the specific observations to get
         let ids;
         if (isString(req.query.ids)) {
-          ids = JSON.parse(req.query.ids);
+          ids = JSON.parse(req.query.ids) as string[];
         } else {
           res.status(400).send("List of artifact IDs required");
           return;
@@ -380,18 +384,61 @@ function initialize(middlewareOpts: MiddlewareOptions) {
           req,
           mainConfig,
         );
+        // Fetch all the metadata
+        const contentIds = ids.sort((id1, id2) => +id1 < +id2 ? -1 : 1);
+        const allMetadata = await Promise.all(
+          contentIds.map(async (contentId) => {
+            const metadata = await storage.getMetadata(
+              repoId,
+              contentId,
+            );
+            return metadata.map((md) => {
+              try {
+                md.tags = formatter.toHumanFormat(md.tags);
+              } catch (err) {
+                logger.warn(
+                  `Unable to convert tags to human format: ${contentId} (${repoId})`,
+                );
+                throw err;
+              }
+              return md;
+            });
+          }),
+        );
+        const metadata = allMetadata
+          .filter((metadata) => metadata.isSome())
+          .map((metadata) => metadata.unwrap());
+
+        // get all the metadata in human format
         const task = new DownloadTask(
+          mainConfig as AzureGmeConfig,
           logger,
-          storage,
-          formatter,
-          parentId,
-          ids,
+          req,
+          metadata,
+          () => getRepositoryName(logger, repoId, storage, formatter),
         );
         const id = downloadQueue.submitTask(task);
         res.json(id);
       },
     ),
   );
+
+  async function getRepositoryName(
+    logger: Global.GmeLogger,
+    repoId: string,
+    storage: Adapter,
+    formatter: TagFormatter,
+  ): Promise<string> {
+    const metadata = await storage.getRepoMetadata(repoId);
+    const tags = formatter.toHumanFormat(metadata.tags);
+    return Option.from(tags.Base?.name?.value as string)
+      .unwrapOrElse(() => {
+        logger.info(
+          `No "Base.name" tag found for ${repoId}. Using ID instead.`,
+        );
+        return repoId;
+      });
+  }
 
   router.get(
     RouterUtils.getContentTypeRoutes(

@@ -37,7 +37,10 @@
   let open = false;
   let uploading: Promise<UploadPromise[]> | null = null;
   let selectTagDisabled = false;
+  let isReference = false;
 
+  $: isReference = !!metadata?.tags?.Base?.Location;
+  $: console.log({isReference, metadata});
   $: displayName = set?.displayName ?? "";
   $: appendName = displayName;
   $: setOpen(set != null);
@@ -58,7 +61,7 @@
 
 
   async function onAppendClicked() {
-    if (!files.length) {
+    if (!files.length && !isReference) {
       return dispatchError(`${contentType.name} file required.`);
     }
 
@@ -114,8 +117,13 @@
   <Title id="append-artifact-title">Append data to {displayName}</Title>
   <Content id="append-artifact-content">
     <Textfield label="Name" bind:value={appendName} disabled={!!uploading} />
-    <p>{contentType.name} file(s):</p>
+    <TagSelector 
+      bind:metadata={metadata}
+      bind:contentType
+      bind:disabled={selectTagDisabled}
+    />
 
+    <p>{contentType.name} file(s):</p>
     <ul class="append-files">
       {#each files as file, index (file.name + "-" + file.lastModified)}
         <li transition:fade={{ duration: 200 }}>
@@ -154,7 +162,12 @@
       {/each}
     </ul>
 
-    {#if !uploading}
+    {#if isReference}
+      <!-- TODO: show the display name of the ref? -->
+      <Dropzone disabled multiple={true}>
+        <p>Tags reference existing data</p>
+      </Dropzone>
+    {:else if !uploading}
       <Dropzone on:drop={onAppendFileDrop} multiple={true}>
         <p>Select dataset to upload.</p>
       </Dropzone>
@@ -163,12 +176,6 @@
         <p>Select dataset to upload.</p>
       </Dropzone>
     {/if}
-
-    <TagSelector 
-      bind:metadata={metadata}
-      bind:contentType
-      bind:disabled={selectTagDisabled}
-    />
   </Content>
   <div class="dialog-actions">
     <Button disabled={uploading} on:click={() => close()}>

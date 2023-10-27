@@ -1,6 +1,7 @@
 describe("PDP", function () {
-  const PDP =
-    require("../../../../../src/routers/Search/build/adapters/PDP").default;
+  const { default: PDP, HostUri } = require(
+    "../../../../../src/routers/Search/build/adapters/PDP",
+  );
   const { InMemoryPdp } = require(
     "../../../../../src/routers/Search/build/adapters/PDP/api",
   );
@@ -22,10 +23,9 @@ describe("PDP", function () {
     beforeEach(() => {
       const api = new InMemoryPdp();
       api.dropData();
-      const hostUri = PDP.getHostUri("memory", processType);
+      const hostUri = new HostUri("memory", processType);
       storage = new PDP(
         api,
-        processType,
         hostUri,
         "observerId",
         "readToken",
@@ -60,10 +60,9 @@ describe("PDP", function () {
       const api = new InMemoryPdp();
       api.dropData();
       const processType = "someProcessType";
-      const hostUri = PDP.getHostUri("memory", processType);
+      const hostUri = new HostUri("memory", processType);
       storage = new PDP(
         api,
-        processType,
         hostUri,
         "observerId",
         "readToken",
@@ -147,21 +146,19 @@ describe("PDP", function () {
     });
   });
 
-  describe("getHostUri", function () {
+  describe("HostUri", function () {
     it("should replace trailing /", function () {
-      const uri = PDP.getHostUri("https://127.0.0.1:80/", "someProcess");
+      const uri = new HostUri("https://127.0.0.1:80/", "someProcess");
       assert.equal(uri, "pdp://127.0.0.1:80/someProcess");
     });
 
     it("should strip https://", function () {
-      const uri = PDP.getHostUri("https://127.0.0.1:80/", "someProcess");
+      const uri = new HostUri("https://127.0.0.1:80/", "someProcess");
       assert.equal(uri, "pdp://127.0.0.1:80/someProcess");
     });
 
     it("should throw an error if http", function () {
-      assert.throws(() =>
-        PDP.getHostUri("http://127.0.0.1:80/", "someProcess")
-      );
+      assert.throws(() => new HostUri("http://127.0.0.1:80/", "someProcess"));
     });
   });
 
@@ -207,9 +204,9 @@ describe("PDP", function () {
     let pdp;
     before(() => {
       const processType = "testProcessType";
-      const hostUri = PDP.getHostUri("memory", processType);
+      const hostUri = new HostUri("memory", processType);
       const api = new InMemoryPdp();
-      pdp = new PDP(api, processType, hostUri, "someUser", "unusedToken");
+      pdp = new PDP(api, hostUri, "someUser", "unusedToken");
     });
 
     it("should queue concurrent upload requests", async function () {
