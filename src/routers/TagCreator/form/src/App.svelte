@@ -1,4 +1,5 @@
 <script lang="ts">
+  import 'svelte-jsonschema-form/theme/default';
   import SchemaForm, { type ValidationError, type JSONSchema7 } from 'svelte-jsonschema-form';
   import TopAppBar, { Row, Section, Title } from "@smui/top-app-bar";
   import Button, { Label } from '@smui/button';
