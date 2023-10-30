@@ -460,10 +460,10 @@ export default class PDP implements Adapter {
   }
 
   static async from(
-    req: WebgmeRequest,
-    gmeConfig: AzureGmeConfig,
     gmeContext: WebgmeContext,
     storageNode: Core.Node,
+    req: WebgmeRequest,
+    gmeConfig: AzureGmeConfig,
   ) {
     const { core } = gmeContext;
     const baseUrl = core.getAttribute(storageNode, "URL");
