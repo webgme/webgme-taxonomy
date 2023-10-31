@@ -56,4 +56,18 @@ describe("PdpApi", function () {
       authHeaders.forEach((auth) => assert.equal(`Bearer ${callToken}`, auth));
     });
   });
+
+  it("should add trailing path", async function () {
+    const userToken = "userToken";
+    const api = new PdpApi("https://withoutPath.com", userToken);
+
+    assert.equal(api.url, "https://withoutPath.com/");
+  });
+
+  it("should preserve trailing path", async function () {
+    const userToken = "userToken";
+    const api = new PdpApi("https://withPath.com/", userToken);
+
+    assert.equal(api.url, "https://withPath.com/");
+  });
 });
