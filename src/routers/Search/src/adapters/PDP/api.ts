@@ -85,7 +85,7 @@ export default class PdpApi implements PdpProvider {
   private token: string;
 
   constructor(url: string, token: string) {
-    this.url = url;
+    this.url = url.replace(/\/?$/, "/");
     this.token = token;
   }
 
