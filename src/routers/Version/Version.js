@@ -1,11 +1,11 @@
 /*globals define*/
 
-'use strict';
+"use strict";
 
 // http://expressjs.com/en/guide/routing.html
-const pkgJson = require('../../../package-lock.json');
-var express = require('express'),
-    router = express.Router();
+const pkgJson = require("../../../package-lock.json");
+var express = require("express"),
+  router = express.Router();
 
 /**
  * Called when the server is created but before it starts to listening to incoming requests.
@@ -23,13 +23,13 @@ var express = require('express'),
  */
 function initialize(middlewareOpts) {
   const logger = middlewareOpts.logger.fork("Version");
-    logger.debug('initializing ...');
+  logger.debug("initializing ...");
 
-    router.get('*', function (req, res/*, next*/) {
-        res.send(pkgJson.version);
-    });
+  router.get("*", function (req, res /*, next*/) {
+    res.send(pkgJson.version);
+  });
 
-    logger.debug('ready');
+  logger.debug("ready");
 }
 
 /**
@@ -37,7 +37,7 @@ function initialize(middlewareOpts) {
  * @param {function} callback
  */
 function start(callback) {
-    callback();
+  callback();
 }
 
 /**
@@ -45,13 +45,12 @@ function start(callback) {
  * @param {function} callback
  */
 function stop(callback) {
-    callback();
+  callback();
 }
 
-
 module.exports = {
-    initialize: initialize,
-    router: router,
-    start: start,
-    stop: stop
+  initialize: initialize,
+  router: router,
+  start: start,
+  stop: stop,
 };
