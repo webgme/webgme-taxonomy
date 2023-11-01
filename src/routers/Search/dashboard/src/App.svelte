@@ -41,14 +41,14 @@
   $: title = `${contentType.name} Dashboard`;
   let vocabularies: TaxonomyData[] = [];
 
-  const storage = setContext("storage", new Storage());
-
-
   let allItems: PopulatedRepo[] = [];
   let items: PopulatedRepo[] = [];
 
   const params = new URLSearchParams(location.search);
   let searchQuery: string = params.get("searchQuery") || "";
+  let hostUrl: string = params.get("host") || getDefaultHost();
+  const storage = setContext("storage", new Storage(hostUrl));
+
   let filterTags: FilterTag[] = [];
   function parseTagParams(filterTagString: string | null): FilterTag[] {
     if (filterTagString) {
@@ -131,15 +131,20 @@
     }
   }
 
-  async function fetchConfiguration() {
+  export function getDefaultHost() {
     const chunks = window.location.href.split("/");
     chunks.pop();
     chunks.pop();
-    const url = chunks.join("/") + "/configuration.json";
+    return chunks.join("/");
+  }
+
+  async function fetchConfiguration() {
+    const url = hostUrl + "/configuration.json";
     try {
       const response = await fetch(url);
       return await response.json();
     } catch (err) {
+      // TODO: add a better error if using a custom host URL
       displayError(
         "An error occurred. Please double check the URL and try again."
       );

@@ -15,11 +15,8 @@ export type UploadPromise = Promise<boolean> & Readable<number> & {
 
 class Storage {
   baseUrl: string;
-  constructor() {
-    const chunks = window.location.href.split("/"); // TODO:
-    chunks.pop();
-    chunks.pop();
-    this.baseUrl = chunks.join("/") + "/artifacts/";
+  constructor(hostUrl: string) {
+    this.baseUrl = hostUrl + "/artifacts/";
   }
 
   async listRepos(defaultVersion: TaxonomyReference): Promise<Repository[]> {
