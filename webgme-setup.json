@@ -102,6 +102,11 @@
         "src": "src/routers/Insights",
         "test": "test/routers/Insights",
         "mount": "routers/Insights"
+      },
+      "Version": {
+        "src": "src/routers/Version",
+        "test": "test/routers/Version",
+        "mount": "version"
       }
     }
   },

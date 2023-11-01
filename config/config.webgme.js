@@ -62,6 +62,11 @@ config.rest.components["Insights"] = {
   mount: "routers/Insights",
   options: {},
 };
+config.rest.components["Version"] = {
+  src: __dirname + "/../src/routers/Version/Version.js",
+  mount: "version",
+  options: {},
+};
 
 // Visualizer descriptors
 config.visualization.visualizerDescriptors.push(
