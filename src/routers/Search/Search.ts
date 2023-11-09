@@ -19,18 +19,18 @@ const router = express.Router();
 
 import SystemTerm from "./SystemTerm";
 import UploadContext, { FileUpload } from "./UploadContext";
-import RouterUtils, { UserError } from "../../../common/routers/Utils";
+import RouterUtils, { UserError } from "../../common/routers/Utils";
 import type {
   AzureGmeConfig,
   MiddlewareOptions,
-  WebgmeContext,
+  GmeContentContext,
   WebgmeRequest,
-} from "../../../common/types";
+} from "../../common/types";
 import { toArtifactMetadatav2 } from "./adapters/common/Helpers";
-import Utils from "../../../common/Utils";
+import Utils from "../../common/Utils";
 import { deepMerge, fromResult, isString } from "./Utils";
-import DashboardConfiguration from "../../../common/SearchFilterDataExporter";
-import TagFormatter from "../../../common/TagFormatter";
+import DashboardConfiguration from "../../common/SearchFilterDataExporter";
+import TagFormatter from "../../common/TagFormatter";
 import path from "path";
 import fsp from "fs/promises";
 const staticPath = path.join(__dirname, "..", "dashboard", "public");
@@ -40,7 +40,7 @@ import {
   MetaNodeNotFoundError,
   TaxNodeNotFoundError,
 } from "./adapters/common/ModelError";
-import JSONSchemaExporter from "../../../common/JSONSchemaExporter";
+import JSONSchemaExporter from "../../common/JSONSchemaExporter";
 import TaskQueue, { DownloadTask, FilePath } from "./TaskQueue";
 import { Option } from "oxide.ts";
 import {
@@ -495,7 +495,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
 async function addChildSystemTags(
   metadata: ArtifactMetadatav2,
   reservation: UploadReservation,
-  gmeContext: WebgmeContext,
+  gmeContext: GmeContentContext,
   userId: string,
   filenames: string[],
 ) {
@@ -522,7 +522,7 @@ async function addChildSystemTags(
 async function addSystemTags(
   metadata: ArtifactMetadatav2,
   reservation: UploadReservation,
-  gmeContext: WebgmeContext,
+  gmeContext: GmeContentContext,
   userId: string,
   filenames: string[],
 ) {
@@ -542,7 +542,7 @@ async function addContentTypeSystemTags(
   contentType: Core.Node,
   metadata: ArtifactMetadatav2,
   reservation: UploadReservation,
-  gmeContext: WebgmeContext,
+  gmeContext: GmeContentContext,
   userId: string,
   filenames: string[] = [],
 ) {
@@ -604,7 +604,7 @@ function getVocabulariesMetaNode(
  * Convert the taxonomy tags in the metadata to GUID format.
  */
 async function toGuidFormat(
-  gmeContext: WebgmeContext,
+  gmeContext: GmeContentContext,
   metadata: ArtifactMetadatav2,
 ): Promise<ArtifactMetadata> {
   const formatter = await getFormatter(gmeContext);
@@ -621,7 +621,7 @@ async function toGuidFormat(
   }
 }
 
-async function getFormatter(gmeContext: WebgmeContext): Promise<TagFormatter> {
+async function getFormatter(gmeContext: GmeContentContext): Promise<TagFormatter> {
   const { root, core } = gmeContext;
   const node = await Utils.findTaxonomyNode(core, root);
   if (node == null) {

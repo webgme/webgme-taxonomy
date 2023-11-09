@@ -8,7 +8,7 @@ declare global {
 }
 
 import type from "webgme";
-import type { Request, RequestHandler } from "express";
+import type { Response, Request, RequestHandler } from "express";
 
 export interface AzureGmeConfig extends GmeConfig.GmeConfig {
   authentication: {
@@ -67,33 +67,81 @@ export type MiddlewareOptions = {
   /** Authorization module. */
   gmeAuth: Object;
   /** Accesses the storage and emits events (PROJECT_CREATED, COMMIT..). */
-  safeStorage: Object;
+  safeStorage: SafeStorage;
   /** Spawns and keeps track of "worker" sub-processes. */
   workerManager: Object;
 };
 
-export type WebgmeContext = {
-  core: GmeClasses.Core & { getMetaType(node: Core.Node): Core.Node };
-  root: Core.Node;
-  contentType: Core.Node;
-  project: {
+export type GmeCore = GmeClasses.Core & { getMetaType(node: Core.Node): Core.Node };
+export interface SafeStorage {
+  openProject(params: OpenProjectParams): Promise<UserProject>;
+  getTags(params: OpenProjectParams): Promise<{[name: string]: CommitObject}>;
+}
+
+export interface OpenProjectParams {
+  username: string;
+  projectId: string;
+}
+
+export interface UserProject {
     projectName: string;
     projectId: string;
-  };
-  projectVersion: ProjectVersion;
-};
 
-export interface ProjectVersion {
+  setUser(username: string): void;
+  getCommitObject(commitHash: string): CommitObject;
+  getTags(): Promise<{[name: string]: CommitObject}>;
+}
+
+export type CommitObject = any;  // FIXME
+
+export interface GmeContext {
+  project: UserProject;
+  projectVersion: VerifiedProjectContext;
+  core: GmeCore;
+  root: Core.Node;
+  commitObject: CommitObject;
+}
+
+export interface GmeContentContext extends GmeContext {
+  contentType: Core.Node;
+}
+
+interface BranchProjectContext {
   id: string;
-  branch?: string;
-  tag?: string;
+  branch: string;
+}
+
+interface TagProjectContext {
+  id: string;
+  tag: string;
+}
+
+interface CommitProjectContext {
+  id: string;
   commit: string;
 }
+
+type ProjectContext = BranchProjectContext | CommitProjectContext | TagProjectContext;
+
+interface VerifiedBranchProjectContext extends BranchProjectContext {
+  commit: string;
+}
+
+interface VerifiedTagProjectContext extends TagProjectContext {
+  commit: string;
+}
+
+/**
+ * A project context known to be valid and resolved to a specific commit
+ */
+type VerifiedProjectContext = VerifiedBranchProjectContext | CommitProjectContext | VerifiedTagProjectContext;
 
 export interface RequestWithCookies extends Request {
   cookies: { [key: string]: string };
 }
 
 export type WebgmeRequest = RequestWithCookies & {
-  webgmeContext: WebgmeContext;
+  webgmeContext: GmeContentContext | GmeContext;
 };
+
+export type WebgmeHandler = (req: WebgmeRequest, res: Response) => void | Promise<void>;

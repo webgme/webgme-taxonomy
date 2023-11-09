@@ -1,8 +1,8 @@
 /*globals define, WebGMEGlobal*/
 
 define([
-  "./lib/jsonschema-form.umd",
-  "./lib/react-dom.production.min",
+  "webgme-taxonomy/lib/jsonschema-form.umd",
+  "webgme-taxonomy/lib/react-dom.production.min",
   "react",
   "webgme-taxonomy/TagCreatorForm",
   "css!./styles/TagCreatorWidget.css",

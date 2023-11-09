@@ -20,11 +20,11 @@ import type {
   TaxonomyVersion,
   UploadReservation,
 } from "../common/types";
-import type TagFormatter from "../../../../../common/TagFormatter";
+import type TagFormatter from "../../../../common/TagFormatter";
 import { MissingAttributeError } from "../common/ModelError";
 import { GridFSBucket, MongoClient, ObjectId } from "mongodb";
 import type { Collection, Document } from "mongodb";
-import gmeConfig from "../../../../../../config";
+import gmeConfig from "../../../../../config";
 import {
   AppendResult,
   UploadParams,
@@ -32,9 +32,9 @@ import {
 } from "../common/AppendResult";
 import {
   AzureGmeConfig,
-  WebgmeContext,
+  GmeContentContext,
   WebgmeRequest,
-} from "../../../../../common/types";
+} from "../../../../common/types";
 import { toArtifactMetadatav2 } from "../common/Helpers";
 import { filterMap, fromResult, Pattern } from "../../Utils";
 import ScopedFnQueue from "../../ScopedFnQueue";
@@ -309,7 +309,7 @@ export default class MongoAdapter implements Adapter {
     }
   }
 
-  static from(gmeContext: WebgmeContext, storageNode: Core.Node) {
+  static from(gmeContext: GmeContentContext, storageNode: Core.Node) {
     const { core } = gmeContext;
     const collection = core.getAttribute(storageNode, "collection");
     if (!collection) {

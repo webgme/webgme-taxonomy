@@ -1,10 +1,10 @@
 import type { AppendResult } from "./AppendResult";
-import type TagFormatter from "../../../../../common/TagFormatter";
+import type TagFormatter from "../../../../common/TagFormatter";
 import type {
   AzureGmeConfig,
-  WebgmeContext,
+  GmeContentContext,
   WebgmeRequest,
-} from "../../../../../common/types";
+} from "../../../../common/types";
 import type { Option } from "oxide.ts";
 
 export interface Adapter {
@@ -67,7 +67,7 @@ export interface UploadReservation {
 
 export interface AdapterStatic {
   from(
-    gmeContext: WebgmeContext,
+    gmeContext: GmeContentContext,
     storageNode: Core.Node,
     request: WebgmeRequest,
     config: any,

@@ -2,10 +2,10 @@
 
 import type {
   AzureGmeConfig,
-  WebgmeContext,
+  GmeContentContext,
   WebgmeRequest,
-} from "../../../../common/types";
-import RouterUtils from "../../../../common/routers/Utils";
+} from "../../../common/types";
+import RouterUtils from "../../../common/routers/Utils";
 import { StorageNotFoundError } from "./common/ModelError";
 import fs from "fs";
 import type { Adapter, AdapterStatic } from "./common/types";
@@ -36,7 +36,7 @@ const AdaptersByPrefix = Object.values(SUPPORTED_ADAPTERS)
 
 export default class Adapters {
   static async from(
-    gmeContext: WebgmeContext,
+    gmeContext: GmeContentContext,
     req: WebgmeRequest,
     config: any,
   ): Promise<Adapter> {
@@ -103,7 +103,7 @@ export default class Adapters {
   }
 }
 
-function isTypeOf(core: WebgmeContext["core"], node: Core.Node, name: string) {
+function isTypeOf(core: GmeContentContext["core"], node: Core.Node, name: string) {
   let basenode: Core.Node | null = core.getMetaType(node);
   while (basenode) {
     if (core.getAttribute(basenode, "name") === name) {

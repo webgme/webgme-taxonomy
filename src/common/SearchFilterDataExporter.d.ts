@@ -1,4 +1,4 @@
-import { WebgmeContext } from "./types";
+import { GmeContentContext } from "./types";
 
 declare namespace DashboardConfiguration {
   interface VocabularyTermSchema {
@@ -18,7 +18,7 @@ declare namespace DashboardConfiguration {
   type DashboardConfiguration = {
     name: any;
     content: ContentTypeConfiguration;
-    project?: WebgmeContext["projectVersion"];
+    project?: GmeContentContext["projectVersion"];
     contentTypePath?: string;
   };
 

@@ -18,13 +18,13 @@ import type {
   Observation,
   ProcessID,
 } from "./types";
-import RouterUtils from "../../../../../common/routers/Utils";
+import RouterUtils from "../../../../common/routers/Utils";
 import withTokens from "./tokens";
 import type {
   AzureGmeConfig,
-  WebgmeContext,
+  GmeContentContext,
   WebgmeRequest,
-} from "../../../../../common/types";
+} from "../../../../common/types";
 import { pipeline } from "stream";
 import { promisify } from "util";
 const streamPipeline = promisify(pipeline);
@@ -460,7 +460,7 @@ export default class PDP implements Adapter {
   }
 
   static async from(
-    gmeContext: WebgmeContext,
+    gmeContext: GmeContentContext,
     storageNode: Core.Node,
     req: WebgmeRequest,
     gmeConfig: AzureGmeConfig,

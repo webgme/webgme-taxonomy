@@ -1,5 +1,5 @@
-import type { WebgmeContext } from "../../../../../common/types";
-import { UserError } from "../../../../../common/routers/Utils";
+import type { GmeContentContext } from "../../../../common/types";
+import { UserError } from "../../../../common/routers/Utils";
 import type { Response } from "express";
 const UNPROCESSABLE_ENTITY = 422;
 
@@ -25,7 +25,7 @@ export class ModelError extends UserError {
     response.status(this.statusCode).json(data);
   }
 
-  static getContext(gmeContext: WebgmeContext, node: Core.Node): ModelContext {
+  static getContext(gmeContext: GmeContentContext, node: Core.Node): ModelContext {
     const { core, projectVersion } = gmeContext;
     return {
       projectId: projectVersion.id,
@@ -36,7 +36,7 @@ export class ModelError extends UserError {
 }
 
 export class MissingAttributeError extends ModelError {
-  constructor(gmeContext: WebgmeContext, node: Core.Node, attrName: string) {
+  constructor(gmeContext: GmeContentContext, node: Core.Node, attrName: string) {
     const { core } = gmeContext;
     const name = core.getAttribute(node, "name");
     const msg = `No ${attrName} specified for ${name}`;
@@ -47,7 +47,7 @@ export class MissingAttributeError extends ModelError {
 
 export class InvalidAttributeError extends ModelError {
   constructor(
-    gmeContext: WebgmeContext,
+    gmeContext: GmeContentContext,
     node: Core.Node,
     attrName: string,
     issue: string,
@@ -61,7 +61,7 @@ export class InvalidAttributeError extends ModelError {
 }
 
 export class StorageNotFoundError extends ModelError {
-  constructor(gmeContext: WebgmeContext, contentTypeNode: Core.Node) {
+  constructor(gmeContext: GmeContentContext, contentTypeNode: Core.Node) {
     const { core } = gmeContext;
     const name = core.getAttribute(contentTypeNode, "name");
     const msg = `No storage configured for ${name}`;
@@ -71,7 +71,7 @@ export class StorageNotFoundError extends ModelError {
 }
 
 export class ChildContentTypeNotFoundError extends ModelError {
-  constructor(gmeContext: WebgmeContext, contentTypeNode: Core.Node) {
+  constructor(gmeContext: GmeContentContext, contentTypeNode: Core.Node) {
     const { core } = gmeContext;
     const name = core.getAttribute(contentTypeNode, "name");
     const msg = `No content defined within ${name}`;
@@ -81,7 +81,7 @@ export class ChildContentTypeNotFoundError extends ModelError {
 }
 
 export class MetaNodeNotFoundError extends ModelError {
-  constructor(gmeContext: WebgmeContext, name: string) {
+  constructor(gmeContext: GmeContentContext, name: string) {
     const msg =
       `Could not find "${name}" in the metamodel. Is this a taxonomy project?`;
     const context = ModelError.getContext(gmeContext, gmeContext.root);
@@ -90,7 +90,7 @@ export class MetaNodeNotFoundError extends ModelError {
 }
 
 export class TaxNodeNotFoundError extends ModelError {
-  constructor(gmeContext: WebgmeContext) {
+  constructor(gmeContext: GmeContentContext) {
     const msg = `No taxonomy defined in the project.`;
     const context = ModelError.getContext(gmeContext, gmeContext.root);
     super(context, msg);
