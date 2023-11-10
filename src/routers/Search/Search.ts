@@ -17,13 +17,18 @@
 import * as express from "express";
 const router = express.Router();
 
+import type { NextFunction, Request, Response, Router } from "express";
 import SystemTerm from "./SystemTerm";
 import UploadContext, { FileUpload } from "./UploadContext";
-import RouterUtils, { UserError } from "../../common/routers/Utils";
+import RouterUtils, {
+  handleUserErrors,
+  responseClose,
+  UserError,
+} from "../../common/routers/Utils";
 import type {
   AzureGmeConfig,
-  MiddlewareOptions,
   GmeContentContext,
+  MiddlewareOptions,
   WebgmeRequest,
 } from "../../common/types";
 import { toArtifactMetadatav2 } from "./adapters/common/Helpers";
@@ -93,9 +98,10 @@ function initialize(middlewareOpts: MiddlewareOptions) {
 
   router.get(
     RouterUtils.getContentTypeRoutes("configuration.json"),
-    RouterUtils.handleUserErrors(
+    // FIXME: how can we handle this correctly in TS?
+    handleUserErrors(
       logger,
-      async function getConfiguration(req, res) {
+      async function getConfiguration(req: WebgmeRequest, res: Response) {
         const { core, contentType } = req.webgmeContext;
         const configuration = await DashboardConfiguration.from(
           core,
@@ -110,7 +116,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
 
   router.get(
     RouterUtils.getContentTypeRoutes("schema.json"),
-    RouterUtils.handleUserErrors(logger, async (request, response) => {
+    handleUserErrors(logger, async (request, response) => {
       const { root, core, contentType } = request.webgmeContext;
       const exporter = JSONSchemaExporter.from(core, root);
       const vocabularies = await Utils.getVocabulariesFor(core, contentType);
@@ -127,7 +133,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
   // Accessing and updating data via the storage adapter
   router.get(
     RouterUtils.getContentTypeRoutes("artifacts/"),
-    RouterUtils.handleUserErrors(logger, async function listRepos(req, res) {
+    handleUserErrors(logger, async function listRepos(req, res) {
       const storage = await StorageAdapter.from(
         req.webgmeContext,
         req,
@@ -140,7 +146,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
 
   router.get(
     RouterUtils.getContentTypeRoutes("artifacts/:repoId"),
-    RouterUtils.handleUserErrors(
+    handleUserErrors(
       logger,
       async function listArtifacts(req, res) {
         const { repoId } = req.params;
@@ -158,7 +164,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
 
   router.post(
     RouterUtils.getContentTypeRoutes("artifacts/"),
-    RouterUtils.handleUserErrors(
+    handleUserErrors(
       logger,
       async function createRepo(req, res) {
         const userId = middlewareOpts.getUserId(req);
@@ -197,7 +203,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
 
   router.post(
     RouterUtils.getContentTypeRoutes("artifacts/:repoId/append"),
-    RouterUtils.handleUserErrors(
+    handleUserErrors(
       logger,
       async function appendContent(req, res) {
         const userId = middlewareOpts.getUserId(req);
@@ -254,7 +260,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
     RouterUtils.getContentTypeRoutes(
       "artifacts/:parentId/:index/:fileId/upload",
     ),
-    RouterUtils.handleUserErrors(logger, async function uploadFile(req, res) {
+    handleUserErrors(logger, async function uploadFile(req, res) {
       const { parentId, index, fileId } = req.params;
       const storage = await StorageAdapter.from(
         req.webgmeContext,
@@ -272,7 +278,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
 
   router.get(
     RouterUtils.getContentTypeRoutes("artifacts/:parentId/files/"),
-    RouterUtils.handleUserErrors(
+    handleUserErrors(
       logger,
       async function downloadContentURL(req, res) {
         const { parentId } = req.params;
@@ -301,7 +307,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
 
   router.get(
     RouterUtils.getContentTypeRoutes("artifacts/:parentId/:id/metadata.json"),
-    RouterUtils.handleUserErrors(
+    handleUserErrors(
       logger,
       async function getMetadata(req, res) {
         const { parentId, id } = req.params;
@@ -332,7 +338,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
 
   router.get(
     RouterUtils.getContentTypeRoutes("artifacts/:parentId/metadata.jsonl"),
-    RouterUtils.handleUserErrors(
+    handleUserErrors(
       logger,
       async function getBulkMetadata(req, res) {
         const { parentId } = req.params;
@@ -373,7 +379,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
   const downloadQueue: TaskQueue<DownloadTask, FilePath> = new TaskQueue();
   router.post(
     RouterUtils.getContentTypeRoutes("artifacts/:repoId/downloads/"),
-    RouterUtils.handleUserErrors(
+    handleUserErrors(
       logger,
       async function downloadContent(req, res) {
         const { repoId } = req.params;
@@ -451,7 +457,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
     RouterUtils.getContentTypeRoutes(
       "artifacts/:parentId/downloads/:taskId/status",
     ),
-    RouterUtils.handleUserErrors(
+    handleUserErrors(
       logger,
       async function getDownloadTaskStatus(req, res) {
         const { taskId } = req.params;
@@ -465,7 +471,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
     RouterUtils.getContentTypeRoutes(
       "artifacts/:parentId/downloads/:taskId",
     ),
-    RouterUtils.handleUserErrors(
+    handleUserErrors(
       logger,
       async function getDownloadContent(req, res) {
         const { taskId } = req.params;
@@ -477,7 +483,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
           path.basename(zipPath),
         );
 
-        await RouterUtils.responseClose(res);
+        await responseClose(res);
         await fsp.rm(tmpDir, { recursive: true });
       },
     ),
@@ -621,7 +627,9 @@ async function toGuidFormat(
   }
 }
 
-async function getFormatter(gmeContext: GmeContentContext): Promise<TagFormatter> {
+async function getFormatter(
+  gmeContext: GmeContentContext,
+): Promise<TagFormatter> {
   const { root, core } = gmeContext;
   const node = await Utils.findTaxonomyNode(core, root);
   if (node == null) {

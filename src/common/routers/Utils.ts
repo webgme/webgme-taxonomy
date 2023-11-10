@@ -5,55 +5,61 @@ import webgme from "webgme";
 const Core = webgme.requirejs("common/core/coreQ");
 import jwt from "jsonwebtoken";
 import { filterMap } from "../../routers/Search/Utils";
-import {
-  SemanticVersion,
-} from "../../routers/Search/dashboard/TaxonomyReference";
-import type {CommitObject, GmeContext, GmeCore, MiddlewareOptions, ProjectContext, UserProject, VerifiedProjectContext, WebgmeHandler, WebgmeRequest} from '../types';
+import { SemanticVersion } from "../TaxonomyReference";
+import type {
+  GmeContentContext,
+  GmeContext,
+  GmeCore,
+  MiddlewareOptions,
+  ProjectContext,
+  UserProject,
+  VerifiedProjectContext,
+  WebgmeHandler,
+  WebgmeRequest,
+} from "../types";
 import type { NextFunction, Request, Response, Router } from "express";
 // TODO: module or requirejs
-
+type ContentTypeRoute = (
+  context: GmeContentContext,
+  req: Request,
+  res: Response,
+) => Promise<void> | void;
 function makeCore(project: UserProject, opts: MiddlewareOptions): GmeCore {
-    const { gmeConfig, logger } = opts;
-    //@ts-ignore
-    return new Core(project, {
-      globConf: gmeConfig,
-      logger: logger.fork("core"),
-    });
+  const { gmeConfig, logger } = opts;
+  //@ts-ignore
+  return new Core(project, {
+    globConf: gmeConfig,
+    logger: logger.fork("core"),
+  });
 }
-
 
 interface ProjectScopeMiddlewareOpts {
   unsafe?: boolean;
 }
 
-function getProjectContext(params: {[k: string]: string}): ProjectContext {
-  
-    if (!params.projectId) {
-      throw new MissingParameterError('projectId');
-    }
+function getProjectContext(params: { [k: string]: string }): ProjectContext {
+  if (!params.projectId) {
+    throw new MissingParameterError("projectId");
+  }
 
-
-    if (params.tag) {
+  if (params.tag) {
     return {
       id: params.projectId,
       tag: params.tag,
     };
-    } else if(params.commitHash) {
-      
+  } else if (params.commitHash) {
     return {
       id: params.projectId,
       commit: params.commitHash,
     };
-    } else if(params.branch) {
-
+  } else if (params.branch) {
     return {
       id: params.projectId,
       branch: params.branch,
     };
-    } else {
-      throw new MissingParameterChooseError('tag', 'commitHash', 'branch');
-    }
-
+  } else {
+    throw new MissingParameterChooseError("tag", "commitHash", "branch");
+  }
 }
 
 export default {
@@ -74,7 +80,7 @@ export default {
   async getWebGMEContextUnsafe(
     middlewareOpts: MiddlewareOptions,
     userId: string,
-    projectContext: ProjectContext
+    projectContext: ProjectContext,
   ): Promise<GmeContext> {
     const { safeStorage } = middlewareOpts;
     const { id: projectId } = projectContext;
@@ -107,14 +113,14 @@ export default {
 
     // TODO: Get the context
     let commitObject;
-    if ('commit' in projectContext) {
+    if ("commit" in projectContext) {
       const commitHash = projectContext.commit;
       commitObject = await project.getCommitObject(commitHash);
       projectVersion = {
         id: projectId,
         commit: commitHash as string,
       };
-    } else if ('tag' in projectContext) {
+    } else if ("tag" in projectContext) {
       const tag = projectContext.tag;
       const tags = await project.getTags();
       if (!tags.hasOwnProperty(tag)) {
@@ -127,10 +133,9 @@ export default {
         tag,
         commit: commitObject._id,
       };
-    } else  if ('branch' in projectContext) {
+    } else if ("branch" in projectContext) {
       const branch = projectContext.branch;
-      commitObject = await project.getCommitObject(branch,
-      );
+      commitObject = await project.getCommitObject(branch);
 
       projectVersion = {
         id: projectId,
@@ -142,7 +147,7 @@ export default {
     }
 
     return {
-      root: await core.loadRoot(commitObject.root), 
+      root: await core.loadRoot(commitObject.root),
       core,
       project,
       projectVersion,
@@ -152,7 +157,7 @@ export default {
 
   getObserverIdFromToken(token: string): string | undefined {
     const tokenData = jwt.decode(token);
-    if (typeof tokenData !== 'string' && tokenData) {
+    if (typeof tokenData !== "string" && tokenData) {
       return tokenData.oid; //TODO maybe we need a complete class for token functions?
     }
   },
@@ -162,6 +167,10 @@ export default {
   getContentTypeRoutes(route = "") {
     const contentTypeRoute = `:contentTypePath/${route}`;
     return this.getProjectScopedRoutes(contentTypeRoute);
+  },
+
+  addContentTypeRoute(router: Router, route = "", handler: ContentTypeRoute) {
+    // TODO
   },
 
   // FIXME: remove this
@@ -178,7 +187,11 @@ export default {
     ];
   },
 
-  addContentTypeMiddleware(middlewareOpts: MiddlewareOptions, router: Router, options: ProjectScopeMiddlewareOpts) {
+  addContentTypeMiddleware(
+    middlewareOpts: MiddlewareOptions,
+    router: Router,
+    options: ProjectScopeMiddlewareOpts = {},
+  ) {
     this.addProjectScopeMiddleware(middlewareOpts, router, options);
     const { logger } = middlewareOpts;
     return router.use(
@@ -189,30 +202,35 @@ export default {
         const contentType = await core.loadByPath(root, contentTypePath);
         assert(contentType, new ContentTypeNotFoundError(contentTypePath));
         req.webgmeContext = {
-  project: req.webgmeContext.project,
-  projectVersion: req.webgmeContext.projectVersion,
-  core: req.webgmeContext.core,
-  root: req.webgmeContext.root,
-  commitObject: req.webgmeContext.commitObject,
-        contentType,
+          project: req.webgmeContext.project,
+          projectVersion: req.webgmeContext.projectVersion,
+          core: req.webgmeContext.core,
+          root: req.webgmeContext.root,
+          commitObject: req.webgmeContext.commitObject,
+          contentType,
         };
         console.log("CTX received:", req.originalUrl);
       }),
     );
   },
 
-  addProjectScopeMiddleware(middlewareOpts: MiddlewareOptions, router: Router, options: ProjectScopeMiddlewareOpts = {}) {
+  addProjectScopeMiddleware(
+    middlewareOpts: MiddlewareOptions,
+    router: Router,
+    options: ProjectScopeMiddlewareOpts = {},
+  ) {
     const { logger } = middlewareOpts;
     const { unsafe } = options;
     const contextFn: (req: WebgmeRequest) => Promise<GmeContext> = !unsafe
-      ? (request: WebgmeRequest) => this.getWebGMEContext(middlewareOpts, request)
+      ? (request: WebgmeRequest) =>
+        this.getWebGMEContext(middlewareOpts, request)
       : (request: WebgmeRequest) => {
         const userId = request.params.projectId.split("+").shift();
         if (!userId) {
           throw new InvalidProjectIdError(request.params.projectId);
         }
 
-      const projectContext = getProjectContext(request.params);
+        const projectContext = getProjectContext(request.params);
         return this.getWebGMEContextUnsafe(
           middlewareOpts,
           userId,
@@ -237,49 +255,56 @@ export default {
     const { logger } = middlewareOpts;
     router.use(
       this.getProjectScopedRoutes(),
-      handleUserErrors(logger, async function resolveLatestTag(req: WebgmeRequest, res: Response) {
-        const { projectId, tag } = req.params;
-        if (tag === "latest") {
-          const { safeStorage } = middlewareOpts;
-          const userId = projectId.split("+").shift() as string;
-          const tagDict = await safeStorage.getTags({
-            projectId,
-            username: userId,
-          });
-          const tags = filterMap(Object.keys(tagDict), (tagName) => {
-            try {
-              const version = SemanticVersion.parse(tagName);
-              return {
-                name: tagName,
-                version,
-              };
-            } catch (_err) {
-              return undefined;
+      handleUserErrors(
+        logger,
+        async function resolveLatestTag(req: WebgmeRequest, res: Response) {
+          const { projectId, tag } = req.params;
+          if (tag === "latest") {
+            const { safeStorage } = middlewareOpts;
+            const userId = projectId.split("+").shift() as string;
+            const tagDict = await safeStorage.getTags({
+              projectId,
+              username: userId,
+            });
+            const tags = filterMap(Object.keys(tagDict), (tagName) => {
+              try {
+                const version = SemanticVersion.parse(tagName);
+                return {
+                  name: tagName,
+                  version,
+                };
+              } catch (_err) {
+                return undefined;
+              }
+            });
+
+            if (tags.length === 0) {
+              throw new TagNotFoundError("latest");
             }
-          });
 
-          if (tags.length === 0) {
-            throw new TagNotFoundError("latest");
+            const latestTag = tags.reduce((latest, other) =>
+              latest.version.gte(other.version) ? latest : other
+            );
+
+            const url = req.originalUrl.replace(
+              "/tag/latest",
+              `/tag/${latestTag.name}`,
+            );
+            res.redirect(url);
           }
-
-          const latestTag = tags.reduce((latest, other) =>
-            latest.version.gte(other.version) ? latest : other
-          );
-
-          const url = req.originalUrl.replace(
-            "/tag/latest",
-            `/tag/${latestTag.name}`,
-          );
-          res.redirect(url);
-        }
-      }),
+        },
+      ),
     );
     return router;
   },
 };
 
 export function handleUserErrors(logger, ...fns: WebgmeHandler[]) {
-  return async function (req: WebgmeRequest, res: Response, next: NextFunction) {
+  return async function (
+    req: WebgmeRequest,
+    res: Response,
+    next: NextFunction,
+  ) {
     try {
       await fns.reduce(async (prev, fn) => {
         await prev;
@@ -328,8 +353,10 @@ class ContentTypeNotFoundError extends UserError {
 
 class InvalidProjectIdError extends UserError {
   constructor(projectId: string | undefined) {
-  const msg = projectId ? `Invalid project ID: ${projectId}` : `Project ID required.`;
-  super(msg);
+    const msg = projectId
+      ? `Invalid project ID: ${projectId}`
+      : `Project ID required.`;
+    super(msg);
   }
 }
 
@@ -355,16 +382,15 @@ class MissingParameterError extends UserError {
   constructor(param: string) {
     super(`Missing URL parameter: ${param}`);
   }
-  
 }
 
 /**
  * Missing a required parameter. Must choose one from the given set.
  */
 class MissingParameterChooseError extends UserError {
-constructor(...choices: string[]) {
-super(`Must specify a URL parameter from: ${choices.join(' ')}`);
-}
+  constructor(...choices: string[]) {
+    super(`Must specify a URL parameter from: ${choices.join(" ")}`);
+  }
 }
 
 interface Emitter {

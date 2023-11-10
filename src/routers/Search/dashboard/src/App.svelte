@@ -27,7 +27,7 @@
    } from "./components";
 
   import TaxonomyData from "./TaxonomyData";
-  import TaxonomyReference from "./TaxonomyReference";
+  import TaxonomyReference from "../../../../common/TaxonomyReference";
   import Storage, { LoadState, ModelError, RequestError, ModelContext } from "./Storage";
   import type { PopulatedRepo } from "./Storage";
   import type ContentType from "./ContentType";

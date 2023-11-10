@@ -18,7 +18,7 @@ import type {
   Observation,
   ProcessID,
 } from "./types";
-import RouterUtils from "../../../../common/routers/Utils";
+import RouterUtils, { UserError } from "../../../../common/routers/Utils";
 import withTokens from "./tokens";
 import type {
   AzureGmeConfig,
@@ -43,7 +43,14 @@ import type {
   Repository,
   UploadReservation,
 } from "../common/types";
-import { filterMap, fromResult, intervals, Pattern, sleep } from "../../Utils";
+import {
+  assert,
+  filterMap,
+  fromResult,
+  intervals,
+  Pattern,
+  sleep,
+} from "../../Utils";
 import {
   AppendResult,
   UploadParams,
@@ -103,7 +110,7 @@ export default class PDP implements Adapter {
 
   private async _getRepositoryMetadata(
     id: ProcessID,
-  ): Promise<Result<Repository, RouterUtils.UserError>> {
+  ): Promise<Result<Repository, UserError>> {
     // fetch the first observation for each to get the repo metadata
     const metadataR = await this.api.getObservation(id, 0, 0, {
       token: this._readToken,
@@ -220,7 +227,7 @@ export default class PDP implements Adapter {
         const response = await fetch(url);
         if (!response.ok) {
           // FIXME: should this be a user error?
-          throw new RouterUtils.UserError("Unable to retrieve file: " + name);
+          throw new UserError("Unable to retrieve file: " + name);
         }
         return [name, response.body];
       }),
@@ -517,6 +524,7 @@ export default class PDP implements Adapter {
     } else {
       api = new PdpApi(hostUri.baseUrl, userToken);
       observerId = RouterUtils.getObserverIdFromToken(userToken);
+      if (!observerId) throw new UserError("Unable to determine observer ID");
     }
 
     return new PDP(

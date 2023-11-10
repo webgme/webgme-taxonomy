@@ -1,4 +1,6 @@
-import TaxonomyReference, { TaxonomyVersionData } from "./TaxonomyReference";
+import TaxonomyReference, {
+  TaxonomyVersionData,
+} from "../../../../common/TaxonomyReference";
 import { assert, Result, sleep } from "./Utils";
 import { Readable, writable } from "svelte/store";
 

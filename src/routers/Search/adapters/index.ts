@@ -5,7 +5,7 @@ import type {
   GmeContentContext,
   WebgmeRequest,
 } from "../../../common/types";
-import RouterUtils from "../../../common/routers/Utils";
+import { UserError } from "../../../common/routers/Utils";
 import { StorageNotFoundError } from "./common/ModelError";
 import fs from "fs";
 import type { Adapter, AdapterStatic } from "./common/types";
@@ -68,7 +68,7 @@ export default class Adapters {
       : null;
     assert(
       AdapterType,
-      new RouterUtils.UserError(
+      new UserError(
         `Unsupported storage adapter: ${adapterType}`,
         400,
       ),
@@ -103,7 +103,11 @@ export default class Adapters {
   }
 }
 
-function isTypeOf(core: GmeContentContext["core"], node: Core.Node, name: string) {
+function isTypeOf(
+  core: GmeContentContext["core"],
+  node: Core.Node,
+  name: string,
+) {
   let basenode: Core.Node | null = core.getMetaType(node);
   while (basenode) {
     if (core.getAttribute(basenode, "name") === name) {

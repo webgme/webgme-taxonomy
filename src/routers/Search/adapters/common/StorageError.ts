@@ -1,12 +1,12 @@
-import RouterUtils from "../../../../common/routers/Utils";
+import { UserError } from "../../../../common/routers/Utils";
 
-export class RepositoryNotFound extends RouterUtils.UserError {
+export class RepositoryNotFound extends UserError {
   constructor(id: string) {
     super("Repository not found: " + id);
   }
 }
 
-export class UnsupportedUriFormat extends RouterUtils.UserError {
+export class UnsupportedUriFormat extends UserError {
   constructor(uri: string) {
     super("Unsupported URI: " + uri);
   }
