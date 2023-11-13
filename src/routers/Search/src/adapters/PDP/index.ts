@@ -551,7 +551,7 @@ export default class PDP implements Adapter {
     const chunks = uri.split("/");
     const version = chunks.pop() as string;
     const index = chunks.pop() as string;
-    const content = `${index}/${version}`;
+    const content = `${index}_${version}`;
     const repo = chunks.pop() as string;
     return [repo, content];
   }
