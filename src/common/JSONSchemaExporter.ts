@@ -17,6 +17,54 @@ interface VocabSchema {
 interface TermSchema {
 }
 
+interface BaseFieldSchema {
+  title: string;
+}
+interface IntegerFieldSchema extends BaseFieldSchema {
+  type: "integer";
+  default?: number;
+}
+interface FloatFieldSchema extends BaseFieldSchema {
+  type: "number";
+  default?: number;
+}
+interface BooleanFieldSchema extends BaseFieldSchema {
+  type: "boolean";
+  default?: boolean;
+}
+interface TextFieldSchema extends BaseFieldSchema {
+  type: "string";
+  default?: string;
+}
+interface UriFieldSchema extends BaseFieldSchema {
+  type: "string";
+  pattern: string;
+  default?: string;
+}
+interface EnumFieldSchema extends BaseFieldSchema {
+}
+interface CompoundFieldSchema extends BaseFieldSchema {
+  type: "object";
+  properties: { [k: string]: any };
+  additionalProperties: false;
+}
+
+interface SetFieldSchema extends BaseFieldSchema {
+  type: "array";
+  uniqueItems: true;
+  items: any[]; // FIXME
+}
+
+type FieldSchema =
+  | SetFieldSchema
+  | CompoundFieldSchema
+  | EnumFieldSchema
+  | UriFieldSchema
+  | TextFieldSchema
+  | BooleanFieldSchema
+  | FloatFieldSchema
+  | IntegerFieldSchema;
+
 const optionTypes = ["EnumField", "SetField"];
 export default class JSONSchemaExporter {
   core: GmeCore;
@@ -208,25 +256,7 @@ export default class JSONSchemaExporter {
     }
   }
 
-  async getDefinitionEntries(node) {
-    const children = await this.core.loadChildren(node);
-    const dependentDefs = await this.getDependentDefinitions(node);
-
-    const childDefs = (
-      await Promise.all(
-        children.map((node) => this.getDefinitionEntries(node)),
-      )
-    ).flat();
-    const myDefs = await Promise.all(
-      dependentDefs.map(async (node) => [
-        this.core.getGuid(node),
-        await this.getDefinition(node),
-      ]),
-    );
-    return myDefs.concat(childDefs);
-  }
-
-  hasProperties(node) {
+  hasProperties(node: Core.Node): boolean {
     return (
       this.core.isTypeOf(node, this.META.Term) ||
       this.core.isTypeOf(node, this.META.Vocabulary) ||
@@ -277,27 +307,25 @@ export default class JSONSchemaExporter {
   }
 
   /**
-   * Get the JSON Schema for field node.
-   *
-   * @param {Core.Node} node A field node to get JSON schema for
-   * @return {Promise<{ [key:string]: any }>} A promise for schema
-   * @memberof JSONSchemaExporter
+   * Get the JSON schema for the given field node.
    */
-  async getFieldSchema(node) {
+  async getFieldSchema(node: Core.Node): Promise<FieldSchema> {
     const name = (this.core.getAttribute(node, "name") || "").toString();
     const baseNode = this.core.getMetaType(node);
     const baseName = this.core.getAttribute(baseNode, "name");
 
-    /** @type {{ [key:string]: any }} */
-    let fieldSchema = {
-      title: name,
-    };
     let isPrimitive = false;
     switch (baseName) {
       case "IntegerField":
-        fieldSchema.type = "integer";
-        isPrimitive = true;
-        break;
+        const fieldSchema: IntegerFieldSchema = {
+          title: name,
+          type: "integer",
+        };
+        const value = this.core.getAttribute(node, "value");
+        if (value) {
+          fieldSchema.default = parseInt(toString(value));
+        }
+        return fieldSchema;
       case "FloatField":
         fieldSchema.type = "number";
         isPrimitive = true;
@@ -311,11 +339,17 @@ export default class JSONSchemaExporter {
         isPrimitive = true;
         break;
       case "UriField":
-        fieldSchema.type = "string";
-        fieldSchema.pattern = Pattern.exact(Pattern.anyIn(
-          ...StorageAdapters.getUriPatterns(),
-        ));
-        isPrimitive = true;
+        const value = this.core.getAttribute(node, "value");
+        if (value) {
+          fieldSchema.default = value;
+        }
+        return {
+          title: name,
+          type: "string",
+          pattern: Pattern.exact(Pattern.anyIn(
+            ...StorageAdapters.getUriPatterns(),
+          )),
+        };
         break;
       case "EnumField":
         Object.assign(fieldSchema, await this._getAnyOfSchema(node));
@@ -324,11 +358,14 @@ export default class JSONSchemaExporter {
         delete fieldSchema.default;
         break;
       case "CompoundField":
-        fieldSchema.type = "object";
-        fieldSchema.properties = {};
-        fieldSchema.properties[name] = await this.getDefinition(node);
-        fieldSchema.additionalProperties = false;
-        break;
+        const properties: { [k: string]: any } = {};
+        properties[name] = await this.getDefinition(node);
+        return {
+          title: name,
+          type: "object",
+          properties,
+          additionalProperties: false,
+        };
       case "SetField":
         Object.assign(fieldSchema, {
           type: "array",
