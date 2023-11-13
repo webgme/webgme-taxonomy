@@ -2,30 +2,48 @@
 /*eslint-env node, browser*/
 // @ts-check
 /// <reference path="define.d.ts" />
-const StorageAdapters =
-  require("../routers/Search/build/adapters/index").default;
-const { Pattern, unique } = require("../routers/Search/build/Utils");
-const optionTypes = ["EnumField", "SetField"];
+import { JSONSchema7 } from "json-schema";
+import StorageAdapters from "../routers/Search/adapters/index";
+import { Pattern, unique } from "../routers/Search/Utils";
+import { GmeCore } from "./types";
+import { toString } from "./Utils";
 
-class JSONSchemaExporter {
+// subsets of JSON schema targeted:
+interface VocabSchema {
+  type: "object";
+  required: boolean;
+  properties: { [name: string]: TermSchema };
+}
+interface TermSchema {
+}
+
+const optionTypes = ["EnumField", "SetField"];
+export default class JSONSchemaExporter {
+  core: GmeCore;
+  private META: { [name: string]: Core.Node };
+
   /**
    * Creates an instance of JSONSchemaExporter.
    * @param {GmeClasses.Core & { getMetaType(node: Core.Node): Core.Node }} core
    * @param {any} META
    * @memberof JSONSchemaExporter
    */
-  constructor(core, META) {
+  constructor(core: GmeCore, META: { [name: string]: Core.Node }) {
     this.core = core;
     this.META = META;
   }
 
-  async getSchemas(taxonomyNode, onlyReleased = false) {
-    const taxonomyName = this.core.getAttribute(taxonomyNode, "name");
+  async getSchemas(taxonomyNode: Core.Node, onlyReleased = false) {
+    const taxonomyName = toString(this.core.getAttribute(taxonomyNode, "name"));
     const vocabs = await this.core.loadChildren(taxonomyNode);
     return this.getVocabSchemas(vocabs, taxonomyName, onlyReleased);
   }
 
-  async getVocabSchemas(vocabNodes, taxonomyName, onlyReleased = false) {
+  async getVocabSchemas(
+    vocabNodes: Core.Node[],
+    taxonomyName: string,
+    onlyReleased = false,
+  ) {
     const allVocabs = await Promise.all(
       vocabNodes
         .filter((node) => !onlyReleased || this.isReleased(node))
@@ -58,7 +76,10 @@ class JSONSchemaExporter {
     return { schema, uiSchema, formData };
   }
 
-  async _getVocab(vocabNode, onlyReleased = false) {
+  async _getVocab(
+    vocabNode: Core.Node,
+    onlyReleased = false,
+  ): Promise<Vocabulary> {
     const terms = await Promise.all(
       (await this.core.loadChildren(vocabNode))
         .filter((node) =>
@@ -78,15 +99,15 @@ class JSONSchemaExporter {
       required,
     };
 
-    const name = this.core.getAttribute(vocabNode, "name");
+    const name = toString(this.core.getAttribute(vocabNode, "name"));
     return new Vocabulary(name, schema, terms);
     // FIXME: this is assuming that it is flat atm
     // TODO: add a test for deeper hierarchies
   }
 
-  async getTermFromNode(node) {
+  async getTermFromNode(node: Core.Node): Promise<Term> {
     // const parentTerms = this.getAncestorTerms(node);
-    const name = this.core.getAttribute(node, "name");
+    const name = toString(this.core.getAttribute(node, "name"));
     const schema = await this.getDefinition(node);
     // const termFields = await Promise.all(
     //   parentTerms.map((n) => this.getDefinition(n)),
@@ -96,7 +117,8 @@ class JSONSchemaExporter {
     //   const name = this.core.getAttribute(parent, "name");
     //   return (schema.properties[name] = fields);
     // }, schema);
-    const selection = this.core.getAttribute(node, "selection");
+    // TODO: Check that this is a valid selection constraint
+    const selection = toString(this.core.getAttribute(node, "selection"));
     return new Term(name, schema, selection);
   }
 
@@ -107,35 +129,17 @@ class JSONSchemaExporter {
    * @return {node is Core.Node} Whether or not the `node` is a vocabulary
    * @memberof JSONSchemaExporter
    */
-  isVocab(node) {
+  isVocab(node: Core.Node): boolean {
     return node != null && this.core.isTypeOf(node, this.META.Vocabulary);
   }
 
-  async getTermNodes(node, onlyReleased) {
-    return (await this.core.loadSubTree(node)).filter((node) =>
+  async getTermNodes(
+    node: Core.Node,
+    onlyReleased: boolean,
+  ): Promise<Core.Node[]> {
+    return (await this.core.loadSubTree(node)).filter((node: Core.Node) =>
       this.isTerm(node) && (!onlyReleased || this.isReleased(node))
     );
-  }
-
-  async getTermFields(node) {
-    const fieldNodes = (await this.core.loadChildren(node)).filter(
-      (n) => !this.isTerm(n),
-    );
-  }
-
-  isEnum(node) {
-    return this.isTypeOf(node, "EnumField");
-  }
-
-  /**
-   * Gets whether the given node is a Set field.
-   *
-   * @param {Core.Node} node The node to check the type of
-   * @return {boolean} Whether or not the `node` is a `SetField` type
-   * @memberof JSONSchemaExporter
-   */
-  isSet(node) {
-    return this.isTypeOf(node, "SetField");
   }
 
   /**
@@ -146,7 +150,7 @@ class JSONSchemaExporter {
    * @return {boolean} Whether or not the `node` is a type with "option" fields
    * @memberof JSONSchemaExporter
    */
-  isOptionType(node) {
+  isOptionType(node: Core.Node): boolean {
     return optionTypes.some((optType) => this.isTypeOf(node, optType));
   }
 
@@ -158,7 +162,7 @@ class JSONSchemaExporter {
    * @return {boolean} Whether or not the `node` is an "option" field
    * @memberof JSONSchemaExporter
    */
-  isFieldOption(node) {
+  isFieldOption(node: Core.Node): boolean {
     const parent = this.core.getParent(node);
     return (
       parent != null &&
@@ -175,13 +179,12 @@ class JSONSchemaExporter {
    * @return {node is Core.Node} Whether or not the `node` is a taxonomy term
    * @memberof JSONSchemaExporter
    */
-  isTerm(node) {
+  isTerm(node: Core.Node): boolean {
     return node != null && this.core.isTypeOf(node, this.META.Term);
   }
 
-  isTypeOf(node, name) {
-    /** @type {Core.Node | null} */
-    let iternode = this.core.getMetaType(node);
+  isTypeOf(node: Core.Node, name: string): boolean {
+    let iternode: Core.Node | null = this.core.getMetaType(node);
     while (iternode) {
       const baseName = this.core.getAttribute(iternode, "name");
       if (baseName === name) {
@@ -231,7 +234,7 @@ class JSONSchemaExporter {
     );
   }
 
-  async getDefinition(node) {
+  async getDefinition(node): Promise<JSONSchema7> {
     const isFieldOpt = this.isFieldOption(node);
 
     if (this.hasProperties(node)) {
@@ -266,7 +269,7 @@ class JSONSchemaExporter {
    * @return {Promise<{ [key:string]: any }>} A promise for properties dict
    * @memberof JSONSchemaExporter
    */
-  async getProperties(node) {
+  async getProperties(node: Core.Node): Promise<Property[]> {
     const fieldNodes = (await this.core.loadChildren(node)).filter((child) =>
       this.core.isTypeOf(child, this.META.Field)
     );
@@ -345,12 +348,8 @@ class JSONSchemaExporter {
 
   /**
    * Gets whether the given term node is deprecated.
-   *
-   * @param {Core.Node | null} node The node to check the type of
-   * @return {boolean} Whether or not the `node` is deprecated
-   * @memberof JSONSchemaExporter
    */
-  isReleased(node) {
+  isReleased(node: Core.Node | null): boolean {
     if (node === null) {
       return false;
     }
@@ -373,7 +372,7 @@ class JSONSchemaExporter {
    * @return {Promise<{ [key:string]: any }>} A promise for schema w/ anyOf, default fields
    * @memberof JSONSchemaExporter
    */
-  async _getAnyOfSchema(node) {
+  async _getAnyOfSchema(node: Core.Node) {
     const children = await this.core.loadChildren(node);
     if (!children.length) {
       return { type: "null" };
@@ -393,7 +392,7 @@ class JSONSchemaExporter {
     };
   }
 
-  _getDefault(fieldSchema) {
+  _getDefault(fieldSchema: JSONSchema7) {
     if (fieldSchema.default) {
       return fieldSchema.default;
     }
@@ -408,7 +407,7 @@ class JSONSchemaExporter {
     }
   }
 
-  static from(core, node) {
+  static from(core: GmeCore, node: Core.Node) {
     const metanodes = Object.values(core.getAllMetaNodes(node));
     const meta = Object.fromEntries(
       metanodes.map((n) => [core.getAttribute(n, "name"), n]),
@@ -418,7 +417,11 @@ class JSONSchemaExporter {
 }
 
 class Vocabulary {
-  constructor(name, schema, childTerms) {
+  name: string;
+  schema: VocabSchema;
+  childTerms: Term[];
+
+  constructor(name: string, schema: VocabSchema, childTerms: Term[]) {
     this.name = name;
     this.schema = schema;
     this.childTerms = childTerms;
@@ -449,25 +452,30 @@ class Vocabulary {
   }
 }
 
-function getContainmentAncestors(core, node) {
+function getContainmentAncestors(core: GmeCore, node: Core.Node) {
   let pathToRoot = [];
+  let iternode: Core.Node | null = node;
 
-  while (node) {
-    pathToRoot.push(node);
-    node = core.getParent(node);
+  while (iternode) {
+    pathToRoot.push(iternode);
+    iternode = core.getParent(iternode);
   }
 
   return pathToRoot;
 }
 
-class Property {
-  constructor(name, schema, required = false) {
+export class Property {
+  name: string;
+  schema: JSONSchema7;
+  required: boolean;
+
+  constructor(name: string, schema: JSONSchema7, required = false) {
     this.name = name;
     this.schema = schema;
     this.required = required;
   }
 
-  static async from(exporter, node) {
+  static async from(exporter: JSONSchemaExporter, node: Core.Node) {
     const core = exporter.core;
     const schema = await exporter.getFieldSchema(node);
     const name = core.getAttribute(node, "name");
@@ -484,8 +492,12 @@ class Property {
   }
 }
 
-class Term {
-  constructor(name, schema, selectionConstraint) {
+type SelectionConstraint = "required" | "recommended" | "optional";
+export class Term {
+  name: string;
+  selectionConstraint: SelectionConstraint;
+
+  constructor(name: string, schema, selectionConstraint: SelectionConstraint) {
     this.name = name;
     this.schema = schema;
     this.selectionConstraint = selectionConstraint;
@@ -525,5 +537,3 @@ class Term {
     return null;
   }
 }
-
-module.exports = JSONSchemaExporter;
