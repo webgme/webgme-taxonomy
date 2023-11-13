@@ -209,7 +209,11 @@ function handleUserErrors(logger, ...fns) {
       if (e instanceof UserError) {
         e.sendVia(res);
       } else {
-        logger.error(e);
+        if (e instanceof Error) {
+          logger.error(e.stack);
+        } else {
+          logger.error(e);
+        }
         res.sendStatus(500);
       }
     }
