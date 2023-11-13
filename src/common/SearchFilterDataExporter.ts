@@ -8,23 +8,14 @@
  *       "children": [...child nodes]
  *     }
  */
-import { OutAttr } from "webgme/common";
 import { GmeCore, VerifiedProjectContext } from "./types";
-import Utils from "./Utils";
+import Utils, { toString } from "./Utils";
 
 export interface VocabularyConfig {
   id: string;
   name: string;
   type: string;
   children: VocabularyConfig[];
-}
-
-function toString(attr: OutAttr): string {
-  if (attr) {
-    return attr.toString();
-  } else {
-    return "";
-  }
 }
 
 class VocabExporter {

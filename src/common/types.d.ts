@@ -77,6 +77,9 @@ export type MiddlewareOptions = {
   workerManager: Object;
 };
 
+export type HumanReadableTags = { [name: string]: any };
+export type GuidTags = { [name: string]: any };
+
 export type GmeCore = GmeClasses.Core & {
   getMetaType(node: Core.Node): Core.Node;
 };

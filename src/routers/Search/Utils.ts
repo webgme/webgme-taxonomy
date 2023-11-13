@@ -193,22 +193,6 @@ export function assert(cond: boolean, msg: string | Error) {
   }
 }
 
-/**
- * Given an object and a function, return a new object where the values are `fn(value)`.
- *
- * @param obj - The object to map over
- * @param fn - The function mapping the `obj` values to the output values
- * @returns A new object with the same keys but new values
- */
-export function mapObject<T, O>(
-  obj: { [key: string]: T },
-  fn: (value: T, key: string) => O,
-): { [key: string]: O } {
-  return Object.fromEntries(
-    Object.entries(obj).map(([k, v]) => [k, fn(v, k)]),
-  );
-}
-
 const defaultErrorFn = (key: string) => `Key not found: ${key}`;
 /**
  * A dictionary that throws an error if a key is not found.

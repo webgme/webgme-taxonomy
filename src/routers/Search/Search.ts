@@ -35,7 +35,7 @@ import { toArtifactMetadatav2 } from "./adapters/common/Helpers";
 import Utils from "../../common/Utils";
 import { deepMerge, fromResult, isString } from "./Utils";
 import DashboardConfiguration from "../../common/SearchFilterDataExporter";
-import TagFormatter from "../../common/TagFormatter";
+import TagFormatter, { FormatError } from "../../common/TagFormatter";
 import path from "path";
 import fsp from "fs/promises";
 const staticPath = path.join(__dirname, "..", "dashboard", "public");
@@ -621,7 +621,7 @@ async function toGuidFormat(
     return metadata;
   } catch (err) {
     // A stop-gap solution until FormatError actually inherits from UserError
-    if (err instanceof TagFormatter.FormatError) {
+    if (err instanceof FormatError) {
       throw new UserError(err.message);
     } else {
       throw err;

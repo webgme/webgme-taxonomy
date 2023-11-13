@@ -1,6 +1,7 @@
-import { filterMap, mapObject, OptionDict } from "./Utils";
+import { filterMap, OptionDict } from "./Utils";
 import { GMEContext, GMENode, Primitive } from "webgme-transformations";
 import { VerifiedProjectContext } from "../../common/types";
+import { mapObject } from "../../common/Utils";
 
 type TypeDict = { [path: string]: string }; // FIXME: don't duplicate this
 
