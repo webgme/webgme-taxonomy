@@ -17,7 +17,7 @@
 import * as express from "express";
 const router = express.Router();
 
-import type { NextFunction, Request, Response, Router } from "express";
+import type { Request, Response } from "express";
 import SystemTerm from "./SystemTerm";
 import UploadContext, { FileUpload } from "./UploadContext";
 import RouterUtils, {
@@ -28,8 +28,8 @@ import RouterUtils, {
 import type {
   AzureGmeConfig,
   GmeContentContext,
+  GmeContext,
   MiddlewareOptions,
-  WebgmeRequest,
 } from "../../common/types";
 import { toArtifactMetadatav2 } from "./adapters/common/Helpers";
 import Utils from "../../common/Utils";
@@ -94,30 +94,32 @@ function initialize(middlewareOpts: MiddlewareOptions) {
   );
 
   // Perhaps the path should include the node ID, too...
-  RouterUtils.addContentTypeMiddleware(middlewareOpts, router);
-
-  router.get(
-    RouterUtils.getContentTypeRoutes("configuration.json"),
-    // FIXME: how can we handle this correctly in TS?
-    handleUserErrors(
-      logger,
-      async function getConfiguration(req: WebgmeRequest, res: Response) {
-        const { core, contentType } = req.webgmeContext;
-        const configuration = await DashboardConfiguration.from(
-          core,
-          contentType,
-        );
-        configuration.project = req.webgmeContext.projectVersion;
-        configuration.contentTypePath = core.getPath(contentType);
-        res.json(configuration);
-      },
-    ),
+  RouterUtils.addContentTypeRoute(
+    middlewareOpts,
+    router,
+    "configuration.json",
+    async function getConfiguration(
+      webgmeContext,
+      _req: Request,
+      res: Response,
+    ) {
+      const { core, contentType } = webgmeContext;
+      const configuration = await DashboardConfiguration.from(
+        core,
+        contentType,
+      );
+      configuration.project = webgmeContext.projectVersion;
+      configuration.contentTypePath = core.getPath(contentType);
+      res.json(configuration);
+    },
   );
 
-  router.get(
-    RouterUtils.getContentTypeRoutes("schema.json"),
-    handleUserErrors(logger, async (request, response) => {
-      const { root, core, contentType } = request.webgmeContext;
+  RouterUtils.addContentTypeRoute(
+    middlewareOpts,
+    router,
+    "schema.json",
+    async (webgmeContext, _request, response) => {
+      const { root, core, contentType } = webgmeContext;
       const exporter = JSONSchemaExporter.from(core, root);
       const vocabularies = await Utils.getVocabulariesFor(core, contentType);
       const name = core.getAttribute(contentType, "name")?.toString() ?? "";
@@ -127,143 +129,144 @@ function initialize(middlewareOpts: MiddlewareOptions) {
         true,
       );
       response.json(schema);
-    }),
+    },
   );
 
   // Accessing and updating data via the storage adapter
-  router.get(
-    RouterUtils.getContentTypeRoutes("artifacts/"),
-    handleUserErrors(logger, async function listRepos(req, res) {
+  RouterUtils.addContentTypeRoute(
+    middlewareOpts,
+    router,
+    "artifacts/",
+    async function listRepos(webgmeContext, req, res) {
       const storage = await StorageAdapter.from(
-        req.webgmeContext,
+        webgmeContext,
         req,
         mainConfig,
       );
       const artifacts = await storage.listRepos();
       res.status(200).json(artifacts).end();
-    }),
+    },
   );
 
-  router.get(
-    RouterUtils.getContentTypeRoutes("artifacts/:repoId"),
-    handleUserErrors(
-      logger,
-      async function listArtifacts(req, res) {
-        const { repoId } = req.params;
-        const storage = await StorageAdapter.from(
-          req.webgmeContext,
-          req,
-          mainConfig,
-        );
-        // TODO: add support for repos that just reference another repo
-        const artifacts = await storage.listArtifacts(repoId);
-        res.status(200).json(artifacts).end();
-      },
-    ),
+  RouterUtils.addContentTypeRoute(
+    middlewareOpts,
+    router,
+    "artifacts/:repoId",
+    async function listArtifacts(webgmeContext, req, res) {
+      const { repoId } = req.params;
+      const storage = await StorageAdapter.from(
+        webgmeContext,
+        req,
+        mainConfig,
+      );
+      // TODO: add support for repos that just reference another repo
+      const artifacts = await storage.listArtifacts(repoId);
+      res.status(200).json(artifacts).end();
+    },
   );
 
-  router.post(
-    RouterUtils.getContentTypeRoutes("artifacts/"),
-    handleUserErrors(
-      logger,
-      async function createRepo(req, res) {
-        const userId = middlewareOpts.getUserId(req);
-        let metadata: ArtifactMetadatav2 = getArtifactMetadata(
-          <WebgmeRequest> req,
-        );
+  RouterUtils.addContentTypeRoute(
+    middlewareOpts,
+    router,
+    "artifacts/",
+    async function createRepo(gmeContext, req, res) {
+      const userId = middlewareOpts.getUserId(req);
+      let metadata: ArtifactMetadatav2 = getArtifactMetadata(
+        gmeContext,
+        <ArtifactMetadata> req.body.metadata,
+      );
 
-        // Upload to the storage backend
-        const storage = await StorageAdapter.from(
-          req.webgmeContext,
-          req,
-          mainConfig,
-        );
-        const status = await storage.withRepoReservation(
-          async (reservation) => {
-            const gmeContext = (<WebgmeRequest> req).webgmeContext;
-            await addSystemTags(
-              metadata,
-              reservation,
-              gmeContext,
-              userId,
-              [], // repos are not initialized with any files
-            );
-            await toGuidFormat(
-              gmeContext,
-              metadata,
-            );
-            return await storage.createArtifact(reservation, metadata);
-          },
-        );
+      // Upload to the storage backend
+      const storage = await StorageAdapter.from(
+        gmeContext,
+        req,
+        mainConfig,
+      );
+      const status = await storage.withRepoReservation(
+        async (reservation) => {
+          await addSystemTags(
+            metadata,
+            reservation,
+            gmeContext,
+            userId,
+            [], // repos are not initialized with any files
+          );
+          await toGuidFormat(
+            gmeContext,
+            metadata,
+          );
+          return await storage.createArtifact(reservation, metadata);
+        },
+      );
 
-        res.json("status: " + status);
-      },
-    ),
+      res.json("status: " + status);
+    },
+    { method: "post" },
   );
 
-  router.post(
-    RouterUtils.getContentTypeRoutes("artifacts/:repoId/append"),
-    handleUserErrors(
-      logger,
-      async function appendContent(req, res) {
-        const userId = middlewareOpts.getUserId(req);
-        let metadata: ArtifactMetadatav2 = getArtifactMetadata(
-          <WebgmeRequest> req,
-        );
+  RouterUtils.addContentTypeRoute(
+    middlewareOpts,
+    router,
+    "artifacts/:repoId/append",
+    async function appendContent(gmeContext, req, res) {
+      const userId = middlewareOpts.getUserId(req);
+      let metadata: ArtifactMetadatav2 = getArtifactMetadata(
+        gmeContext,
+        <ArtifactMetadata> req.body.metadata,
+      );
 
-        const { repoId } = req.params;
-        const storage = await StorageAdapter.from(
-          req.webgmeContext,
-          req,
-          mainConfig,
-        );
+      const { repoId } = req.params;
+      const storage = await StorageAdapter.from(
+        gmeContext,
+        req,
+        mainConfig,
+      );
 
-        const appendResult = await storage.withContentReservation(
-          async (reservation) => {
-            const gmeContext = (<WebgmeRequest> req).webgmeContext;
-            const filenames = req.body.filenames;
-            await addChildSystemTags(
-              metadata,
-              reservation,
-              gmeContext,
-              userId,
-              filenames,
-            );
-            await toGuidFormat(
-              gmeContext,
-              metadata,
-            );
-            return await storage.appendArtifact(
-              reservation,
-              metadata,
-              filenames,
-            );
-          },
-          repoId,
-        );
+      const appendResult = await storage.withContentReservation(
+        async (reservation) => {
+          const filenames = req.body.filenames;
+          await addChildSystemTags(
+            metadata,
+            reservation,
+            gmeContext,
+            userId,
+            filenames,
+          );
+          await toGuidFormat(
+            gmeContext,
+            metadata,
+          );
+          return await storage.appendArtifact(
+            reservation,
+            metadata,
+            filenames,
+          );
+        },
+        repoId,
+      );
 
-        appendResult.files.forEach((file) => {
-          const isRelative = file.params.url.startsWith("./");
-          if (isRelative) {
-            const baseUrl = req.originalUrl
-              .split(`artifacts/${repoId}/append`)
-              .shift();
-            file.params.url = baseUrl + file.params.url.substring(2);
-          }
-        });
-        res.json(appendResult);
-      },
-    ),
+      appendResult.files.forEach((file) => {
+        const isRelative = file.params.url.startsWith("./");
+        if (isRelative) {
+          const baseUrl = req.originalUrl
+            .split(`artifacts/${repoId}/append`)
+            .shift();
+          file.params.url = baseUrl + file.params.url.substring(2);
+        }
+      });
+      res.json(appendResult);
+    },
+    { method: "post" },
   );
 
-  router.post(
-    RouterUtils.getContentTypeRoutes(
-      "artifacts/:parentId/:index/:fileId/upload",
-    ),
-    handleUserErrors(logger, async function uploadFile(req, res) {
+  RouterUtils.addContentTypeRoute(
+    middlewareOpts,
+    router,
+    "artifacts/:parentId/:index/:fileId/upload",
+    async function uploadFile(webgmeContext, req, res) {
       const { parentId, index, fileId } = req.params;
       const storage = await StorageAdapter.from(
-        req.webgmeContext,
+        webgmeContext,
         req,
         mainConfig,
       );
@@ -273,167 +276,166 @@ function initialize(middlewareOpts: MiddlewareOptions) {
       } else {
         res.sendStatus(400);
       }
-    }),
+    },
+    { method: "post" },
   );
 
-  router.get(
-    RouterUtils.getContentTypeRoutes("artifacts/:parentId/files/"),
-    handleUserErrors(
-      logger,
-      async function downloadContentURL(req, res) {
-        const { parentId } = req.params;
-        // TODO: get the IDs for the specific observations to get
-        let ids;
-        if (isString(req.query.ids)) {
-          ids = JSON.parse(req.query.ids);
-        } else {
-          res.status(400).send("List of artifact IDs required");
-          return;
-        }
+  RouterUtils.addContentTypeRoute(
+    middlewareOpts,
+    router,
+    "artifacts/:parentId/files/",
+    async function downloadContentURL(webgmeContext, req, res) {
+      const { parentId } = req.params;
+      // TODO: get the IDs for the specific observations to get
+      let ids;
+      if (isString(req.query.ids)) {
+        ids = JSON.parse(req.query.ids);
+      } else {
+        res.status(400).send("List of artifact IDs required");
+        return;
+      }
 
-        //const formatter = await getFormatter(req.webgmeContext);
-        const storage = await StorageAdapter.from(
-          req.webgmeContext,
-          req,
-          mainConfig,
-        );
+      //const formatter = await getFormatter(req.webgmeContext);
+      const storage = await StorageAdapter.from(
+        webgmeContext,
+        req,
+        mainConfig,
+      );
 
-        // need to download the urls of the associated observations ids
-        const urlResponse = await storage.downloadFileURLs(parentId, ids);
-        res.json(urlResponse);
-      },
-    ),
+      // need to download the urls of the associated observations ids
+      const urlResponse = await storage.downloadFileURLs(parentId, ids);
+      res.json(urlResponse);
+    },
   );
 
-  router.get(
-    RouterUtils.getContentTypeRoutes("artifacts/:parentId/:id/metadata.json"),
-    handleUserErrors(
-      logger,
-      async function getMetadata(req, res) {
-        const { parentId, id } = req.params;
-        const storage = await StorageAdapter.from(
-          req.webgmeContext,
-          req,
-          mainConfig,
-        );
-        const metadataOpt = await storage.getMetadata(
-          parentId,
-          id,
-        );
+  RouterUtils.addContentTypeRoute(
+    middlewareOpts,
+    router,
+    "artifacts/:parentId/:id/metadata.json",
+    async function getMetadata(webgmeContext, req, res) {
+      const { parentId, id } = req.params;
+      const storage = await StorageAdapter.from(
+        webgmeContext,
+        req,
+        mainConfig,
+      );
+      const metadataOpt = await storage.getMetadata(
+        parentId,
+        id,
+      );
 
-        const formatter = await getFormatter(req.webgmeContext);
-        const metadata = fromResult(
-          metadataOpt
-            .map((md) => {
-              md.tags = formatter.toHumanFormat(md.tags);
-              return md;
-            })
-            .okOrElse(() => new UserError("Metadata not found", 404)),
-        );
+      const formatter = await getFormatter(webgmeContext);
+      const metadata = fromResult(
+        metadataOpt
+          .map((md) => {
+            md.tags = formatter.toHumanFormat(md.tags);
+            return md;
+          })
+          .okOrElse(() => new UserError("Metadata not found", 404)),
+      );
 
-        res.json(metadata);
-      },
-    ),
+      res.json(metadata);
+    },
   );
 
-  router.get(
-    RouterUtils.getContentTypeRoutes("artifacts/:parentId/metadata.jsonl"),
-    handleUserErrors(
-      logger,
-      async function getBulkMetadata(req, res) {
-        const { parentId } = req.params;
-        let ids: string[];
-        if (isString(req.query.ids)) {
-          ids = JSON.parse(req.query.ids);
-        } else {
-          res.status(400).send("List of artifact IDs required");
-          return;
-        }
-        const MAX_THRESHOLD = 20000;
-        if (ids.length > MAX_THRESHOLD) {
-          res.status(400).send("Too many content IDs");
-          return;
-        }
+  RouterUtils.addContentTypeRoute(
+    middlewareOpts,
+    router,
+    "artifacts/:parentId/metadata.jsonl",
+    async function getBulkMetadata(webgmeContext, req, res) {
+      const { parentId } = req.params;
+      let ids: string[];
+      if (isString(req.query.ids)) {
+        ids = JSON.parse(req.query.ids);
+      } else {
+        res.status(400).send("List of artifact IDs required");
+        return;
+      }
+      const MAX_THRESHOLD = 20000;
+      if (ids.length > MAX_THRESHOLD) {
+        res.status(400).send("Too many content IDs");
+        return;
+      }
 
-        const formatter = await getFormatter(req.webgmeContext);
-        const storage = await StorageAdapter.from(
-          req.webgmeContext,
-          req,
-          mainConfig,
-        );
-        const metadata = await storage.getBulkMetadata(
-          parentId,
-          ids,
-          formatter,
-        );
+      const formatter = await getFormatter(webgmeContext);
+      const storage = await StorageAdapter.from(
+        webgmeContext,
+        req,
+        mainConfig,
+      );
+      const metadata = await storage.getBulkMetadata(
+        parentId,
+        ids,
+        formatter,
+      );
 
-        const metadataLines = metadata
-          .map((md) => JSON.stringify(md))
-          .join("\n");
+      const metadataLines = metadata
+        .map((md) => JSON.stringify(md))
+        .join("\n");
 
-        res.send(metadataLines);
-      },
-    ),
+      res.send(metadataLines);
+    },
   );
 
   const downloadQueue: TaskQueue<DownloadTask, FilePath> = new TaskQueue();
-  router.post(
-    RouterUtils.getContentTypeRoutes("artifacts/:repoId/downloads/"),
-    handleUserErrors(
-      logger,
-      async function downloadContent(req, res) {
-        const { repoId } = req.params;
-        // TODO: get the IDs for the specific observations to get
-        let ids;
-        if (isString(req.query.ids)) {
-          ids = JSON.parse(req.query.ids) as string[];
-        } else {
-          res.status(400).send("List of artifact IDs required");
-          return;
-        }
-        const formatter = await getFormatter(req.webgmeContext);
-        const storage = await StorageAdapter.from(
-          req.webgmeContext,
-          req,
-          mainConfig,
-        );
-        // Fetch all the metadata
-        const contentIds = ids.sort((id1, id2) => +id1 < +id2 ? -1 : 1);
-        const allMetadata = await Promise.all(
-          contentIds.map(async (contentId) => {
-            const metadata = await storage.getMetadata(
-              repoId,
-              contentId,
-            );
-            return metadata.map((md) => {
-              try {
-                md.tags = formatter.toHumanFormat(md.tags);
-              } catch (err) {
-                logger.warn(
-                  `Unable to convert tags to human format: ${contentId} (${repoId})`,
-                );
-                throw err;
-              }
-              return md;
-            });
-          }),
-        );
-        const metadata = allMetadata
-          .filter((metadata) => metadata.isSome())
-          .map((metadata) => metadata.unwrap());
 
-        // get all the metadata in human format
-        const task = new DownloadTask(
-          mainConfig as AzureGmeConfig,
-          logger,
-          req,
-          metadata,
-          () => getRepositoryName(logger, repoId, storage, formatter),
-        );
-        const id = downloadQueue.submitTask(task);
-        res.json(id);
-      },
-    ),
+  RouterUtils.addContentTypeRoute(
+    middlewareOpts,
+    router,
+    "artifacts/:repoId/downloads/",
+    async function downloadContent(webgmeContext, req, res) {
+      const { repoId } = req.params;
+      // TODO: get the IDs for the specific observations to get
+      let ids;
+      if (isString(req.query.ids)) {
+        ids = JSON.parse(req.query.ids) as string[];
+      } else {
+        res.status(400).send("List of artifact IDs required");
+        return;
+      }
+      const formatter = await getFormatter(webgmeContext);
+      const storage = await StorageAdapter.from(
+        webgmeContext,
+        req,
+        mainConfig,
+      );
+      // Fetch all the metadata
+      const contentIds = ids.sort((id1, id2) => +id1 < +id2 ? -1 : 1);
+      const allMetadata = await Promise.all(
+        contentIds.map(async (contentId) => {
+          const metadata = await storage.getMetadata(
+            repoId,
+            contentId,
+          );
+          return metadata.map((md) => {
+            try {
+              md.tags = formatter.toHumanFormat(md.tags);
+            } catch (err) {
+              logger.warn(
+                `Unable to convert tags to human format: ${contentId} (${repoId})`,
+              );
+              throw err;
+            }
+            return md;
+          });
+        }),
+      );
+      const metadata = allMetadata
+        .filter((metadata) => metadata.isSome())
+        .map((metadata) => metadata.unwrap());
+
+      // get all the metadata in human format
+      const task = new DownloadTask(
+        mainConfig as AzureGmeConfig,
+        logger,
+        req,
+        metadata,
+        () => getRepositoryName(logger, repoId, storage, formatter),
+      );
+      const id = downloadQueue.submitTask(task);
+      res.json(id);
+    },
+    { method: "post" },
   );
 
   async function getRepositoryName(
@@ -641,19 +643,21 @@ async function getFormatter(
 /**
  * Retrieve the artifact metadata from the request. Initialize it if none provided.
  */
-function getArtifactMetadata(req: WebgmeRequest): ArtifactMetadatav2 {
-  const gmeContext = req.webgmeContext;
+function getArtifactMetadata(
+  gmeContext: GmeContext,
+  metadata: ArtifactMetadata,
+): ArtifactMetadatav2 {
   const projectVersion = gmeContext.projectVersion;
 
   // TODO: check if it is a tags file...
-  const metadata = toArtifactMetadatav2(<ArtifactMetadata> req.body.metadata);
+  const metadatav2 = toArtifactMetadatav2(metadata);
 
   // TODO: check if the project version and metadata tags are compatible
   // if not, throw a UserError
-  metadata.tags = metadata.tags || {};
-  metadata.taxonomyVersion = projectVersion;
+  metadatav2.tags = metadatav2.tags || {};
+  metadatav2.taxonomyVersion = projectVersion;
 
-  return metadata;
+  return metadatav2;
 }
 
 /**

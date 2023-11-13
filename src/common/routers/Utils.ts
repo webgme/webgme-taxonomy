@@ -10,17 +10,22 @@ import type {
   GmeContentContext,
   GmeContext,
   GmeCore,
+  GmeLogger,
   MiddlewareOptions,
   ProjectContext,
   UserProject,
   VerifiedProjectContext,
   WebgmeHandler,
-  WebgmeRequest,
 } from "../types";
 import type { NextFunction, Request, Response, Router } from "express";
 // TODO: module or requirejs
 type ContentTypeRoute = (
   context: GmeContentContext,
+  req: Request,
+  res: Response,
+) => Promise<void> | void;
+type GmeProjectRoute = (
+  context: GmeContext,
   req: Request,
   res: Response,
 ) => Promise<void> | void;
@@ -33,8 +38,9 @@ function makeCore(project: UserProject, opts: MiddlewareOptions): GmeCore {
   });
 }
 
-interface ProjectScopeMiddlewareOpts {
+interface GmeRouteOpts {
   unsafe?: boolean;
+  method: "get" | "post";
 }
 
 function getProjectContext(params: { [k: string]: string }): ProjectContext {
@@ -169,10 +175,6 @@ export default {
     return this.getProjectScopedRoutes(contentTypeRoute);
   },
 
-  addContentTypeRoute(router: Router, route = "", handler: ContentTypeRoute) {
-    // TODO
-  },
-
   // FIXME: remove this
   getContentTypeVocabRoutes(route = "") {
     const vocabRoute = `:vocabScope(data|repo)/${route}`;
@@ -187,44 +189,48 @@ export default {
     ];
   },
 
-  addContentTypeMiddleware(
+  addContentTypeRoute(
     middlewareOpts: MiddlewareOptions,
     router: Router,
-    options: ProjectScopeMiddlewareOpts = {},
-  ) {
-    this.addProjectScopeMiddleware(middlewareOpts, router, options);
-    const { logger } = middlewareOpts;
-    return router.use(
-      this.getContentTypeRoutes(),
-      handleUserErrors(logger, async (req: WebgmeRequest, _res: Response) => {
+    path: string,
+    handler: ContentTypeRoute,
+    options: GmeRouteOpts = { method: "get" },
+  ): void {
+    this.addProjectRoute(
+      middlewareOpts,
+      router,
+      `:contentTypePath/${path}`,
+      async (gmeContext, req, res) => {
         const { contentTypePath } = req.params;
-        const { core, root } = req.webgmeContext;
+        const { core, root } = gmeContext;
         const contentType = await core.loadByPath(root, contentTypePath);
         assert(contentType, new ContentTypeNotFoundError(contentTypePath));
-        req.webgmeContext = {
-          project: req.webgmeContext.project,
-          projectVersion: req.webgmeContext.projectVersion,
-          core: req.webgmeContext.core,
-          root: req.webgmeContext.root,
-          commitObject: req.webgmeContext.commitObject,
+        const context = {
+          project: gmeContext.project,
+          projectVersion: gmeContext.projectVersion,
+          core: gmeContext.core,
+          root: gmeContext.root,
+          commitObject: gmeContext.commitObject,
           contentType,
         };
         console.log("CTX received:", req.originalUrl);
-      }),
+        await handler(context, req, res);
+      },
+      options,
     );
   },
 
-  addProjectScopeMiddleware(
+  addProjectRoute(
     middlewareOpts: MiddlewareOptions,
     router: Router,
-    options: ProjectScopeMiddlewareOpts = {},
-  ) {
-    const { logger } = middlewareOpts;
-    const { unsafe } = options;
-    const contextFn: (req: WebgmeRequest) => Promise<GmeContext> = !unsafe
-      ? (request: WebgmeRequest) =>
-        this.getWebGMEContext(middlewareOpts, request)
-      : (request: WebgmeRequest) => {
+    path: string,
+    handler: GmeProjectRoute,
+    options: GmeRouteOpts = { method: "get" },
+  ): void {
+    const { unsafe, method } = options;
+    const contextFn: (req: Request) => Promise<GmeContext> = !unsafe
+      ? (request: Request) => this.getWebGMEContext(middlewareOpts, request)
+      : (request: Request) => {
         const userId = request.params.projectId.split("+").shift();
         if (!userId) {
           throw new InvalidProjectIdError(request.params.projectId);
@@ -238,14 +244,13 @@ export default {
         );
       };
 
-    this.addLatestVersionRedirect(middlewareOpts, router);
-
-    return router.use(
-      this.getProjectScopedRoutes(),
+    router[method](
+      this.getProjectScopedRoutes(path),
       handleUserErrors(
-        logger,
-        async (req: WebgmeRequest, _res: Response) => {
-          req.webgmeContext = await contextFn(req);
+        middlewareOpts.logger,
+        async (req, res) => {
+          const gmeContext = await contextFn(req);
+          handler(gmeContext, req, res);
         },
       ),
     );
@@ -257,7 +262,7 @@ export default {
       this.getProjectScopedRoutes(),
       handleUserErrors(
         logger,
-        async function resolveLatestTag(req: WebgmeRequest, res: Response) {
+        async function resolveLatestTag(req: Request, res: Response) {
           const { projectId, tag } = req.params;
           if (tag === "latest") {
             const { safeStorage } = middlewareOpts;
@@ -299,9 +304,9 @@ export default {
   },
 };
 
-export function handleUserErrors(logger, ...fns: WebgmeHandler[]) {
+export function handleUserErrors(logger: GmeLogger, ...fns: WebgmeHandler[]) {
   return async function (
-    req: WebgmeRequest,
+    req: Request,
     res: Response,
     next: NextFunction,
   ) {

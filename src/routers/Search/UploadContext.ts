@@ -1,6 +1,6 @@
 import { filterMap, mapObject, OptionDict } from "./Utils";
 import { GMEContext, GMENode, Primitive } from "webgme-transformations";
-import { ProjectVersion } from "../../common/types";
+import { VerifiedProjectContext } from "../../common/types";
 
 type TypeDict = { [path: string]: string }; // FIXME: don't duplicate this
 
@@ -14,7 +14,7 @@ export interface UploadContextData {
   description: string;
   tags: any[];
   files: FileUpload[];
-  project: ProjectVersion;
+  project: VerifiedProjectContext;
   core: GmeClasses.Core;
   contentType: Core.Node;
   userId: string;
@@ -77,10 +77,10 @@ export default class UploadContext {
       commit: Primitive.from(data.project.commit),
     };
 
-    if (data.project.branch) {
+    if ("branch" in data.project) {
       attrs.branch = Primitive.from(data.project.branch);
     }
-    if (data.project.tag) {
+    if ("tag" in data.project) {
       attrs.tag = Primitive.from(data.project.tag);
     }
     const project = new GMENode("@tmp/project", attrs);

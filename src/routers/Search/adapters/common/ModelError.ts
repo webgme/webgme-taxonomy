@@ -3,11 +3,20 @@ import { UserError } from "../../../../common/routers/Utils";
 import type { Response } from "express";
 const UNPROCESSABLE_ENTITY = 422;
 
-interface ModelContext {
+interface ModelNodeContext {
   projectId: string;
-  branch: string | undefined;
   nodeId: string;
 }
+
+interface ModelBranchContext extends ModelNodeContext {
+  branch: string;
+}
+
+interface ModelCommitContext extends ModelNodeContext {
+  commit: string;
+}
+
+type ModelContext = ModelBranchContext | ModelCommitContext;
 
 export class ModelError extends UserError {
   modelContext: ModelContext;
@@ -25,18 +34,33 @@ export class ModelError extends UserError {
     response.status(this.statusCode).json(data);
   }
 
-  static getContext(gmeContext: GmeContentContext, node: Core.Node): ModelContext {
+  static getContext(
+    gmeContext: GmeContentContext,
+    node: Core.Node,
+  ): ModelContext {
     const { core, projectVersion } = gmeContext;
-    return {
-      projectId: projectVersion.id,
-      branch: projectVersion.branch, // TODO: add support for more types of references to a project
-      nodeId: core.getPath(node),
-    };
+    if ("branch" in projectVersion) {
+      return {
+        projectId: projectVersion.id,
+        branch: projectVersion.branch,
+        nodeId: core.getPath(node),
+      };
+    } else {
+      return {
+        projectId: projectVersion.id,
+        commit: projectVersion.commit,
+        nodeId: core.getPath(node),
+      };
+    }
   }
 }
 
 export class MissingAttributeError extends ModelError {
-  constructor(gmeContext: GmeContentContext, node: Core.Node, attrName: string) {
+  constructor(
+    gmeContext: GmeContentContext,
+    node: Core.Node,
+    attrName: string,
+  ) {
     const { core } = gmeContext;
     const name = core.getAttribute(node, "name");
     const msg = `No ${attrName} specified for ${name}`;

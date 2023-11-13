@@ -1,10 +1,7 @@
 // TODO: load the different adapter types
 
-import type {
-  AzureGmeConfig,
-  GmeContentContext,
-  WebgmeRequest,
-} from "../../../common/types";
+import type { AzureGmeConfig, GmeContentContext } from "../../../common/types";
+import type { Request } from "express";
 import { UserError } from "../../../common/routers/Utils";
 import { StorageNotFoundError } from "./common/ModelError";
 import fs from "fs";
@@ -37,7 +34,7 @@ const AdaptersByPrefix = Object.values(SUPPORTED_ADAPTERS)
 export default class Adapters {
   static async from(
     gmeContext: GmeContentContext,
-    req: WebgmeRequest,
+    req: Request,
     config: any,
   ): Promise<Adapter> {
     const { core, contentType } = gmeContext;
@@ -48,15 +45,15 @@ export default class Adapters {
     if (!storageNode) {
       throw new StorageNotFoundError(gmeContext, contentType);
     }
-    return Adapters.fromStorageNode(req, storageNode, config);
+    return Adapters.fromStorageNode(gmeContext, req, storageNode, config);
   }
 
   static async fromStorageNode(
-    req: WebgmeRequest,
+    gmeContext: GmeContentContext,
+    req: Request,
     storageNode: Core.Node,
     config: any,
   ): Promise<Adapter> {
-    const gmeContext = req.webgmeContext;
     const { core } = gmeContext;
     const adapterType = core.getAttribute(
       core.getMetaType(storageNode),
@@ -77,7 +74,7 @@ export default class Adapters {
   }
 
   static async fromUri(
-    req: WebgmeRequest,
+    req: Request,
     uri: string,
     config: AzureGmeConfig,
   ): Promise<Adapter> {

@@ -1,7 +1,7 @@
-import type { GmeContentContext } from "../../../common/types";
+import type { GmeContext } from "../../common/types";
 
 export default class ContextFacade {
-  constructor(protected context: GmeContentContext) {}
+  constructor(protected context: GmeContext) {}
 
   async getContentTypeNodes() {
     const { core, root } = this.context;

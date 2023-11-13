@@ -5,6 +5,7 @@
  *    Process -> ArtifactSet
  *    Observation -> Artifact
  */
+import type { Request } from "express";
 import fetch from "node-fetch";
 import fs from "fs";
 import _ from "underscore";
@@ -23,7 +24,6 @@ import withTokens from "./tokens";
 import type {
   AzureGmeConfig,
   GmeContentContext,
-  WebgmeRequest,
 } from "../../../../common/types";
 import { pipeline } from "stream";
 import { promisify } from "util";
@@ -469,7 +469,7 @@ export default class PDP implements Adapter {
   static async from(
     gmeContext: GmeContentContext,
     storageNode: Core.Node,
-    req: WebgmeRequest,
+    req: Request,
     gmeConfig: AzureGmeConfig,
   ) {
     const { core } = gmeContext;
@@ -493,6 +493,7 @@ export default class PDP implements Adapter {
     );
 
     return PDP.fromParameters(
+      gmeContext,
       req,
       gmeConfig,
       hostUri,
@@ -500,11 +501,11 @@ export default class PDP implements Adapter {
   }
 
   static async fromParameters(
-    req: WebgmeRequest,
+    gmeContext: GmeContentContext,
+    req: Request,
     gmeConfig: AzureGmeConfig,
     hostUri: HostUri,
   ): Promise<PDP> {
-    const gmeContext = req.webgmeContext;
     const userToken =
       req.cookies[gmeConfig.authentication.azureActiveDirectory.cookieId];
 
@@ -536,8 +537,9 @@ export default class PDP implements Adapter {
   }
 
   static async fromUri(
+    gmeContext: GmeContentContext,
     gmeConfig: AzureGmeConfig,
-    req: WebgmeRequest,
+    req: Request,
     uri: string,
   ): Promise<PDP> {
     const chunks = uri.split("/");
@@ -549,6 +551,7 @@ export default class PDP implements Adapter {
     const hostUri = new HostUri(baseUrl, processType);
 
     return PDP.fromParameters(
+      gmeContext,
       req,
       gmeConfig,
       hostUri,

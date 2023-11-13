@@ -3,6 +3,7 @@
  * in documents along with any contained artifacts.
  */
 import fs from "fs";
+import type { Request } from "express";
 import stream from "stream";
 import _ from "underscore";
 import { Option } from "oxide.ts";
@@ -30,11 +31,7 @@ import {
   UploadParams,
   UploadRequest,
 } from "../common/AppendResult";
-import {
-  AzureGmeConfig,
-  GmeContentContext,
-  WebgmeRequest,
-} from "../../../../common/types";
+import { AzureGmeConfig, GmeContentContext } from "../../../../common/types";
 import { toArtifactMetadatav2 } from "../common/Helpers";
 import { filterMap, fromResult, Pattern } from "../../Utils";
 import ScopedFnQueue from "../../ScopedFnQueue";
@@ -325,7 +322,7 @@ export default class MongoAdapter implements Adapter {
 
   static async fromUri(
     _config: AzureGmeConfig,
-    _req: WebgmeRequest,
+    _req: Request,
     uri: string,
   ): Promise<MongoAdapter> {
     // TODO: How can we handle repo IDs?

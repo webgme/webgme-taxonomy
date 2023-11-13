@@ -1,3 +1,4 @@
+import type { Request } from "express";
 import { UserError } from "../../common/routers/Utils";
 import type { ArtifactMetadatav2 } from "./adapters/common/types";
 import StorageAdapter from "./adapters";
@@ -11,7 +12,7 @@ import { promisify } from "util";
 const streamPipeline = promisify(pipeline);
 import { Result } from "oxide.ts";
 import { UniqueNames } from "./Utils";
-import { AzureGmeConfig, WebgmeRequest } from "../../common/types";
+import { AzureGmeConfig } from "../../common/types";
 
 export enum Status {
   Created,
@@ -45,7 +46,7 @@ interface Runnable<O> {
 export type FilePath = string;
 export class DownloadTask implements Runnable<FilePath> {
   private config: AzureGmeConfig;
-  private req: WebgmeRequest;
+  private req: Request;
   logger: Global.GmeLogger;
   metadata: ArtifactMetadatav2[];
   getRepoName: () => Promise<string>;
@@ -53,7 +54,7 @@ export class DownloadTask implements Runnable<FilePath> {
   constructor(
     config: AzureGmeConfig,
     logger: Global.GmeLogger,
-    req: WebgmeRequest,
+    req: Request,
     metadata: ArtifactMetadatav2[],
     getRepoName: () => Promise<string>,
   ) {

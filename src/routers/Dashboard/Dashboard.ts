@@ -12,8 +12,8 @@
 
 import * as express from "express";
 import * as path from "path";
-import type { MiddlewareOptions } from "../../../common/types";
-import * as RouterUtils from "../../../common/routers/Utils";
+import type { MiddlewareOptions } from "../../common/types";
+import RouterUtils from "../../common/routers/Utils";
 import ContextFacade from "./ContextFacade";
 
 export const router = express.Router();
@@ -52,12 +52,12 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
     express.static(staticPath),
   );
 
-  RouterUtils.addProjectScopeMiddleware(middlewareOpts, router);
-
-  router.get(
-    RouterUtils.getProjectScopedRoutes("info"),
-    async (req, res) => {
-      const context = new ContextFacade((<any> req).webgmeContext);
+  RouterUtils.addProjectRoute(
+    middlewareOpts,
+    router,
+    "info",
+    async (gmeContext, _req, res) => {
+      const context = new ContextFacade(gmeContext);
       const body = await context.getProjectInfo();
       res.json(body);
     },
