@@ -315,7 +315,7 @@ export function addQueryParams(
   queryDict: { [key: string]: string },
 ): string {
   const queryString = Object.entries(queryDict)
-    .map((part) => part.join("="))
+    .map((part) => part.map((c) => encodeURIComponent(c)).join("="))
     .join("&");
   return baseUrl.replace(/\??$/, "?") + queryString;
 }
