@@ -29,6 +29,30 @@ describe("PdpApi", function () {
       authHeaders.forEach((auth) => assert.equal(`Bearer ${userToken}`, auth));
     });
 
+    it("should encode URI components", async function () {
+      const userToken = "userToken";
+      const api = new PdpApi("https://someUrl.com", userToken);
+
+      // TODO: setup the mocks
+      let apiUrl;
+      api._rawFetch = async (url, _opts) => {
+        apiUrl = url;
+        return {
+          status: 400,
+          text: () => "Just a mock method",
+        };
+      };
+
+      const processId = "someProcessId";
+      await api.getObservationFiles(
+        processId,
+        1,
+        1,
+      );
+
+      assert(!apiUrl.includes("*"), "api includes *: " + apiUrl);
+    });
+
     it("should use token, if provided", async function () {
       const userToken = "userToken";
       const api = new PdpApi("https://someUrl.com", userToken);
