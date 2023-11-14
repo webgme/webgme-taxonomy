@@ -314,50 +314,74 @@ export default class JSONSchemaExporter {
     const baseNode = this.core.getMetaType(node);
     const baseName = this.core.getAttribute(baseNode, "name");
 
-    let isPrimitive = false;
     switch (baseName) {
-      case "IntegerField":
+      case "IntegerField": {
         const fieldSchema: IntegerFieldSchema = {
           title: name,
           type: "integer",
         };
-        const value = this.core.getAttribute(node, "value");
+        const value = toString(this.core.getAttribute(node, "value"));
         if (value) {
-          fieldSchema.default = parseInt(toString(value));
+          fieldSchema.default = parseInt(value);
         }
         return fieldSchema;
-      case "FloatField":
-        fieldSchema.type = "number";
-        isPrimitive = true;
-        break;
-      case "BooleanField":
-        fieldSchema.type = "boolean";
-        isPrimitive = true;
-        break;
-      case "TextField":
-        fieldSchema.type = "string";
-        isPrimitive = true;
-        break;
-      case "UriField":
-        const value = this.core.getAttribute(node, "value");
+      }
+      case "FloatField": {
+        const fieldSchema: FloatFieldSchema = {
+          title: name,
+          type: "number",
+        };
+        const value = toString(this.core.getAttribute(node, "value"));
+        if (value) {
+          fieldSchema.default = parseFloat(value);
+        }
+        return fieldSchema;
+      }
+      case "BooleanField": {
+        const fieldSchema: BooleanFieldSchema = {
+          title: name,
+          type: "boolean",
+        };
+        const value = toString(this.core.getAttribute(node, "value"));
+        if (value) {
+          fieldSchema.default = value === "true";
+        }
+        return fieldSchema;
+      }
+      case "TextField": {
+        const fieldSchema: TextFieldSchema = {
+          title: name,
+          type: "string",
+        };
+        const value = toString(this.core.getAttribute(node, "value"));
         if (value) {
           fieldSchema.default = value;
         }
-        return {
+        return fieldSchema;
+      }
+      case "UriField": {
+        const fieldSchema: UriFieldSchema = {
           title: name,
           type: "string",
           pattern: Pattern.exact(Pattern.anyIn(
             ...StorageAdapters.getUriPatterns(),
           )),
         };
-        break;
-      case "EnumField":
-        Object.assign(fieldSchema, await this._getAnyOfSchema(node));
+
+        const value = toString(this.core.getAttribute(node, "value"));
+        if (value) { // FIXME: validate the default URI?
+          fieldSchema.default = value;
+        }
+        return fieldSchema;
+      }
+      case "EnumField": {
+        const fieldSchema: EnumFieldSchema = await this._getAnyOfSchema(node);
         // Currently, setting the default is problematic for enums and results in the default key
         // always being added (resulting in many validation errors)
         delete fieldSchema.default;
-        break;
-      case "CompoundField":
+        return fieldSchema;
+      }
+      case "CompoundField": {
         const properties: { [k: string]: any } = {};
         properties[name] = await this.getDefinition(node);
         return {
@@ -366,21 +390,19 @@ export default class JSONSchemaExporter {
           properties,
           additionalProperties: false,
         };
-      case "SetField":
-        Object.assign(fieldSchema, {
+      }
+      case "SetField": {
+        const fieldSchema: SetFieldSchema = {
+          title: name,
           type: "array",
           uniqueItems: true,
           items: await this._getAnyOfSchema(node),
-        });
-    }
-
-    if (isPrimitive) {
-      const value = this.core.getAttribute(node, "value");
-      if (value) {
-        fieldSchema.default = value;
+        };
+        return fieldSchema;
       }
+      default:
+        throw new Error("Unsupported field type: " + baseName); // FIXME: should this be a user error?
     }
-    return fieldSchema;
   }
 
   /**
