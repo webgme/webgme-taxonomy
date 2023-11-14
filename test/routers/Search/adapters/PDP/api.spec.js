@@ -50,7 +50,11 @@ describe("PdpApi", function () {
         1,
       );
 
-      assert(!apiUrl.includes("*"), "api includes *: " + apiUrl);
+      const slashInQs = /\?.*\//;
+      assert(
+        !slashInQs.test(apiUrl),
+        "URL includes / in query string: " + apiUrl,
+      );
     });
 
     it("should use token, if provided", async function () {
