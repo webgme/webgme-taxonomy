@@ -11,6 +11,16 @@ export function toString(attr: OutAttr): string {
   }
 }
 
+export function filterMap<I, O>(list: I[], fn: (x: I) => O | undefined): O[] {
+  return list.reduce((items, input) => {
+    const mapped = fn(input);
+    if (mapped !== undefined) {
+      items.push(mapped);
+    }
+    return items;
+  }, <Array<O>> []);
+}
+
 /**
  * Given an object and a function, return a new object where the values are `fn(value)`.
  *
