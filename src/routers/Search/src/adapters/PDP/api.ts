@@ -292,6 +292,7 @@ export default class PdpApi implements PdpProvider {
   }
 
   private async _rawFetch(url: string, opts: RequestInit): Promise<Response> {
+    console.log("PDP API request:", url, JSON.stringify(opts, null, 2));
     return await fetch(url, opts);
   }
 
@@ -299,7 +300,6 @@ export default class PdpApi implements PdpProvider {
     url: string,
     opts: FetchOpts,
   ): Promise<Result<any, PdpApiError>> {
-    console.log("PDP request:", url, JSON.stringify(opts, null, 2));
     const respRes = await this._fetch(url, opts);
     const response = respRes.map((resp) => resp.json());
     if (response.isOk()) {
