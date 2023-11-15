@@ -532,13 +532,7 @@ export default class PDP implements Adapter {
     req: WebgmeRequest,
     uri: string,
   ): Promise<PDP> {
-    const chunks = uri.split("/");
-    const version = chunks.pop() as string;
-    const index = chunks.pop() as string;
-    const contentId = `${index}/${version}`;
-    const processType = chunks.pop() as string;
-    const baseUrl = chunks.join("/").replace(/^pdp/, "https");
-    const hostUri = new HostUri(baseUrl, processType);
+    const hostUri = HostUri.fromUri(uri);
 
     return PDP.fromParameters(
       req,
@@ -592,6 +586,18 @@ export class HostUri {
     const hostAddr = this.baseUrl
       .replace(/^(https:\/\/)?/, "");
     return `pdp://${hostAddr}/${this.processType}`;
+  }
+
+  static fromUri(uri: string): HostUri {
+    const chunks = uri.split("/");
+    const _version = chunks.pop() as string;
+    const _index = chunks.pop() as string;
+    const _processId = chunks.pop() as string;
+    const processType = chunks.pop() as string;
+
+    const baseUrl = chunks.join("/").replace(/^pdp/, "https");
+
+    return new HostUri(baseUrl, processType);
   }
 }
 interface PdpReservation extends UploadReservation {

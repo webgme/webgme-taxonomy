@@ -292,7 +292,6 @@ export default class PdpApi implements PdpProvider {
   }
 
   private async _rawFetch(url: string, opts: RequestInit): Promise<Response> {
-    console.log("PDP API request:", url, JSON.stringify(opts, null, 2));
     return await fetch(url, opts);
   }
 
@@ -381,7 +380,6 @@ export class InMemoryPdp implements PdpProvider {
     id: ProcessID,
     _opts: RequestOpts = {},
   ): Promise<Result<ProcessState, PdpApiError>> {
-    console.log(id);
     return this.getProcessData(id).map((data) => data.state);
   }
 

@@ -19,6 +19,16 @@ describe("PDP", function () {
     });
   });
 
+  describe("HostUri.fromUri", function () {
+    it("should extract the correct URL, processType", function () {
+      const hostUri = HostUri.fromUri(
+        "pdp://premonitiondev.azurewebsites.net/vutest/6e9da372-8cc7-4b11-bf85-23ed9d83a901/90/0",
+      );
+      assert.equal(hostUri.baseUrl, "https://premonitiondev.azurewebsites.net");
+      assert.equal(hostUri.processType, "vutest");
+    });
+  });
+
   describe("appendArtifact", function () {
     beforeEach(() => {
       const api = new InMemoryPdp();
