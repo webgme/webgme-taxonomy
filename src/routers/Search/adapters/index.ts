@@ -6,12 +6,12 @@ import type {
   GmeContext,
 } from "../../../common/types";
 import type { Request } from "express";
-import { UserError } from "../../../common/routers/Utils";
 import { InvalidStorageError, StorageNotFoundError } from "./common/ModelError";
 import fs from "fs";
 import type { Adapter, AdapterStatic } from "./common/types";
 import assert from "assert";
 import { UnsupportedUriFormat } from "./common/StorageError";
+import { UserError } from "../../../common/UserError";
 
 const SUPPORTED_ADAPTERS: { [type: string]: AdapterStatic } = Object
   .fromEntries(

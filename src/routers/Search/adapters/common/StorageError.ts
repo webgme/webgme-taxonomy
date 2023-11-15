@@ -1,4 +1,4 @@
-import { UserError } from "../../../../common/routers/Utils";
+import { UserError } from "../../../../common/UserError";
 
 export class RepositoryNotFound extends UserError {
   constructor(id: string) {

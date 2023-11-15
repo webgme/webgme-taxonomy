@@ -17,7 +17,8 @@
     "pluginHook": "node ./node_modules/webgme-engine/src/bin/plugin_hook.js",
     "users": "node ./node_modules/webgme-engine/src/bin/usermanager.js",
     "clean_up": "node ./node_modules/webgme-engine/src/bin/clean_up.js",
-    "build": "tsc --build",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc --build && copyfiles -u 1 -e 'src/**/*.ts' -e 'src/**/node_modules' 'src/**/*' build/",
     "prepublish": "husky install",
     "prepare-docker": "node scripts/prepare-docker.js",
     "prepare": "npm run build && cd src/routers/Dashboard/app && npm install && cd ../../Search/dashboard && npm install && cd ../../TagCreator/form && npm install && cd ../../Insights/dashboard && npm install"

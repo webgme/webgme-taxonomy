@@ -5,10 +5,7 @@
 // http://expressjs.com/en/guide/routing.html
 import * as express from "express";
 const router = express.Router();
-import RouterUtils, {
-  getFormatter,
-  UserError,
-} from "../../common/routers/Utils";
+import RouterUtils, { getFormatter } from "../../common/routers/Utils";
 import { FormatError } from "../../common/TagFormatter";
 import {
   GmeContext,
@@ -16,6 +13,7 @@ import {
   HumanReadableTags,
   MiddlewareOptions,
 } from "../../common/types";
+import { UserError } from "../../common/UserError";
 import { deepMerge, isObject } from "../Search/Utils";
 
 type TagFormat = "human" | "guid";

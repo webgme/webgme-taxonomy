@@ -19,7 +19,7 @@ import type {
   Observation,
   ProcessID,
 } from "./types";
-import RouterUtils, { UserError } from "../../../../common/routers/Utils";
+import RouterUtils from "../../../../common/routers/Utils";
 import withTokens from "./tokens";
 import type {
   AzureGmeConfig,
@@ -53,6 +53,7 @@ import {
 import PdpApi, { InMemoryPdp, PdpProvider } from "./api";
 import { toArtifactMetadatav2 } from "../common/Helpers";
 import ScopedFnQueue from "../../ScopedFnQueue";
+import { UserError } from "../../../../common/UserError";
 const UPLOAD_HEADERS = {
   Accept: "application/xml",
   "Content-Type": "application/octet-stream",

@@ -1,4 +1,3 @@
-import { TestEnvOnlyError } from "../../../../common/routers/Utils";
 import CreateRequestLogger from "./CreateRequestLogger";
 const logFilePath = process.env.CREATE_LOG_PATH || "./CreateProcesses.jsonl";
 const reqLogger = new CreateRequestLogger(logFilePath);
@@ -16,7 +15,7 @@ import {
 import { retry } from "../../Utils";
 import { Err, Ok, Option, Result } from "oxide.ts";
 import { ArtifactMetadata } from "../common/types";
-import { UserError } from "../../../../common/routers/Utils";
+import { TestEnvOnlyError, UserError } from "../../../../common/UserError";
 
 class PdpApiError extends UserError {}
 

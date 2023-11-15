@@ -24,7 +24,6 @@ import RouterUtils, {
   getFormatter,
   handleUserErrors,
   responseClose,
-  UserError,
 } from "../../common/routers/Utils";
 import type {
   AzureGmeConfig,
@@ -54,6 +53,7 @@ import {
   ArtifactMetadatav2,
   UploadReservation,
 } from "./adapters/common/types";
+import { UserError } from "../../common/UserError";
 
 /* N.B. gmeAuth, safeStorage and workerManager are not ready to use until the start function is called.
  * (However inside an incoming request they are all ensured to have been initialized.)

@@ -1,5 +1,4 @@
 import type { Request } from "express";
-import { UserError } from "../../common/routers/Utils";
 import type { ArtifactMetadatav2 } from "./adapters/common/types";
 import StorageAdapter from "./adapters";
 import { COMPRESSION_LEVEL, zip } from "zip-a-folder";
@@ -13,6 +12,7 @@ const streamPipeline = promisify(pipeline);
 import { Result } from "oxide.ts";
 import { UniqueNames } from "./Utils";
 import { AzureGmeConfig } from "../../common/types";
+import { UserError } from "../../common/UserError";
 
 export enum Status {
   Created,

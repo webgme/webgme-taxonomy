@@ -14,14 +14,9 @@
 "use strict";
 
 // http://expressjs.com/en/guide/routing.html
-import { unique } from "../Search/Utils";
-import RouterUtils, { makeCore } from "../../common/routers/Utils";
+import RouterUtils from "../../common/routers/Utils";
 import Utils, { toString } from "../../common/Utils";
-import {
-  GmeContentContext,
-  MiddlewareOptions,
-  ProjectMetadata,
-} from "../../common/types";
+import { GmeContentContext, MiddlewareOptions } from "../../common/types";
 import { NextFunction, Request, Response } from "express";
 import express from "express";
 const router = express.Router();
@@ -54,7 +49,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
   var logger = middlewareOpts.logger.fork("TagCreator"),
     ensureAuthenticated = middlewareOpts.ensureAuthenticated;
 
-  generateFormHtml(middlewareOpts.gmeConfig);
+  //generateFormHtml(middlewareOpts.gmeConfig);
   logger.debug("initializing ...");
 
   // Ensure authenticated can be used only after this rule.

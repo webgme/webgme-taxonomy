@@ -1,5 +1,5 @@
 import type { GmeContentContext, GmeContext } from "../../../../common/types";
-import { UserError } from "../../../../common/routers/Utils";
+import { UserError } from "../../../../common/UserError";
 import type { Response } from "express";
 const UNPROCESSABLE_ENTITY = 422;
 
