@@ -14,16 +14,27 @@
 "use strict";
 
 // http://expressjs.com/en/guide/routing.html
-const express = require("express");
+import { unique } from "../Search/Utils";
+import RouterUtils, { makeCore } from "../../common/routers/Utils";
+import Utils, { toString } from "../../common/Utils";
+import {
+  GmeContentContext,
+  MiddlewareOptions,
+  ProjectMetadata,
+} from "../../common/types";
+import { NextFunction, Request, Response } from "express";
+import express from "express";
 const router = express.Router();
-const path = require("path");
-const fs = require("fs");
+import JSONSchemaExporter from "../../common/JSONSchemaExporter";
+
+import path = require("path");
+import fs = require("fs");
+import _ from "underscore";
+import pkgJson from "webgme/package.json";
+import { TaxonomyVersion } from "./types";
+const webgmeVersion = pkgJson.version;
+
 const fsp = fs.promises;
-const _ = require("underscore");
-const JSONSchemaExporter = require("../../common/JSONSchemaExporter");
-const RouterUtils = require("../../common/routers/Utils");
-const Utils = require("../../common/Utils");
-const webgmeVersion = require("webgme/package.json").version;
 
 /**
  * Called when the server is created but before it starts to listening to incoming requests.
@@ -39,15 +50,15 @@ const webgmeVersion = require("webgme/package.json").version;
  * @param {object} middlewareOpts.safeStorage - Accesses the storage and emits events (PROJECT_CREATED, COMMIT..).
  * @param {object} middlewareOpts.workerManager - Spawns and keeps track of "worker" sub-processes.
  */
-function initialize(middlewareOpts) {
+function initialize(middlewareOpts: MiddlewareOptions) {
   var logger = middlewareOpts.logger.fork("TagCreator"),
     ensureAuthenticated = middlewareOpts.ensureAuthenticated;
 
-  // generateFormHtml(middlewareOpts.gmeConfig);
+  generateFormHtml(middlewareOpts.gmeConfig);
   logger.debug("initializing ...");
 
   // Ensure authenticated can be used only after this rule.
-  router.use("*", function (_req, res, next) {
+  router.use("*", function (_req: Request, res: Response, next: NextFunction) {
     // TODO: set all headers, check rate limit, etc.
 
     // This header ensures that any failures with authentication won't redirect.
@@ -66,42 +77,49 @@ function initialize(middlewareOpts) {
     express.static(staticPath),
   );
 
-  RouterUtils.addContentTypeMiddleware(middlewareOpts, router);
-
-  router.get(
-    RouterUtils.getContentTypeRoutes("configuration.json"),
-    RouterUtils.handleUserErrors(
-      logger,
-      async function getTagFormConfig(req, res) {
-        const { root, core, contentType } = req.webgmeContext;
-        const exporter = JSONSchemaExporter.from(core, root);
-        const vocabularies = await Utils.getVocabulariesFor(core, contentType);
-        const contentName = core.getAttribute(contentType, "name").toString();
-        const config = await exporter.getVocabSchemas(
-          vocabularies,
-          contentName,
-          true,
-        );
-        config.taxonomyVersion = req.webgmeContext.projectVersion;
-        config.taxonomyVersion.url = getHostUrl(req);
-        return res.json(config);
-      },
-    ),
+  RouterUtils.addContentTypeRoute(
+    middlewareOpts,
+    router,
+    "configuration.json",
+    async function getTagFormConfig(
+      gmeContext: GmeContentContext,
+      req: Request,
+      res: Response,
+    ) {
+      const { root, core, contentType } = gmeContext;
+      const exporter = JSONSchemaExporter.from(core, root);
+      const vocabularies = await Utils.getVocabulariesFor(core, contentType);
+      const contentName = toString(core.getAttribute(contentType, "name"));
+      const { schema, uiSchema, formData } = await exporter.getVocabSchemas(
+        vocabularies,
+        contentName,
+        true,
+      );
+      const taxonomyVersion: TaxonomyVersion = gmeContext.projectVersion;
+      taxonomyVersion.url = getHostUrl(req);
+      const config = {
+        schema,
+        uiSchema,
+        formData,
+        taxonomyVersion,
+      };
+      res.json(config);
+    },
   );
 
   logger.debug("ready");
 }
 
-function getHostUrl(req) {
+function getHostUrl(req: Request) {
   // TODO: this could be improved to include path
-  return req.host;
+  return req.hostname;
 }
 
 /**
  * Called before the server starts listening.
  * @param {function} callback
  */
-function start(callback) {
+function start(callback: () => void) {
   callback();
 }
 
@@ -109,14 +127,14 @@ function start(callback) {
  * Called after the server stopped listening.
  * @param {function} callback
  */
-function stop(callback) {
+function stop(callback: () => void) {
   callback();
 }
 
 /**
  * Generate the index.html file given the GME config (deployment specific settings).
  */
-async function generateFormHtml(gmeConfig) {
+async function generateFormHtml(gmeConfig: GmeConfig.GmeConfig) {
   const formTemplate = _.template(
     fs.readFileSync(path.join(__dirname, "form", "index.html.ejs"), "utf8"),
   );

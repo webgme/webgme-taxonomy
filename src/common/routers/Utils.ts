@@ -4,7 +4,7 @@ import webgme from "webgme";
 //@ts-ignore
 const Core = webgme.requirejs("common/core/coreQ");
 import jwt from "jsonwebtoken";
-import { filterMap } from "../../routers/Search/Utils";
+import { filterMap } from "../../common/Utils";
 import { SemanticVersion } from "../TaxonomyReference";
 import type {
   GmeContentContext,
@@ -18,6 +18,10 @@ import type {
   WebgmeHandler,
 } from "../types";
 import type { NextFunction, Request, Response, Router } from "express";
+import TagFormatter from "../TagFormatter";
+import { TaxNodeNotFoundError } from "../../routers/Search/adapters/common/ModelError";
+import Utils from "../Utils";
+
 // TODO: module or requirejs
 type ContentTypeRoute = (
   context: GmeContentContext,
@@ -29,7 +33,11 @@ type GmeProjectRoute = (
   req: Request,
   res: Response,
 ) => Promise<void> | void;
-function makeCore(project: UserProject, opts: MiddlewareOptions): GmeCore {
+
+export function makeCore(
+  project: UserProject,
+  opts: MiddlewareOptions,
+): GmeCore {
   const { gmeConfig, logger } = opts;
   //@ts-ignore
   return new Core(project, {
@@ -409,4 +417,15 @@ async function eventEmitted(emitter: Emitter, eventName: string) {
 
 export function responseClose(res: Response) {
   return eventEmitted(res, "close");
+}
+
+export async function getFormatter(
+  gmeContext: GmeContext,
+): Promise<TagFormatter> {
+  const { root, core } = gmeContext;
+  const node = await Utils.findTaxonomyNode(core, root);
+  if (node == null) {
+    throw new TaxNodeNotFoundError(gmeContext);
+  }
+  return await TagFormatter.from(core, node);
 }

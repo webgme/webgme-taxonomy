@@ -168,16 +168,6 @@ export function omit(dict: object, ...keys: string[]): object {
   return Object.fromEntries(entries);
 }
 
-export function filterMap<I, O>(list: I[], fn: (x: I) => O | undefined): O[] {
-  return list.reduce((items, input) => {
-    const mapped = fn(input);
-    if (mapped !== undefined) {
-      items.push(mapped);
-    }
-    return items;
-  }, <Array<O>> []);
-}
-
 export function isString<T>(possibleStr: T): possibleStr is Extract<T, string> {
   return typeof possibleStr === "string";
 }

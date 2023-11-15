@@ -13,12 +13,13 @@
 
 "use strict";
 
-// http://expressjs.com/en/guide/routing.html
-const _ = require("underscore");
-require("webgme"); // loads requireJS as a global
-const Core = requireJS("common/core/coreQ");
-var express = require("express"),
-  router = express.Router();
+import { unique } from "../Search/Utils";
+import { makeCore } from "../../common/routers/Utils";
+import { toString } from "../../common/Utils";
+import { MiddlewareOptions, ProjectMetadata } from "../../common/types";
+import { NextFunction, Request, Response } from "express";
+import express from "express";
+const router = express.Router();
 
 /**
  * Called when the server is created but before it starts to listening to incoming requests.
@@ -34,7 +35,7 @@ var express = require("express"),
  * @param {object} middlewareOpts.safeStorage - Accesses the storage and emits events (PROJECT_CREATED, COMMIT..).
  * @param {object} middlewareOpts.workerManager - Spawns and keeps track of "worker" sub-processes.
  */
-function initialize(middlewareOpts) {
+function initialize(middlewareOpts: MiddlewareOptions) {
   var logger = middlewareOpts.logger.fork("Profiles"),
     ensureAuthenticated = middlewareOpts.ensureAuthenticated;
 
@@ -43,7 +44,7 @@ function initialize(middlewareOpts) {
   logger.debug("initializing ...");
 
   // Ensure authenticated can be used only after this rule.
-  router.use("*", function (req, res, next) {
+  router.use("*", function (_req: Request, res: Response, next: NextFunction) {
     // This header ensures that any failures with authentication won't redirect.
     res.setHeader("X-WebGME-Media-Type", "webgme.v1");
     next();
@@ -53,7 +54,7 @@ function initialize(middlewareOpts) {
   router.use("*", ensureAuthenticated);
 
   // Get a list of profiles visible by the current user
-  router.get("/", async function (req, res /*, next*/) {
+  router.get("/", async function (req: Request, res: Response /*, next*/) {
     const userId = middlewareOpts.getUserId(req);
     const projects = await safeStorage.getProjects({
       info: true,
@@ -63,11 +64,11 @@ function initialize(middlewareOpts) {
     // Filter out all non-trusted (admin or self) projects
     const profiles = projects.filter((project) => {
       const isProfile = project.info.kind === "profile";
-      return isProfile && project.branches.master;
+      return isProfile && !!project.branches.master;
     });
 
     const owners = await Promise.all(
-      _.uniq(profiles.map((project) => project.owner)).map((name) =>
+      unique(profiles.map((project) => project.owner)).map((name) =>
         gmeAuth.getUser(name)
       ),
     );
@@ -81,25 +82,30 @@ function initialize(middlewareOpts) {
     );
 
     // Collect all the profiles defined in these projects and return them as JSON
-    const profileJSONs = await Promise.all(trustedProfiles.map(getProfile));
-    const profileDict = Object.fromEntries(
+    const profileJSONs = await Promise.all(trustedProfiles.map(getProfiles));
+    const profileDict: { [name: string]: ProfileData } = Object.fromEntries(
       profileJSONs
         .flat()
-        .map((profile) => [profile.name, _.omit(profile, "name")]),
+        .map((
+          profile,
+        ) => [profile.name, {
+          project: profile.project,
+          version: profile.version,
+          URL: profile.URL,
+        }]),
     );
 
     res.json(profileDict);
   });
 
-  async function getProfile(projectInfo) {
+  async function getProfiles(
+    projectInfo: ProjectMetadata,
+  ): Promise<Profile[]> {
     // Set up the core and load the root node
     const project = await safeStorage.openProject({
       projectId: projectInfo._id,
     });
-    const core = new Core(project, {
-      globConf: middlewareOpts.gmeConfig,
-      logger: logger.fork("core"),
-    });
+    const core = makeCore(project, middlewareOpts);
     const rootHash = await project.getRootHash("master");
     const root = await core.loadRoot(rootHash);
 
@@ -113,12 +119,12 @@ function initialize(middlewareOpts) {
     // convert the nodes to JSON
     return profiles.map((node) => {
       // TODO: remove empty strings
-      const profileData = {
-        name: core.getAttribute(node, "name"),
-        project: core.getAttribute(node, "project"),
-        version: core.getAttribute(node, "version"),
+      const profileData: Profile = {
+        name: toString(core.getAttribute(node, "name")),
+        project: toString(core.getAttribute(node, "project")),
+        version: toString(core.getAttribute(node, "version")),
       };
-      const url = core.getAttribute(node, "URL");
+      const url = toString(core.getAttribute(node, "URL"));
       if (url && url !== "") {
         profileData.URL = url;
       }
@@ -129,11 +135,24 @@ function initialize(middlewareOpts) {
   logger.debug("ready");
 }
 
+interface Profile {
+  name: string;
+  project: string;
+  version: string;
+  URL?: string;
+}
+
+interface ProfileData {
+  project: string;
+  version: string;
+  URL?: string;
+}
+
 /**
  * Called before the server starts listening.
  * @param {function} callback
  */
-function start(callback) {
+function start(callback: () => void) {
   callback();
 }
 
@@ -141,7 +160,7 @@ function start(callback) {
  * Called after the server stopped listening.
  * @param {function} callback
  */
-function stop(callback) {
+function stop(callback: () => void) {
   callback();
 }
 

@@ -70,26 +70,53 @@ export type MiddlewareOptions = {
   /** If authenticated retrieves the userId from the request. */
   getUserId: (req: Request) => string;
   /** Authorization module. */
-  gmeAuth: Object;
+  gmeAuth: GmeAuth;
   /** Accesses the storage and emits events (PROJECT_CREATED, COMMIT..). */
   safeStorage: SafeStorage;
   /** Spawns and keeps track of "worker" sub-processes. */
   workerManager: Object;
 };
 
+export interface GmeAuth {
+  getUser(userId: string): GmeUserData;
+}
+
+export interface GmeUserData {
+  _id: string;
+  siteAdmin: boolean;
+}
+
 export type HumanReadableTags = { [name: string]: any };
 export type GuidTags = { [name: string]: any };
 
 export type GmeCore = GmeClasses.Core & {
   getMetaType(node: Core.Node): Core.Node;
+  loadSubTree(node: Core.Node): Promise<Core.Node[]>;
 };
 export interface SafeStorage {
   openProject(params: OpenProjectParams): Promise<UserProject>;
   getTags(params: OpenProjectParams): Promise<{ [name: string]: CommitObject }>;
+  getProjects(params: GetProjectsParams): Promise<ProjectMetadata[]>;
+}
+
+export interface GetProjectsParams {
+  info: true; // must be true for now or the return value type is wrong
+  branches: true;
+}
+
+export interface ProjectMetadata {
+  _id: string;
+  owner: string;
+  info: ProjectInfo;
+  branches: { [name: string]: string }; // name to commit hash
+}
+
+export interface ProjectInfo {
+  kind: string;
 }
 
 export interface OpenProjectParams {
-  username: string;
+  username?: string;
   projectId: string;
 }
 
@@ -100,6 +127,7 @@ export interface UserProject {
   setUser(username: string): void;
   getCommitObject(commitHash: string): CommitObject;
   getTags(): Promise<{ [name: string]: CommitObject }>;
+  getRootHash(branch: string): Promise<string>;
 }
 
 export type CommitObject = any; // FIXME

@@ -1,9 +1,13 @@
 // TODO: load the different adapter types
 
-import type { AzureGmeConfig, GmeContentContext } from "../../../common/types";
+import type {
+  AzureGmeConfig,
+  GmeContentContext,
+  GmeContext,
+} from "../../../common/types";
 import type { Request } from "express";
 import { UserError } from "../../../common/routers/Utils";
-import { StorageNotFoundError } from "./common/ModelError";
+import { InvalidStorageError, StorageNotFoundError } from "./common/ModelError";
 import fs from "fs";
 import type { Adapter, AdapterStatic } from "./common/types";
 import assert from "assert";
@@ -49,7 +53,7 @@ export default class Adapters {
   }
 
   static async fromStorageNode(
-    gmeContext: GmeContentContext,
+    gmeContext: GmeContext,
     req: Request,
     storageNode: Core.Node,
     config: any,
@@ -70,7 +74,26 @@ export default class Adapters {
         400,
       ),
     );
-    return await AdapterType.from(gmeContext, storageNode, req, config);
+    // TODO: add the content type
+    // FIXME: what if the storage node isn't in a content type?
+    const parent = core.getParent(storageNode);
+    if (!parent) {
+      throw new InvalidStorageError(gmeContext, storageNode);
+    }
+    const base = core.getBase(parent);
+    if (core.getAttribute(base, "name") !== "Content Type") {
+      throw new InvalidStorageError(gmeContext, storageNode);
+    }
+
+    const contentContext: GmeContentContext = {
+      project: gmeContext.project,
+      projectVersion: gmeContext.projectVersion,
+      core: gmeContext.core,
+      root: gmeContext.root,
+      commitObject: gmeContext.commitObject,
+      contentType: parent,
+    };
+    return await AdapterType.from(contentContext, storageNode, req, config);
   }
 
   static async fromUri(

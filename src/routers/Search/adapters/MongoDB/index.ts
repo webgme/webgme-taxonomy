@@ -33,7 +33,8 @@ import {
 } from "../common/AppendResult";
 import { AzureGmeConfig, GmeContentContext } from "../../../../common/types";
 import { toArtifactMetadatav2 } from "../common/Helpers";
-import { filterMap, fromResult, Pattern } from "../../Utils";
+import { filterMap } from "../../../../common/Utils";
+import { fromResult, Pattern } from "../../Utils";
 import ScopedFnQueue from "../../ScopedFnQueue";
 import { RepositoryNotFound } from "../common/StorageError";
 

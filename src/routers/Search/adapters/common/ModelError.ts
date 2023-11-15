@@ -1,4 +1,4 @@
-import type { GmeContentContext } from "../../../../common/types";
+import type { GmeContentContext, GmeContext } from "../../../../common/types";
 import { UserError } from "../../../../common/routers/Utils";
 import type { Response } from "express";
 const UNPROCESSABLE_ENTITY = 422;
@@ -35,7 +35,7 @@ export class ModelError extends UserError {
   }
 
   static getContext(
-    gmeContext: GmeContentContext,
+    gmeContext: GmeContext,
     node: Core.Node,
   ): ModelContext {
     const { core, projectVersion } = gmeContext;
@@ -105,7 +105,7 @@ export class ChildContentTypeNotFoundError extends ModelError {
 }
 
 export class MetaNodeNotFoundError extends ModelError {
-  constructor(gmeContext: GmeContentContext, name: string) {
+  constructor(gmeContext: GmeContext, name: string) {
     const msg =
       `Could not find "${name}" in the metamodel. Is this a taxonomy project?`;
     const context = ModelError.getContext(gmeContext, gmeContext.root);
@@ -114,8 +114,17 @@ export class MetaNodeNotFoundError extends ModelError {
 }
 
 export class TaxNodeNotFoundError extends ModelError {
-  constructor(gmeContext: GmeContentContext) {
+  constructor(gmeContext: GmeContext) {
     const msg = `No taxonomy defined in the project.`;
+    const context = ModelError.getContext(gmeContext, gmeContext.root);
+    super(context, msg);
+  }
+}
+
+export class InvalidStorageError extends ModelError {
+  constructor(gmeContext: GmeContext, node: Core.Node) {
+    const { core } = gmeContext;
+    const msg = `Invalid storage node: ${core.getPath(node)}`;
     const context = ModelError.getContext(gmeContext, gmeContext.root);
     super(context, msg);
   }

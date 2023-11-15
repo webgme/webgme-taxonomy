@@ -4,17 +4,23 @@
 /// <reference path="define.d.ts" />
 import { JSONSchema7 } from "json-schema";
 import StorageAdapters from "../routers/Search/adapters/index";
-import { Pattern, unique } from "../routers/Search/Utils";
+import { Pattern } from "../routers/Search/Utils";
 import { GmeCore } from "./types";
 import { toString } from "./Utils";
 
 // subsets of JSON schema targeted:
 interface VocabSchema {
   type: "object";
-  required: boolean;
+  required: string[];
   properties: { [name: string]: TermSchema };
 }
+
 interface TermSchema {
+  title: string;
+  type: "object";
+  properties: { [name: string]: FieldSchema };
+  required: string[];
+  additionalProperties: false;
 }
 
 interface BaseFieldSchema {
@@ -42,17 +48,21 @@ interface UriFieldSchema extends BaseFieldSchema {
   default?: string;
 }
 interface EnumFieldSchema extends BaseFieldSchema {
+  type: "object";
+  additionalProperties: false;
+  anyOf: CompoundFieldSchema[];
 }
 interface CompoundFieldSchema extends BaseFieldSchema {
   type: "object";
   properties: { [k: string]: any };
   additionalProperties: false;
 }
-
 interface SetFieldSchema extends BaseFieldSchema {
   type: "array";
   uniqueItems: true;
-  items: any[]; // FIXME
+  items: {
+    anyOf: CompoundFieldSchema[]; // FIXME
+  };
 }
 
 type FieldSchema =
@@ -139,7 +149,7 @@ export default class JSONSchemaExporter {
     const required = terms.filter((term) => term.isRequired())
       .map((term) => term.name);
 
-    const schema = {
+    const schema: VocabSchema = {
       type: "object",
       properties: Object.fromEntries(
         terms.map((term) => [term.name, term.schema]),
@@ -156,7 +166,22 @@ export default class JSONSchemaExporter {
   async getTermFromNode(node: Core.Node): Promise<Term> {
     // const parentTerms = this.getAncestorTerms(node);
     const name = toString(this.core.getAttribute(node, "name"));
-    const schema = await this.getDefinition(node);
+    const properties = await this.getProperties(node);
+    const required = properties
+      .filter((prop) => prop.required)
+      .map((prop) => prop.name);
+
+    const propDict = Object.fromEntries(
+      properties.map((prop) => [prop.name, prop.schema]),
+    );
+
+    const schema: TermSchema = {
+      title: toString(this.core.getAttribute(node, "name")),
+      type: "object",
+      properties: propDict,
+      required,
+      additionalProperties: false,
+    };
     // const termFields = await Promise.all(
     //   parentTerms.map((n) => this.getDefinition(n)),
     // );
@@ -165,8 +190,15 @@ export default class JSONSchemaExporter {
     //   const name = this.core.getAttribute(parent, "name");
     //   return (schema.properties[name] = fields);
     // }, schema);
-    // TODO: Check that this is a valid selection constraint
-    const selection = toString(this.core.getAttribute(node, "selection"));
+    const selectionStr = toString(this.core.getAttribute(node, "selection"))
+      .toLowerCase();
+
+    const validSelections = ["required", "recommended", "optional"];
+    if (!validSelections.includes(selectionStr)) {
+      throw new Error("Unknown selection constraint: " + selectionStr);
+    }
+    let selection: SelectionConstraint = selectionStr as SelectionConstraint;
+
     return new Term(name, schema, selection);
   }
 
@@ -243,7 +275,7 @@ export default class JSONSchemaExporter {
     return false;
   }
 
-  async getDependentDefinitions(node) {
+  async getDependentDefinitions(node: Core.Node) {
     const children = await this.core.loadChildren(node);
     if (this.isOptionType(node)) {
       return children;
@@ -264,7 +296,7 @@ export default class JSONSchemaExporter {
     );
   }
 
-  async getDefinition(node): Promise<JSONSchema7> {
+  async getDefinition(node: Core.Node): Promise<JSONSchema7> {
     const isFieldOpt = this.isFieldOption(node);
 
     if (this.hasProperties(node)) {
@@ -278,7 +310,7 @@ export default class JSONSchemaExporter {
       );
 
       return {
-        title: this.core.getAttribute(node, "name"),
+        title: toString(this.core.getAttribute(node, "name")),
         type: "object",
         properties: propDict,
         required,
@@ -375,10 +407,16 @@ export default class JSONSchemaExporter {
         return fieldSchema;
       }
       case "EnumField": {
-        const fieldSchema: EnumFieldSchema = await this._getAnyOfSchema(node);
+        const { anyOf } = await this._getAnyOfSchema(node);
         // Currently, setting the default is problematic for enums and results in the default key
         // always being added (resulting in many validation errors)
-        delete fieldSchema.default;
+        const fieldSchema: EnumFieldSchema = {
+          title: name,
+          type: "object",
+          additionalProperties: false,
+          anyOf,
+          // TODO: make the name a required field
+        };
         return fieldSchema;
       }
       case "CompoundField": {
@@ -392,11 +430,12 @@ export default class JSONSchemaExporter {
         };
       }
       case "SetField": {
+        const { anyOf } = await this._getAnyOfSchema(node);
         const fieldSchema: SetFieldSchema = {
           title: name,
           type: "array",
           uniqueItems: true,
-          items: await this._getAnyOfSchema(node),
+          items: { anyOf },
         };
         return fieldSchema;
       }
@@ -426,45 +465,47 @@ export default class JSONSchemaExporter {
 
   /**
    * Get a partial JSON schema allowing any of the node's children.
-   *
-   * @param {Core.Node} node A field node to get JSON schema for
-   * @return {Promise<{ [key:string]: any }>} A promise for schema w/ anyOf, default fields
-   * @memberof JSONSchemaExporter
    */
-  async _getAnyOfSchema(node: Core.Node) {
+  async _getAnyOfSchema(
+    node: Core.Node,
+  ): Promise<{ anyOf: CompoundFieldSchema[] }> {
     const children = await this.core.loadChildren(node);
-    if (!children.length) {
-      return { type: "null" };
+    if (!children.length) { // FIXME: Should we throw an error instead?
+      throw new Error(
+        "No valid candidates found for " + this.core.getAttribute(node, "name"),
+      );
+      //return { type: "null" };
     }
 
     const childSchemas = await Promise.all(
       children.map((c) => this.getFieldSchema(c)),
-    );
-    let type = unique(childSchemas.map((s) => s.type));
-    if (type.length < 2) {
-      type = type[0];
-    }
+    ) as CompoundFieldSchema[];
+    // FIXME: do we need 'type'?
+    // let type = unique(childSchemas.map((s) => s.type));
+    // if (type.length < 2) {
+    //   type = type[0];
+    // }
     return {
-      type,
+      //type,
       anyOf: childSchemas,
-      default: this._getDefault(childSchemas[0]),
+      //default: this._getDefault(childSchemas[0]),
     };
   }
 
-  _getDefault(fieldSchema: JSONSchema7) {
-    if (fieldSchema.default) {
-      return fieldSchema.default;
-    }
+  // _getDefault(fieldSchema: JSONSchema7) {
+  //   if (fieldSchema.default) {
+  //     return fieldSchema.default;
+  //   }
 
-    if (fieldSchema.properties) {
-      return Object.fromEntries(
-        Object.entries(fieldSchema.properties).map(([k, v]) => [
-          k,
-          this._getDefault(v),
-        ]),
-      );
-    }
-  }
+  //   if (fieldSchema.properties) {
+  //     return Object.fromEntries(
+  //       Object.entries(fieldSchema.properties).map(([k, v]) => [
+  //         k,
+  //         this._getDefault(v),
+  //       ]),
+  //     );
+  //   }
+  // }
 
   static from(core: GmeCore, node: Core.Node) {
     const metanodes = Object.values(core.getAllMetaNodes(node));
@@ -501,7 +542,7 @@ class Vocabulary {
       .filter((term) => term.isRequired())
       .map((term) => [term.name, term.getInstance()]);
 
-    const formData = {};
+    const formData: { [field: string]: any } = {};
     formData[this.name] = Object.fromEntries(entries);
     return formData;
   }
@@ -525,10 +566,10 @@ function getContainmentAncestors(core: GmeCore, node: Core.Node) {
 
 export class Property {
   name: string;
-  schema: JSONSchema7;
+  schema: FieldSchema;
   required: boolean;
 
-  constructor(name: string, schema: JSONSchema7, required = false) {
+  constructor(name: string, schema: FieldSchema, required = false) {
     this.name = name;
     this.schema = schema;
     this.required = required;
@@ -537,15 +578,19 @@ export class Property {
   static async from(exporter: JSONSchemaExporter, node: Core.Node) {
     const core = exporter.core;
     const schema = await exporter.getFieldSchema(node);
-    const name = core.getAttribute(node, "name");
+    const name = toString(core.getAttribute(node, "name"));
 
     // FIXME: Due to a limitation in the tag forms, fields can only
     // be considered required if they are contained in a required term
     const parentTerm = getContainmentAncestors(core, node)
       .find((node) => exporter.isTerm(node));
+
+    if (parentTerm === undefined) {
+      throw new Error("Found field not contained in term: " + name);
+    }
     const isTermRequired =
-      core.getAttribute(parentTerm, "selection") === "required";
-    const required = isTermRequired && core.getAttribute(node, "required");
+      toString(core.getAttribute(parentTerm, "selection")) === "required";
+    const required = isTermRequired && !!core.getAttribute(node, "required");
 
     return new Property(name, schema, required);
   }
@@ -555,27 +600,32 @@ type SelectionConstraint = "required" | "recommended" | "optional";
 export class Term {
   name: string;
   selectionConstraint: SelectionConstraint;
+  schema: TermSchema;
 
-  constructor(name: string, schema, selectionConstraint: SelectionConstraint) {
+  constructor(
+    name: string,
+    schema: TermSchema,
+    selectionConstraint: SelectionConstraint,
+  ) {
     this.name = name;
     this.schema = schema;
     this.selectionConstraint = selectionConstraint;
   }
 
-  isRequired() {
+  isRequired(): boolean {
     return this.selectionConstraint === "required";
   }
 
-  isRecommended() {
+  isRecommended(): boolean {
     return this.selectionConstraint === "recommended";
   }
 
-  isOptional() {
+  isOptional(): boolean {
     return !this.isRecommended() && !this.isRequired();
   }
 
-  getInstance(schema = this.schema) {
-    if (schema.anyOf) {
+  getInstance(schema: TermSchema | FieldSchema = this.schema): any {
+    if ("anyOf" in schema) {
       return this.getInstance(schema.anyOf[0]);
     } else if (schema.type === "object") {
       const entries = Object.entries(schema.properties).map(([k, v]) => [
@@ -584,7 +634,7 @@ export class Term {
       ]);
 
       return Object.fromEntries(entries);
-    } else if (schema.default) {
+    } else if ("default" in schema) {
       return schema.default;
     } else if (schema.type === "array") {
       return [];

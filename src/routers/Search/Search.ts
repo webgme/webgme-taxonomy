@@ -21,6 +21,7 @@ import type { Request, Response } from "express";
 import SystemTerm from "./SystemTerm";
 import UploadContext, { FileUpload } from "./UploadContext";
 import RouterUtils, {
+  getFormatter,
   handleUserErrors,
   responseClose,
   UserError,
@@ -43,7 +44,6 @@ import StorageAdapter from "./adapters";
 import {
   ChildContentTypeNotFoundError,
   MetaNodeNotFoundError,
-  TaxNodeNotFoundError,
 } from "./adapters/common/ModelError";
 import JSONSchemaExporter from "../../common/JSONSchemaExporter";
 import TaskQueue, { DownloadTask, FilePath } from "./TaskQueue";
@@ -627,17 +627,6 @@ async function toGuidFormat(
       throw err;
     }
   }
-}
-
-async function getFormatter(
-  gmeContext: GmeContentContext,
-): Promise<TagFormatter> {
-  const { root, core } = gmeContext;
-  const node = await Utils.findTaxonomyNode(core, root);
-  if (node == null) {
-    throw new TaxNodeNotFoundError(gmeContext);
-  }
-  return await TagFormatter.from(core, node);
 }
 
 /**
