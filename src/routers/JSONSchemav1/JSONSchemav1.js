@@ -16,9 +16,9 @@
 // http://expressjs.com/en/guide/routing.html
 var express = require("express"),
   router = express.Router();
-const RouterUtils = require("../../common/routers/Utils");
-const Utils = require("../../common/Utils");
-const JSONSchemaExporter = require("../../common/JSONSchemaExporter");
+const RouterUtils = require("../../common/routers/Utils").default;
+const Utils = require("../../common/Utils").default;
+const JSONSchemaExporter = require("../../common/JSONSchemaExporterv1");
 
 /**
  * Called when the server is created but before it starts to listening to incoming requests.
@@ -35,14 +35,12 @@ const JSONSchemaExporter = require("../../common/JSONSchemaExporter");
  * @param {object} middlewareOpts.workerManager - Spawns and keeps track of "worker" sub-processes.
  */
 function initialize(middlewareOpts) {
-  var logger = middlewareOpts.logger.fork("JSONSchema"),
-    ensureAuthenticated = middlewareOpts.ensureAuthenticated,
-    getUserId = middlewareOpts.getUserId;
+  const logger = middlewareOpts.logger.fork("JSONSchema");
 
   logger.debug("initializing ...");
 
   // Ensure authenticated can be used only after this rule.
-  router.use("*", function (req, res, next) {
+  router.use("*", function (_req, res, next) {
     // TODO: set all headers, check rate limit, etc.
 
     // This header ensures that any failures with authentication won't redirect.
@@ -54,19 +52,19 @@ function initialize(middlewareOpts) {
   // router.use('*', ensureAuthenticated);
   // Authentication not needed since actual data isn't shared, just taxonomy used to label data (as JSON schema).
   RouterUtils.addLatestVersionRedirect(middlewareOpts, router);
-  RouterUtils.addContentTypeMiddleware(middlewareOpts, router, {
-    unsafe: true,
-  });
 
-  router.get(
-    RouterUtils.getContentTypeVocabRoutes("schema.json"),
-    async (request, response) => {
-      const { root, core, contentType } = request.webgmeContext;
+  RouterUtils.addContentTypeRoute(
+    middlewareOpts,
+    router,
+    "schema.json",
+    async (gmeContext, _request, response) => {
+      const { root, core, contentType } = gmeContext;
       const exporter = JSONSchemaExporter.from(core, root);
       const vocabularies = await Utils.getVocabulariesFor(core, contentType);
       const { schema } = await exporter.getVocabSchemas(vocabularies);
       return response.json(schema);
     },
+    { unsafe: true, method: "get" },
   );
 
   logger.debug("ready");

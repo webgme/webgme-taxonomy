@@ -2,9 +2,8 @@
 /*eslint-env node, browser*/
 // @ts-check
 /// <reference path="define.d.ts" />
-const StorageAdapters =
-  require("../routers/Search/build/adapters/index").default;
-const { Pattern, zip, unique } = require("../routers/Search/build/Utils");
+const StorageAdapters = require("../routers/Search/adapters/index").default;
+const { Pattern, zip, unique } = require("../routers/Search/Utils");
 const optionTypes = ["EnumField", "SetField"];
 
 class JSONSchemaExporter {

@@ -21,8 +21,8 @@ const fs = require("fs");
 const fsp = fs.promises;
 const _ = require("underscore");
 const JSONSchemaExporter = require("../../common/JSONSchemaExporterv1");
-const RouterUtils = require("../../common/routers/Utils");
-const Utils = require("../../common/Utils");
+const RouterUtils = require("../../common/routers/Utils").default;
+const Utils = require("../../common/Utils").default;
 const webgmeVersion = require("webgme/package.json").version;
 
 /**
@@ -66,28 +66,25 @@ function initialize(middlewareOpts) {
     express.static(staticPath),
   );
 
-  RouterUtils.addContentTypeMiddleware(middlewareOpts, router);
-
-  router.get(
-    RouterUtils.getContentTypeRoutes("configuration.json"),
-    RouterUtils.handleUserErrors(
-      logger,
-      async function getTagFormConfig(req, res) {
-        const { root, core, contentType } = req.webgmeContext;
-        const exporter = JSONSchemaExporter.from(core, root);
-        const vocabularies = await Utils.getVocabulariesFor(core, contentType);
-        const contentName = core.getAttribute(contentType, "name").toString();
-        const title = `${contentName} Terms`;
-        const config = await exporter.getVocabSchemas(
-          vocabularies,
-          title,
-          true,
-        );
-        config.taxonomyVersion = req.webgmeContext.projectVersion;
-        config.taxonomyVersion.url = getHostUrl(req);
-        return res.json(config);
-      },
-    ),
+  RouterUtils.addContentTypeRoute(
+    middlewareOpts,
+    router,
+    "configuration.json",
+    async function getTagFormConfig(gmeContext, req, res) {
+      const { root, core, contentType } = gmeContext;
+      const exporter = JSONSchemaExporter.from(core, root);
+      const vocabularies = await Utils.getVocabulariesFor(core, contentType);
+      const contentName = core.getAttribute(contentType, "name").toString();
+      const title = `${contentName} Terms`;
+      const config = await exporter.getVocabSchemas(
+        vocabularies,
+        title,
+        true,
+      );
+      config.taxonomyVersion = req.webgmeContext.projectVersion;
+      config.taxonomyVersion.url = getHostUrl(req);
+      return res.json(config);
+    },
   );
 
   logger.debug("ready");

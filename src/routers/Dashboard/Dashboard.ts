@@ -17,7 +17,7 @@ import RouterUtils from "../../common/routers/Utils";
 import ContextFacade from "./ContextFacade";
 
 export const router = express.Router();
-const staticPath = path.join(__dirname, "..", "app", "dist");
+const staticPath = path.join(__dirname, "app", "dist");
 
 /**
  * Called when the server is created but before it starts to listening to incoming requests.

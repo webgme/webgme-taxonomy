@@ -38,7 +38,7 @@ import DashboardConfiguration from "../../common/SearchFilterDataExporter";
 import TagFormatter, { FormatError } from "../../common/TagFormatter";
 import path from "path";
 import fsp from "fs/promises";
-const staticPath = path.join(__dirname, "..", "dashboard", "public");
+const staticPath = path.join(__dirname, "dashboard", "public");
 import StorageAdapter from "./adapters";
 import {
   ChildContentTypeNotFoundError,
