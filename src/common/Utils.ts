@@ -37,6 +37,19 @@ export function mapObject<T, O>(
   );
 }
 
+/**
+ * Given an object and a function, return a new object that returns the new entry
+ * for each key, value pair
+ */
+export function mapObjectEntries<T, O>(
+  obj: { [key: string]: T },
+  fn: (value: T, key: string) => [string, O],
+): { [key: string]: O } {
+  return Object.fromEntries(
+    Object.entries(obj).map(([k, v]) => fn(v, k)),
+  );
+}
+
 export default {
   async findTaxonomyNode(
     core: GmeCore,

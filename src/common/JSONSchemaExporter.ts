@@ -1,7 +1,5 @@
 /*globals define*/
 /*eslint-env node, browser*/
-// @ts-check
-/// <reference path="define.d.ts" />
 import { JSONSchema7 } from "json-schema";
 import StorageAdapters from "../routers/Search/adapters/index";
 import { Pattern } from "../routers/Search/Utils";

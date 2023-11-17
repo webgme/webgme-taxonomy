@@ -267,7 +267,7 @@ export default {
         middlewareOpts.logger,
         async (req, res) => {
           const gmeContext = await contextFn(req);
-          handler(gmeContext, req, res);
+          await handler(gmeContext, req, res);
         },
       ),
     );
@@ -321,19 +321,14 @@ export default {
   },
 };
 
-export function handleUserErrors(logger: GmeLogger, ...fns: WebgmeHandler[]) {
+export function handleUserErrors(logger: GmeLogger, fn: WebgmeHandler) {
   return async function (
     req: Request,
     res: Response,
     next: NextFunction,
   ) {
     try {
-      await fns.reduce(async (prev, fn) => {
-        await prev;
-        if (!res.headersSent) {
-          return await fn(req, res);
-        }
-      }, Promise.resolve());
+      await fn(req, res);
       if (!res.headersSent) {
         next();
       }
