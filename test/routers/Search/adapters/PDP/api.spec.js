@@ -1,6 +1,6 @@
 describe("PdpApi", function () {
   const PdpApi = require(
-    "../../../../../src/routers/Search/build/adapters/PDP/api",
+    "../../../../../build/routers/Search/adapters/PDP/api",
   ).default;
   const assert = require("assert");
   describe("getObservationFiles", function () {

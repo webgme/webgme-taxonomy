@@ -1,11 +1,11 @@
 describe("TaskQueue", function () {
   const assert = require("assert");
   const { default: TaskQueue, Status } = require(
-    "../../../src/routers/Search/build/TaskQueue",
+    "../../../build/routers/Search/TaskQueue",
   );
-  const { UserError } = require("../../../src/common/routers/Utils");
+  const { UserError } = require("../../../build/common/UserError");
   const { sleep, fromResult } = require(
-    "../../../src/routers/Search/build/Utils",
+    "../../../build/routers/Search/Utils",
   );
 
   class MockRunnable {

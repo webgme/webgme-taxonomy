@@ -2,7 +2,7 @@ describe("Tokens", function () {
   const testFixture = require("../../../../globals");
   const gmeConfig = testFixture.getGmeConfig();
   const withTokens =
-    require("../../../../../src/routers/Search/build/adapters/PDP/tokens")
+    require("../../../../../build/routers/Search/adapters/PDP/tokens")
       .default;
   const assert = require("assert");
   const projectId = "test_projectId";

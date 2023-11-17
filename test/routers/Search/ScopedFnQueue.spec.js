@@ -1,10 +1,10 @@
 describe("ScopedFnQueue", function () {
   const assert = require("assert");
   const ScopedFnQueue = require(
-    "../../../src/routers/Search/build/ScopedFnQueue",
+    "../../../build/routers/Search/ScopedFnQueue",
   ).default;
   const { sleep } = require(
-    "../../../src/routers/Search/build/Utils",
+    "../../../build/routers/Search/Utils",
   );
 
   it("should return fn result", async function () {

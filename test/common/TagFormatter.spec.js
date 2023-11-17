@@ -1,7 +1,7 @@
 describe("TagFormatter", function () {
   const testFixture = require("../globals");
-  const TagFormatter = require("../../src/common/TagFormatter");
-  const TaxonomyParser = require("../../src/common/TaxonomyParser");
+  const TagFormatter = require("../../build/common/TagFormatter").default;
+  const TaxonomyParser = require("../../build/common/TaxonomyParser").default;
   const assert = require("assert");
   const Utils = require("../Utils");
   const Importer = testFixture.requirejs("webgme-json-importer/JSONImporter");
@@ -163,5 +163,11 @@ describe("TagFormatter", function () {
     };
 
     check(tags, 3);
+  });
+
+  it("should convert vocabulary name to GUID", function () {
+    const tag = { Base: { name: "test name" } };
+    const guidTag = formatter.toGuidFormat(tag);
+    assert(!guidTag.Base, "Vocabulary name not converted to a GUID");
   });
 });

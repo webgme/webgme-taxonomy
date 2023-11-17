@@ -6,7 +6,7 @@
 describe("SetPdpReadToken", function () {
   const assert = require("assert");
   const withTokens =
-    require("../../../src/routers/Search/build/adapters/PDP/tokens")
+    require("../../../build/routers/Search/adapters/PDP/tokens")
       .default;
 
   var testFixture = require("../../globals"),

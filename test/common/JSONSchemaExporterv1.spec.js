@@ -1,7 +1,7 @@
 describe("JSONSchemaExporterv1", function () {
   const testFixture = require("../globals");
   const Importer = testFixture.requirejs("webgme-json-importer/JSONImporter");
-  const JSONSchemaExporter = require("../../src/common/JSONSchemaExporterv1");
+  const JSONSchemaExporter = require("../../build/common/JSONSchemaExporterv1");
   const Ajv = require("ajv");
   const ajv = new Ajv();
   const assert = require("assert");

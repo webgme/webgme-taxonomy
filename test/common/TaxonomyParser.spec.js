@@ -1,5 +1,5 @@
 describe("TaxonomyParser", function () {
-  const parser = require("../../src/common/TaxonomyParser");
+  const parser = require("../../build/common/TaxonomyParser");
   const assert = require("assert");
   const _ = require("underscore");
 
