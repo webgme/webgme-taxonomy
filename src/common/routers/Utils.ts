@@ -336,7 +336,11 @@ export function handleUserErrors(logger: GmeLogger, fn: WebgmeHandler) {
       if (e instanceof UserError) {
         e.sendVia(res);
       } else {
-        logger.error(e);
+        if (e instanceof Error) {
+          logger.error(e.stack);
+        } else {
+          logger.error(e);
+        }
         res.sendStatus(500);
       }
     }

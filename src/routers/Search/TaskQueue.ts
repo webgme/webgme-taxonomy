@@ -99,6 +99,7 @@ export class DownloadTask implements Runnable<FilePath> {
           this.config,
         );
         const [repoId, id] = storage.resolveUri(uri);
+        console.log("getting file streams:", { uri, repoId, id });
         const streamDict = await storage.getFileStreams(repoId, id);
 
         // create the main content directory

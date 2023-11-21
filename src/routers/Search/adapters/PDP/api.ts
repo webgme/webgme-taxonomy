@@ -313,7 +313,7 @@ export function addQueryParams(
   queryDict: { [key: string]: string },
 ): string {
   const queryString = Object.entries(queryDict)
-    .map((part) => part.join("="))
+    .map((part) => part.map((c) => encodeURIComponent(c)).join("="))
     .join("&");
   return baseUrl.replace(/\??$/, "?") + queryString;
 }
@@ -379,7 +379,6 @@ export class InMemoryPdp implements PdpProvider {
     id: ProcessID,
     _opts: RequestOpts = {},
   ): Promise<Result<ProcessState, PdpApiError>> {
-    console.log(id);
     return this.getProcessData(id).map((data) => data.state);
   }
 
