@@ -1,10 +1,15 @@
 /*globals define*/
+/*eslint-env node, browser*/
+
+/**
+ * This is a simple (client-side) plugin that opens the content type dashboard in a new tab.
+ */
 
 import PluginBase from "plugin/PluginBase";
 import { getVersionString } from "../../common/plugins/Utils";
 import pluginMetadata from "./metadata.json";
 
-export default class OpenTagForm extends PluginBase {
+export default class OpenContentTypeDashboard extends PluginBase {
   static metadata: GmeCommon.Metadata;
 
   constructor() {
@@ -14,6 +19,7 @@ export default class OpenTagForm extends PluginBase {
 
   async main() {
     const baseUrl = window.location.href.replace(/\?.*$/, "");
+    console.log("project id:", this.project.projectId);
     const versionString = await getVersionString(this.project, {
       /// @ts-ignore
       commitHash: this.commitHash,
@@ -21,20 +27,14 @@ export default class OpenTagForm extends PluginBase {
       branchName: this.branchName,
     });
     const url = baseUrl +
-      "routers/TagCreator/" +
-      //@ts-ignore
+      "routers/Dashboard/" +
       encodeURIComponent(this.project.projectId) +
       "/" +
       versionString +
-      "/" +
-      //@ts-ignore
-      encodeURIComponent(this.core.getPath(this.activeNode)) +
       "/static/index.html";
-
-    window.open(url, "TagForm");
-    //@ts-ignore
+    window.open(url, "ContentTypeDashboard");
     this.result.setSuccess(true);
   }
 }
 
-OpenTagForm.metadata = pluginMetadata;
+OpenContentTypeDashboard.metadata = pluginMetadata;
