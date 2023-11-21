@@ -1,7 +1,7 @@
 describe("TagFormatter", function () {
   const testFixture = require("../globals");
   const TagFormatter = require("../../build/common/TagFormatter").default;
-  const TaxonomyParser = require("../../build/common/TaxonomyParser").default;
+  const TaxonomyParser = require("../../build/common/TaxonomyParser");
   const assert = require("assert");
   const Utils = require("../Utils");
   const Importer = testFixture.requirejs("webgme-json-importer/JSONImporter");
@@ -53,6 +53,7 @@ describe("TagFormatter", function () {
     const importer = new Importer(core, root);
     await Promise.all(vocabRoots.map((vr) => importer.import(taxonomy, vr)));
 
+    console.log({ TagFormatter });
     formatter = await TagFormatter.from(core, taxonomy);
     nodesByGuid = Object.fromEntries(
       formatter._allNodes(formatter.taxonomy).map((node) => [node.guid, node]),

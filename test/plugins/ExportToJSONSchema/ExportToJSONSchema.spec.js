@@ -31,7 +31,6 @@ describe("ExportToJSONSchema", function () {
             "..",
             "..",
             "..",
-            "src",
             "seeds",
             "test",
             "test.webgmex",

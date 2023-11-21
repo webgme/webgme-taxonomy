@@ -3,7 +3,6 @@ describe("TaskQueue", function () {
   const { default: TaskQueue, Status } = require(
     "../../../build/routers/Search/TaskQueue",
   );
-  const { UserError } = require("../../../build/common/UserError");
   const { sleep, fromResult } = require(
     "../../../build/routers/Search/Utils",
   );
@@ -62,7 +61,7 @@ describe("TaskQueue", function () {
         queue.getStatus(1);
         assert(false, "No error thrown on getStatus w/ invalid ID");
       } catch (err) {
-        assert(err instanceof UserError);
+        assert.equal(err.constructor.name, "TaskNotFoundError");
       }
     });
 
@@ -86,7 +85,7 @@ describe("TaskQueue", function () {
         queue.getResult(id);
         assert(false, "No error thrown on getResult");
       } catch (err) {
-        assert(err instanceof UserError);
+        assert.equal(err.constructor.name, "TaskNotCompleteError");
       }
     });
 
@@ -102,7 +101,7 @@ describe("TaskQueue", function () {
         queue.getResult(id);
         assert(false, "No error thrown on 2nd call to getResult");
       } catch (err) {
-        assert(err instanceof UserError);
+        assert.equal(err.constructor.name, "TaskNotFoundError");
       }
     });
   });

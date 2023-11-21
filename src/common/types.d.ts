@@ -186,8 +186,11 @@ export interface UserProject {
   getCommitObject(commitHash: string): CommitObject;
   getTags(): Promise<{ [name: string]: CommitObject }>;
   getRootHash(branch: string): Promise<string>;
+  createBranch(name: string, hash: string): Promise<CommitResult>;
+  getBranchHash(name: string): Promise<string>;
 }
 
+export type CommitResult = any;
 export type CommitObject = any; // FIXME
 
 export interface RequestWithCookies extends Request {

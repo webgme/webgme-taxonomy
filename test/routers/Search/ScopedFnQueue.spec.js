@@ -2,7 +2,7 @@ describe("ScopedFnQueue", function () {
   const assert = require("assert");
   const ScopedFnQueue = require(
     "../../../build/routers/Search/ScopedFnQueue",
-  ).default;
+  );
   const { sleep } = require(
     "../../../build/routers/Search/Utils",
   );

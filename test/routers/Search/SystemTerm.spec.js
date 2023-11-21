@@ -4,10 +4,10 @@ describe("SystemTerm", function () {
   const Utils = require("../../Utils");
   const Importer = testFixture.requirejs("webgme-json-importer/JSONImporter");
   const assert = require("assert");
-  const { default: SystemTerm } = require(
+  const SystemTerm = require(
     "../../../build/routers/Search/SystemTerm",
   );
-  const { default: UploadContext } = require(
+  const UploadContext = require(
     "../../../build/routers/Search/UploadContext",
   );
   let project, gmeAuth, storage, commitHash, core, projectVersion;

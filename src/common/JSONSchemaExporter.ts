@@ -7,6 +7,19 @@ import { GmeCore } from "./types";
 import { toString } from "./Utils";
 
 // subsets of JSON schema targeted:
+export interface Schemas {
+  schema: TaxonomySchema;
+  uiSchema: any;
+  formData: any;
+}
+interface TaxonomySchema {
+  title: string;
+  type: "object";
+  properties: { [name: string]: VocabSchema };
+  additionalProperties: false;
+  required: string[];
+}
+
 interface VocabSchema {
   type: "object";
   required: string[];
@@ -89,7 +102,10 @@ export default class JSONSchemaExporter {
     this.META = META;
   }
 
-  async getSchemas(taxonomyNode: Core.Node, onlyReleased = false) {
+  async getSchemas(
+    taxonomyNode: Core.Node,
+    onlyReleased = false,
+  ): Promise<Schemas> {
     const taxonomyName = toString(this.core.getAttribute(taxonomyNode, "name"));
     const vocabs = await this.core.loadChildren(taxonomyNode);
     return this.getVocabSchemas(vocabs, taxonomyName, onlyReleased);
@@ -99,7 +115,7 @@ export default class JSONSchemaExporter {
     vocabNodes: Core.Node[],
     taxonomyName: string,
     onlyReleased = false,
-  ) {
+  ): Promise<Schemas> {
     const allVocabs = await Promise.all(
       vocabNodes
         .filter((node) => !onlyReleased || this.isReleased(node))
@@ -115,7 +131,7 @@ export default class JSONSchemaExporter {
       .filter((v) => v.isRequired())
       .map((v) => v.name);
 
-    const schema = {
+    const schema: TaxonomySchema = {
       title: `Metadata for ${taxonomyName}`,
       type: "object",
       properties,
