@@ -22,8 +22,8 @@ import express from "express";
 const router = express.Router();
 import JSONSchemaExporter from "../../common/JSONSchemaExporter";
 
-import path = require("path");
-import fs = require("fs");
+import path from "path";
+import fs from "fs";
 import _ from "underscore";
 import pkgJson from "webgme/package.json";
 import { TaxonomyVersion } from "./types";

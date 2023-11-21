@@ -161,6 +161,8 @@ function initialize(middlewareOpts: MiddlewareOptions) {
       );
       // TODO: add support for repos that just reference another repo
       const artifacts = await storage.listArtifacts(repoId);
+      // Print the tags... Are they the correct type?
+      console.log(artifacts[0]);
       res.status(200).json(artifacts).end();
     },
   );
@@ -617,6 +619,7 @@ async function toGuidFormat(
 ): Promise<ArtifactMetadata> {
   const formatter = await getFormatter(gmeContext);
   try {
+    // TODO: validate them, first?
     metadata.tags = formatter.toGuidFormat(metadata.tags);
     return metadata;
   } catch (err) {

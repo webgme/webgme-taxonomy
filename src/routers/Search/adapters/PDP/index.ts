@@ -496,7 +496,7 @@ export default class PDP implements Adapter {
   }
 
   static async fromParameters(
-    gmeContext: GmeContentContext,
+    gmeContext: GmeContentContext | null,
     req: Request,
     gmeConfig: AzureGmeConfig,
     hostUri: HostUri,
@@ -508,7 +508,8 @@ export default class PDP implements Adapter {
     // This is a temporary workaround for the lack of read-only permissions in PDP.
     const readToken = await withTokens(
       gmeConfig,
-      (tokens) => tokens.get(gmeContext.project.projectId),
+      (tokens) =>
+        !!gmeContext ? tokens.get(gmeContext.project.projectId) : userToken,
     );
 
     // This doesn't yet work (doesn't support file uploads)
@@ -532,7 +533,7 @@ export default class PDP implements Adapter {
   }
 
   static async fromUri(
-    gmeContext: GmeContentContext,
+    // gmeContext: GmeContentContext,
     gmeConfig: AzureGmeConfig,
     req: Request,
     uri: string,
@@ -546,7 +547,7 @@ export default class PDP implements Adapter {
     const hostUri = new HostUri(baseUrl, processType);
 
     return PDP.fromParameters(
-      gmeContext,
+      null,
       req,
       gmeConfig,
       hostUri,

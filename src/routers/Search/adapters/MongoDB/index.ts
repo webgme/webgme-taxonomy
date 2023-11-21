@@ -2,6 +2,7 @@
  * This is a storage adapter for MongoDB which stores artifact sets
  * in documents along with any contained artifacts.
  */
+import { fileURLToPath } from "node:url";
 import fs from "fs";
 import type { Request } from "express";
 import stream from "stream";
@@ -25,7 +26,7 @@ import type TagFormatter from "../../../../common/TagFormatter";
 import { MissingAttributeError } from "../common/ModelError";
 import { GridFSBucket, MongoClient, ObjectId } from "mongodb";
 import type { Collection, Document } from "mongodb";
-import gmeConfig from "../../../../../config";
+import gmeConfig from '../../../../../config/index';
 import {
   AppendResult,
   UploadParams,
@@ -307,7 +308,12 @@ export default class MongoAdapter implements Adapter {
     }
   }
 
-  static from(gmeContext: GmeContentContext, storageNode: Core.Node) {
+  static async from(
+    gmeContext: GmeContentContext,
+    storageNode: Core.Node,
+    _req: Request,
+    _config: any,
+  ) {
     const { core } = gmeContext;
     const collection = core.getAttribute(storageNode, "collection");
     if (!collection) {

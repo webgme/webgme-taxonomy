@@ -65,18 +65,18 @@ export interface UploadReservation {
   uri: string | undefined;
 }
 
-export interface AdapterStatic {
+export interface AdapterStatic<A extends Adapter> {
   from(
     gmeContext: GmeContentContext,
     storageNode: Core.Node,
     request: Request,
     config: any,
-  ): Promise<Adapter>;
+  ): Promise<A>;
   fromUri(
     config: AzureGmeConfig,
     req: Request,
     uri: string,
-  ): Promise<Adapter>;
+  ): Promise<A>;
   getUriPatterns(): string[];
 }
 

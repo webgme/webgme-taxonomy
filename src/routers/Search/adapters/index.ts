@@ -7,33 +7,12 @@ import type {
 } from "../../../common/types";
 import type { Request } from "express";
 import { InvalidStorageError, StorageNotFoundError } from "./common/ModelError";
-import fs from "fs";
 import type { Adapter, AdapterStatic } from "./common/types";
 import assert from "assert";
 import { UnsupportedUriFormat } from "./common/StorageError";
 import { UserError } from "../../../common/UserError";
-
-const SUPPORTED_ADAPTERS: { [type: string]: AdapterStatic } = Object
-  .fromEntries(
-    fs
-      .readdirSync(__dirname, { withFileTypes: true })
-      .filter((entry) => entry.isDirectory() && (entry.name !== "common"))
-      .map(({ name }) => [name.toLowerCase(), require(`./${name}`).default]),
-  );
-const prefixRegex = /^[a-zA-Z]+:\/\//;
-const AdaptersByPrefix = Object.values(SUPPORTED_ADAPTERS)
-  .find((adapter) => {
-    const pattern = adapter.getUriPatterns()
-      .find((ptrn) => prefixRegex.test(ptrn));
-
-    if (!pattern) {
-      throw new Error(
-        "Could not find prefix for adapter: " + JSON.stringify(adapter),
-      );
-    }
-
-    return pattern.split("://").shift();
-  });
+import PDP from "./PDP/index";
+import MongoDB from "./MongoDB/index";
 
 export default class Adapters {
   static async from(
@@ -64,9 +43,10 @@ export default class Adapters {
       "name",
     );
     const adapterName = adapterType?.toString().toLowerCase();
-    const AdapterType = (adapterName != null)
-      ? SUPPORTED_ADAPTERS[adapterName]
-      : null;
+    // const AdapterType = (adapterName != null)
+    //   ? SUPPORTED_ADAPTERS[adapterName]
+    //   : null;
+    const AdapterType = PDP; // FIXME
     assert(
       AdapterType,
       new UserError(
@@ -101,26 +81,31 @@ export default class Adapters {
     uri: string,
     config: AzureGmeConfig,
   ): Promise<Adapter> {
-    const AdapterType = Object.values(SUPPORTED_ADAPTERS)
-      .find((adapter) =>
-        adapter.getUriPatterns().find((pattern) => {
-          const regex = new RegExp(pattern);
-          return regex.test(uri);
-        })
-      );
-
-    if (!AdapterType) {
-      throw new UnsupportedUriFormat(uri);
+    if (isUriFor(PDP, uri)) {
+      return PDP.fromUri(config, req, uri);
+    } else if (isUriFor(MongoDB, uri)) {
+      return MongoDB.fromUri(config, req, uri);
     }
 
-    return AdapterType.fromUri(config, req, uri);
+    throw new UnsupportedUriFormat(uri);
   }
 
   static getUriPatterns(): string[] {
-    return Object.values(SUPPORTED_ADAPTERS).flatMap((adapter) =>
-      adapter.getUriPatterns()
-    );
+    return [
+      PDP.getUriPatterns(),
+      MongoDB.getUriPatterns(),
+    ].flat();
   }
+}
+
+function isUriFor<A extends Adapter>(
+  adapter: AdapterStatic<A>,
+  uri: string,
+): boolean {
+  return !!adapter.getUriPatterns().find((pattern) => {
+    const regex = new RegExp(pattern);
+    return regex.test(uri);
+  });
 }
 
 function isTypeOf(

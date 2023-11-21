@@ -56,9 +56,12 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
     middlewareOpts,
     router,
     "info",
-    async (gmeContext, _req, res) => {
+    async function getDashboardConfig(gmeContext, _req, res) {
+      console.log("1. res.headersSent", res.headersSent);
       const context = new ContextFacade(gmeContext);
+      console.log("2. res.headersSent", res.headersSent);
       const body = await context.getProjectInfo();
+      console.log("3. res.headersSent", res.headersSent);
       res.json(body);
     },
   );
