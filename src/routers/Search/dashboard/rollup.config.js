@@ -95,13 +95,4 @@ export default [
       clearScreen: false,
     },
   },
-  {
-    input: "src/TaxonomyReference.ts",
-    output: {
-      format: "umd",
-      name: "TaxonomyReference",
-      file: "dist/TaxonomyReference.js",
-    },
-    plugins,
-  },
 ];

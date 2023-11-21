@@ -48,6 +48,7 @@ export default async function withTokens<T>(
 ): Promise<T> {
   const mongoUri = gmeConfig.mongo.uri;
   const mongoClient = new MongoClient(mongoUri);
+  await mongoClient.connect();
 
   const tokens = new Tokens(mongoClient, name);
   const result: T = await task(tokens);

@@ -42,18 +42,19 @@ export default class Adapters {
       core.getMetaType(storageNode),
       "name",
     );
+    // FIXME: this needs to be finished up!
     const adapterName = adapterType?.toString().toLowerCase();
-    // const AdapterType = (adapterName != null)
-    //   ? SUPPORTED_ADAPTERS[adapterName]
-    //   : null;
-    const AdapterType = PDP; // FIXME
-    assert(
-      AdapterType,
-      new UserError(
+    let AdapterType;
+    if (adapterName === "mongodb") {
+      AdapterType = MongoDB;
+    } else if (adapterName === "pdp") {
+      AdapterType = PDP;
+    } else {
+      throw new UserError(
         `Unsupported storage adapter: ${adapterType}`,
         400,
-      ),
-    );
+      );
+    }
     // TODO: add the content type
     // FIXME: what if the storage node isn't in a content type?
     const parent = core.getParent(storageNode);
