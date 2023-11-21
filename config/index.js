@@ -4,8 +4,7 @@
  * @author pmeijer / https://github.com/pmeijer
  */
 
-//var env = process.env.NODE_ENV || "default",
-var env = "default",
+var env = process.env.NODE_ENV || "default",
   configFilename = "./config." + env + ".js",
   config = require(configFilename),
   validateConfig = require("webgme/config/validator"),
