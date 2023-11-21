@@ -1,31 +1,43 @@
+/**
+ * This rollup config builds all the entry points into self-contained files
+ * (using the webgme-setup.json)
+ */
 import commonjs from "@rollup/plugin-commonjs";
 import typescript from "@rollup/plugin-typescript";
 import json from "@rollup/plugin-json";
+import copy from "rollup-plugin-copy";
 import fs from "node:fs/promises";
 import path from "node:path";
 import webgmeSetup from "./webgme-setup.json" assert { type: "json" };
 import { fileURLToPath } from "node:url";
-import nodePolyfill from "rollup-plugin-polyfill-node";
-import del from "rollup-plugin-delete";
+const external =       [
+        "express",
+        "path",
+        "fs/promises",
+        "oxide.ts",
+        "webgme-transformations",
+        "assert",
+        "webgme",
+        "jsonwebtoken",
+        "os",
+        "fs",
+        "zip-a-folder",
+        "mongodb",
+        "underscore",
+        "node-fetch",
+        "newtype-ts",
+        "stream",
+        "util",
+        fileURLToPath(
+          new URL(
+            "config/index.js",
+            import.meta.url,
+          ),
+        ),
+      ];
 
 // TODO: common files should be... umd?
-// TODO: is tsc already running like before? Is it generating all the files?
-
-// All regular files will just go through commonjs & typescript
-const pluginFiles = Object.keys(webgmeSetup.components.plugins)
-  .filter((n) => n === "ExportToJSONSchema" && false)
-  .map((name) => ({
-    input: `src/plugins/${name}/${name}.ts`,
-    output: {
-      file: `build/plugins/${name}/${name}.js`,
-      format: "amd",
-    },
-    plugins: [
-      commonjs(),
-      typescript(),
-      json(),
-    ],
-  }));
+// We may not need common files... Unless they are used by a client file...
 
 async function exists(filepath) {
   const exists = await fs.access(filepath)
@@ -35,93 +47,92 @@ async function exists(filepath) {
   return exists;
 }
 
-async function filterP(list, fn) {
+async function asyncFilter(list, fn) {
   const keep = await Promise.all(list.map(fn));
   return list.filter((_item, index) => keep[index]);
 }
 
-const routers = await filterP(
-  Object.entries(webgmeSetup.components.routers),
-  async ([name, _info]) =>
-    exists(
-      path.join("src", "routers", name, name + ".ts"),
-    ),
-);
-const routerFiles = routers
-  .flatMap((
-    [name, info],
-  ) => ({
-    //input: `src/routers/${name}/${name}.ts`,
-    input: `src/routers/${name}/${name}.ts`,
-    //input: `tmp/${info.src}/${name}.js`,
-    external: [
-      "express",
-      "path",
-      "fs/promises",
-      "oxide.ts",
-      "webgme-transformations",
-      "assert",
-      "webgme",
-      "jsonwebtoken",
-      "os",
-      "fs",
-      "zip-a-folder",
-      "mongodb",
-      "underscore",
-      "node-fetch",
-      "newtype-ts",
-      "stream",
-      "util",
-    ],
-    output: {
-      //file: `${info.src}/${name}.js`,
-      format: "commonjs",
-      dir: info.src,
-      preserveModules: true,
+async function asyncFind(list, fn) {
+  // This is inefficient but fine for now
+  const filtered = await asyncFilter(list, fn);
+  return filtered[0];
+}
+
+// All regular files will just go through commonjs & typescript
+const pluginPaths = await Promise.all(
+  Object.keys(webgmeSetup.components.plugins).map(
+    async (name) => {
+      const paths = [
+        path.join("src", "plugins", name, name + ".ts"),
+        path.join("src", "plugins", name, name + ".js"),
+      ];
+      return await asyncFind(paths, exists);
     },
-    plugins: [
-      //nodePolyfill({ include: [/^config/, /^src/], sequential: true }), // resolve __dirname correctly
+  ),
+);
+
+const buildPlugins = pluginPaths
+  .map((pluginPath) => {
+    const outpath = pluginPath.replace(/^src/, "build").replace(/\.ts$/, ".js");
+    const isTs = pluginPath.endsWith(".ts");
+    const plugins = isTs
+      ? [commonjs({
+        // Dynamic require used by config/ (imported by MongoDB adapter)
+        ignoreDynamicRequires: true,
+      }), typescript(), json()]
+      : [commonjs(), json()];
+
+    plugins.push(
+      copy({
+        targets: [{
+          src: `${path.dirname(pluginPath)}/metadata.json`,
+          dest: path.dirname(outpath),
+        }],
+      }),
+    );
+    return {
+      input: pluginPath,
+external,
+      output: {
+        file: outpath,
+        format: "amd",
+      },
+      plugins,
+    };
+  });
+
+const buildRouters = Object.entries(webgmeSetup.components.routers).map(
+  ([name, info]) => {
+    const routerPath = path.join("src", "routers", name, name + ".ts");
+    const outpath = `${info.src}/${name}.js`;
+    const plugins = [
       commonjs({
         // exclude config
         transformMixedEsModules: true,
-        exclude: [
-          fileURLToPath(
-            new URL(
-              "config/*.js",
-              import.meta.url,
-            ),
-          ),
-        ],
         // Dynamic require used by config/ (imported by MongoDB adapter)
-        // ignoreDynamicRequires: true,
-        // dynamicRequireTargets: [
-        //   fileURLToPath(
-        //     new URL(
-        //       "config/*.js",
-        //       import.meta.url,
-        //     ),
-        //   ),
-        // ],
+        ignoreDynamicRequires: true,
       }),
-      typescript({ rootDir: `src/routers/${name}/`, outDir: info.src }),
+      typescript(),
       json(),
-    ],
-  }));
+    ];
 
-console.log(
-  fileURLToPath(
-    new URL(
-      "config/index.js",
-      import.meta.url,
-    ),
-  ),
-  routers,
-  routerFiles,
+    if (info.assets) {
+      const targets = info.assets.map((dirname) => ({
+        src: path.join(path.dirname(routerPath), dirname),
+        dest: info.src + "/" + path.dirname(dirname),
+      }));
+      plugins.push(copy({ targets }));
+    }
+    return {
+      input: routerPath,
+external,
+      output: {
+        file: outpath,
+        format: "commonjs",
+      },
+      plugins,
+    };
+  },
 );
 
-// const cleanup = {
-//   input: "tmp/*",
-//   output: { file: "tmp/cleanup.del" },
-//   plugins: [del({ targets: "tmp/*" })],
-// };
-export default pluginFiles.concat(routerFiles);
+export default buildRouters.concat(buildPlugins);

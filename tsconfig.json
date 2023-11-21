@@ -2,11 +2,11 @@
 // https://www.typescriptlang.org/docs/handbook/project-references.html
 {
   "include": [
-    "src/**/*",
-    "src/**/*.json",
-    ],
+    "src/**/*.ts",
+    "src/**/*.json"
+  ],
   "compilerOptions": {
-    "module": "commonjs",
+    "module": "esnext",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,

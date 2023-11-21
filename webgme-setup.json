@@ -61,6 +61,7 @@
       "Search": {
         "src": "build/routers/Search",
         "test": "test/routers/Search",
+        "assets": ["dashboard/public"],
         "mount": "routers/Search"
       },
       "TagFormat": {
@@ -71,6 +72,7 @@
       "TagCreator": {
         "src": "build/routers/TagCreator",
         "test": "test/routers/TagCreator",
+        "assets": ["form/dist"],
         "mount": "routers/TagCreator"
       },
       "JSONSchema": {
@@ -81,6 +83,7 @@
       "Dashboard": {
         "src": "build/routers/Dashboard",
         "test": "test/routers/Dashboard",
+        "assets": ["app/dist"],
         "mount": "routers/Dashboard"
       },
       "Profiles": {
@@ -96,11 +99,13 @@
       "TagCreatorv1": {
         "src": "build/routers/TagCreatorv1",
         "test": "test/routers/TagCreatorv1",
+        "assets": ["form"],
         "mount": "routers/TagCreatorv1"
       },
       "Insights": {
         "src": "build/routers/Insights",
         "test": "test/routers/Insights",
+        "assets": ["dashboard/public"],
         "mount": "routers/Insights"
       }
     }
