@@ -1,3 +1,5 @@
+import { GmeCore } from "./types";
+
 type VocabSchemas = {
   schema: any;
   uiSchema: any;
@@ -5,6 +7,7 @@ type VocabSchemas = {
 };
 
 export default class JSONSchemaExporter {
+  constructor(core: GmeCore, META: any);
   getSchemas(
     taxonomyNode: Core.Node,
     onlyReleased?: boolean,
