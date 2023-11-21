@@ -2,7 +2,6 @@ describe("MongoDB", function () {
   const MongoDB = require(
     "../../../../../build/routers/Search/adapters/MongoDB",
   );
-  console.log({ MongoDB });
   const { range, Pattern, sleep } = require(
     "../../../../../build/routers/Search/Utils",
   );
