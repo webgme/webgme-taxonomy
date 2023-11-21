@@ -48,15 +48,7 @@
         "test": "test/plugins/ExportToJSONSchemav1"
       }
     },
-    "visualizers": {
-      "TagCreator": {
-        "src": "panels/TagCreator/TagCreatorPanel",
-        "title": "TagCreator",
-        "panel": "build/visualizers/panels/TagCreator",
-        "secondary": false,
-        "widget": "build/visualizers/widgets/TagCreator"
-      }
-    },
+    "visualizers": {},
     "routers": {
       "Search": {
         "src": "build/routers/Search",

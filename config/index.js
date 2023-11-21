@@ -4,8 +4,9 @@
  * @author pmeijer / https://github.com/pmeijer
  */
 
-var env = process.env.NODE_ENV || "default",
-  configFilename = __dirname + "/config." + env + ".js",
+//var env = process.env.NODE_ENV || "default",
+var env = "default",
+  configFilename = "./config." + env + ".js",
   config = require(configFilename),
   validateConfig = require("webgme/config/validator"),
   overrideFromEnv = require("webgme/config/overridefromenv");
