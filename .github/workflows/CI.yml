@@ -28,7 +28,10 @@ jobs:
           mongodb-version: "5.0"
 
       - name: "Install Dependencies"
-        run: NODE_ENV=test npm ci --legacy-peer-deps
+        run: npm ci --legacy-peer-deps
+
+      - name: "Build test files"
+        run: NODE_ENV=test npm run build
 
       - name: "Unit Tests"
         run: npm test
