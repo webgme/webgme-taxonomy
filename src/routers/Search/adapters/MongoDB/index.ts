@@ -26,7 +26,7 @@ import type TagFormatter from "../../../../common/TagFormatter";
 import { MissingAttributeError } from "../common/ModelError";
 import { GridFSBucket, MongoClient, ObjectId } from "mongodb";
 import type { Collection, Document } from "mongodb";
-import gmeConfig from '../../../../../config/index';
+import gmeConfig from "../../../../../config/index";
 import {
   AppendResult,
   UploadParams,
