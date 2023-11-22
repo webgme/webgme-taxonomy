@@ -29,9 +29,8 @@ jobs:
 
       - name: "Install Dependencies"
         run: npm ci --legacy-peer-deps
-
-      - name: "Build test files"
-        run: NODE_ENV=test npm run build
+        env:
+          NODE_ENV: test
 
       - name: "Unit Tests"
         run: npm test
