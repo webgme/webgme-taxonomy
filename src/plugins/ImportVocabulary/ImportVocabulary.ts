@@ -4,16 +4,24 @@
 import PluginBase from "plugin/PluginBase";
 import pluginMetadata from "./metadata.json";
 import TaxonomyParser from "../../common/TaxonomyParser";
+/// @ts-ignore
 import WJIImporter from "webgme-json-importer/JSONImporter";
 
+interface ImportVocabConfig {
+  csv: string;
+  overwrite: boolean;
+}
+
 export default class ImportVocabulary extends PluginBase {
+  static metadata: GmeCommon.Metadata;
   constructor() {
     super();
     this.pluginMetadata = pluginMetadata;
   }
 
   async main() {
-    const config = this.getCurrentConfig();
+    /// @ts-ignore FIXME
+    const config: ImportVocabConfig = this.getCurrentConfig();
     if (!config.csv) throw new Error("Vocabulary file is required.");
 
     const csvContent = await this.blobClient.getObjectAsString(config.csv);
@@ -32,7 +40,7 @@ export default class ImportVocabulary extends PluginBase {
       );
     }
 
-    const vocabularyNames = vocabs.map((v) => v.attributes.name).join(", ");
+    const vocabularyNames = vocabs.map((v) => v.attributes?.name).join(", ");
     await this.save(`Imported vocab(s): ${vocabularyNames}`);
     this.result.setSuccess(true);
   }
