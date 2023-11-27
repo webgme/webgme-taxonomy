@@ -176,6 +176,7 @@ if (process.env.NODE_ENV === "test") {
       input: filename,
       external,
       output: {
+        sourcemap: true,
         file: filename.replace(/^src/, "build").replace(/\.ts/, ".js"),
         format: "commonjs",
         exports: "named",
