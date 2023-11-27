@@ -53,7 +53,6 @@ const require = createRequire(import.meta.url);
 tsconfig.include.push(
   path.relative(process.cwd(), require.resolve("webgme/package.json")),
 );
-tsconfig.include.push("node_modules/webgme/*.json");
 console.log(tsconfig);
 
 // All regular files will just go through commonjs & typescript
@@ -69,21 +68,33 @@ const pluginPaths = await Promise.all(
   ),
 );
 
-const buildPlugins = pluginPaths
-  .map((pluginPath) => {
+const buildPlugins = await Promise.all(pluginPaths
+  .map(async (pluginPath) => {
     const outpath = pluginPath.replace(/^src/, "build").replace(/\.ts$/, ".js");
     const isTs = pluginPath.endsWith(".ts");
+    // HEAD
     console.log(pluginPath, "isTs?:", isTs);
+    //
+
+    // Determine the target (browser or nodejs) based on server-only execution or not
+    const metadataPath = path.dirname(pluginPath) + "/metadata.json";
+    const metadata = JSON.parse(await fs.readFile(metadataPath, "utf8"));
+    const cjsOpts = {
+      // Dynamic require used by config/ (imported by MongoDB adapter)
+      ignoreDynamicRequires: true,
+    };
+    if (metadata.disableBrowserSideExecution) {
+      console.log("Found nodejs only plugin:", pluginPath);
+    }
+
+    //b48964d (Fix package.json build warnings and remove a few more debug logs)
     const plugins = isTs
       ? [
-        commonjs({
-          // Dynamic require used by config/ (imported by MongoDB adapter)
-          ignoreDynamicRequires: true,
-        }),
+        commonjs(cjsOpts),
         typescript(tsconfig),
         json(),
       ]
-      : [commonjs(), json()];
+      : [commonjs(cjsOpts), json()];
 
     plugins.push(
       copy({
@@ -93,6 +104,7 @@ const buildPlugins = pluginPaths
         }],
       }),
     );
+
     return {
       input: pluginPath,
       external,
@@ -103,7 +115,7 @@ const buildPlugins = pluginPaths
       },
       plugins,
     };
-  });
+  }));
 
 const buildRouters = Object.entries(webgmeSetup.components.routers).map(
   ([name, info]) => {
