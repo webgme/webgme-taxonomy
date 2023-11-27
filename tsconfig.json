@@ -1,5 +1,3 @@
-// More info on TypeScript project references:
-// https://www.typescriptlang.org/docs/handbook/project-references.html
 {
   "include": [
     "src/**/*.ts",
@@ -15,8 +13,7 @@
     "moduleResolution": "node",
     "sourceMap": true,
     "composite": true,
-    "outDir": "build",
-    "rootDir": "src"
+    "outDir": "build"
   },
   "exclude": [
     "src/routers/TagCreator/form",

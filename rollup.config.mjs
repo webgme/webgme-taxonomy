@@ -9,12 +9,14 @@ import copy from "rollup-plugin-copy";
 import fs from "node:fs/promises";
 import path from "node:path";
 import webgmeSetup from "./webgme-setup.json" assert { type: "json" };
+import tsconfig from "./tsconfig.json" assert { type: "json" };
 import { fileURLToPath } from "node:url";
+import { createRequire } from 'node:module';
+
 const external = [
   "express",
   "path",
   "fs/promises",
-  "plugin/PluginBase",
   "oxide.ts",
   "webgme-transformations",
   "assert",
@@ -35,7 +37,22 @@ const external = [
       import.meta.url,
     ),
   ),
+
+  // plugin externals
+  "plugin/PluginBase",
+  "webgme-json-importer/JSONImporter",
 ];
+
+// set "include" to be relative to rootDir - not project root. This was the source of a tricky
+// bug that only didn't find the metadata.json files when running tsc through rollup...
+tsconfig.include = tsconfig.include.map(
+  ptrn => ptrn.replace(tsconfig.compilerOptions.rootDir + '/', '')
+);
+
+const require = createRequire(import.meta.url);
+tsconfig.include.push(path.relative(process.cwd(), require.resolve('webgme/package.json')));
+tsconfig.include.push('node_modules/webgme/*.json');
+console.log(tsconfig)
 
 // All regular files will just go through commonjs & typescript
 const pluginPaths = await Promise.all(
@@ -54,13 +71,14 @@ const buildPlugins = pluginPaths
   .map((pluginPath) => {
     const outpath = pluginPath.replace(/^src/, "build").replace(/\.ts$/, ".js");
     const isTs = pluginPath.endsWith(".ts");
+    console.log(pluginPath, 'isTs?:', isTs)
     const plugins = isTs
       ? [
         commonjs({
           // Dynamic require used by config/ (imported by MongoDB adapter)
           ignoreDynamicRequires: true,
         }),
-        typescript(),
+        typescript(tsconfig),
         json(),
       ]
       : [commonjs(), json()];
@@ -77,6 +95,7 @@ const buildPlugins = pluginPaths
       input: pluginPath,
       external,
       output: {
+        sourcemap: true,
         file: outpath,
         format: "amd",
       },
@@ -95,7 +114,7 @@ const buildRouters = Object.entries(webgmeSetup.components.routers).map(
         // Dynamic require used by config/ (imported by MongoDB adapter)
         ignoreDynamicRequires: true,
       }),
-      typescript(),
+      typescript(tsconfig),
       json(),
     ];
 
@@ -110,6 +129,7 @@ const buildRouters = Object.entries(webgmeSetup.components.routers).map(
       input: routerPath,
       external,
       output: {
+        sourcemap: true,
         file: outpath,
         format: "commonjs",
       },
@@ -135,7 +155,7 @@ if (process.env.NODE_ENV === "test") {
       // Dynamic require used by config/ (imported by MongoDB adapter)
       ignoreDynamicRequires: true,
     }),
-    typescript(),
+    typescript(tsconfig),
     json(),
   ];
   const configs = files
