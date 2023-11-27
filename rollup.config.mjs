@@ -48,6 +48,9 @@ const external = [
 tsconfig.include = tsconfig.include.map(
   (ptrn) => ptrn.replace(tsconfig.compilerOptions.rootDir + "/", ""),
 );
+tsconfig.exclude = tsconfig.exclude.map(
+  (ptrn) => ptrn.replace(tsconfig.compilerOptions.rootDir + "/", ""),
+);
 
 const require = createRequire(import.meta.url);
 tsconfig.include.push(
@@ -72,9 +75,6 @@ const buildPlugins = await Promise.all(pluginPaths
   .map(async (pluginPath) => {
     const outpath = pluginPath.replace(/^src/, "build").replace(/\.ts$/, ".js");
     const isTs = pluginPath.endsWith(".ts");
-    // HEAD
-    console.log(pluginPath, "isTs?:", isTs);
-    //
 
     // Determine the target (browser or nodejs) based on server-only execution or not
     const metadataPath = path.dirname(pluginPath) + "/metadata.json";
@@ -87,7 +87,6 @@ const buildPlugins = await Promise.all(pluginPaths
       console.log("Found nodejs only plugin:", pluginPath);
     }
 
-    //b48964d (Fix package.json build warnings and remove a few more debug logs)
     const plugins = isTs
       ? [
         commonjs(cjsOpts),
@@ -179,6 +178,7 @@ if (process.env.NODE_ENV === "test") {
       output: {
         file: filename.replace(/^src/, "build").replace(/\.ts/, ".js"),
         format: "commonjs",
+        exports: "named",
       },
       plugins,
     }));

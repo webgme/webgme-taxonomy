@@ -12,6 +12,7 @@
     "strict": true,
     "moduleResolution": "node",
     "sourceMap": true,
+    "rootDir": ".",
     "outDir": "build"
   },
   "exclude": [
