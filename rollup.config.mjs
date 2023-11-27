@@ -12,6 +12,7 @@ import webgmeSetup from "./webgme-setup.json" assert { type: "json" };
 import tsconfig from "./tsconfig.json" assert { type: "json" };
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
+import assert from "node:assert/strict";
 
 const external = [
   "express",
@@ -160,7 +161,8 @@ if (process.env.NODE_ENV === "test") {
         !name.endsWith("/Search.ts") && !name.includes("dashboard")
       ),
     )
-    .filter((name) => name.endsWith(".ts") && !name.endsWith(".d.ts"));
+    .filter((name) => !name.endsWith(".d.ts"));
+  const [tsFiles, jsFiles] = partition(files, (name) => name.endsWith(".ts"));
 
   const plugins = [
     commonjs({
@@ -172,7 +174,7 @@ if (process.env.NODE_ENV === "test") {
     typescript(tsconfig),
     json(),
   ];
-  const configs = files
+  const configs = tsFiles
     .map((filename) => ({
       input: filename,
       external,
@@ -180,11 +182,27 @@ if (process.env.NODE_ENV === "test") {
         sourcemap: true,
         file: filename.replace(/^src/, "build").replace(/\.ts/, ".js"),
         format: "commonjs",
-        exports: "named",
       },
       plugins,
     }));
-  console.log(`About to build ${configs.length} files for testing`);
+
+  // Copy over the JS files
+  if (jsFiles.length) {
+    assert(
+      tsFiles.length > 0,
+      "Cannot copy over JS files without any ts files",
+    );
+    const targets = jsFiles.map((filepath) => ({
+      src: filepath,
+      dest: path.dirname(filepath.replace(/^src/, "build")),
+    }));
+    configs[0].plugins = configs[0].plugins.concat(copy({ targets }));
+  }
+
+  console.log(`About to build ${configs.length} files for testing:`);
+  console.log(
+    configs.map((cfg) => cfg.output.file).join("\n").map((name) => "\t" + name),
+  );
   buildRouters.push(...configs);
 }
 
@@ -232,4 +250,18 @@ async function asyncFind(list, fn) {
   // This is inefficient but fine for now
   const filtered = await asyncFilter(list, fn);
   return filtered[0];
+}
+
+/**
+ * Partition the given list into 2 using the given partition function.
+ *
+ * Returns 2 lists: the first containing all items such that f(item) == true and
+ * the latter contains all the others.
+ */
+function partition(list, fn) {
+  return list.reduce((partitions, item) => {
+    const index = fn(item) ? 0 : 1;
+    partitions[index].push(item);
+    return partitions;
+  }, [[], []]);
 }
