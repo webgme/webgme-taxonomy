@@ -152,6 +152,7 @@ const buildRouters = Object.entries(webgmeSetup.components.routers).map(
 );
 
 // If testing, we should build common files so they can be tested
+console.log("NODE_ENV is", process.env.NODE_ENV);
 if (process.env.NODE_ENV === "test") {
   const files = (await readdir("./src/common"))
     .concat(
@@ -183,6 +184,7 @@ if (process.env.NODE_ENV === "test") {
       },
       plugins,
     }));
+  console.log(`About to build ${configs.length} files for testing`);
   buildRouters.push(...configs);
 }
 
