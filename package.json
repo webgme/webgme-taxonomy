@@ -6,7 +6,7 @@
     "test-tax": "ENV=test npx mocha --recursive test",
     "test": "npm run test-tax && npm run test-dash",
     "test-dash": "cd src/routers/Search/dashboard && npm t",
-    "setup-e2e": "npm run import -- src/seeds/test/test.webgmex -p e2e_tests",
+    "setup-e2e": "npm run import -- seeds/test/test.webgmex -p e2e_tests",
     "test-e2e": "playwright test",
     "apply": "node ./node_modules/webgme-engine/src/bin/apply.js",
     "diff": "node ./node_modules/webgme-engine/src/bin/diff.js",
