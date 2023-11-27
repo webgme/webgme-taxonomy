@@ -1,8 +1,0 @@
-[
-  {
-    "id": "TagCreator",
-    "title": "Taxonomy Tags",
-    "panel": "panels/TagCreator/TagCreatorPanel",
-    "DEBUG_ONLY": false
-  }
-]

@@ -1,12 +1,12 @@
 describe("PDP", function () {
   const { default: PDP, HostUri } = require(
-    "../../../../../src/routers/Search/build/adapters/PDP",
+    "../../../../../build/routers/Search/adapters/PDP",
   );
   const { InMemoryPdp } = require(
-    "../../../../../src/routers/Search/build/adapters/PDP/api",
+    "../../../../../build/routers/Search/adapters/PDP/api",
   );
   const { sleep, Pattern } = require(
-    "../../../../../src/routers/Search/build/Utils",
+    "../../../../../build/routers/Search/Utils",
   );
   const assert = require("assert");
   const processType = "someProcessType";

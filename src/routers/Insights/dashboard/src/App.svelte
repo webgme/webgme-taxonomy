@@ -6,8 +6,8 @@
     AppHeader,
     Chart,
    } from "./components";
-  import type {ArtifactMetadatav2} from "../../Search/src/adapters/common/types";
-  import { DateTimeInterval, getTimepoints, groupBy, shiftWhile, sortDates } from "../../../Search/src/Utils";
+  import type {ArtifactMetadatav2} from "../../Search/adapters/common/types";
+  import { DateTimeInterval, getTimepoints, groupBy, shiftWhile, sortDates } from "../../../Search/Utils";
 
   const projectId = decodeURIComponent(location.href.split('/Insights/').pop().split('/').shift());
   let title: string = `Content Insights: ${projectId.split('+').pop()}`;

@@ -1,8 +1,9 @@
 describe("MongoDB", function () {
-  const MongoDB =
-    require("../../../../../src/routers/Search/build/adapters/MongoDB").default;
+  const MongoDB = require(
+    "../../../../../build/routers/Search/adapters/MongoDB",
+  );
   const { range, Pattern, sleep } = require(
-    "../../../../../src/routers/Search/build/Utils",
+    "../../../../../build/routers/Search/Utils",
   );
   const assert = require("assert");
   const gmeConfig = require("../../../../../config");

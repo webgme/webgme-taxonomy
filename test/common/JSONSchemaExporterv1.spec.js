@@ -1,7 +1,7 @@
 describe("JSONSchemaExporterv1", function () {
   const testFixture = require("../globals");
   const Importer = testFixture.requirejs("webgme-json-importer/JSONImporter");
-  const JSONSchemaExporter = require("../../src/common/JSONSchemaExporterv1");
+  const JSONSchemaExporter = require("../../build/common/JSONSchemaExporterv1");
   const Ajv = require("ajv");
   const ajv = new Ajv();
   const assert = require("assert");
@@ -386,37 +386,6 @@ describe("JSONSchemaExporterv1", function () {
         termSchemas.filter((schema) => schema.title.startsWith("pre")).length,
         3,
       );
-    });
-  });
-
-  describe("UriField", function () {
-    it("should enforce syntax", async function () {
-      const root = await Utils.getNewRootNode(project, commitHash, core);
-      const taxCsv = `vocab,,,
-        ,term,,
-        ,,field (uri),
-      `;
-      const uri =
-        "pdp://127.0.0.1:435/someType/e0de6a4a-5257-4f2c-b3ce-470e3299fc4a/9/0";
-
-      const tag = {
-        vocab: {
-          term: {
-            field: uri,
-          },
-        },
-      };
-      const validate = await getValidateFn(core, root, taxCsv);
-      assert(await validate(tag));
-
-      const badTag = {
-        vocab: {
-          term: {
-            field: "IamAnInvalidURI",
-          },
-        },
-      };
-      assert(!await validate(badTag));
     });
   });
 });

@@ -10,7 +10,7 @@ type Project = Readonly<{
 }>;
 
 export default async function (apiBaseUrl: string) {
-  const url = apiBaseUrl + "/info/";
+  const url = apiBaseUrl + "/info";
   const response = await fetch(url);
   return response.json() as Promise<Project>;
 }
