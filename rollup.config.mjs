@@ -201,7 +201,7 @@ if (process.env.NODE_ENV === "test") {
 
   console.log(`About to build ${configs.length} files for testing:`);
   console.log(
-    configs.map((cfg) => cfg.output.file).join("\n").map((name) => "\t" + name),
+    configs.map((cfg) => cfg.output.file).map((name) => "\t" + name).join("\n"),
   );
   buildRouters.push(...configs);
 }
