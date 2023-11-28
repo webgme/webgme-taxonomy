@@ -14,6 +14,19 @@ describe("Tokens", function () {
     assert.equal(token, readToken);
   });
 
+  it("should scope token to project", async function () {
+    const token = "token123";
+    await withTokens(gmeConfig, (tokens) => tokens.update(projectId, token));
+    const otherProjectId = "someOtherProject";
+    const otherToken = "otherToken";
+    await withTokens(
+      gmeConfig,
+      (tokens) => tokens.update(otherProjectId, otherToken),
+    );
+    const readToken = await withTokens(gmeConfig, (t) => t.get(otherProjectId));
+    assert.equal(readToken, otherToken);
+  });
+
   it("should save latest token", async function () {
     const token = "token123";
     const newToken = "token234";
