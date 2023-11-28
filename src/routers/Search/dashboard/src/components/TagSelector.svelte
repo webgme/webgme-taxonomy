@@ -3,8 +3,8 @@
   A component for selecting tags for a repository or content.
 -->
 <script lang="ts">
-  import type { ArtifactMetadatav2 } from '../../../src/adapters/common/types';
-  import { toArtifactMetadatav2 } from '../../../src/Utils';
+  import type { ArtifactMetadatav2 } from '../../../adapters/common/types';
+  import { toArtifactMetadatav2 } from '../../../Utils';
   import type { default as ContentType } from "../ContentType";
   import Dropzone from "svelte-file-dropzone";
   import {
@@ -62,21 +62,11 @@
     <a
       target="_blank"
       href={window.location.href
-        .replace("/Search/", "/TagCreatorv1/")
-        .replace(
-          /[^\/]*\/static\//,
-          `${encodeURIComponent(contentType.nodePath)}/static/`
-        )}>Click to select tags for the {displayTypeName}.</a
-    >
-    <br/>
-    <a
-      target="_blank"
-      href={window.location.href
         .replace("/Search/", "/TagCreator/")
         .replace(
           /[^\/]*\/static\//,
           `${encodeURIComponent(contentType.nodePath)}/static/`
-        )}>Click to try the new tag form (experimental).</a
+        )}>Click to select tags for the {displayTypeName}.</a
     >
 </div>
 

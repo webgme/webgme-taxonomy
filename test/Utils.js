@@ -1,9 +1,9 @@
 const Q = require("q");
 const path = require("path");
 const testFixture = require("./globals");
-const TaxonomyParser = require("../src/common/TaxonomyParser");
+const TaxonomyParser = require("../build/common/TaxonomyParser");
 const Importer = testFixture.requirejs("webgme-json-importer/JSONImporter");
-const SEED_DIR = path.join(__dirname, "..", "src", "seeds");
+const SEED_DIR = path.join(__dirname, "..", "seeds");
 
 let counter = 1;
 

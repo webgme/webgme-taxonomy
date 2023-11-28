@@ -1,0 +1,62 @@
+diff --git a/node_modules/@smui-extra/autocomplete/dist/Autocomplete.svelte b/node_modules/@smui-extra/autocomplete/dist/Autocomplete.svelte
+index 1e5ea22..95cbf3c 100644
+--- a/node_modules/@smui-extra/autocomplete/dist/Autocomplete.svelte
++++ b/node_modules/@smui-extra/autocomplete/dist/Autocomplete.svelte
+@@ -155,28 +155,10 @@ $: if (previousText !== text) {
+     if (!combobox && value != null && getOptionLabel(value) !== text) {
+         deselectOption(value, false);
+     }
+-    (async () => {
+-        loading = true;
+-        error = false;
+-        try {
+-            const searchResult = await search(text);
+-            if (searchResult !== false) {
+-                matches = searchResult;
+-                if (selectOnExactMatch) {
+-                    const exactMatch = matches.find((match) => getOptionLabel(match) === text);
+-                    if (exactMatch && value !== exactMatch) {
+-                        selectOption(exactMatch);
+-                    }
+-                }
+-            }
+-        }
+-        catch (e) {
+-            error = true;
+-        }
+-        loading = false;
+-    })();
++    refreshOptions();
+     previousText = text;
+ }
++$: (options, search, refreshOptions());
+ let previousValue = value;
+ $: if (!combobox && previousValue !== value) {
+     // If the value changes from outside, update the text.
+@@ -316,6 +298,26 @@ async function handleTextfieldBlur(event) {
+         text = '';
+     }
+ }
++async function refreshOptions() {
++    loading = true;
++    error = false;
++    try {
++        const searchResult = await search(text);
++        if (searchResult !== false) {
++            matches = searchResult;
++            if (selectOnExactMatch) {
++                const exactMatch = matches.find((match) => getOptionLabel(match) === text);
++                if (exactMatch && value !== exactMatch) {
++                    selectOption(exactMatch);
++                }
++            }
++        }
++    }
++    catch (e) {
++        error = true;
++    }
++    loading = false;
++}
+ export function focus() {
+     if (inputContainer) {
+         const inputEl = inputContainer.querySelector('input.mdc-text-field__input');

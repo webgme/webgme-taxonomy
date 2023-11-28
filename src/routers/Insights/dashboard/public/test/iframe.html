@@ -1,0 +1,23 @@
+<html>
+<head>
+</head>
+<body>
+  <iframe
+    style="width:100%; height: 100%"
+    src="http://localhost:8888/routers/Search/guest%2BTaxonomyDemo/branch/master/static/index.html">
+  </iframe>
+  <script>
+    const element = document.getElementsByTagName('iframe')[0];
+    element.onload = () => {
+      // subscribe to selections
+      element.contentWindow.postMessage({type: 'subscribe'}, '*');
+
+      // set up message handler
+      function onMessage(event) {
+        console.log('received message from dashboard:', event.data);
+      }
+      window.addEventListener('message', onMessage, false);
+    }
+  </script>
+</body>
+</html>

@@ -182,8 +182,18 @@
                   : ""}
               </SecondaryText>
             </Text>
-            <Meta on:click$stopPropagation={() => showTags(artifact)} class="material-icons">info</Meta>
-              <Meta on:click$stopPropagation={() => onCopyLink(artifact)} class="material-icons">link</Meta>
+            <Meta>
+              <IconButton
+                on:click$stopPropagation={() => showTags(artifact)}
+                class="material-icons"
+                size="mini"
+              >info</IconButton>
+              <IconButton
+                on:click$stopPropagation={() => onCopyLink(artifact)}
+                class="material-icons"
+                size="mini"
+              >link</IconButton>
+            </Meta>
           </Item>
         {/each}
       </List>

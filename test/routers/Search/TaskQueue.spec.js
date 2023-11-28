@@ -1,11 +1,10 @@
 describe("TaskQueue", function () {
   const assert = require("assert");
-  const { default: TaskQueue, Task, Status } = require(
-    "../../../src/routers/Search/build/TaskQueue",
+  const { default: TaskQueue, Status } = require(
+    "../../../build/routers/Search/TaskQueue",
   );
-  const { UserError } = require("../../../src/common/routers/Utils");
-  const { sleep } = require(
-    "../../../src/routers/Search/build/Utils",
+  const { sleep, fromResult } = require(
+    "../../../build/routers/Search/Utils",
   );
 
   class MockRunnable {
@@ -20,6 +19,12 @@ describe("TaskQueue", function () {
     }
   }
 
+  class ThrowingRunnable {
+    async run() {
+      throw new Error("throw!");
+    }
+  }
+
   describe("submitTask", function () {
     it("should run tasks in order", async function () {
       const queue = new TaskQueue();
@@ -31,8 +36,8 @@ describe("TaskQueue", function () {
       while (queue.getStatus(id2) !== Status.Complete) {
         await sleep(5);
       }
-      const r1 = queue.getResult(id1);
-      const r2 = queue.getResult(id2);
+      const r1 = fromResult(queue.getResult(id1));
+      const r2 = fromResult(queue.getResult(id2));
       assert(r1 < r2);
     });
 
@@ -56,8 +61,18 @@ describe("TaskQueue", function () {
         queue.getStatus(1);
         assert(false, "No error thrown on getStatus w/ invalid ID");
       } catch (err) {
-        assert(err instanceof UserError);
+        assert.equal(err.constructor.name, "TaskNotFoundError");
       }
+    });
+
+    it("should get error it task throws error", async function () {
+      const queue = new TaskQueue();
+      const t1 = new ThrowingRunnable();
+      const id1 = queue.submitTask(t1);
+      await sleep(5);
+      const result = queue.getResult(id1);
+      assert(result.isErr());
+      assert.throws(() => fromResult(result));
     });
   });
 
@@ -70,7 +85,7 @@ describe("TaskQueue", function () {
         queue.getResult(id);
         assert(false, "No error thrown on getResult");
       } catch (err) {
-        assert(err instanceof UserError);
+        assert.equal(err.constructor.name, "TaskNotCompleteError");
       }
     });
 
@@ -86,7 +101,7 @@ describe("TaskQueue", function () {
         queue.getResult(id);
         assert(false, "No error thrown on 2nd call to getResult");
       } catch (err) {
-        assert(err instanceof UserError);
+        assert.equal(err.constructor.name, "TaskNotFoundError");
       }
     });
   });

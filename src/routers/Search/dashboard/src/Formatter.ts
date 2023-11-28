@@ -8,9 +8,14 @@ export default class TagFormatter {
   }
 
   async toHumanFormat(tags: any[]) {
-    const encodedTags = encodeURIComponent(JSON.stringify(tags));
-    const url = `${this.baseUrl}?tags=${encodedTags}`;
-    const response = await fetch(url);
+    const options = {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(tags),
+    };
+    const response = await fetch(this.baseUrl, options);
     if (response.status > 399) {
       throw new FormatError(await response.text());
     }

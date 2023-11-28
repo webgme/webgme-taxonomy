@@ -23,8 +23,10 @@ var WebGME = testFixture.WebGME,
     return JSON.parse(JSON.stringify(gmeConfig));
   };
 
+console.log("adding to requirejs paths");
 WebGME.addToRequireJsPaths(gmeConfig);
 
 testFixture.getGmeConfig = getGmeConfig;
+testFixture.getLogger = (name) => testFixture.logger.fork(name);
 
 module.exports = testFixture;
