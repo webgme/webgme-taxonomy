@@ -1,57 +1,51 @@
 <script lang="ts">
   import { setContext } from "svelte";
   import { FilterTag, LeanTag, fromDict } from "./tags";
-  import TopAppBar, { Row, Section, Title } from "@smui/top-app-bar";
   import { filterMap } from "./Utils";
   import {
-    getLatestArtifact,
     openUrl,
     encodeQueryParams,
-    readFile,
   } from "./Utils";
   import Textfield from "@smui/textfield";
-  import IconButton from "@smui/icon-button";
-  import { SvelteToast, toast } from "@zerodevx/svelte-toast";
+  import { SvelteToast, SvelteToastOptions, toast } from "@zerodevx/svelte-toast";
   /*import Chip from "@smui/chips";*/
   import List, {
     Item,
     Text,
-    Graphic,
     PrimaryText,
     SecondaryText,
   } from "@smui/list";
   import Drawer, { Content, AppContent } from "@smui/drawer";
   import LinearProgress from "@smui/linear-progress";
-  import Select, { Option } from "@smui/select";
-  import Dialog, {
-    Content as DialogContent,
-    Title as DialogTitle,
-    InitialFocus,
-    Actions,
-  } from "@smui/dialog";
-  import Radio from "@smui/radio";
-  import Button, { Label } from "@smui/button";
   import Paper, { Content as PaperContent } from "@smui/paper";
   import {
+    AppHeader,
     AppendArtifactDialog,
     ArtifactSetViewer,
     TaxonomyFilter,
-  } from "./components";
+    CreateRepoDialog,
+   } from "./components";
 
   import TaxonomyData from "./TaxonomyData";
-  import TaxonomyReference from "./TaxonomyReference";
+  import TaxonomyReference from "../../../../common/TaxonomyReference";
+  import Storage, { LoadState, ModelError, RequestError, ModelContext } from "./Storage";
+  import type { PopulatedRepo } from "./Storage";
+  import type ContentType from "./ContentType";
 
   let title: string;
-  let contentType: string = "Data";
-  $: title = `${contentType} Dashboard`;
+  let contentType: ContentType = {
+    name: "Data",
+    nodePath: '',
+    vocabularies: []
+  };
+  $: title = `${contentType.name} Dashboard`;
   let vocabularies: TaxonomyData[] = [];
 
-  import TagFormatter, { FormatError } from "./Formatter";
-  import Storage, { ModelError, RequestError, ModelContext } from "./Storage";
   const storage = setContext("storage", new Storage());
 
-  let allItems = [];
-  let items = [];
+
+  let allItems: PopulatedRepo[] = [];
+  let items: PopulatedRepo[] = [];
 
   const params = new URLSearchParams(location.search);
   let searchQuery: string = params.get("searchQuery") || "";
@@ -85,16 +79,12 @@
 
   function onFilterUpdate(searchQuery: string, filterTags: FilterTag[]) {
     const filter = (item) => {
-      const { displayName, taxonomyTags = [] } = item;
+      const { displayName, tags = {} } = item;
 
-      const matchingTags = filterTags.every(
-        (filterTag) => !!taxonomyTags.find((tag) => filterTag.isMatch(tag))
-      );
+      const matchingTags = FilterTag.applyFilters(tags, filterTags);
       const hasMatchingArtifact = item.children.find((child) => {
-        const { displayName, taxonomyTags = [] } = child;
-        return filterTags.every(
-          (filterTag) => !!taxonomyTags.find((tag) => filterTag.isMatch(tag))
-        );
+        const { displayName, tags = {} } = child;
+        return FilterTag.applyFilters(tags, filterTags);
       });
 
       if (matchingTags || hasMatchingArtifact) {
@@ -117,7 +107,8 @@
 
   $: onFilterUpdate(searchQuery, filterTags);
 
-  $: itemTags = items.flatMap((item) => item.taxonomyTags ?? []);
+  // FIXME: what should this be?
+  $: itemTags = items.flatMap((item) => item.tags ?? {});
 
   function setQueryStringParams(newParams: URLSearchParams) {
     const params = new URLSearchParams(location.search);
@@ -190,8 +181,13 @@
     }
   }
 
-  function displayMessage(msg: string) {
-    toast.push(msg, { classes: ["info"] }); // background green
+  function clearMessage(id: number) {
+    return toast.pop(id);
+  }
+
+  function displayMessage(msg: string, opts: SvelteToastOptions = {}): number {
+    opts.classes = opts.classes || ['info'];  // background green
+    return toast.push(msg, opts);
   }
 
   function displayProgressMessage(msg: string, duration: number = 60000) {
@@ -207,15 +203,15 @@
 
   let isLoading = false;
   let configuration;
-  let currentTaxonomy;
+  let currentTaxonomy: TaxonomyReference;
   async function initialize() {
     configuration = await fetchConfiguration();
     currentTaxonomy = TaxonomyReference.from(configuration.project);
     // FIXME: Only 2-level depth is currently supported
     let depth = 1;
-    let contentType = configuration.content;
-    while (contentType.content) {
-      contentType = contentType.content;
+    let contentTypeIter = configuration.content;
+    while (contentTypeIter.content) {
+      contentTypeIter = contentTypeIter.content;
       depth++;
     }
     if (depth !== 2) {
@@ -237,20 +233,51 @@
     );
     vocabularies = trimTaxonomy(dataVocabs);
     filterTags = parseTagParams(params.get("filterTags"));
-    contentType = configuration.name;
+    contentType = configuration.content;
     fetchData();
+  }
+
+  async function onTryCreateRepo(event) {
+    const {status} = event.detail;
+    displayMessage(status);
+    if (status.includes("Created!")) {
+      // FIXME: replace this with a proper enum
+      await fetchData();
+    }
+  }
+
+  async function loadContents(repo: PopulatedRepo) {
+    repo.loadState = LoadState.Pending;
+    const children = await storage.listArtifacts(repo.id);
+    // TODO: keep all and just show if they are valid or not...
+    const validArtifacts = children.filter(
+      (content) => content.taxonomyVersion && currentTaxonomy.supports(content.taxonomyVersion)
+    );
+    repo.children = validArtifacts;
+    repo.loadState = LoadState.Complete;
+
+    if (selectedArtifactSet?.id === repo.id) {
+      selectedArtifactSet = selectedArtifactSet;
+    }
   }
 
   async function fetchData() {
     isLoading = true;
     try {
-      allItems = await storage.listArtifacts();
-      allItems.forEach((set) => {
-        const validArtifacts = set.children.filter(
-          (item) => item.taxonomy && currentTaxonomy.supports(item.taxonomy)
-        );
-        set.children = validArtifacts;
-      });
+      allItems = (await storage.listRepos(currentTaxonomy))
+        .map(repo => ({
+          id: repo.id,
+          displayName: repo.displayName,
+          tags: repo.tags,
+          taxonomyVersion: repo.taxonomyVersion,
+          children: [],
+          loadState: LoadState.Pending,
+        }));
+
+      if (selectedArtifactSet) {
+        selectedArtifactSet = allItems.find(repo => repo.id === selectedArtifactSet.id);
+      }
+      allItems.forEach((repo) => loadContents(repo));
     } catch (err) {
       displayError(err);
 
@@ -322,9 +349,8 @@
 
   ////// Artifact Upload //////
   const queryDict = parseQueryString(window.location.href);
-  let creatingArtifact = queryDict.action === "create";
+  let creatingRepo = queryDict.action === "create";
   let artifactFiles = [];
-  let uploadMetadata;
 
   function onFileDrop(event) {
     const { acceptedFiles } = event.detail;
@@ -332,34 +358,6 @@
       artifactFiles = acceptedFiles;
     }
     // TODO: handle rejections
-  }
-
-  async function onTagsFileDrop(event) {
-    const [tagsFile] = event.detail.acceptedFiles;
-    if (tagsFile) {
-      uploadMetadata = JSON.parse(await readFile(tagsFile));
-    }
-  }
-
-  async function onUploadClicked() {
-    if (!uploadMetadata) {
-      // TODO: require tags?
-    }
-    // TODO: re-enable this once they can create datasets on their own
-    //if (artifactFiles.length === 0) {
-    //  return displayError("No dataset files provided");
-    //}
-    //uploadMetadata.displayName = artifactName;
-    //await storage.createArtifact(uploadMetadata, artifactFiles);
-    const status = await storage.createArtifact(
-      { displayName: artifactName },
-      artifactFiles
-    );
-    displayMessage(status);
-    if (status === "Created!") {
-      // FIXME: replace this with a proper enum
-      fetchData();
-    }
   }
 
   let artifactName = "";
@@ -375,30 +373,28 @@
   //////// Download ////////
   async function onDownload(event) {
     const { artifactSet, artifactIds } = event;
+    if (artifactIds.length === 0) {
+      return displayError("Nothing to download: No data found.");
+    }
+    const msgId = displayMessage(
+      `Downloading ${artifactIds.length} from ${artifactSet.displayName}...`,
+      {initial: 0}
+    );
+
     try {
-      if (artifactIds.length === 0) {
-        return displayError("Nothing to download: No data found.");
-      }
-      displayMessage(
-        `Downloading ${artifactIds.length} from ${artifactSet.displayName}...`
-      );
       const url = await storage.getDownloadUrl(artifactSet.id, ...artifactIds);
       openUrl(url);
+
     } catch (err) {
+      clearMessage(msgId);
       return displayError(err);
     }
   }
 
   //////// Artifact Sets ////////
-  let artifactSets = [];
-  $: artifactSets = getArtifactSets(items);
   let selectedArtifactSet;
   $: if (!items.includes(selectedArtifactSet)) {
     selectedArtifactSet = null;
-  }
-
-  function getArtifactSets(items) {
-    return [];
   }
 
   //////// Edit taxonomy ////////
@@ -431,139 +427,75 @@
   />
 {/if}
 
-<!-- Artifact creation dialog -->
-<Dialog
-  bind:open={creatingArtifact}
-  aria-labelledby="title"
-  aria-describedby="content"
->
-  <DialogTitle id="title">Create new dataset</DialogTitle>
-  <DialogContent id="content">
-    <Textfield label="Name" bind:value={artifactName} />
-    <!-- TODO: create process -->
-    <!-- TODO: re-enable this when we can automatically create processes
-    <p>{contentType} file(s):</p>
-    <ul>
-      {#each artifactFiles as file}
-        <li>{file.name}</li>
-      {/each}
-    </ul>
-    <Dropzone on:drop={onFileDrop} multiple={true}>
-      <p>Select dataset to upload.</p>
-    </Dropzone>
-    <p>
-      Taxonomy Terms:
-      {uploadMetadata
-        ? uploadMetadata.taxonomyTags.map((tag) => tag.Tag).join(", ")
-        : ""}
-    </p>
-    <Dropzone on:drop={onTagsFileDrop} accept=".json">
-      <p>Select tags file for dataset.</p>
-    </Dropzone>
-    <a
-      target="_blank"
-      href={window.location.href.replace("/Search/", "/TagCreator/")}
-      >Click to select tags for your dataset.</a
-    >
-    -->
-  </DialogContent>
-  <Actions>
-    <Button>
-      <Label>Cancel</Label>
-    </Button>
-    <Button on:click={() => onUploadClicked()}>
-      <Label>Submit</Label>
-    </Button>
-  </Actions>
-</Dialog>
+<!-- Repo creation dialog -->
+<CreateRepoDialog
+  bind:open={creatingRepo}
+  bind:contentType
+  on:create={onTryCreateRepo}
+/>
 <!-- Main app -->
-<TopAppBar variant="static">
-  <Row>
-    <Section>
-      <Title>{title}</Title>
-    </Section>
-    <Section align="end" toolbar>
-      <IconButton
-        class="material-icons"
-        aria-label="Upload dataset"
-        ripple={false}
-        on:click={() => (creatingArtifact = true)}>file_upload</IconButton
-      >
-      <IconButton
-        class="material-icons"
-        aria-label="Edit taxonomy"
-        ripple={false}
-        on:click={onOpenInEditor}>open_in_new</IconButton
-      >
-    </Section>
-  </Row>
-</TopAppBar>
-{#if isLoading}
-  <LinearProgress indeterminate />
-{/if}
-<SvelteToast options={{ classes: ["log"] }} />
-<!-- TODO: make the drawer collapsible? -->
-<div class="drawer-container">
-  <Drawer style="width: 360px">
-    <Content>
-      <Textfield label="Search..." bind:value={searchQuery} />
-      <span class="filter-header">Advanced Filters</span>
-      <TaxonomyFilter
-        trees={vocabularies}
-        tags={itemTags}
-        on:change={(event) =>
-          (filterTags = event.detail.filterTags.map(fromDict))}
-      />
-    </Content>
-  </Drawer>
-  <AppContent>
-    <main style="display: inline-block; vertical-align: top">
-      <!-- Artifact list -->
-      {#if items.length}
-        <List twoLine avatarList>
-          {#each items as item (item.hash)}
-            <Item
-              selected={item === selectedArtifactSet}
-              on:SMUI:action={() => onItemClicked(item)}
-            >
-              <Text>
-                <PrimaryText>{item.displayName}</PrimaryText>
-                <SecondaryText />
-              </Text>
-              {#each item.taxonomyTags as tag}
-                <!--
-                                                          <Chip chip={tag.id}>
-                  {#if tag.type === 'EnumField'}
-              <Text>{tag.name}</Text>
-                                          {:else if tag.value}
-              <Text>{tag.name}: {tag.value}</Text>
-                  {:else}
-              <Text>{tag.name}</Text>
-                  {/if}
-                                                          </Chip>
-                -->
-              {/each}
-            </Item>
-          {/each}
-        </List>
-      {:else if !isLoading}
-        <Paper variant="unelevated" class="empty">
-          <PaperContent>
-            <p>No results found</p>
-          </PaperContent>
-        </Paper>
+<main id="app">
+  <AppHeader
+    {title}
+    on:createArtifact={() => (creatingRepo = true)}
+    on:openEditor={onOpenInEditor}
+  />
+  {#if isLoading}
+    <LinearProgress indeterminate />
+  {/if}
+  <SvelteToast options={{ classes: ["log"] }} />
+  <!-- TODO: make the drawer collapsible? -->
+  <div class="drawer-container">
+    <Drawer style="width: 360px">
+      <Content>
+        <Textfield label="Search..." bind:value={searchQuery} />
+        <span class="filter-header">Advanced Filters</span>
+        <TaxonomyFilter
+          trees={vocabularies}
+          tags={itemTags}
+          on:change={(event) =>
+            (filterTags = event.detail.filterTags.map(fromDict))}
+        />
+      </Content>
+    </Drawer>
+    <AppContent>
+      <main style="display: inline-block; vertical-align: top; min-width: 33%">
+        <!-- Artifact list -->
+        {#if items.length}
+          <List twoLine avatarList>
+            {#each items as item (item.id)}
+              <Item
+                data-testid={item.displayName}
+                selected={item === selectedArtifactSet}
+                on:SMUI:action={() => onItemClicked(item)}
+              >
+                <Text>
+                  <PrimaryText>{item.displayName}</PrimaryText>
+                  <SecondaryText />
+                </Text>
+              </Item>
+            {/each}
+          </List>
+        {:else if !isLoading}
+          <Paper variant="unelevated" class="empty">
+            <PaperContent>
+              <p>No results found</p>
+            </PaperContent>
+          </Paper>
+        {/if}
+      </main>
+      {#if selectedArtifactSet}
+        <ArtifactSetViewer
+          bind:artifactSet={selectedArtifactSet}
+          bind:contentType
+          on:download={(event) => onDownload(event.detail)}
+          on:upload={(event) => (appendItem = event.detail.artifactSet)}
+          on:copyUri={(event) => displayMessage("Copied URI: " + event.detail.name)}
+        />
       {/if}
-    </main>
-    {#if selectedArtifactSet}
-      <ArtifactSetViewer
-        bind:artifactSet={selectedArtifactSet}
-        bind:contentType
-        on:download={(event) => onDownload(event.detail)}
-        on:upload={(event) => (appendItem = event.detail.artifactSet)}
-      />
-    {/if}
-  </AppContent>
-</div>
+    </AppContent>
+  </div>
+</main>
 
 <!-- Material Icons -->
 <link
@@ -589,6 +521,12 @@
     }
   }
 
+  main#app {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+
   .filter-header {
     display: block;
     padding-top: 10px;
@@ -597,15 +535,22 @@
   /* FIXME: this is an annoying hack to get the placement/size right*/
   .drawer-container {
     position: relative;
+    padding: 0 8px;
+    flex: 1;
+    min-height: 0;
     display: flex;
-    height: 100%;
   }
 
-  * :global(.app-content) {
-    flex: auto;
+  * :global(.app-content),
+  * :global(.mdc-drawer-app-content) {
+    flex: 1;
     overflow: auto;
-    position: relative;
-    flex-grow: 1;
+    display: flex;
+  }
+
+  :global(.mdc-drawer-app-content) > main {
+    min-height: 0;
+    overflow-y: auto;
   }
 
   :global(.log.info) {

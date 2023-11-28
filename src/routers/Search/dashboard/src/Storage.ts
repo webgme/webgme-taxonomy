@@ -1,6 +1,7 @@
-import TaxonomyReference from "./TaxonomyReference";
-import { assert, Result } from "./Utils";
-import { filterMap } from "./Utils";
+import TaxonomyReference, {
+  TaxonomyVersionData,
+} from "../../../../common/TaxonomyReference";
+import { assert, Result, sleep } from "./Utils";
 import { Readable, writable } from "svelte/store";
 
 type UploadParams = {
@@ -23,16 +24,60 @@ class Storage {
     this.baseUrl = chunks.join("/") + "/artifacts/";
   }
 
-  async listArtifacts(): Promise<ArtifactSet[]> {
+  async listRepos(defaultVersion: TaxonomyReference): Promise<Repository[]> {
     const result = await this._fetchJson(this.baseUrl, null, ListError);
-    const items: any[] = await result.unwrap();
-    return filterMap(items, (item) => ArtifactSet.tryFrom(item));
+    const items: RepositoryData[] = (await result.unwrap())
+      .filter((data: any) => {
+        if (isRepositoryData(data)) {
+          return true;
+        } else {
+          console.warn("Found malformed repository:", data);
+          return false;
+        }
+      });
+    return items.map((item) => parseRepo(item, defaultVersion));
+  }
+
+  async listArtifacts(repoId: string): Promise<Artifact[]> {
+    const result = await this._fetchJson(
+      this.baseUrl + repoId,
+      null,
+      ListError,
+    );
+    const items: ArtifactData[] = (await result.unwrap())
+      .filter((data: any) => {
+        if (isArtifactData(data)) {
+          return true;
+        } else {
+          console.warn("Found malformed data", data);
+          return false;
+        }
+      });
+
+    return items.map((item) => parseArtifact(item));
   }
 
   async getDownloadUrl(parentId, ...ids) {
-    // TODO: add item IDs
     const qs = `ids=${encodeURIComponent(JSON.stringify(ids))}`;
-    return this.baseUrl + parentId + `/download?${qs}`;
+    const createArchiveUrl = this.baseUrl + parentId + `/downloads/?${qs}`;
+    const taskId: number =
+      await (await this._fetchJson(createArchiveUrl, { method: "post" }))
+        .unwrap();
+
+    const checkStatusUrl = this.baseUrl + parentId +
+      `/downloads/${taskId}/status`;
+    let status: Status = await (await this._fetchJson(checkStatusUrl))
+      .unwrap();
+
+    while (status !== Status.Complete) {
+      await sleep(10);
+      status = await (await this._fetchJson(checkStatusUrl))
+        .unwrap();
+    }
+
+    const downloadUrl = this.baseUrl + parentId +
+      `/downloads/${taskId}`;
+    return downloadUrl;
   }
 
   private _uploadFile({ method, url, headers }: UploadParams, file: File) {
@@ -105,9 +150,9 @@ class Storage {
     console.log("Updating artifact:", metadata, newContent);
   }
 
-  async createArtifact(metadata, files) {
-    console.log("Creating artifact:", metadata, files);
-    metadata.taxonomyTags = metadata.taxonomyTags || [];
+  async createRepo(metadata) {
+    console.log("Creating repo:", metadata);
+    metadata.tags = metadata.tags || {};
     const opts = {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -209,23 +254,114 @@ class AppendDataError extends StorageError {
   }
 }
 
-class ArtifactSet {
-  static tryFrom(item: any) {
-    if (!item.displayName) {
-      console.log("Found malformed data. Filtering out. Data:", item);
-    } else {
-      const hash = [item.id, ...item.children.map((child) => child.id).sort()]
-        .join("/");
-      item.hash = hash;
-      item.children = item.children.map((child) => {
-        if (child.taxonomy) {
-          child.taxonomy = TaxonomyReference.from(child.taxonomy);
-        }
-        return child;
-      });
-      return item;
-    }
-  }
+function parseRepo(
+  item: RepositoryData,
+  defaultVersion: TaxonomyReference,
+): Repository {
+  return {
+    id: item.id,
+    displayName: item.displayName,
+    tags: item.tags || {},
+    // FIXME: this is a bit of a temp hack
+    taxonomyVersion: item.taxonomyVersion
+      ? TaxonomyReference.from(item.taxonomyVersion)
+      : defaultVersion,
+  };
+}
+
+function parseArtifact(data: ArtifactData): Artifact {
+  console.log("parse artifact", data);
+  return {
+    id: data.id,
+    displayName: data.displayName,
+    tags: data.tags || {},
+    time: data.time,
+    taxonomyVersion: TaxonomyReference.from(data.taxonomyVersion),
+  };
+}
+
+// TODO: consolidate code with original definition in TaskQueue.ts
+enum Status {
+  Created,
+  Running,
+  Complete,
+}
+
+// TODO: unify the below types with the server types
+interface RepositoryData {
+  id: string;
+  displayName: string;
+  tags: any[];
+  taxonomyVersion: TaxonomyVersionData;
+}
+
+interface ArtifactData {
+  parentId?: string;
+  id?: string;
+  displayName: string;
+  tags: any;
+  taxonomyVersion: TaxonomyVersionData;
+  time: string;
+  files?: string[];
+}
+
+function hasKeys(data: any, reqKeys: string[]): boolean {
+  return reqKeys.reduce(
+    (isType, reqKey) => isType && data.hasOwnProperty(reqKey),
+    true,
+  );
+}
+
+function isArtifactData(data: any): data is ArtifactData {
+  const reqKeys = [
+    "tags",
+    "taxonomyVersion",
+  ];
+
+  return hasKeys(data, reqKeys);
+}
+
+function isRepositoryData(data: any): data is RepositoryData {
+  const reqKeys = [
+    "id",
+    "displayName",
+    // Old repositories may not have taxonomy tags
+    //"tags",
+    //"taxonomyVersion",
+  ];
+
+  return hasKeys(data, reqKeys);
+}
+
+export interface Repository {
+  id: string;
+  displayName: string;
+  tags: any;
+  taxonomyVersion: TaxonomyReference;
+}
+
+export interface Artifact {
+  parentId?: string;
+  id?: string;
+  displayName: string;
+  tags: any;
+  taxonomyVersion: TaxonomyReference;
+  time: string;
+  files?: string[];
+}
+
+export enum LoadState {
+  Pending,
+  Complete,
+}
+
+export interface PopulatedRepo {
+  id: string;
+  displayName: string;
+  tags: any;
+  taxonomyVersion: TaxonomyReference;
+  children: Artifact[];
+  loadState: LoadState;
 }
 
 export default Storage;

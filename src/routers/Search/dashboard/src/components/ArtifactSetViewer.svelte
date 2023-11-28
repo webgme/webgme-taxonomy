@@ -1,10 +1,9 @@
 <script lang="ts">
-  import { capitalize } from "../Utils";
+  import { capitalize, getTagValue } from "../Utils";
+  import TagFormatter from "../Formatter";
   import Card, { Content, Actions } from "@smui/card";
   import Button, { Label } from "@smui/button";
-  import type { ButtonComponentDev } from "@smui/button";
   import Menu from "@smui/menu";
-  import type { MenuComponentDev } from "@smui/menu";
   import IconButton from "@smui/icon-button";
   import List, {
     Item,
@@ -12,16 +11,18 @@
     PrimaryText,
     SecondaryText,
     Meta,
+    Graphic,
   } from "@smui/list";
   import Checkbox from "@smui/checkbox";
-  import type Storage from "../Storage";
+  import DisplayTagsDialog from "./DisplayTagsDialog.svelte";
 
   export let artifactSet;
-  export let contentType = "artifact";
+  export let contentType = {name: "artifact"};
   let numArtifacts = 10;
   let shownArtifacts = [];
   let selected = [];
-  let menu: MenuComponentDev;
+  let menu: Menu;
+  const formatter = new TagFormatter();
 
   import { createEventDispatcher } from "svelte";
   const dispatch = createEventDispatcher();
@@ -33,10 +34,51 @@
     });
   }
 
-  async function onCopyIdClicked() {
-    const id = selected.length === 1 ? artifactSet.id + '_' + selected[0] : artifactSet.id;
-    await navigator.clipboard.writeText(id);
-    parent.postMessage({type:'selectArtifact', value:id}, window.location.origin);
+  let displayedTags = null;
+  let displayedName = null;
+  let displayTags = false;
+  async function showTags(artifact) {
+    displayedTags = await formatter.toHumanFormat(artifact.tags);
+    displayedName = artifact.displayName;
+    displayTags = true;
+  }
+
+  async function getUri(content, tags=null) {
+    tags = tags ?? await formatter.toHumanFormat(content.tags);
+    return getTagValue(tags, 'Base', 'URI', 'value');
+  }
+
+  async function onCopyLink(content) {
+    const tags = await formatter.toHumanFormat(content.tags);
+    const uri = await getUri(content, tags);
+
+    try {
+      await navigator.clipboard.writeText(uri || getDeprecatedID(content));
+      dispatch("copyUri", {
+        uri: uri || getDeprecatedID(content),
+        name: getTagValue(tags, 'Base', 'name', 'value') || content.displayName
+      })
+    } catch (e) {
+      console.error(`Unable to copy URI to clipboard:`, e);
+      //TODO - we should probably limit the clipboard to regular use
+    }
+  }
+
+  async function onSelectContent() {
+    if (selected.length === 1) {
+      const content = artifactSet.children.find(content => content.id === selected[0]);
+      const uri = await getUri(content);
+      const id = getDeprecatedID(content);
+      parent.postMessage({type:'selectArtifact', value: id, uri}, "*");
+    } else {
+      const repoId = getDeprecatedID();
+      parent.postMessage({type:'selectArtifact', value: repoId}, "*");
+    }
+  }
+
+  function getDeprecatedID(content?) {
+    return content ? artifactSet.id + '_' + content.id : artifactSet.id;
+
   }
 
   async function onUploadClicked() {
@@ -47,13 +89,10 @@
 
   $: artifactSet, onArtifactSetChange();
 
-  let prevSetHash = null;
-
   onArtifactSetChange();
   function onArtifactSetChange() {
-    if (artifactSet && prevSetHash !== artifactSet.hash) {
+    if (artifactSet) {
       selected = [];
-      prevSetHash = artifactSet.hash;
       numArtifacts = Math.min(artifactSet.children.length, 10);
       setShownArtifacts(numArtifacts);
     }
@@ -77,32 +116,22 @@
     } as const;
     return date.toLocaleDateString("en-us", formatOpts);
   }
-
-  // Ensure the window always stays at the top of the screen
-  let scrollY;
-  let panel;
-  let panelOffset = 0;
-  $: {
-    if (panel) {
-      const parentRect = panel.offsetParent.getBoundingClientRect();
-      panelOffset = parentRect.top + panel.offsetTop;
-    }
-  }
 </script>
 
-<svelte:window bind:scrollY />
-<div
-  bind:this={panel}
-  class="card-container"
-  class:sticky={scrollY > panelOffset}
->
+{#if displayTags}
+  <DisplayTagsDialog
+    bind:open={displayTags}
+    displayName={displayedName}
+    bind:taxonomyTags={displayedTags}/>
+{/if}
+<div class="card-container">
   <!-- TODO: add a header for the observation -->
   <!-- TODO: upload times -->
   <!-- Artifact list -->
   <Card>
     <Content>
       <h2 class="mdc-typography--headline6" style="margin: 0;">
-        {capitalize(contentType)}s in {artifactSet.displayName}
+        {capitalize(contentType.name)}s in {artifactSet.displayName}
       </h2>
       <h4
         class="mdc-typography--subtitle3"
@@ -114,8 +143,8 @@
           class="material-icons"
           style="vertical-align: middle; margin: 0; padding: 0;"
           on:click={() => menu.setOpen(true)}
-          title="Options">more_vert</IconButton
-        >
+          title="Options">more_vert
+        </IconButton>
         <Menu bind:this={menu} anchorCorner="BOTTOM_RIGHT">
           <List>
             <Item
@@ -137,10 +166,14 @@
         </Menu>
       </h4>
       <!-- add show more button, select all -->
-      <List checkList>
+      <List checkList twoLine>
         <!-- TODO: check if they have permissions to append to it -->
         {#each shownArtifacts as artifact (artifact.id)}
-          <Item>
+          <Item
+            class="repo-content"
+            data-testid={artifact.displayName}
+          >
+              <Checkbox bind:group={selected} value={artifact.id} />
             <Text>
               <PrimaryText>{artifact.displayName}</PrimaryText>
               <SecondaryText>
@@ -150,7 +183,16 @@
               </SecondaryText>
             </Text>
             <Meta>
-              <Checkbox bind:group={selected} value={artifact.id} />
+              <IconButton
+                on:click$stopPropagation={() => showTags(artifact)}
+                class="material-icons"
+                size="mini"
+              >info</IconButton>
+              <IconButton
+                on:click$stopPropagation={() => onCopyLink(artifact)}
+                class="material-icons"
+                size="mini"
+              >link</IconButton>
             </Meta>
           </Item>
         {/each}
@@ -163,21 +205,35 @@
       <Button on:click={onDownloadClicked} disabled={selected.length == 0}>
         <Label>Download</Label>
       </Button>
-      <Button on:click={onCopyIdClicked} disabled={selected.length > 1}>
-        <Label>Copy Id</Label>
+      {#if window.self !== window.top }
+      <Button on:click={() => onSelectContent()} disabled={selected.length != 1}>
+        <Label>Select</Label>
       </Button>
+      {/if}
     </Actions>
   </Card>
 </div>
 
 <style>
   .card-container {
-    display: inline-block;
+    display: inline-flex;
     vertical-align: top;
   }
 
-  .sticky {
-    position: fixed;
-    top: 0;
+  .card-container > :global(.mdc-card) {
+    flex: 1;
+  }
+
+  .card-container > :global(.mdc-card .smui-card__content) {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    flex: 0 1 auto;
+    min-height: 0;
+  }
+
+  .card-container > :global(.mdc-card .smui-card__content .mdc-deprecated-list) {
+    flex: 0 1 auto;
+    overflow-y: auto;
   }
 </style>

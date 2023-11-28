@@ -1,9 +1,24 @@
-// More info on TypeScript project references:
-// https://www.typescriptlang.org/docs/handbook/project-references.html
 {
-  "files": [],
-  "references": [
-    { "path": "src/routers/Dashboard" },
-    { "path": "src/routers/Search" }
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.json"
+  ],
+  "compilerOptions": {
+    "module": "esnext",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "target": "es6",
+    "strict": true,
+    "moduleResolution": "node",
+    "sourceMap": true,
+    "rootDir": ".",
+    "outDir": "build"
+  },
+  "exclude": [
+    "src/routers/TagCreator/form",
+    "src/routers/Dashboard/app",
+    "src/routers/Insights/dashboard",
+    "src/routers/Search/dashboard"
   ]
 }

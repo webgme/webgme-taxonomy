@@ -135,3 +135,41 @@ export function filterMap<I, O>(list: I[], fn: (x: I) => O | undefined): O[] {
     return items;
   }, <Array<O>> []);
 }
+
+export function getNestedValue(
+  obj: { [key: string]: any },
+  keys: string[],
+): any {
+  const key = keys.unshift();
+  const value = obj[key];
+
+  if (keys.length === 0) {
+    return value;
+  }
+
+  if (typeof value === "object") {
+    return getNestedValue(value, keys);
+  } else {
+    return undefined;
+  }
+}
+
+export function downloadJSON(name: string, object: any) {
+  const dataStr = "data:text/json;charset=utf-8," +
+    encodeURIComponent(JSON.stringify(object));
+  const element = document.createElement("a");
+  element.setAttribute("href", dataStr);
+  element.setAttribute("download", name + ".json");
+  document.body.appendChild(element);
+  element.click();
+  element.remove();
+}
+
+// TODO: combine logic with the other utils in the server code
+export async function sleep(duration: number): Promise<void> {
+  return new Promise((res) => setTimeout(res, duration));
+}
+
+export function getTagValue(tags: any, ...fqn: string[]) {
+  return fqn.reduce((tagData, name) => tagData && tagData[name], tags);
+}

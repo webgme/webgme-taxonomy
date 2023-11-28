@@ -2,80 +2,103 @@
   "components": {
     "seeds": {
       "taxonomy": {
-        "src": "src/seeds/taxonomy"
+        "src": "seeds/taxonomy"
       },
       "TaxonomyProject": {
-        "src": "src/seeds/TaxonomyProject"
+        "src": "seeds/TaxonomyProject"
       },
       "profile": {
-        "src": "src/seeds/profile"
+        "src": "seeds/profile"
+      },
+      "test": {
+        "src": "seeds/test"
       }
     },
     "plugins": {
       "ExportOntology": {
-        "src": "src/plugins/ExportOntology",
+        "src": "build/plugins/ExportOntology",
         "test": "test/plugins/ExportOntology"
       },
       "ExportToJSONSchema": {
-        "src": "src/plugins/ExportToJSONSchema",
+        "src": "build/plugins/ExportToJSONSchema",
         "test": "test/plugins/ExportToJSONSchema"
       },
       "ExportSearchFilterData": {
-        "src": "src/plugins/ExportSearchFilterData",
+        "src": "build/plugins/ExportSearchFilterData",
         "test": "test/plugins/ExportSearchFilterData"
       },
       "OpenContentTypeDashboard": {
-        "src": "src/plugins/OpenContentTypeDashboard",
+        "src": "build/plugins/OpenContentTypeDashboard",
         "test": "test/plugins/OpenContentTypeDashboard"
       },
       "ImportVocabulary": {
-        "src": "src/plugins/ImportVocabulary",
+        "src": "build/plugins/ImportVocabulary",
         "test": "test/plugins/ImportVocabulary"
       },
       "OpenTagForm": {
-        "src": "src/plugins/OpenTagForm",
+        "src": "build/plugins/OpenTagForm",
         "test": "test/plugins/OpenTagForm"
+      },
+      "SetPdpReadToken": {
+        "src": "build/plugins/SetPdpReadToken",
+        "test": "test/plugins/SetPdpReadToken"
+      },
+      "ExportToJSONSchemav1": {
+        "src": "build/plugins/ExportToJSONSchemav1",
+        "test": "test/plugins/ExportToJSONSchemav1"
       }
     },
-    "visualizers": {
-      "TagCreator": {
-        "src": "panels/TagCreator/TagCreatorPanel",
-        "title": "TagCreator",
-        "panel": "src/visualizers/panels/TagCreator",
-        "secondary": false,
-        "widget": "src/visualizers/widgets/TagCreator"
-      }
-    },
+    "visualizers": {},
     "routers": {
       "Search": {
-        "src": "src/routers/Search",
+        "src": "build/routers/Search",
         "test": "test/routers/Search",
+        "assets": ["dashboard/public"],
         "mount": "routers/Search"
       },
       "TagFormat": {
-        "src": "src/routers/TagFormat",
+        "src": "build/routers/TagFormat",
         "test": "test/routers/TagFormat",
         "mount": "routers/TagFormat"
       },
       "TagCreator": {
-        "src": "src/routers/TagCreator",
+        "src": "build/routers/TagCreator",
         "test": "test/routers/TagCreator",
+        "assets": ["form/dist"],
         "mount": "routers/TagCreator"
       },
       "JSONSchema": {
-        "src": "src/routers/JSONSchema",
+        "src": "build/routers/JSONSchema",
         "test": "test/routers/JSONSchema",
         "mount": "routers/JSONSchema"
       },
       "Dashboard": {
-        "src": "src/routers/Dashboard",
+        "src": "build/routers/Dashboard",
         "test": "test/routers/Dashboard",
+        "assets": ["app/dist"],
         "mount": "routers/Dashboard"
       },
       "Profiles": {
-        "src": "src/routers/Profiles",
+        "src": "build/routers/Profiles",
         "test": "test/routers/Profiles",
         "mount": "routers/Profiles"
+      },
+      "JSONSchemav1": {
+        "src": "build/routers/JSONSchemav1",
+        "test": "test/routers/JSONSchemav1",
+        "mount": "routers/JSONSchemav1"
+      },
+      "TagCreatorv1": {
+        "src": "build/routers/TagCreatorv1",
+        "test": "test/routers/TagCreatorv1",
+        "assets": ["form"],
+        "mount": "routers/TagCreatorv1"
+      },
+      "Insights": {
+        "src": "build/routers/Insights",
+        "test": "test/routers/Insights",
+        "assets": ["dashboard/public"],
+        "mount": "routers/Insights"
       }
     }
   },

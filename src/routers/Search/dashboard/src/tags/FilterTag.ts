@@ -59,4 +59,12 @@ export default class FilterTag<T extends string = string> {
   lean(): LeanTag {
     return new LeanTag(this.id, this.value);
   }
+
+  static applyFilters(tags: ItemTag, filterTags: FilterTag[]) {
+    const matchingTags = filterTags.every(
+      (filterTag) => !!filterTag.isMatch(tags),
+    );
+
+    return matchingTags;
+  }
 }

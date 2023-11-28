@@ -1,9 +1,9 @@
 const Q = require("q");
 const path = require("path");
 const testFixture = require("./globals");
-const TaxonomyParser = require("../src/common/TaxonomyParser");
+const TaxonomyParser = require("../build/common/TaxonomyParser");
 const Importer = testFixture.requirejs("webgme-json-importer/JSONImporter");
-const SEED_DIR = path.join(__dirname, "..", "src", "seeds");
+const SEED_DIR = path.join(__dirname, "..", "seeds");
 
 let counter = 1;
 
@@ -16,11 +16,13 @@ const Utils = {
     return await Q.ninvoke(core, "loadRoot", commit.root);
   },
   async createTaxonomyFromCsv(core, root, csv) {
+    // load all the vocabs
     const vocabRoots = TaxonomyParser.fromCSV(csv);
     vocabRoots.forEach(
       (vocabRoot) => (vocabRoot.pointers.base = "@meta:Vocabulary"),
     );
     const tax = { pointers: { base: "@meta:Taxonomy" }, children: vocabRoots };
+
     const importer = new Importer(core, root);
     return await importer.import(root, tax);
   },

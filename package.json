@@ -3,9 +3,11 @@
   "scripts": {
     "start": "node app.js",
     "debug": "NODE_ENV=azure node --inspect app.js",
-    "test-tax": "npx mocha --recursive test",
+    "test-tax": "ENV=test npx mocha --recursive test",
     "test": "npm run test-tax && npm run test-dash",
     "test-dash": "cd src/routers/Search/dashboard && npm t",
+    "setup-e2e": "npm run import -- seeds/test/test.webgmex -p e2e_tests",
+    "test-e2e": "playwright test",
     "apply": "node ./node_modules/webgme-engine/src/bin/apply.js",
     "diff": "node ./node_modules/webgme-engine/src/bin/diff.js",
     "export": "node ./node_modules/webgme-engine/src/bin/export.js",
@@ -15,16 +17,25 @@
     "pluginHook": "node ./node_modules/webgme-engine/src/bin/plugin_hook.js",
     "users": "node ./node_modules/webgme-engine/src/bin/usermanager.js",
     "clean_up": "node ./node_modules/webgme-engine/src/bin/clean_up.js",
-    "build": "tsc --build",
+    "typecheck": "tsc --noEmit",
+    "build": "rollup -c",
     "prepublish": "husky install",
-    "prepare": "npm run build && cd src/routers/Dashboard/app && npm install && cd ../../Search/dashboard && npm install"
+    "prepare-docker": "node scripts/prepare-docker.js",
+    "prepare": "cd src/routers/Dashboard/app && npm install && cd ../../Search/dashboard && npm install && cd ../../TagCreator/form && npm install && cd ../../Insights/dashboard && npm install && cd ../.. && npm run build"
   },
-  "version": "1.2.2",
+  "version": "1.5.0",
   "devDependencies": {
+    "@playwright/test": "^1.36.0",
+    "@rollup/plugin-commonjs": "^25.0.7",
+    "@rollup/plugin-json": "^6.0.1",
+    "@rollup/plugin-typescript": "^11.1.5",
     "@smui/icon-button": "^6.1.0",
     "@smui/linear-progress": "^6.1.0",
     "@types/express": "^4.17.17",
+    "@types/json-schema": "^7.0.15",
+    "@types/jsonwebtoken": "^9.0.4",
     "@types/node-fetch": "^2.6.2",
+    "@types/q": "^1.5.8",
     "@types/underscore": "^1.11.4",
     "@zerodevx/svelte-toast": "^0.7.2",
     "ajv": "^8.11.0",
@@ -35,18 +46,28 @@
     "mocha": "^5.2.0",
     "monocle-ts": "^2.3.13",
     "newtype-ts": "^0.3.5",
+    "oxide.ts": "^1.1.0",
+    "playwright": "^1.36.1",
     "prettier": "^2.7.1",
     "prettier-plugin-svelte": "^2.7.0",
+    "rollup": "^4.4.1",
+    "rollup-plugin-copy": "^3.5.0",
+    "sinon": "^15.2.0",
     "typescript": "^4.8.3"
   },
   "dependencies": {
     "mongodb": "^4.11.0",
     "node-fetch": "^2.6.6",
     "svelte": "^3.50.0",
-    "webgme": "github:webgme/webgme#azure",
+    "webgme": "^2.45.1",
     "webgme-json-importer": "^1.4.1",
+    "webgme-transformations": "^0.5.1",
     "zip-a-folder": "^1.1.5"
   },
+  "testDependencies": [
+    "playwright",
+    "@playwright/test"
+  ],
   "lint-staged": {
     "src/**/*.{js,css,md,svelte}": "prettier --write --plugin-search-dir=."
   }
