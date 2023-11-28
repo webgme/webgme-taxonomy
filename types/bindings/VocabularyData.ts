@@ -3,4 +3,9 @@ import type { ReleaseState } from "./ReleaseState";
 import type { Term } from "./Term";
 import type { VocabularyId } from "./VocabularyId";
 
-export interface VocabularyData { id: VocabularyId, description: string | null, release_state: ReleaseState, terms: Array<Term>, }
+export interface VocabularyData {
+  id: VocabularyId;
+  description: string | null;
+  release_state: ReleaseState;
+  terms: Array<Term>;
+}

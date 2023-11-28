@@ -5,4 +5,9 @@ import type { IntegerContent } from "./IntegerContent";
 import type { TextContent } from "./TextContent";
 import type { UriContent } from "./UriContent";
 
-export type FieldContent = { "Text": TextContent } | { "Integer": IntegerContent } | { "Float": FloatContent } | { "Boolean": BooleanContent } | { "Uri": UriContent };
+export type FieldContent =
+  | { "Text": TextContent }
+  | { "Integer": IntegerContent }
+  | { "Float": FloatContent }
+  | { "Boolean": BooleanContent }
+  | { "Uri": UriContent };
