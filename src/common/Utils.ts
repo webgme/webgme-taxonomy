@@ -1,6 +1,7 @@
 /// <amd-module />
 
 import { OutAttr } from "webgme/common";
+import { isTypeNamed } from "./GmeHelpers";
 import type { GmeCore } from "./types";
 
 export function toString(attr: OutAttr): string {
@@ -93,17 +94,10 @@ export default {
     }
   },
 
-  isTypeNamed(core: GmeCore, node: Core.Node | null, typeName: string) {
-    while (node) {
-      if (core.getAttribute(node, "name") === typeName) {
-        return true;
-      }
-      node = core.getBase(node);
-    }
-    return false;
-  },
+  isTypeNamed,
   getMetaNode,
 };
+
 function getMetaNode(
   core: GmeCore,
   node: Core.Node,
@@ -113,4 +107,22 @@ function getMetaNode(
     .find((node) => core.getAttribute(node, "name") === name);
 
   return metanode;
+}
+
+export class InvalidVariantError<T> extends Error {
+  constructor(value: unknown, variants: T[]) {
+    const msg = `Invalid value "${value}". Expected one of ${
+      variants.join(",")
+    }`;
+    super(msg);
+  }
+}
+
+export function parseEnum<T>(possibleVariant: unknown, variants: T[]): T {
+  const index = variants.indexOf(possibleVariant as T);
+  if (index > -1) {
+    return variants[index];
+  }
+
+  throw new InvalidVariantError(possibleVariant, variants);
 }

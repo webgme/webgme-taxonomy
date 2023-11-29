@@ -38,7 +38,6 @@ const external = [
       import.meta.url,
     ),
   ),
-
   // plugin externals
   "plugin/PluginBase",
   "webgme-json-importer/JSONImporter",
@@ -84,17 +83,22 @@ const buildPlugins = await Promise.all(pluginPaths
       // Dynamic require used by config/ (imported by MongoDB adapter)
       ignoreDynamicRequires: true,
     };
-    if (metadata.disableBrowserSideExecution) {
-      console.log("Found nodejs only plugin:", pluginPath);
-    }
-
     const plugins = isTs
       ? [
         commonjs(cjsOpts),
         typescript(tsconfig),
         json(),
       ]
-      : [commonjs(cjsOpts), json()];
+      : [
+        commonjs(cjsOpts),
+        json(),
+      ];
+
+    if (metadata.disableBrowserSideExecution) {
+      console.log("Found nodejs only plugin:", pluginPath);
+      // } else {
+      //   plugins.unshift(nodeResolve({ resolveOnly: ["oxide.ts"] }));
+    }
 
     plugins.push(
       copy({
