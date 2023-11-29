@@ -96,8 +96,6 @@ const buildPlugins = await Promise.all(pluginPaths
 
     if (metadata.disableBrowserSideExecution) {
       console.log("Found nodejs only plugin:", pluginPath);
-      // } else {
-      //   plugins.unshift(nodeResolve({ resolveOnly: ["oxide.ts"] }));
     }
 
     plugins.push(
