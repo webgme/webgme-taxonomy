@@ -153,6 +153,9 @@ export type GmeCore = GmeClasses.Core & {
 };
 export interface SafeStorage {
   openProject(params: OpenProjectParams): Promise<UserProject>;
+  /**
+   * Retrieve all tags and their commits hashes within the project.
+   */
   getTags(params: OpenProjectParams): Promise<{ [name: string]: CommitObject }>;
   getProjects(params: GetProjectsParams): Promise<ProjectMetadata[]>;
 }
