@@ -463,5 +463,6 @@ export function toArtifactMetadatav2(
     displayName: metadata.displayName,
     taxonomyVersion: metadata.taxonomyVersion,
     time: metadata.time,
+    disabled: metadata.disabled,
   };
 }

@@ -11,6 +11,57 @@ describe("PDP", function () {
   const assert = require("assert");
   const processType = "someProcessType";
 
+  describe("disableArtifact", function () {
+    let storage, repoId, contentId;
+
+    beforeEach(async () => {
+      const api = new InMemoryPdp();
+      api.dropData();
+      const processType = "disableArtifactTest";
+      const hostUri = new HostUri("memory", processType);
+      storage = new PDP(
+        api,
+        hostUri,
+        "observerId",
+        "readToken",
+      );
+      // Create the test fixtures
+      repoId = await storage.api.createProcessHelper(
+        "observerId",
+        processType,
+        { displayName: "someRepo" },
+      );
+      const metadata = {
+        displayName: `content_item`,
+      };
+      const result = await storage.withContentReservation(
+        (res) => storage.appendArtifact(res, metadata, []),
+        repoId,
+      );
+      contentId = `${result.index}_0`;
+      console.log({ result, contentId });
+
+      // disable the content
+      await storage.disableArtifact(repoId, contentId);
+    });
+
+    it("should mark listed content as disabled", async function () {
+      const artifacts = await storage.listArtifacts(repoId);
+
+      assert.equal(artifacts.length, 1);
+
+      // Check that the artifact is marked as deleted...
+      assert(artifacts[0].disabled);
+    });
+
+    it.only("should not allow downloading disabled content", async function () {
+      await assert.rejects(
+        storage.downloadFileURLs(repoId, [contentId]),
+        /Content has been deleted/,
+      );
+    });
+  });
+
   describe("getOriginalFilePath", function () {
     it("should strip prefix from filenames", function () {
       const original = "a/b/cat.txt";
@@ -270,6 +321,20 @@ describe("PDP", function () {
           result1.index + 1
         } (found ${result2.index})`,
       );
+    });
+  });
+
+  describe("deletion", function () {
+    let pdp;
+    before(() => {
+      const processType = "testProcessType";
+      const hostUri = new HostUri("memory", processType);
+      const api = new InMemoryPdp();
+      pdp = new PDP(api, hostUri, "someUser", "unusedToken");
+    });
+
+    it("should be able to ", function () {
+      // TODO
     });
   });
 });

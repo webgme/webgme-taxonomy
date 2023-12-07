@@ -7,6 +7,8 @@ import type {
 } from "../../../../common/types";
 import type { Option } from "oxide.ts";
 
+type DisableResult = void;
+
 export interface Adapter {
   listRepos(): Promise<Repository[]>;
   getRepoMetadata(repoId: string): Promise<Repository>;
@@ -20,6 +22,18 @@ export interface Adapter {
     metadata: ArtifactMetadata,
     filenames: string[],
   ): Promise<AppendResult>;
+  /**
+   * Push an updated version of the content.
+   */
+  // updateArtifact(
+  //   res: UploadReservation,
+  //   metadata: ArtifactMetadata,
+  // ): Promise<UpdateResult>;
+  /**
+   * Disable the content. Metadata will still be available but content is inaccessible.
+   */
+  disableArtifact(repoId: string, contentId: string): Promise<DisableResult>;
+
   // returns fileUploadInfo
   getFileStreams(
     repoId: string,
@@ -88,6 +102,7 @@ export interface Artifact {
   taxonomyVersion: TaxonomyVersion;
   time: string;
   files?: string[];
+  disabled?: DisabledInfo;
 }
 
 // Tags are stored in a tag dictionary like below (example is human-readable):
@@ -117,11 +132,17 @@ export interface Metadata {
 
 export type ArtifactMetadata = ArtifactMetadatav1 | ArtifactMetadatav2;
 
+export interface DisabledInfo {
+  time: string;
+  userId: string;
+}
+
 export interface ArtifactMetadatav2 {
   displayName: string;
   tags: any;
   taxonomyVersion: TaxonomyVersion;
   time: string;
+  disabled?: DisabledInfo;
 }
 
 export interface ArtifactMetadatav1 {
@@ -129,6 +150,7 @@ export interface ArtifactMetadatav1 {
   taxonomyTags: any[];
   taxonomyVersion: TaxonomyVersion;
   time: string;
+  disabled?: DisabledInfo;
 }
 
 export type TaxonomyVersion = TaxonomyRelease | TaxonomyBranch | TaxonomyCommit;

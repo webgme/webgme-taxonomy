@@ -1,6 +1,7 @@
 /// <amd-module />
 
 import { OutAttr } from "webgme/common";
+import { Option } from "oxide.ts";
 import type { GmeCore } from "./types";
 
 export function toString(attr: OutAttr): string {
@@ -12,10 +13,14 @@ export function toString(attr: OutAttr): string {
 }
 
 export function filterMap<I, O>(list: I[], fn: (x: I) => O | undefined): O[] {
+  return filterMapOpt(list, (item) => Option.from(fn(item)));
+}
+
+export function filterMapOpt<I, O>(list: I[], fn: (x: I) => Option<O>): O[] {
   return list.reduce((items, input) => {
-    const mapped = fn(input);
-    if (mapped !== undefined) {
-      items.push(mapped);
+    const opt = fn(input);
+    if (opt.isSome()) {
+      items.push(opt.unwrap());
     }
     return items;
   }, <Array<O>> []);
@@ -48,6 +53,10 @@ export function mapObjectEntries<T, O>(
   return Object.fromEntries(
     Object.entries(obj).map(([k, v]) => fn(v, k)),
   );
+}
+
+export function last<T>(l: T[]): T | undefined {
+  return l[l.length - 1];
 }
 
 export default {

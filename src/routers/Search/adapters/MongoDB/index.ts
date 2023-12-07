@@ -15,6 +15,7 @@ import type {
   Artifact,
   ArtifactMetadata,
   ArtifactMetadatav2,
+  DisableResult,
   DownloadInfo,
   FileStreamDict,
   Metadata,
@@ -239,6 +240,13 @@ export default class MongoAdapter implements Adapter {
       return new UploadRequest(name, params);
     });
     return new AppendResult(index, files);
+  }
+
+  async disableArtifact(
+    repoId: string,
+    contentId: string,
+  ): Promise<DisableResult> {
+    throw new Error("To do!");
   }
 
   async uploadFile(

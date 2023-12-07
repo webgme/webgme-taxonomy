@@ -24,10 +24,43 @@ export interface Observation {
   observerId: string;
   startTime: string;
   endTime: string;
-  data: ArtifactMetadata[];
+  /**
+   * The data contains the latest version of the data and, possibly,
+   * tombstone information about prior deleted/disabled content.
+   */
+  data: [ObservationData];
   dataFiles: string[];
   applicationDependencies: [];
   processDependencies: [];
+}
+
+export type ObservationData =
+  | ArtifactMetadata
+  | ContentUpdate
+  | ContentDeletion;
+
+export interface ContentUpdate {
+  metadata: ArtifactMetadata;
+  validVersions: number[];
+}
+
+export interface ContentDeletion {
+  version: number;
+  validVersions: number[];
+  /**
+   * A reference to the latest metadata after the content has been deleted.
+   *
+   * This is merely an optimization so we don't need O(n) runtime to look
+   * up a single content item.
+   */
+  latest?: LatestMetadata;
+}
+
+export type ContentEvent = ContentUpdate | ContentDeletion;
+
+export interface LatestMetadata {
+  metadata: ArtifactMetadata;
+  version: number;
 }
 
 export interface AppendObservationResponse extends Observation {
