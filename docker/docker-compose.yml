@@ -1,0 +1,14 @@
+version: "3"
+services:
+  taxonomy:
+    restart: always
+    image: webgme/taxonomy:nightly
+    network_mode: host
+    depends_on:
+        - mongo
+
+  mongo:
+    restart: always
+    image: mongo:5.0-focal
+    ports:
+        - "27017:27017"
