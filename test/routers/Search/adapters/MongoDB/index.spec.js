@@ -51,7 +51,7 @@ describe("MongoDB", function () {
     it("should ignore disabled content while listing", async function () {
       const artifacts = await storage.listArtifacts(repoId);
 
-      console.log({artifacts})
+      console.log({ artifacts });
       assert.equal(artifacts.length, 0);
 
       // Check that the artifact is marked as deleted...
@@ -67,9 +67,9 @@ describe("MongoDB", function () {
   });
 
   describe("updateArtifact", function () {
-    it('should update the given artifact', function() {
-      throw new Error('todo!');
-    })
+    it("should update the given artifact", function () {
+      throw new Error("todo!");
+    });
   });
 
   describe("getUriPatterns", function () {

@@ -48,7 +48,7 @@ describe("PDP", function () {
       };
 
       const result = await storage.withContentReservation(
-        res => await storage.updateArtifact(res, contentId, updatedMetadata),
+        (res) => await storage.updateArtifact(res, contentId, updatedMetadata),
         repoId,
       );
     });
@@ -57,7 +57,7 @@ describe("PDP", function () {
       // TODO
     });
   });
-    
+
   describe("disableArtifact", function () {
     let storage, repoId, contentId;
 
@@ -95,7 +95,7 @@ describe("PDP", function () {
     it.only("should ignore disabled content while listing", async function () {
       const artifacts = await storage.listArtifacts(repoId);
 
-      console.log({artifacts})
+      console.log({ artifacts });
       assert.equal(artifacts.length, 0);
 
       // Check that the artifact is marked as deleted...
