@@ -49,6 +49,8 @@ import type {
   DownloadInfo,
   FileStreamDict,
   Repository,
+  UpdateReservation,
+  UpdateResult,
   UploadReservation,
 } from "../common/types";
 import {
@@ -201,10 +203,10 @@ export default class PDP implements Adapter {
       const index = procInfo.numObservations;
       const version = 0;
       const reservation = new ObservationReservation(
-        this._hostUri,
         processId,
         index,
         version,
+        this.getUri(processId, index, version),
       );
 
       try {
@@ -220,32 +222,41 @@ export default class PDP implements Adapter {
     });
   }
 
+  private getUri(processId: ProcessID, index: number, version: number): string {
+    return [
+      this._hostUri,
+      processId.toString(),
+      index,
+      version,
+    ].join("/");
+  }
+
   /**
    * RAII-style index-level locking for the given function.
    */
   async withUpdateReservation<T>(
-    fn: (res: UpdateReservation) => Promise<T>,
+    fn: (res: ObservationUpdateReservation) => Promise<T>,
     repoId: string,
     contentId: string,
   ): Promise<T> {
-    const { index, version } = parseContentID(contentId);
-    const lockId = repoId + '/' + index;
+    const { index /*version*/ } = parseContentID(contentId);
+    const lockId = repoId + "/" + index;
     return await this._contentLocks.run(lockId, async () => {
       // TODO: determine the latest version for the given observation
       // TODO: create the new reservation
       const processId = newtype<ProcessID>(repoId);
-      const procInfo = fromResult(await this.api.getProcessState(processId));
+      const state = fromResult(await this.api.getProcessState(processId));
       const lastVersion = state.lastVersionIndex;
       const latestObservation = fromResult(
         await this.api.getObservation(processId, index, lastVersion),
       );
-      const version = latestObservation.version;
+      const version = latestObservation.version + 1;
 
       const reservation = new ObservationUpdateReservation(
-        this._hostUri,
         processId,
         index,
         version,
+        this.getUri(processId, index, version),
       );
 
       try {
@@ -555,22 +566,52 @@ export default class PDP implements Adapter {
     }, repoId);
   }
 
-  updateArtifact(
-    res: UpdateReservation,
+  async updateArtifact(
+    res: ObservationUpdateReservation,
     metadata: ArtifactMetadata,
-  ): Promise<UpdateResult>;
-    // TODO:
+  ): Promise<UpdateResult> {
+    // get the list of validVersions for the index (append the new version)
+    const latestData = await this.getObservationData(
+      res.processId,
+      res.index,
+      res.version,
+    );
+    const validVersions = matchObsDatum(latestData, {
+      ArtifactMetadata(_md) { // only the first version can be this format
+        return [0];
+      },
+      ContentUpdate(md) {
+        return md.validVersions;
+      },
+      ContentDeletion(md) {
+        return md.validVersions;
+      },
+    });
+
+    validVersions.push(res.version);
+
+    // store the observation
+    const update: ContentUpdate = {
+      metadata,
+      validVersions,
+    };
+    const observation = this._createObservationData(
+      res.processId,
+      this.processType,
+      update,
+      res.index,
+    );
+    await this.api.appendVersion(res.processId, observation);
+
+    return { contentId: res.contentId };
   }
 
-  async getMetadataSnapshot(
+  private async getMetadataSnapshot(
     processId: ProcessID,
     index: number,
     version: number,
   ): Promise<ArtifactMetadata> {
-    const obs = fromResult(
-      await this.api.getObservation(processId, index, version),
-    );
-    const datum = getObservationData(obs);
+    const datum = await this.getObservationData(processId, index, version);
 
     return matchObsDatum(datum, {
       ArtifactMetadata(md) {
@@ -583,6 +624,16 @@ export default class PDP implements Adapter {
         throw new ContentNotFoundError(`${index}_${version}`);
       },
     });
+  }
+  private async getObservationData(
+    processId: ProcessID,
+    index: number,
+    version: number,
+  ): Promise<ObservationData> {
+    const obs = fromResult(
+      await this.api.getObservation(processId, index, version),
+    );
+    return getObservationData(obs);
   }
 
   /**
@@ -842,31 +893,42 @@ class ObservationReservation implements PdpReservation {
   processId: ProcessID;
 
   constructor(
-    hostUri: string,
     processId: ProcessID,
     index: number,
     version: number,
+    uri: string,
   ) {
-    const uri = [processId.toString(), index, version].join("/");
-    this.uri = `${hostUri}/${uri}`;
     this.repoId = processId.toString();
     this.processId = processId;
     this.index = index;
     this.version = version;
+    this.uri = uri;
   }
 }
 
-class ObservationUpdateReservation implements PdpReservation {
-repoId: string;
-index: number;
-version: number;
+class ObservationUpdateReservation implements UpdateReservation {
+  repoId: string;
+  contentId: string;
+  uri: string;
 
-constructor(repoId: string, index: number, version: number) {
-this.repoId = repoId;
-this.index = index;
-this.version = version;
-  
-}
+  processId: ProcessID;
+  index: number;
+  version: number;
+
+  constructor(
+    processId: ProcessID,
+    index: number,
+    version: number,
+    uri: string,
+  ) {
+    this.processId = processId;
+    this.index = index;
+    this.version = version;
+
+    this.repoId = processId.toString();
+    this.contentId = `${index}_${version}`;
+    this.uri = uri;
+  }
 }
 
 function getArtifactMetadata(

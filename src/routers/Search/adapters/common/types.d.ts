@@ -8,6 +8,9 @@ import type {
 import type { Option } from "oxide.ts";
 
 type DisableResult = void;
+interface UpdateResult {
+  contentId: string;
+}
 
 export interface Adapter {
   listRepos(): Promise<Repository[]>;

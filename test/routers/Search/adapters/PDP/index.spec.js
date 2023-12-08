@@ -11,8 +11,8 @@ describe("PDP", function () {
   const assert = require("assert");
   const processType = "someProcessType";
 
-  describe("disableArtifact", function () {
-    let storage, repoId, contentId;
+  describe("updateArtifact", function () {
+    let storage, repoId, contentId, updatedId;
 
     beforeEach(async () => {
       const api = new InMemoryPdp();
@@ -39,21 +39,29 @@ describe("PDP", function () {
         (res) => storage.appendArtifact(res, metadata, []),
         repoId,
       );
-      contentId = `${result.index}_0`;
+      contentId = result.id;
       console.log({ result, contentId });
 
       // update the content
       const updatedMetadata = {
         displayName: `content_item`,
       };
-
-      const result = await storage.withContentReservation(
-        (res) => await storage.updateArtifact(res, contentId, updatedMetadata),
+      const updateResult = await storage.withContentReservation(
+        (res) => storage.updateArtifact(res, contentId, updatedMetadata),
         repoId,
       );
+      // TODO validVersions should include latest
+      updatedId = updateResult.contentId;
     });
 
-    it.only("should return latest on list", async function () {
+    it.only("should return latest when listing", async function () {
+      const artifacts = await storage.listArtifacts(repoId);
+
+      console.log({ artifacts });
+      assert.equal(artifacts.length, 0);
+
+      // Check that the artifact is marked as deleted...
+      assert(artifacts[0].disabled);
       // TODO
     });
   });
@@ -92,7 +100,7 @@ describe("PDP", function () {
       await storage.disableArtifact(repoId, contentId);
     });
 
-    it.only("should ignore disabled content while listing", async function () {
+    it("should ignore disabled content while listing", async function () {
       const artifacts = await storage.listArtifacts(repoId);
 
       console.log({ artifacts });

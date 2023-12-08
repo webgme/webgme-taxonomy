@@ -24,10 +24,6 @@ export interface Observation {
   observerId: string;
   startTime: string;
   endTime: string;
-  /**
-   * The data contains the latest version of the data and, possibly,
-   * tombstone information about prior deleted/disabled content.
-   */
   data: [ObservationData];
   dataFiles: string[];
   applicationDependencies: [];

@@ -2,7 +2,6 @@
  * This is a storage adapter for MongoDB which stores artifact sets
  * in documents along with any contained artifacts.
  */
-import { fileURLToPath } from "node:url";
 import fs from "fs";
 import type { Request } from "express";
 import stream from "stream";
@@ -21,6 +20,8 @@ import type {
   Metadata,
   Repository,
   TaxonomyVersion,
+  UpdateReservation,
+  UpdateResult,
   UploadReservation,
 } from "../common/types";
 import type TagFormatter from "../../../../common/TagFormatter";
@@ -75,6 +76,20 @@ export default class MongoAdapter implements Adapter {
     this._files = new GridFSBucket(db, { bucketName: name });
     this._hostUri = hostUri;
     this._repoLocks = new ScopedFnQueue();
+  }
+
+  updateArtifact(
+    res: UpdateReservation,
+    metadata: ArtifactMetadata,
+  ): Promise<UpdateResult> {
+    throw new Error("Method not implemented.");
+  }
+  withUpdateReservation<T>(
+    fn: (res: UpdateReservation) => Promise<T>,
+    repoId: string,
+    contentId: string,
+  ): Promise<T> {
+    throw new Error("Method not implemented.");
   }
 
   async getBulkMetadata(
