@@ -86,6 +86,7 @@ export default class PDP implements Adapter {
   private _readToken: string;
   private _hostUri: string;
   private _repoLocks: ScopedFnQueue;
+  private _contentLocks: ScopedFnQueue;
   processType: string;
   private api: PdpProvider;
 
@@ -101,6 +102,7 @@ export default class PDP implements Adapter {
     this._readToken = readToken;
     this.api = api;
     this._repoLocks = new ScopedFnQueue();
+    this._contentLocks = new ScopedFnQueue();
   }
 
   async listRepos(): Promise<Repository[]> {
@@ -199,6 +201,47 @@ export default class PDP implements Adapter {
       const index = procInfo.numObservations;
       const version = 0;
       const reservation = new ObservationReservation(
+        this._hostUri,
+        processId,
+        index,
+        version,
+      );
+
+      try {
+        const result = await fn(reservation);
+        return result;
+      } catch (err) {
+        throw err;
+      } finally {
+        // TODO: disable the reservation (here and in the appendArtifact methods)
+        // TODO: probably should make it a generic
+        // TODO: probably should make it a generic
+      }
+    });
+  }
+
+  /**
+   * RAII-style index-level locking for the given function.
+   */
+  async withUpdateReservation<T>(
+    fn: (res: UpdateReservation) => Promise<T>,
+    repoId: string,
+    contentId: string,
+  ): Promise<T> {
+    const { index, version } = parseContentID(contentId);
+    const lockId = repoId + '/' + index;
+    return await this._contentLocks.run(lockId, async () => {
+      // TODO: determine the latest version for the given observation
+      // TODO: create the new reservation
+      const processId = newtype<ProcessID>(repoId);
+      const procInfo = fromResult(await this.api.getProcessState(processId));
+      const lastVersion = state.lastVersionIndex;
+      const latestObservation = fromResult(
+        await this.api.getObservation(processId, index, lastVersion),
+      );
+      const version = latestObservation.version;
+
+      const reservation = new ObservationUpdateReservation(
         this._hostUri,
         processId,
         index,
@@ -418,7 +461,7 @@ export default class PDP implements Adapter {
       return new UploadRequest(name, params);
     });
 
-    return new AppendResult(index, files);
+    return new AppendResult(`${index}_0`, files);
   }
 
   async disableArtifact(
@@ -510,6 +553,13 @@ export default class PDP implements Adapter {
 
       return await this.api.appendVersion(processId, obs);
     }, repoId);
+  }
+
+  updateArtifact(
+    res: UpdateReservation,
+    metadata: ArtifactMetadata,
+  ): Promise<UpdateResult>;
+    // TODO:
   }
 
   async getMetadataSnapshot(
@@ -804,6 +854,19 @@ class ObservationReservation implements PdpReservation {
     this.index = index;
     this.version = version;
   }
+}
+
+class ObservationUpdateReservation implements PdpReservation {
+repoId: string;
+index: number;
+version: number;
+
+constructor(repoId: string, index: number, version: number) {
+this.repoId = repoId;
+this.index = index;
+this.version = version;
+  
+}
 }
 
 function getArtifactMetadata(

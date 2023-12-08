@@ -239,7 +239,7 @@ export default class MongoAdapter implements Adapter {
       const params = new UploadParams(url, "POST");
       return new UploadRequest(name, params);
     });
-    return new AppendResult(index, files);
+    return new AppendResult(index.toString(), files);
   }
 
   async disableArtifact(

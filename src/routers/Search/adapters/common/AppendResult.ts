@@ -1,9 +1,9 @@
 export class AppendResult {
-  index: number;
+  id: string;
   files: UploadRequest[];
 
-  constructor(index: number, files: UploadRequest[]) {
-    this.index = index;
+  constructor(id: string, files: UploadRequest[]) {
+    this.id = id;
     this.files = files;
   }
 }

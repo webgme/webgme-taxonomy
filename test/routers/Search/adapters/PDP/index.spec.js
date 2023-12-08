@@ -35,6 +35,53 @@ describe("PDP", function () {
         displayName: `content_item`,
       };
       const result = await storage.withContentReservation(
+        // TODO: should we guarantee the reservation was only used once?
+        (res) => storage.appendArtifact(res, metadata, []),
+        repoId,
+      );
+      contentId = `${result.index}_0`;
+      console.log({ result, contentId });
+
+      // update the content
+      const updatedMetadata = {
+        displayName: `content_item`,
+      };
+
+      const result = await storage.withContentReservation(
+        res => await storage.updateArtifact(res, contentId, updatedMetadata),
+        repoId,
+      );
+    });
+
+    it.only("should return latest on list", async function () {
+      // TODO
+    });
+  });
+    
+  describe("disableArtifact", function () {
+    let storage, repoId, contentId;
+
+    beforeEach(async () => {
+      const api = new InMemoryPdp();
+      api.dropData();
+      const processType = "disableArtifactTest";
+      const hostUri = new HostUri("memory", processType);
+      storage = new PDP(
+        api,
+        hostUri,
+        "observerId",
+        "readToken",
+      );
+      // Create the test fixtures
+      repoId = await storage.api.createProcessHelper(
+        "observerId",
+        processType,
+        { displayName: "someRepo" },
+      );
+      const metadata = {
+        displayName: `content_item`,
+      };
+      const result = await storage.withContentReservation(
         (res) => storage.appendArtifact(res, metadata, []),
         repoId,
       );
@@ -45,16 +92,17 @@ describe("PDP", function () {
       await storage.disableArtifact(repoId, contentId);
     });
 
-    it("should mark listed content as disabled", async function () {
+    it.only("should ignore disabled content while listing", async function () {
       const artifacts = await storage.listArtifacts(repoId);
 
-      assert.equal(artifacts.length, 1);
+      console.log({artifacts})
+      assert.equal(artifacts.length, 0);
 
       // Check that the artifact is marked as deleted...
       assert(artifacts[0].disabled);
     });
 
-    it.only("should not allow downloading disabled content", async function () {
+    it("should not allow downloading disabled content", async function () {
       await assert.rejects(
         storage.downloadFileURLs(repoId, [contentId]),
         /Content has been deleted/,

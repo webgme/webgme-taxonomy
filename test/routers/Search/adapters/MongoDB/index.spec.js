@@ -15,6 +15,63 @@ describe("MongoDB", function () {
     collection,
   );
 
+  describe("disableArtifact", function () {
+    let storage, repoId, contentId;
+
+    beforeEach(async () => {
+      const api = new InMemoryPdp();
+      api.dropData();
+      const processType = "disableArtifactTest";
+      const hostUri = new HostUri("memory", processType);
+      storage = new PDP(
+        api,
+        hostUri,
+        "observerId",
+        "readToken",
+      );
+      // Create the test fixtures
+      repoId = await storage.api.createProcessHelper(
+        "observerId",
+        processType,
+        { displayName: "someRepo" },
+      );
+      const metadata = {
+        displayName: `content_item`,
+      };
+      const result = await storage.withContentReservation(
+        (res) => storage.appendArtifact(res, metadata, []),
+        repoId,
+      );
+      contentId = result.id;
+
+      // disable the content
+      await storage.disableArtifact(repoId, contentId);
+    });
+
+    it("should ignore disabled content while listing", async function () {
+      const artifacts = await storage.listArtifacts(repoId);
+
+      console.log({artifacts})
+      assert.equal(artifacts.length, 0);
+
+      // Check that the artifact is marked as deleted...
+      assert(artifacts[0].disabled);
+    });
+
+    it("should not allow downloading disabled content", async function () {
+      await assert.rejects(
+        storage.downloadFileURLs(repoId, [contentId]),
+        /Content has been deleted/,
+      );
+    });
+  });
+
+  describe("updateArtifact", function () {
+    it('should update the given artifact', function() {
+      throw new Error('todo!');
+    })
+  });
+
   describe("getUriPatterns", function () {
     const Ajv = require("ajv");
     const ajv = new Ajv();

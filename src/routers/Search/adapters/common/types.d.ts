@@ -25,12 +25,14 @@ export interface Adapter {
   /**
    * Push an updated version of the content.
    */
-  // updateArtifact(
-  //   res: UploadReservation,
-  //   metadata: ArtifactMetadata,
-  // ): Promise<UpdateResult>;
+  updateArtifact(
+    res: UpdateReservation,
+    metadata: ArtifactMetadata,
+  ): Promise<UpdateResult>;
+
   /**
-   * Disable the content. Metadata will still be available but content is inaccessible.
+   * Disable the content. Metadata will still be available when requested explicitly
+   * but content is inaccessible.
    */
   disableArtifact(repoId: string, contentId: string): Promise<DisableResult>;
 
@@ -72,11 +74,22 @@ export interface Adapter {
     fn: (res: UploadReservation) => Promise<T>,
     repoId: string,
   ): Promise<T>;
+  withUpdateReservation<T>(
+    fn: (res: UpdateReservation) => Promise<T>,
+    repoId: string,
+    contentId: string,
+  ): Promise<T>;
 }
 
 export interface UploadReservation {
   repoId?: string;
   uri: string | undefined;
+}
+
+export interface UpdateReservation {
+  repoId: string;
+  contentId: string;
+  uri: string;
 }
 
 export interface AdapterStatic<A extends Adapter> {
