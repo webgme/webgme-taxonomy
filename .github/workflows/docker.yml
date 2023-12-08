@@ -50,3 +50,4 @@ jobs:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_PASSWORD }}
           tags: "${{ env.TAG }},${{ env.RELEASE_TAG }}${{ env.EXTRA_TAG }}"
+          dockerfile: "docker/Dockerfile"
