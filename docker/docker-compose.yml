@@ -4,6 +4,7 @@ services:
     restart: always
     image: webgme/taxonomy:nightly
     network_mode: host
+    # Comment out the next line if you don't want to seed the database with the test seed
     command: bash -c "npm run setup-e2e && npm start"
     depends_on:
         - mongo
