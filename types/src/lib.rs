@@ -31,7 +31,8 @@ struct Version(String); // TODO: make this semver
 #[derive(TS, Deserialize, Serialize)]
 #[ts(export)]
 struct Taxonomy {
-    version: Version,
+    // TODO: uncomment this once we have settled on a semantic hashing/versioning scheme
+    //version: Version,
     vocabularies: HashMap<VocabularyName, VocabularyData>,
 }
 
