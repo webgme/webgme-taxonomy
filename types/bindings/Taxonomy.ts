@@ -2,4 +2,6 @@
 import type { VocabularyData } from "./VocabularyData";
 import type { VocabularyName } from "./VocabularyName";
 
-export interface Taxonomy { vocabularies: Record<VocabularyName, VocabularyData>, }
+export interface Taxonomy {
+  vocabularies: Record<VocabularyName, VocabularyData>;
+}

@@ -2,4 +2,6 @@
 import type { Field } from "./Field";
 import type { FieldName } from "./FieldName";
 
-export interface CompoundContent { fields: Record<FieldName, Field>, }
+export interface CompoundContent {
+  fields: Record<FieldName, Field>;
+}
