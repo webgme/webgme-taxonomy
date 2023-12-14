@@ -31,7 +31,6 @@ import {
   UserError,
 } from "../UserError";
 
-// TODO: module or requirejs
 type ContentTypeRoute = (
   context: GmeContentContext,
   req: Request,
@@ -166,7 +165,7 @@ export default {
         commit: commitObject._id,
       };
     } else {
-      throw new Error();
+      throw new Error(); // FIXME: more meaningful error
     }
 
     return {

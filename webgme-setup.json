@@ -46,6 +46,10 @@
       "ExportToJSONSchemav1": {
         "src": "build/plugins/ExportToJSONSchemav1",
         "test": "test/plugins/ExportToJSONSchemav1"
+      },
+      "ExportTaxonomy": {
+        "src": "build/plugins/ExportTaxonomy",
+        "test": "test/plugins/ExportTaxonomy"
       }
     },
     "visualizers": {},
@@ -53,7 +57,9 @@
       "Search": {
         "src": "build/routers/Search",
         "test": "test/routers/Search",
-        "assets": ["dashboard/public"],
+        "assets": [
+          "dashboard/public"
+        ],
         "mount": "routers/Search"
       },
       "TagFormat": {
@@ -64,7 +70,9 @@
       "TagCreator": {
         "src": "build/routers/TagCreator",
         "test": "test/routers/TagCreator",
-        "assets": ["form/dist"],
+        "assets": [
+          "form/dist"
+        ],
         "mount": "routers/TagCreator"
       },
       "JSONSchema": {
@@ -75,7 +83,9 @@
       "Dashboard": {
         "src": "build/routers/Dashboard",
         "test": "test/routers/Dashboard",
-        "assets": ["app/dist"],
+        "assets": [
+          "app/dist"
+        ],
         "mount": "routers/Dashboard"
       },
       "Profiles": {
@@ -91,13 +101,17 @@
       "TagCreatorv1": {
         "src": "build/routers/TagCreatorv1",
         "test": "test/routers/TagCreatorv1",
-        "assets": ["form"],
+        "assets": [
+          "form"
+        ],
         "mount": "routers/TagCreatorv1"
       },
       "Insights": {
         "src": "build/routers/Insights",
         "test": "test/routers/Insights",
-        "assets": ["dashboard/public"],
+        "assets": [
+          "dashboard/public"
+        ],
         "mount": "routers/Insights"
       }
     }
