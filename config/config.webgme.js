@@ -7,6 +7,7 @@ var config = require("webgme/config/config.default"),
 
 // The paths can be loaded from the webgme-setup.json
 config.plugin.basePaths.push(__dirname + "/../build/plugins");
+config.plugin.basePaths.push(__dirname + "/../src/plugins");
 config.plugin.basePaths.push(
   __dirname + "/../node_modules/webgme-json-importer/src/plugins",
 );
@@ -61,14 +62,14 @@ config.rest.components["Insights"] = {
   options: {},
 };
 
+// Visualizer descriptors
+
 // Add requirejs paths
 config.requirejsPaths = {
   "SetStateFromJSON":
     "node_modules/webgme-json-importer/src/plugins/SetStateFromJSON",
-  "panels": "./build/visualizers/panels",
-  "widgets": "./build/visualizers/widgets",
   "webgme-json-importer": "./node_modules/webgme-json-importer/src/common",
-  "webgme-taxonomy": "./build/common",
+  "webgme-taxonomy": "./src/common",
 };
 
 config.mongo.uri = "mongodb://127.0.0.1:27017/webgme_taxonomy";
