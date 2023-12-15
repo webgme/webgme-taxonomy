@@ -493,12 +493,11 @@ export default class JSONSchemaExporter {
 
     const childSchemas = await Promise.all(
       children.map(async (c: Core.Node) => {
-      const schema = await this.getFieldSchema(c) as CompoundFieldSchema;
-      const name = toString(this.core.getAttribute(c, 'name'));
-      schema.required = [name];
-      return schema;
-        }
-      ),
+        const schema = await this.getFieldSchema(c) as CompoundFieldSchema;
+        const name = toString(this.core.getAttribute(c, "name"));
+        schema.required = [name];
+        return schema;
+      }),
     );
 
     // In the anyOf, the options have required name properties
