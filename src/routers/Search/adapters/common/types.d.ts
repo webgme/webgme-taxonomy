@@ -1,4 +1,4 @@
-import type { AppendResult } from "./AppendResult";
+import type { AppendResult, UploadRequest } from "./AppendResult";
 import type TagFormatter from "../../../../common/TagFormatter";
 import type { Request } from "express";
 import type {
@@ -10,6 +10,7 @@ import type { Option } from "oxide.ts";
 type DisableResult = void;
 interface UpdateResult {
   contentId: string;
+  files: UploadRequest[];
 }
 
 export interface Adapter {
@@ -31,6 +32,7 @@ export interface Adapter {
   updateArtifact(
     res: UpdateReservation,
     metadata: ArtifactMetadata,
+    filenames: string[],
   ): Promise<UpdateResult>;
 
   /**

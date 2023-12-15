@@ -475,6 +475,7 @@ export default class PDP implements Adapter {
     return new AppendResult(`${index}_0`, files);
   }
 
+  // TODO: this should probably take a reservation
   async disableArtifact(
     repoId: string,
     contentId: string,
@@ -569,6 +570,7 @@ export default class PDP implements Adapter {
   async updateArtifact(
     res: ObservationUpdateReservation,
     metadata: ArtifactMetadata,
+    filenames: string[] = [],
   ): Promise<UpdateResult> {
     // get the list of validVersions for the index (append the new version)
     const latestData = await this.getObservationData(
@@ -588,6 +590,7 @@ export default class PDP implements Adapter {
       },
     });
 
+    console.log({latestData, validVersions});
     validVersions.push(res.version);
 
     // store the observation
@@ -601,9 +604,13 @@ export default class PDP implements Adapter {
       update,
       res.index,
     );
-    await this.api.appendVersion(res.processId, observation);
+    const response = (await this.api.appendVersion(res.processId, observation));
+      //.map(appendResponse => );
 
-    return { contentId: res.contentId };
+    return {
+    contentId: res.contentId,
+    files: [],  // FIXME
+    };
   }
 
   private async getMetadataSnapshot(
@@ -956,12 +963,15 @@ export function matchObsDatum<T>(
   datum: ObservationData,
   actionDict: ObsDatumCases<T>,
 ): T {
-  if ("tags" in datum || "taxonomyTags" in datum) {
-    return actionDict.ArtifactMetadata(datum);
-  } else if ("metadata" in datum) {
+  if ("validVersions" in datum) {
+  if ("metadata" in datum) {
     return actionDict.ContentUpdate(datum);
   } else {
     return actionDict.ContentDeletion(datum);
+  }
+  } else  {
+    
+    return actionDict.ArtifactMetadata(datum);
   }
 }
 

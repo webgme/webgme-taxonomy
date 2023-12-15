@@ -78,12 +78,20 @@ export default class MongoAdapter implements Adapter {
     this._repoLocks = new ScopedFnQueue();
   }
 
+  async disableArtifact(
+    repoId: string,
+    contentId: string,
+  ): Promise<DisableResult> {
+    throw new Error("To do!");
+  }
+
   updateArtifact(
     res: UpdateReservation,
     metadata: ArtifactMetadata,
   ): Promise<UpdateResult> {
     throw new Error("Method not implemented.");
   }
+
   withUpdateReservation<T>(
     fn: (res: UpdateReservation) => Promise<T>,
     repoId: string,
@@ -255,13 +263,6 @@ export default class MongoAdapter implements Adapter {
       return new UploadRequest(name, params);
     });
     return new AppendResult(index.toString(), files);
-  }
-
-  async disableArtifact(
-    repoId: string,
-    contentId: string,
-  ): Promise<DisableResult> {
-    throw new Error("To do!");
   }
 
   async uploadFile(

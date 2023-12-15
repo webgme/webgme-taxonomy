@@ -11,8 +11,21 @@ describe("PDP", function () {
   const assert = require("assert");
   const processType = "someProcessType";
 
+  function makeMetadata(md) {
+  const defaultMetadata = {
+        displayName: 'metadata',
+        tags: {},
+        taxonomyVersion: {
+            id: "guest+TaxonomyProject",
+            tag: "v1.0.0",
+            commit: "abadae3",
+        },
+          time: new Date().toString(),
+  };
+  return Object.assign({}, defaultMetadata, md);
+  }
   describe("updateArtifact", function () {
-    let storage, repoId, contentId, updatedId;
+    let storage, repoId, contentId, updatedId, updatedFiles;
 
     beforeEach(async () => {
       const api = new InMemoryPdp();
@@ -31,38 +44,41 @@ describe("PDP", function () {
         processType,
         { displayName: "someRepo" },
       );
-      const metadata = {
+      const metadata = makeMetadata({
         displayName: `content_item`,
-      };
+      });
+      const filenames = ['a.txt', 'b.txt'];
       const result = await storage.withContentReservation(
         // TODO: should we guarantee the reservation was only used once?
-        (res) => storage.appendArtifact(res, metadata, []),
+        (res) => storage.appendArtifact(res, metadata, filenames),
         repoId,
       );
       contentId = result.id;
-      console.log({ result, contentId });
 
       // update the content
-      const updatedMetadata = {
-        displayName: `content_item`,
-      };
-      const updateResult = await storage.withContentReservation(
-        (res) => storage.updateArtifact(res, contentId, updatedMetadata),
-        repoId,
+      const updatedMetadata = makeMetadata({
+        displayName: `content_item`,});
+        updatedFiles  = filenames.map(n => `updated_${n}`);
+      const updateResult = await storage.withUpdateReservation(
+        (res) => storage.updateArtifact(res, updatedMetadata, updatedFiles),
+        repoId, contentId, 
       );
-      // TODO validVersions should include latest
       updatedId = updateResult.contentId;
     });
 
-    it.only("should return latest when listing", async function () {
+    it("should return latest when listing", async function () {
       const artifacts = await storage.listArtifacts(repoId);
+      assert.equal(artifacts.length, 1);
 
-      console.log({ artifacts });
-      assert.equal(artifacts.length, 0);
+      // Check that the artifact is the updated one
+      assert.equal(artifacts[0].id, updatedId);
+    });
 
-      // Check that the artifact is marked as deleted...
-      assert(artifacts[0].disabled);
-      // TODO
+    it.only("should update files", async function () {
+      const fileUrls = await storage.downloadFileURLs(repoId, updatedId);
+      console.log({fileUrls})
+
+      updatedFiles  = filenames.map(n => `updated_${n}`);
     });
   });
 
@@ -86,15 +102,14 @@ describe("PDP", function () {
         processType,
         { displayName: "someRepo" },
       );
-      const metadata = {
+      const metadata = makeMetadata({
         displayName: `content_item`,
-      };
+      });
       const result = await storage.withContentReservation(
         (res) => storage.appendArtifact(res, metadata, []),
         repoId,
       );
-      contentId = `${result.index}_0`;
-      console.log({ result, contentId });
+      contentId = result.id;
 
       // disable the content
       await storage.disableArtifact(repoId, contentId);
@@ -102,12 +117,7 @@ describe("PDP", function () {
 
     it("should ignore disabled content while listing", async function () {
       const artifacts = await storage.listArtifacts(repoId);
-
-      console.log({ artifacts });
       assert.equal(artifacts.length, 0);
-
-      // Check that the artifact is marked as deleted...
-      assert(artifacts[0].disabled);
     });
 
     it("should not allow downloading disabled content", async function () {
@@ -115,6 +125,14 @@ describe("PDP", function () {
         storage.downloadFileURLs(repoId, [contentId]),
         /Content has been deleted/,
       );
+    });
+
+    it("should download correct (latest) files after deletion", async function () {
+      // TODO: Add metadata
+      // TODO: update metadata
+      // TODO: delete metadata
+      // TODO: download latest (files should match latest metadata)
+      throw new Error("todo!");
     });
   });
 
@@ -328,16 +346,9 @@ describe("PDP", function () {
 
     it("should queue concurrent upload requests", async function () {
       const repoId = await pdp.withRepoReservation(async (res) => {
-        const metadata = {
+        const metadata = makeMetadata({
           displayName: "hello",
-          taxonomyTags: [],
-          taxonomyVersion: {
-            id: "guest+TaxonomyProject",
-            tag: "v1.0.0",
-            commit: "abadae3",
-          },
-          time: new Date().toString(),
-        };
+        });
         await pdp.createArtifact(res, metadata);
         // Look up the repoId. Since process creation is disabled, we can't
         // actually get the process ID
@@ -349,12 +360,7 @@ describe("PDP", function () {
       };
 
       const [metadata1, metadata2] = ["first", "second"]
-        .map((displayName) => ({
-          displayName,
-          tags: {},
-          taxonomyVersion,
-          time: new Date().toString(),
-        }));
+        .map((displayName) => makeMetadata({displayName}));
 
       const firstUpload = await pdp.withContentReservation(
         async (res) => {
@@ -370,12 +376,13 @@ describe("PDP", function () {
       );
 
       const [result1, result2] = await Promise.all([firstUpload, secondUpload]);
+      const [i1, i2] = [result1, result2].map(res => +res.id.split('_'));
       assert.equal(
-        result1.index + 1,
-        result2.index,
+        i1+ 1,
+        i2,
         `Second upload index should be ${
-          result1.index + 1
-        } (found ${result2.index})`,
+          i1+ 1
+        } (found ${i2})`,
       );
     });
   });

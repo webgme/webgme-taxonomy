@@ -37,7 +37,7 @@ interface ListProcessOpts extends RequestOpts {
   token?: string;
 }
 
-type AppendVersionResponse = void;
+type AppendVersionResponse = any;
 export interface PdpProvider {
   listProcesses(
     opts?: ListProcessOpts,
