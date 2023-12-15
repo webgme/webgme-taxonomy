@@ -60,7 +60,6 @@ interface UriFieldSchema extends BaseFieldSchema {
 }
 interface EnumFieldSchema extends BaseFieldSchema {
   type: "object";
-  additionalProperties: false;
   anyOf: CompoundFieldSchema[];
 }
 interface CompoundFieldSchema extends BaseFieldSchema {
@@ -427,7 +426,6 @@ export default class JSONSchemaExporter {
         const fieldSchema: EnumFieldSchema = {
           title: name,
           type: "object",
-          additionalProperties: false,
           anyOf,
           // TODO: make the name a required field
         };
