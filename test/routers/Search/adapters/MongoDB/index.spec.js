@@ -118,13 +118,11 @@ describe("MongoDB", function () {
       );
 
       const [result1, result2] = await Promise.all([firstUpload, secondUpload]);
-      const [i1, i2] = [result1, result2].map(res => +res.id.split('_'));
+      const [i1, i2] = [result1, result2].map((res) => +res.id.split("_"));
       assert.equal(
-        i1+ 1,
+        i1 + 1,
         i2,
-        `Second upload index should be ${
-          i1+ 1
-        } (found ${i2})`,
+        `Second upload index should be ${i1 + 1} (found ${i2})`,
       );
     });
   });

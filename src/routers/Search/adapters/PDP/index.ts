@@ -590,7 +590,7 @@ export default class PDP implements Adapter {
       },
     });
 
-    console.log({latestData, validVersions});
+    console.log({ latestData, validVersions });
     validVersions.push(res.version);
 
     // store the observation
@@ -604,12 +604,12 @@ export default class PDP implements Adapter {
       update,
       res.index,
     );
-    const response = (await this.api.appendVersion(res.processId, observation));
-      //.map(appendResponse => );
+    const response = await this.api.appendVersion(res.processId, observation);
+    //.map(appendResponse => );
 
     return {
-    contentId: res.contentId,
-    files: [],  // FIXME
+      contentId: res.contentId,
+      files: [], // FIXME
     };
   }
 
@@ -964,13 +964,12 @@ export function matchObsDatum<T>(
   actionDict: ObsDatumCases<T>,
 ): T {
   if ("validVersions" in datum) {
-  if ("metadata" in datum) {
-    return actionDict.ContentUpdate(datum);
+    if ("metadata" in datum) {
+      return actionDict.ContentUpdate(datum);
+    } else {
+      return actionDict.ContentDeletion(datum);
+    }
   } else {
-    return actionDict.ContentDeletion(datum);
-  }
-  } else  {
-    
     return actionDict.ArtifactMetadata(datum);
   }
 }

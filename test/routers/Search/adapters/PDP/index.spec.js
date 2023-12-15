@@ -12,17 +12,17 @@ describe("PDP", function () {
   const processType = "someProcessType";
 
   function makeMetadata(md) {
-  const defaultMetadata = {
-        displayName: 'metadata',
-        tags: {},
-        taxonomyVersion: {
-            id: "guest+TaxonomyProject",
-            tag: "v1.0.0",
-            commit: "abadae3",
-        },
-          time: new Date().toString(),
-  };
-  return Object.assign({}, defaultMetadata, md);
+    const defaultMetadata = {
+      displayName: "metadata",
+      tags: {},
+      taxonomyVersion: {
+        id: "guest+TaxonomyProject",
+        tag: "v1.0.0",
+        commit: "abadae3",
+      },
+      time: new Date().toString(),
+    };
+    return Object.assign({}, defaultMetadata, md);
   }
   describe("updateArtifact", function () {
     let storage, repoId, contentId, updatedId, updatedFiles;
@@ -47,7 +47,7 @@ describe("PDP", function () {
       const metadata = makeMetadata({
         displayName: `content_item`,
       });
-      const filenames = ['a.txt', 'b.txt'];
+      const filenames = ["a.txt", "b.txt"];
       const result = await storage.withContentReservation(
         // TODO: should we guarantee the reservation was only used once?
         (res) => storage.appendArtifact(res, metadata, filenames),
@@ -57,11 +57,13 @@ describe("PDP", function () {
 
       // update the content
       const updatedMetadata = makeMetadata({
-        displayName: `content_item`,});
-        updatedFiles  = filenames.map(n => `updated_${n}`);
+        displayName: `content_item`,
+      });
+      updatedFiles = filenames.map((n) => `updated_${n}`);
       const updateResult = await storage.withUpdateReservation(
         (res) => storage.updateArtifact(res, updatedMetadata, updatedFiles),
-        repoId, contentId, 
+        repoId,
+        contentId,
       );
       updatedId = updateResult.contentId;
     });
@@ -76,9 +78,9 @@ describe("PDP", function () {
 
     it.only("should update files", async function () {
       const fileUrls = await storage.downloadFileURLs(repoId, updatedId);
-      console.log({fileUrls})
+      console.log({ fileUrls });
 
-      updatedFiles  = filenames.map(n => `updated_${n}`);
+      updatedFiles = filenames.map((n) => `updated_${n}`);
     });
   });
 
@@ -360,7 +362,7 @@ describe("PDP", function () {
       };
 
       const [metadata1, metadata2] = ["first", "second"]
-        .map((displayName) => makeMetadata({displayName}));
+        .map((displayName) => makeMetadata({ displayName }));
 
       const firstUpload = await pdp.withContentReservation(
         async (res) => {
@@ -376,13 +378,11 @@ describe("PDP", function () {
       );
 
       const [result1, result2] = await Promise.all([firstUpload, secondUpload]);
-      const [i1, i2] = [result1, result2].map(res => +res.id.split('_'));
+      const [i1, i2] = [result1, result2].map((res) => +res.id.split("_"));
       assert.equal(
-        i1+ 1,
+        i1 + 1,
         i2,
-        `Second upload index should be ${
-          i1+ 1
-        } (found ${i2})`,
+        `Second upload index should be ${i1 + 1} (found ${i2})`,
       );
     });
   });
