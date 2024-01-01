@@ -24,6 +24,7 @@ describe("PDP", function () {
     };
     return Object.assign({}, defaultMetadata, md);
   }
+
   describe("updateArtifact", function () {
     let storage, repoId, contentId, updatedId, updatedFiles;
 
@@ -127,14 +128,6 @@ describe("PDP", function () {
         storage.downloadFileURLs(repoId, [contentId]),
         /Content has been deleted/,
       );
-    });
-
-    it("should download correct (latest) files after deletion", async function () {
-      // TODO: Add metadata
-      // TODO: update metadata
-      // TODO: delete metadata
-      // TODO: download latest (files should match latest metadata)
-      throw new Error("todo!");
     });
   });
 

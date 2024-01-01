@@ -466,6 +466,7 @@ export default class PDP implements Adapter {
       ),
     );
 
+    // TODO: refactor this...
     const files = result.uploadDataFiles.files.map((file) => {
       const name = PDP.getOriginalFilePath(file.name);
       const params = new UploadParams(file.sasUrl, "PUT", UPLOAD_HEADERS);
@@ -604,6 +605,8 @@ export default class PDP implements Adapter {
       update,
       res.index,
     );
+    this._addDataFiles(observation, ...filenames);
+
     const response = await this.api.appendVersion(res.processId, observation);
     //.map(appendResponse => );
 
@@ -722,13 +725,25 @@ export default class PDP implements Adapter {
     observation.index = index;
     observation.version = version;
 
+    this._addDataFiles(observation, ...files);
+
+    return await this.api.appendObservation(processId, observation);
+  }
+
+  private _addDataFiles(
+    observation: Observation,
+    ...files: string[]
+  ): Observation {
+    const index = observation.index;
+    const version = observation.version;
+
     // All files for a process share the same directory so we need to scope them
     // to an index/version
     const uploadDir = `${index}/${version}/`;
     observation.dataFiles = files
       .map((filename: string) => uploadDir + filename);
 
-    return await this.api.appendObservation(processId, observation);
+    return observation;
   }
 
   static async from(
