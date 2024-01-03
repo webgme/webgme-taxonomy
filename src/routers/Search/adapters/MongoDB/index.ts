@@ -41,7 +41,10 @@ import { filterMap, filterMapOpt } from "../../../../common/Utils";
 import { fromResult, Pattern, range, zip } from "../../Utils";
 import ScopedFnQueue from "../../ScopedFnQueue";
 import { RepositoryNotFound } from "../common/StorageError";
-import { ContentNotFoundError, DeletedContentError } from "../../../../common/UserError";
+import {
+  ContentNotFoundError,
+  DeletedContentError,
+} from "../../../../common/UserError";
 
 const defaultMongoUri = gmeConfig.mongo.uri;
 const defaultClient = new MongoClient(defaultMongoUri);
@@ -88,13 +91,13 @@ export default class MongoAdapter implements Adapter {
   ): Promise<DisableResult> {
     const [index, version] = this.parseContentId(contentId);
     const artifactKey = `artifacts.${index}.${version}`;
-    const query: {[key: string]: any} = {
+    const query: { [key: string]: any } = {
       _id: new ObjectId(repoId),
     };
-    query[artifactKey] = { '$exists': true };
+    query[artifactKey] = { "$exists": true };
     const partial: any = {};
-    partial[`${artifactKey}.disabled`] = {time: new Date().toString()};
-    const update = {$set: partial};
+    partial[`${artifactKey}.disabled`] = { time: new Date().toString() };
+    const update = { $set: partial };
 
     const result = await this._collection.updateOne(query, update);
     if (result.matchedCount === 0) {
@@ -118,19 +121,23 @@ export default class MongoAdapter implements Adapter {
       files: fileIds.map((id) => id.toString()),
     };
     const artifactKey = `artifacts.${index}`;
-    const query: {[key: string]: any} = {
+    const query: { [key: string]: any } = {
       _id: new ObjectId(res.repoId),
     };
-    query[artifactKey] = { '$exists': true };
+    query[artifactKey] = { "$exists": true };
     const update: any = {};
     update[artifactKey] = { $push: artifact };
     const result = await this._collection.updateOne(query, update);
 
-    const files = this.getFileUploadReqs(repoId, index, zip(filenames, fileIds));
+    const files = this.getFileUploadReqs(
+      repoId,
+      index,
+      zip(filenames, fileIds),
+    );
     return {
       contentId: `${index}_${version + 1}`,
-      files
-    }
+      files,
+    };
   }
 
   withUpdateReservation<T>(
@@ -191,11 +198,11 @@ export default class MongoAdapter implements Adapter {
     const artifacts: Artifact[] = (await this.getRepository(repoId))
       .map((repo) =>
         filterMapOpt(
-            zip(repo.artifacts, range(0, repo.artifacts.length)),
-            (versionTuple: [ArtifactDoc[], number]) => {
-            const [versions, index] =versionTuple ;
-            return Option.from(versions.reverse().find(v => !v.disabled))
-              .map(latestValid => ({
+          zip(repo.artifacts, range(0, repo.artifacts.length)),
+          (versionTuple: [ArtifactDoc[], number]) => {
+            const [versions, index] = versionTuple;
+            return Option.from(versions.reverse().find((v) => !v.disabled))
+              .map((latestValid) => ({
                 parentId: repoId,
                 id: index.toString(),
                 displayName: latestValid.displayName,
@@ -203,7 +210,8 @@ export default class MongoAdapter implements Adapter {
                 taxonomyVersion: latestValid.taxonomyVersion,
                 time: latestValid.time,
               }));
-          })
+          },
+        )
       ).unwrapOr([]); // TODO: convert to an error instead?
 
     return artifacts;
@@ -268,16 +276,19 @@ export default class MongoAdapter implements Adapter {
   }
 
   private parseContentId(id: string): [number, number] {
-    const [index, version = 0] = id.split('_').map(num => parseInt(num));
+    const [index, version = 0] = id.split("_").map((num) => parseInt(num));
     return [index, version];
   }
 
-  private async getArtifactDoc(repoId: string, id: string): Promise<Option<ArtifactDoc>> {
+  private async getArtifactDoc(
+    repoId: string,
+    id: string,
+  ): Promise<Option<ArtifactDoc>> {
     const [index, version] = this.parseContentId(id);
 
     return (await this.getRepository(repoId))
-      .andThen(repo => Option.from(repo.artifacts[index]))
-      .andThen(versions => Option.from(versions[version]));
+      .andThen((repo) => Option.from(repo.artifacts[index]))
+      .andThen((versions) => Option.from(versions[version]));
   }
 
   async getContentIds(repoId: string): Promise<Option<string[]>> {
@@ -314,11 +325,19 @@ export default class MongoAdapter implements Adapter {
     }
 
     const index = res.index;
-    const files = this.getFileUploadReqs(repoId, index, zip(filenames, fileIds));
+    const files = this.getFileUploadReqs(
+      repoId,
+      index,
+      zip(filenames, fileIds),
+    );
     return new AppendResult(index.toString(), files);
   }
 
-  private getFileUploadReqs(repoId: string, index: number, files: [string, ObjectId][]): UploadRequest[] {
+  private getFileUploadReqs(
+    repoId: string,
+    index: number,
+    files: [string, ObjectId][],
+  ): UploadRequest[] {
     return files.map(([name, id]) => {
       const extendedId = encodeURIComponent(id + "_" + name);
       const url = `./artifacts/${repoId}/${index}/${extendedId}/upload`;
@@ -326,7 +345,6 @@ export default class MongoAdapter implements Adapter {
       const params = new UploadParams(url, "POST");
       return new UploadRequest(name, params);
     });
-    
   }
 
   async uploadFile(
@@ -359,11 +377,11 @@ export default class MongoAdapter implements Adapter {
       .okOrElse(() => new ContentNotFoundError()));
 
     if (artifactDoc.disabled) {
-    throw new DeletedContentError();
-      
+      throw new DeletedContentError();
     }
-      const fileIds = 
-        artifactDoc.files.map((fileIdStr: string) => new ObjectId(fileIdStr));
+    const fileIds = artifactDoc.files.map((fileIdStr: string) =>
+      new ObjectId(fileIdStr)
+    );
 
     const metadataPromise = fileIds
       .map((id) => this._files.find({ _id: id }).next());

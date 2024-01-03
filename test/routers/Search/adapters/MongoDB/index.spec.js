@@ -33,7 +33,7 @@ describe("MongoDB", function () {
     let storage, repoId, contentId;
 
     beforeEach(async () => {
-      const collection = '__testDisableArtifact';
+      const collection = "__testDisableArtifact";
       const hostUri = MongoDB.getHostUri(
         "mongodb://127.0.0.1:27017/",
         collection,
@@ -53,9 +53,12 @@ describe("MongoDB", function () {
         displayName: `content_item`,
       });
       repoId = await storage.withRepoReservation(
-        async res => {
-          await storage.createArtifact(res, makeMetadata({displayName: 'repo'}));
-          console.log({res})
+        async (res) => {
+          await storage.createArtifact(
+            res,
+            makeMetadata({ displayName: "repo" }),
+          );
+          console.log({ res });
           return res.repoId;
         },
       );
