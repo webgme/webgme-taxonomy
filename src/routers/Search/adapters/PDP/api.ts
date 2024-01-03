@@ -444,8 +444,24 @@ export class InMemoryPdp implements PdpProvider {
     _version: number,
     _opts: RequestOpts = {},
   ): Promise<Result<GetObservationFilesResponse, PdpApiError>> {
-    return this.getObservationData(id, index)
+    const fileData = this.getObservationData(id, index)
       .map((obsDatum) => obsDatum.fileData);
+
+    const transferFiles = fileData.map(fd => fd.files).unwrapOr([]);
+    console.log({fileData});
+
+    if (transferFiles.length) {
+        const transferId = fileData
+          .map(fd => fd.transferId)
+          .unwrapOrElse(() => this.newTransferId());
+
+        this.startTransfer(
+          transferFiles.map((fdata) => fdata.name),
+          transferId
+        );
+    }
+
+    return fileData;
   }
 
   private newObsData(
@@ -477,7 +493,7 @@ export class InMemoryPdp implements PdpProvider {
   ): Promise<Result<AppendObservationResponse, PdpApiError>> {
     return this.getProcessData(processId)
       .map((data) => { // add the observation
-        const transferId = `transfer_${Date.now()}_${this.data.counter++}`;
+        const transferId = this.newTransferId();
         const obsDatum = this.newObsData(processId, observation, transferId);
         console.log("append", observation);
         data.observations.push([obsDatum]);
@@ -496,8 +512,8 @@ export class InMemoryPdp implements PdpProvider {
         );
 
         this.startTransfer(
-          transferId,
           obsDatum.fileData.files.map((fdata) => fdata.name),
+          transferId,
         );
         // TODO: add dataFiles
         console.log(JSON.stringify(response));
@@ -524,7 +540,7 @@ export class InMemoryPdp implements PdpProvider {
         observation.version = versions.length;
         console.log("update", observation);
 
-        const transferId = `transfer_${Date.now()}_${this.data.counter++}`;
+        const transferId = this.newTransferId();
         const obsDatum = this.newObsData(processId, observation, transferId);
         versions.push(obsDatum);
 
@@ -633,7 +649,12 @@ export class InMemoryPdp implements PdpProvider {
       .map((versions) => last(versions) as ObservationData);
   }
 
-  private startTransfer(transferId: string, filenames: string[]) {
+  private newTransferId(): string {
+        return `transfer_${Date.now()}_${this.data.counter++}`;
+    
+  }
+
+  private startTransfer( filenames: string[], transferId: string = this.newTransferId()) {
     const start = new Date().toString();
     this.data.transfers[transferId] = {
       operation: "upload",

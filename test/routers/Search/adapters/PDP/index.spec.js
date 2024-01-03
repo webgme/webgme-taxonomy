@@ -77,11 +77,10 @@ describe("PDP", function () {
       assert.equal(artifacts[0].id, updatedId);
     });
 
-    it.only("should update files", async function () {
-      const fileUrls = await storage.downloadFileURLs(repoId, updatedId);
-      console.log({ fileUrls });
-
-      updatedFiles = filenames.map((n) => `updated_${n}`);
+    it("should update files", async function () {
+      const [data] = await storage.downloadFileURLs(repoId, [updatedId]);
+      assert.equal(data.files.length, 2);
+      data.files.forEach((file, i) => assert(file.name.endsWith(updatedFiles[i])));
     });
   });
 
