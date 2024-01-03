@@ -152,7 +152,7 @@ export type ArtifactMetadata = ArtifactMetadatav1 | ArtifactMetadatav2;
 
 export interface DisabledInfo {
   time: string;
-  userId: string;
+  userId?: string;
 }
 
 export interface ArtifactMetadatav2 {

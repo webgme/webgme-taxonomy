@@ -15,6 +15,76 @@ describe("MongoDB", function () {
     collection,
   );
 
+  function makeMetadata(md) {
+    const defaultMetadata = {
+      displayName: "metadata",
+      tags: {},
+      taxonomyVersion: {
+        id: "guest+TaxonomyProject",
+        tag: "v1.0.0",
+        commit: "abadae3",
+      },
+      time: new Date().toString(),
+    };
+    return Object.assign({}, defaultMetadata, md);
+  }
+
+  describe("disableArtifact", function () {
+    let storage, repoId, contentId;
+
+    beforeEach(async () => {
+      const collection = '__testDisableArtifact';
+      const hostUri = MongoDB.getHostUri(
+        "mongodb://127.0.0.1:27017/",
+        collection,
+      );
+
+      client = new MongoClient(defaultMongoUri);
+      const db = client.db(collection);
+      for (let m in db) {
+        console.log(m);
+      }
+      await db.dropDatabase();
+
+      storage = new MongoDB(client, collection, hostUri);
+
+      // Create the test fixtures
+      const metadata = makeMetadata({
+        displayName: `content_item`,
+      });
+      repoId = await storage.withRepoReservation(
+        async res => {
+          await storage.createArtifact(res, makeMetadata({displayName: 'repo'}));
+          console.log({res})
+          return res.repoId;
+        },
+      );
+
+      const result = await storage.withContentReservation(
+        (res) => storage.appendArtifact(res, metadata, []),
+        repoId,
+      );
+      contentId = result.id;
+
+      // disable the content
+      await storage.disableArtifact(repoId, contentId);
+    });
+
+    afterEach(async () => client.close());
+
+    it("should ignore disabled content while listing", async function () {
+      const artifacts = await storage.listArtifacts(repoId);
+      assert.equal(artifacts.length, 0);
+    });
+
+    it("should not allow downloading disabled content", async function () {
+      await assert.rejects(
+        storage.getFileStreams(repoId, contentId),
+        /Content has been deleted/,
+      );
+    });
+  });
+
   describe("getUriPatterns", function () {
     const Ajv = require("ajv");
     const ajv = new Ajv();

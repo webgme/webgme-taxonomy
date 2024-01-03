@@ -54,7 +54,6 @@ import type {
   UploadReservation,
 } from "../common/types";
 import {
-  assert,
   fromResult,
   intervals,
   Pattern,

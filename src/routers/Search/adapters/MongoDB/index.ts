@@ -14,6 +14,7 @@ import type {
   Artifact,
   ArtifactMetadata,
   ArtifactMetadatav2,
+  DisabledInfo,
   DisableResult,
   DownloadInfo,
   FileStreamDict,
@@ -36,29 +37,32 @@ import {
 } from "../common/AppendResult";
 import { AzureGmeConfig, GmeContentContext } from "../../../../common/types";
 import { toArtifactMetadatav2 } from "../common/Helpers";
-import { filterMap } from "../../../../common/Utils";
-import { fromResult, Pattern } from "../../Utils";
+import { filterMap, filterMapOpt } from "../../../../common/Utils";
+import { fromResult, Pattern, range, zip } from "../../Utils";
 import ScopedFnQueue from "../../ScopedFnQueue";
 import { RepositoryNotFound } from "../common/StorageError";
+import { ContentNotFoundError, DeletedContentError } from "../../../../common/UserError";
 
 const defaultMongoUri = gmeConfig.mongo.uri;
 const defaultClient = new MongoClient(defaultMongoUri);
 
 type FileId = string;
+type ArtifactVersions = ArtifactDoc[];
 interface RepositoryDoc {
   _id: ObjectId;
   displayName: string;
   taxonomyVersion: TaxonomyVersion;
   tags: any;
-  artifacts: ArtifactDoc[];
+  artifacts: ArtifactVersions[];
 }
 
-interface ArtifactDoc {
+interface ArtifactDoc extends ArtifactMetadatav2 {
   displayName: string;
   tags: any;
   taxonomyVersion: TaxonomyVersion;
   time: string;
   files: FileId[];
+  disabled?: DisabledInfo;
 }
 
 export default class MongoAdapter implements Adapter {
@@ -82,14 +86,51 @@ export default class MongoAdapter implements Adapter {
     repoId: string,
     contentId: string,
   ): Promise<DisableResult> {
-    throw new Error("To do!");
+    const [index, version] = this.parseContentId(contentId);
+    const artifactKey = `artifacts.${index}.${version}`;
+    const query: {[key: string]: any} = {
+      _id: new ObjectId(repoId),
+    };
+    query[artifactKey] = { '$exists': true };
+    const partial: any = {};
+    partial[`${artifactKey}.disabled`] = {time: new Date().toString()};
+    const update = {$set: partial};
+
+    const result = await this._collection.updateOne(query, update);
+    if (result.matchedCount === 0) {
+      throw new ContentNotFoundError();
+    }
   }
 
-  updateArtifact(
+  async updateArtifact(
     res: UpdateReservation,
-    metadata: ArtifactMetadata,
+    metadata: ArtifactMetadatav2,
+    filenames: string[] = [],
   ): Promise<UpdateResult> {
-    throw new Error("Method not implemented.");
+    const [index, version] = this.parseContentId(res.contentId);
+    const repoId = res.repoId;
+    const fileIds = _.range(filenames.length).map(() => new ObjectId());
+    const artifact: Artifact = {
+      displayName: metadata.displayName,
+      tags: metadata.tags,
+      taxonomyVersion: metadata.taxonomyVersion,
+      time: (new Date()).toString(),
+      files: fileIds.map((id) => id.toString()),
+    };
+    const artifactKey = `artifacts.${index}`;
+    const query: {[key: string]: any} = {
+      _id: new ObjectId(res.repoId),
+    };
+    query[artifactKey] = { '$exists': true };
+    const update: any = {};
+    update[artifactKey] = { $push: artifact };
+    const result = await this._collection.updateOne(query, update);
+
+    const files = this.getFileUploadReqs(repoId, index, zip(filenames, fileIds));
+    return {
+      contentId: `${index}_${version + 1}`,
+      files
+    }
   }
 
   withUpdateReservation<T>(
@@ -147,20 +188,22 @@ export default class MongoAdapter implements Adapter {
   }
 
   async listArtifacts(repoId: string): Promise<Artifact[]> {
-    const artifacts = (await this.getRepository(repoId))
+    const artifacts: Artifact[] = (await this.getRepository(repoId))
       .map((repo) =>
-        repo.artifacts
-          .map(toArtifactMetadatav2)
-          .map(
-            (data: ArtifactMetadatav2, index: number) => ({
-              parentId: repoId,
-              id: index.toString(),
-              displayName: data.displayName,
-              tags: data.tags,
-              taxonomyVersion: data.taxonomyVersion,
-              time: data.time,
-            }),
-          )
+        filterMapOpt(
+            zip(repo.artifacts, range(0, repo.artifacts.length)),
+            (versionTuple: [ArtifactDoc[], number]) => {
+            const [versions, index] =versionTuple ;
+            return Option.from(versions.reverse().find(v => !v.disabled))
+              .map(latestValid => ({
+                parentId: repoId,
+                id: index.toString(),
+                displayName: latestValid.displayName,
+                tags: latestValid.tags,
+                taxonomyVersion: latestValid.taxonomyVersion,
+                time: latestValid.time,
+              }));
+          })
       ).unwrapOr([]); // TODO: convert to an error instead?
 
     return artifacts;
@@ -201,14 +244,17 @@ export default class MongoAdapter implements Adapter {
   }
 
   async createArtifact(res: RepoReservation, metadata: ArtifactMetadatav2) {
-    const artifactSet = {
+    const repo = {
       _id: new ObjectId(res.repoId),
       displayName: metadata.displayName,
       taxonomyVersion: metadata.taxonomyVersion,
       tags: metadata.tags,
       artifacts: [],
     };
-    const result = await this._collection.insertOne(artifactSet);
+    const result = await this._collection.insertOne(repo);
+    if (!result.acknowledged) {
+      throw new Error("Unable to save repository.");
+    }
 
     return "Created!";
   }
@@ -219,6 +265,19 @@ export default class MongoAdapter implements Adapter {
         _id: new ObjectId(repoId),
       }),
     ) as Option<RepositoryDoc>;
+  }
+
+  private parseContentId(id: string): [number, number] {
+    const [index, version = 0] = id.split('_').map(num => parseInt(num));
+    return [index, version];
+  }
+
+  private async getArtifactDoc(repoId: string, id: string): Promise<Option<ArtifactDoc>> {
+    const [index, version] = this.parseContentId(id);
+
+    return (await this.getRepository(repoId))
+      .andThen(repo => Option.from(repo.artifacts[index]))
+      .andThen(versions => Option.from(versions[version]));
   }
 
   async getContentIds(repoId: string): Promise<Option<string[]>> {
@@ -245,24 +304,29 @@ export default class MongoAdapter implements Adapter {
     const result = await this._collection.findOneAndUpdate(
       query,
       {
-        $push: { artifacts: artifact } as Document,
+        $push: { artifacts: [artifact] } as Document,
       },
       { returnDocument: "after" },
     );
 
     if (!result.value) {
-      // TODO: handle artifact not found case
+      throw new RepositoryNotFound(res.repoId);
     }
 
     const index = res.index;
-    const files = _.zip(filenames, fileIds).map(([name, id]) => {
+    const files = this.getFileUploadReqs(repoId, index, zip(filenames, fileIds));
+    return new AppendResult(index.toString(), files);
+  }
+
+  private getFileUploadReqs(repoId: string, index: number, files: [string, ObjectId][]): UploadRequest[] {
+    return files.map(([name, id]) => {
       const extendedId = encodeURIComponent(id + "_" + name);
       const url = `./artifacts/${repoId}/${index}/${extendedId}/upload`;
       // TODO: add an authorization header
       const params = new UploadParams(url, "POST");
       return new UploadRequest(name, params);
     });
-    return new AppendResult(index.toString(), files);
+    
   }
 
   async uploadFile(
@@ -283,9 +347,7 @@ export default class MongoAdapter implements Adapter {
     repoId: string,
     contentId: string,
   ): Promise<Option<ArtifactMetadatav2>> {
-    const idx = parseInt(contentId);
-    return (await this.getRepository(repoId))
-      .andThen((repo) => Option.from(repo.artifacts[idx]))
+    return (await this.getArtifactDoc(repoId, contentId))
       .map(toArtifactMetadatav2);
   }
 
@@ -293,16 +355,18 @@ export default class MongoAdapter implements Adapter {
     repoId: string,
     id: string,
   ): Promise<FileStreamDict> {
-    const idx = parseInt(id);
-    const fileIds = (await this.getRepository(repoId))
-      .andThen((repo) => Option(repo.artifacts[idx]))
-      .map((artifact) =>
-        artifact.files.map((fileIdStr: string) => new ObjectId(fileIdStr))
-      );
+    const artifactDoc = fromResult((await this.getArtifactDoc(repoId, id))
+      .okOrElse(() => new ContentNotFoundError()));
+
+    if (artifactDoc.disabled) {
+    throw new DeletedContentError();
+      
+    }
+      const fileIds = 
+        artifactDoc.files.map((fileIdStr: string) => new ObjectId(fileIdStr));
 
     const metadataPromise = fileIds
-      .map((ids) => ids.map((id) => this._files.find({ _id: id }).next()))
-      .unwrapOr([]);
+      .map((id) => this._files.find({ _id: id }).next());
 
     const metadata = await Promise.all(metadataPromise);
     const entries = filterMap(metadata, (fileMd) => {
@@ -313,6 +377,7 @@ export default class MongoAdapter implements Adapter {
         ];
       }
     });
+
     return Object.fromEntries(entries);
   }
 
