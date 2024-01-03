@@ -8,8 +8,7 @@
   import SchemaLoading from './SchemaLoading.svelte';
 
   let configuration = fetchSchema();
-  let data = {};
-  const uischema = { collapse: "unrequired" } as const;
+  const defaultUischema = { collapse: "unrequired" } as const;
 
   let schemaForm: SchemaForm;
   let errorSnackbar: Snackbar;
@@ -48,7 +47,8 @@
       </Row>
     </TopAppBar>
     <SchemaLoading />
-  {:then {schema, taxonomyVersion}}
+  {:then {schema, taxonomyVersion, formData: data, uiSchema}}
+    {@const uischema = {...defaultUischema, ...uiSchema} }
     <TopAppBar variant="static">
       <Row>
         <Section>
