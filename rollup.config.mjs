@@ -202,8 +202,10 @@ if (process.env.NODE_ENV === "test") {
   }
 
   if (process.env.TEST_TARGETS) {
-    const inputs = process.env.TEST_TARGETS.split(',');
-    configs = configs.filter(cfg => inputs.find(name => cfg.input.includes(name)));
+    const inputs = process.env.TEST_TARGETS.split(",");
+    configs = configs.filter((cfg) =>
+      inputs.find((name) => cfg.input.includes(name))
+    );
   }
 
   console.log(`About to build ${configs.length} files for testing:`);
