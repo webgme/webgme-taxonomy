@@ -1,7 +1,7 @@
 /// <amd-module />
 
 import { OutAttr } from "webgme/common";
-import { Option } from "oxide.ts";
+import { None, Option, Some } from "oxide.ts";
 import { isTypeNamed } from "./GmeHelpers";
 import type { GmeCore } from "./types";
 
@@ -25,6 +25,14 @@ export function filterMapOpt<I, O>(list: I[], fn: (x: I) => Option<O>): O[] {
     }
     return items;
   }, <Array<O>> []);
+}
+
+export function findIndex<I>(list: I[], fn: (x: I) => boolean): Option<number> {
+  const index = list.findIndex(fn);
+  if (index > -1) {
+    return Some(index);
+  }
+  return None;
 }
 
 /**

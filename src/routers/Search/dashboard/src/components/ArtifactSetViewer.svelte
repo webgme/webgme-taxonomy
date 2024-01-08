@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { createEventDispatcher, getContext } from "svelte";
   import { capitalize, getTagValue } from "../Utils";
   import TagFormatter from "../Formatter";
   import Card, { Content, Actions } from "@smui/card";
@@ -23,8 +24,7 @@
   let selected = [];
   let menu: Menu;
   const formatter = new TagFormatter();
-
-  import { createEventDispatcher } from "svelte";
+  const storage: Storage = getContext("storage");
   const dispatch = createEventDispatcher();
 
   async function onDownloadClicked() {
@@ -60,8 +60,19 @@
       })
     } catch (e) {
       console.error(`Unable to copy URI to clipboard:`, e);
-      //TODO - we should probably limit the clipboard to regular use
+      // TODO - we should probably limit the clipboard to regular use
     }
+  }
+
+  async function onDeleteArtifact(artifact) {
+    console.log('deleting', artifact);
+    await storage.disableArtifact(artifactSet.id, artifact.id);
+  }
+
+  async function onUpdateArtifact(artifact) {
+    // TODO: emit an event???
+    console.log('update', artifact);
+    //await storage.disableArtifact(artifact.parentId, artifact.id);
   }
 
   async function onSelectContent() {
@@ -193,6 +204,13 @@
                 class="material-icons"
                 size="mini"
               >link</IconButton>
+              <!-- TODO: add delete button -->
+              <IconButton
+                on:click$stopPropagation={() => onDeleteArtifact(artifact)}
+                class="material-icons"
+                size="mini"
+              >link</IconButton>
+              <!-- TODO: add update button -->
             </Meta>
           </Item>
         {/each}

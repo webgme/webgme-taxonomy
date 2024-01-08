@@ -390,12 +390,6 @@ export default class PDP implements Adapter {
         const obs = fromResult(
           await this.api.getObservation(processId, index, lastVersion),
         );
-        console.log(
-          "isValidVersion",
-          obs,
-          version,
-          isValidVersion(obs, version),
-        );
         if (!isValidVersion(obs, version)) {
           throw new DeletedContentError();
         }
@@ -569,7 +563,7 @@ export default class PDP implements Adapter {
 
   async updateArtifact(
     res: ObservationUpdateReservation,
-    metadata: ArtifactMetadata,
+    metadata: ArtifactMetadatav2,
     filenames: string[] = [],
   ): Promise<UpdateResult> {
     // get the list of validVersions for the index (append the new version)

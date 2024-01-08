@@ -146,8 +146,27 @@ class Storage {
     );
   }
 
-  async updateArtifact(metadata, newContent) {
-    console.log("Updating artifact:", metadata, newContent);
+  async updateArtifact(repoId: string, contentId: string, metadata, files: File[]) {
+    const url = this.baseUrl + encodeURIComponent(repoId) +
+      '/' + encodeURIComponent(contentId);
+    const result = await this._fetchJson(
+      url,
+      {method: 'post'},
+      UpdateError,
+    );
+    return result.unwrap();
+  }
+
+  async disableArtifact(repoId, contentId) {
+    console.log("Disable artifact:", repoId, contentId);
+    const url = this.baseUrl + encodeURIComponent(repoId) +
+      '/' + encodeURIComponent(contentId);
+    const result = await this._fetchJson(
+      url,
+      {method: 'delete'},
+      DeleteError,
+    );
+    return result.unwrap();
   }
 
   async createRepo(metadata) {
@@ -232,7 +251,19 @@ class StorageError extends RequestError {
 
 class ListError extends StorageError {
   constructor(msg: string) {
-    super("list artifacts", msg); // FIXME: rename "artifact"?
+    super("list contents", msg); // FIXME: rename "artifact"?
+  }
+}
+
+class UpdateError extends StorageError {
+  constructor(msg: string) {
+    super("update content", msg);
+  }
+}
+
+class DeleteError extends StorageError {
+  constructor(msg: string) {
+    super("delete content", msg);
   }
 }
 

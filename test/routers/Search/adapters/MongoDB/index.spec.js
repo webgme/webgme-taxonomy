@@ -41,9 +41,6 @@ describe("MongoDB", function () {
 
       client = new MongoClient(defaultMongoUri);
       const db = client.db(collection);
-      for (let m in db) {
-        console.log(m);
-      }
       await db.dropDatabase();
 
       storage = new MongoDB(client, collection, hostUri);
@@ -55,7 +52,6 @@ describe("MongoDB", function () {
       repoId = await storage.withRepoReservation(
         async res => {
           await storage.createArtifact(res, makeMetadata({displayName: 'repo'}));
-          console.log({res})
           return res.repoId;
         },
       );
@@ -82,6 +78,73 @@ describe("MongoDB", function () {
         storage.getFileStreams(repoId, contentId),
         /Content has been deleted/,
       );
+    });
+  });
+
+  describe.only("updateArtifact", function () {
+    let storage, repoId, contentId, updatedId, updatedFiles;
+
+    beforeEach(async () => {
+      const collection = '__testUpdateArtifact';
+      const hostUri = MongoDB.getHostUri(
+        "mongodb://127.0.0.1:27017/",
+        collection,
+      );
+
+      client = new MongoClient(defaultMongoUri);
+      const db = client.db(collection);
+      await db.dropDatabase();
+
+      storage = new MongoDB(client, collection, hostUri);
+
+      // Create the test fixtures
+      const metadata = makeMetadata({
+        displayName: `content_item`,
+      });
+      repoId = await storage.withRepoReservation(
+        async res => {
+          await storage.createArtifact(res, makeMetadata({displayName: 'repo'}));
+          return res.repoId;
+        },
+      );
+
+      const filenames = ["a.txt", "b.txt"];
+      const result = await storage.withContentReservation(
+        (res) => storage.appendArtifact(res, metadata, filenames),
+        repoId,
+      );
+      contentId = result.id;
+
+      // update the content
+      const updatedMetadata = makeMetadata({
+        displayName: `new_content_item`,
+      });
+      updatedFiles = filenames.map((n) => `updated_${n}`);
+      const updateResult = await storage.withUpdateReservation(
+        (res) => storage.updateArtifact(res, updatedMetadata, updatedFiles),
+        repoId,
+        contentId,
+      );
+      console.log({updateResult})
+      updatedId = updateResult.contentId;
+    });
+
+    afterEach(async () => client.close());
+
+    it.only("should return latest when listing", async function () {
+      const artifacts = await storage.listArtifacts(repoId);
+      assert.equal(artifacts.length, 1);
+
+      console.log(artifacts)
+      // Check that the artifact is the updated one
+      assert.equal(artifacts[0].id, updatedId);
+    });
+
+    it("should update files", async function () {
+      // TODO: 
+      const [data] = await storage.downloadFileURLs(repoId, [updatedId]);
+      assert.equal(data.files.length, 2);
+      data.files.forEach((file, i) => assert(file.name.endsWith(updatedFiles[i])));
     });
   });
 

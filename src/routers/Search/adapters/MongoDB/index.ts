@@ -37,7 +37,7 @@ import {
 } from "../common/AppendResult";
 import { AzureGmeConfig, GmeContentContext } from "../../../../common/types";
 import { toArtifactMetadatav2 } from "../common/Helpers";
-import { filterMap, filterMapOpt } from "../../../../common/Utils";
+import { filterMap, filterMapOpt, findIndex } from "../../../../common/Utils";
 import { fromResult, Pattern, range, zip } from "../../Utils";
 import ScopedFnQueue from "../../ScopedFnQueue";
 import { RepositoryNotFound } from "../common/StorageError";
@@ -71,6 +71,7 @@ export default class MongoAdapter implements Adapter {
   private _collection: Collection<Document>;
   private _hostUri: string;
   private _repoLocks: ScopedFnQueue;
+  private _contentLocks: ScopedFnQueue;
 
   constructor(client: MongoClient, collectionName: string, hostUri: string) {
     this._client = client;
@@ -80,6 +81,7 @@ export default class MongoAdapter implements Adapter {
     this._files = new GridFSBucket(db, { bucketName: name });
     this._hostUri = hostUri;
     this._repoLocks = new ScopedFnQueue();
+    this._contentLocks = new ScopedFnQueue();
   }
 
   async disableArtifact(
@@ -122,23 +124,52 @@ export default class MongoAdapter implements Adapter {
       _id: new ObjectId(res.repoId),
     };
     query[artifactKey] = { '$exists': true };
-    const update: any = {};
-    update[artifactKey] = { $push: artifact };
+    const pushData: any = {};
+    pushData[artifactKey] = artifact;
+    const update = {$push: pushData};
+
     const result = await this._collection.updateOne(query, update);
+
+    if (result.matchedCount == 0) {
+      throw new ContentNotFoundError();
+    }
 
     const files = this.getFileUploadReqs(repoId, index, zip(filenames, fileIds));
     return {
-      contentId: `${index}_${version + 1}`,
+      contentId: `${index}_${version}`,
       files
     }
   }
 
-  withUpdateReservation<T>(
+  async withUpdateReservation<T>(
     fn: (res: UpdateReservation) => Promise<T>,
     repoId: string,
     contentId: string,
   ): Promise<T> {
-    throw new Error("Method not implemented.");
+    const [index, /*version*/] = this.parseContentId(contentId);
+    const lockId = repoId + "/" + index;
+    return await this._contentLocks.run(lockId, async () => {
+
+    const versions = fromResult((await this.getRepository(repoId))
+      .okOrElse(() => new RepositoryNotFound(repoId))
+      .andThen(repo => Option.from(repo.artifacts[index])
+        .okOrElse(() => new ContentNotFoundError())
+      ));
+
+    const nextVersion = versions.length;
+    const reservation = new ContentUpdateReservation(this._hostUri, repoId, index, nextVersion);
+
+      try {
+        const result = await fn(reservation);
+        return result;
+      } catch (err) {
+        throw err;
+      } finally {
+        // TODO: disable the reservation
+        // TODO: probably should make it a generic
+      }
+
+    });
   }
 
   async getBulkMetadata(
@@ -193,16 +224,25 @@ export default class MongoAdapter implements Adapter {
         filterMapOpt(
             zip(repo.artifacts, range(0, repo.artifacts.length)),
             (versionTuple: [ArtifactDoc[], number]) => {
-            const [versions, index] =versionTuple ;
-            return Option.from(versions.reverse().find(v => !v.disabled))
-              .map(latestValid => ({
+            const [versions, index] = versionTuple ;
+            const validIndex = findIndex(versions.reverse(), v => !v.disabled);
+            console.log('versions');
+            console.log(versions);
+            return validIndex.map(inverseIdx => {
+              const lastIndex = versions.length - 1;
+              const versionIndex = lastIndex - inverseIdx;
+              const latestValid = versions[versionIndex];
+                
+              return ({
                 parentId: repoId,
-                id: index.toString(),
+                id: `${index}_${versionIndex}`,
                 displayName: latestValid.displayName,
                 tags: latestValid.tags,
                 taxonomyVersion: latestValid.taxonomyVersion,
                 time: latestValid.time,
-              }));
+              });
+              }
+              );
           })
       ).unwrapOr([]); // TODO: convert to an error instead?
 
@@ -501,6 +541,18 @@ class ContentReservation implements UploadReservation {
     this.repoId = repoId;
     this.index = index;
     this.uri = `${hostUri}/${this.repoId}/${index}`;
+  }
+}
+
+class ContentUpdateReservation implements UpdateReservation {
+  repoId: string;
+  contentId: string;
+  uri: string;
+
+  constructor(hostUri: string, repoId: string, index: number, version: number) {
+    this.repoId = repoId;
+    this.contentId = `${index}_${version}`;
+    this.uri = `${hostUri}/${this.repoId}/${this.contentId}`;
   }
 }
 
