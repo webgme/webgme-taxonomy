@@ -339,64 +339,6 @@ function initialize(middlewareOpts: MiddlewareOptions) {
       res.json(metadata);
     },
   );
-
-  RouterUtils.addContentTypeRoute(
-    middlewareOpts,
-    router,
-    "artifacts/:repoId/:id",
-    async function updateContent(gmeContext, req, res) {
-      const userId = middlewareOpts.getUserId(req);
-      const { repoId, id } = req.params;
-      const storage = await StorageAdapter.from(
-        gmeContext,
-        req,
-        mainConfig,
-      );
-      let metadata: ArtifactMetadatav2 = getArtifactMetadata(
-        gmeContext,
-        <ArtifactMetadata> req.body.metadata,
-      );
-
-      // update the content
-      const updateResult = await storage.withUpdateReservation(
-        async (reservation) => {
-          const filenames = req.body.filenames;
-          await addChildSystemTags(
-            metadata,
-            reservation,
-            gmeContext,
-            userId,
-            filenames,
-          );
-          await toGuidFormat(
-            gmeContext,
-            metadata,
-          );
-          return await storage.updateArtifact(
-            reservation,
-            metadata,
-            filenames,
-          );
-        },
-        repoId,
-        id,
-      );
-
-      updateResult.files.forEach((file) => {
-        const isRelative = file.params.url.startsWith("./");
-        if (isRelative) {
-          const baseUrl = req.originalUrl
-            .split(`artifacts/${repoId}/append`)
-            .shift();
-          file.params.url = baseUrl + file.params.url.substring(2);
-        }
-      });
-
-      res.json(updateResult);
-    },
-    { method: "post" },
-  );
-
   RouterUtils.addContentTypeRoute(
     middlewareOpts,
     router,
@@ -566,6 +508,63 @@ function initialize(middlewareOpts: MiddlewareOptions) {
         await fsp.rm(tmpDir, { recursive: true });
       },
     ),
+  );
+
+  RouterUtils.addContentTypeRoute(
+    middlewareOpts,
+    router,
+    "artifacts/:repoId/:id",
+    async function updateContent(gmeContext, req, res) {
+      const userId = middlewareOpts.getUserId(req);
+      const { repoId, id } = req.params;
+      const storage = await StorageAdapter.from(
+        gmeContext,
+        req,
+        mainConfig,
+      );
+      let metadata: ArtifactMetadatav2 = getArtifactMetadata(
+        gmeContext,
+        <ArtifactMetadata> req.body.metadata,
+      );
+
+      // update the content
+      const updateResult = await storage.withUpdateReservation(
+        async (reservation) => {
+          const filenames = req.body.filenames;
+          await addChildSystemTags(
+            metadata,
+            reservation,
+            gmeContext,
+            userId,
+            filenames,
+          );
+          await toGuidFormat(
+            gmeContext,
+            metadata,
+          );
+          return await storage.updateArtifact(
+            reservation,
+            metadata,
+            filenames,
+          );
+        },
+        repoId,
+        id,
+      );
+
+      updateResult.files.forEach((file) => {
+        const isRelative = file.params.url.startsWith("./");
+        if (isRelative) {
+          const baseUrl = req.originalUrl
+            .split(`artifacts/${repoId}/${id}`)
+            .shift();
+          file.params.url = baseUrl + file.params.url.substring(2);
+        }
+      });
+
+      res.json(updateResult);
+    },
+    { method: "post" },
   );
 
   logger.debug("ready");

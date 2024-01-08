@@ -137,13 +137,14 @@ export default class MongoAdapter implements Adapter {
       throw new ContentNotFoundError();
     }
 
+    const contentId = `${index}_${version}`;
     const files = this.getFileUploadReqs(
       repoId,
-      index,
+      contentId,
       zip(filenames, fileIds),
     );
     return {
-      contentId: `${index}_${version}`,
+      contentId,
       files,
     };
   }
@@ -370,23 +371,23 @@ export default class MongoAdapter implements Adapter {
       throw new RepositoryNotFound(res.repoId);
     }
 
-    const index = res.index;
+    const contentId = `${res.index}_0`;
     const files = this.getFileUploadReqs(
       repoId,
-      index,
+      contentId,
       zip(filenames, fileIds),
     );
-    return new AppendResult(index.toString(), files);
+    return new AppendResult(contentId, files);
   }
 
   private getFileUploadReqs(
     repoId: string,
-    index: number,
+    contentId: string,
     files: [string, ObjectId][],
   ): UploadRequest[] {
     return files.map(([name, id]) => {
       const extendedId = encodeURIComponent(id + "_" + name);
-      const url = `./artifacts/${repoId}/${index}/${extendedId}/upload`;
+      const url = `./artifacts/${repoId}/${contentId}/${extendedId}/upload`;
       // TODO: add an authorization header
       const params = new UploadParams(url, "POST");
       return new UploadRequest(name, params);
