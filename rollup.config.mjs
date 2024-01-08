@@ -176,7 +176,7 @@ if (process.env.NODE_ENV === "test") {
     typescript(tsconfig),
     json(),
   ];
-  const configs = tsFiles
+  let configs = tsFiles
     .map((filename) => ({
       input: filename,
       external,
@@ -201,10 +201,16 @@ if (process.env.NODE_ENV === "test") {
     configs[0].plugins = configs[0].plugins.concat(copy({ targets }));
   }
 
+  if (process.env.TEST_TARGETS) {
+    const inputs = process.env.TEST_TARGETS.split(',');
+    configs = configs.filter(cfg => inputs.find(name => cfg.input.includes(name)));
+  }
+
   console.log(`About to build ${configs.length} files for testing:`);
   console.log(
     configs.map((cfg) => cfg.output.file).map((name) => "\t" + name).join("\n"),
   );
+
   buildRouters.push(...configs);
 }
 
