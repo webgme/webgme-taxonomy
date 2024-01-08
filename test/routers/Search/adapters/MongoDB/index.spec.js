@@ -50,8 +50,11 @@ describe("MongoDB", function () {
         displayName: `content_item`,
       });
       repoId = await storage.withRepoReservation(
-        async res => {
-          await storage.createArtifact(res, makeMetadata({displayName: 'repo'}));
+        async (res) => {
+          await storage.createArtifact(
+            res,
+            makeMetadata({ displayName: "repo" }),
+          );
           return res.repoId;
         },
       );
@@ -85,7 +88,7 @@ describe("MongoDB", function () {
     let storage, repoId, contentId, updatedId, updatedFiles;
 
     beforeEach(async () => {
-      const collection = '__testUpdateArtifact';
+      const collection = "__testUpdateArtifact";
       const hostUri = MongoDB.getHostUri(
         "mongodb://127.0.0.1:27017/",
         collection,
@@ -102,8 +105,11 @@ describe("MongoDB", function () {
         displayName: `content_item`,
       });
       repoId = await storage.withRepoReservation(
-        async res => {
-          await storage.createArtifact(res, makeMetadata({displayName: 'repo'}));
+        async (res) => {
+          await storage.createArtifact(
+            res,
+            makeMetadata({ displayName: "repo" }),
+          );
           return res.repoId;
         },
       );
@@ -125,7 +131,7 @@ describe("MongoDB", function () {
         repoId,
         contentId,
       );
-      console.log({updateResult})
+      console.log({ updateResult });
       updatedId = updateResult.contentId;
     });
 
@@ -135,16 +141,18 @@ describe("MongoDB", function () {
       const artifacts = await storage.listArtifacts(repoId);
       assert.equal(artifacts.length, 1);
 
-      console.log(artifacts)
+      console.log(artifacts);
       // Check that the artifact is the updated one
       assert.equal(artifacts[0].id, updatedId);
     });
 
     it("should update files", async function () {
-      // TODO: 
+      // TODO:
       const [data] = await storage.downloadFileURLs(repoId, [updatedId]);
       assert.equal(data.files.length, 2);
-      data.files.forEach((file, i) => assert(file.name.endsWith(updatedFiles[i])));
+      data.files.forEach((file, i) =>
+        assert(file.name.endsWith(updatedFiles[i]))
+      );
     });
   });
 

@@ -126,10 +126,10 @@ export default class MongoAdapter implements Adapter {
     const query: { [key: string]: any } = {
       _id: new ObjectId(res.repoId),
     };
-    query[artifactKey] = { '$exists': true };
+    query[artifactKey] = { "$exists": true };
     const pushData: any = {};
     pushData[artifactKey] = artifact;
-    const update = {$push: pushData};
+    const update = { $push: pushData };
 
     const result = await this._collection.updateOne(query, update);
 
@@ -137,11 +137,15 @@ export default class MongoAdapter implements Adapter {
       throw new ContentNotFoundError();
     }
 
-    const files = this.getFileUploadReqs(repoId, index, zip(filenames, fileIds));
+    const files = this.getFileUploadReqs(
+      repoId,
+      index,
+      zip(filenames, fileIds),
+    );
     return {
       contentId: `${index}_${version}`,
-      files
-    }
+      files,
+    };
   }
 
   async withUpdateReservation<T>(
@@ -149,18 +153,25 @@ export default class MongoAdapter implements Adapter {
     repoId: string,
     contentId: string,
   ): Promise<T> {
-    const [index, /*version*/] = this.parseContentId(contentId);
+    const [index /*version*/] = this.parseContentId(contentId);
     const lockId = repoId + "/" + index;
     return await this._contentLocks.run(lockId, async () => {
+      const versions = fromResult(
+        (await this.getRepository(repoId))
+          .okOrElse(() => new RepositoryNotFound(repoId))
+          .andThen((repo) =>
+            Option.from(repo.artifacts[index])
+              .okOrElse(() => new ContentNotFoundError())
+          ),
+      );
 
-    const versions = fromResult((await this.getRepository(repoId))
-      .okOrElse(() => new RepositoryNotFound(repoId))
-      .andThen(repo => Option.from(repo.artifacts[index])
-        .okOrElse(() => new ContentNotFoundError())
-      ));
-
-    const nextVersion = versions.length;
-    const reservation = new ContentUpdateReservation(this._hostUri, repoId, index, nextVersion);
+      const nextVersion = versions.length;
+      const reservation = new ContentUpdateReservation(
+        this._hostUri,
+        repoId,
+        index,
+        nextVersion,
+      );
 
       try {
         const result = await fn(reservation);
@@ -171,7 +182,6 @@ export default class MongoAdapter implements Adapter {
         // TODO: disable the reservation
         // TODO: probably should make it a generic
       }
-
     });
   }
 
@@ -225,17 +235,20 @@ export default class MongoAdapter implements Adapter {
     const artifacts: Artifact[] = (await this.getRepository(repoId))
       .map((repo) =>
         filterMapOpt(
-            zip(repo.artifacts, range(0, repo.artifacts.length)),
-            (versionTuple: [ArtifactDoc[], number]) => {
-            const [versions, index] = versionTuple ;
-            const validIndex = findIndex(versions.reverse(), v => !v.disabled);
-            console.log('versions');
+          zip(repo.artifacts, range(0, repo.artifacts.length)),
+          (versionTuple: [ArtifactDoc[], number]) => {
+            const [versions, index] = versionTuple;
+            const validIndex = findIndex(
+              versions.reverse(),
+              (v) => !v.disabled,
+            );
+            console.log("versions");
             console.log(versions);
-            return validIndex.map(inverseIdx => {
+            return validIndex.map((inverseIdx) => {
               const lastIndex = versions.length - 1;
               const versionIndex = lastIndex - inverseIdx;
               const latestValid = versions[versionIndex];
-                
+
               return ({
                 parentId: repoId,
                 id: `${index}_${versionIndex}`,
@@ -244,9 +257,9 @@ export default class MongoAdapter implements Adapter {
                 taxonomyVersion: latestValid.taxonomyVersion,
                 time: latestValid.time,
               });
-              }
-              );
-          })
+            });
+          },
+        )
       ).unwrapOr([]); // TODO: convert to an error instead?
 
     return artifacts;

@@ -379,7 +379,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
           );
         },
         repoId,
-        id
+        id,
       );
 
       updateResult.files.forEach((file) => {
@@ -394,7 +394,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
 
       res.json(updateResult);
     },
-    {method: 'post'}
+    { method: "post" },
   );
 
   RouterUtils.addContentTypeRoute(
@@ -412,7 +412,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
       await storage.disableArtifact(parentId, id);
       res.sendStatus(200);
     },
-    {method: 'delete'}
+    { method: "delete" },
   );
 
   RouterUtils.addContentTypeRoute(

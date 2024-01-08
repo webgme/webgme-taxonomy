@@ -146,12 +146,17 @@ class Storage {
     );
   }
 
-  async updateArtifact(repoId: string, contentId: string, metadata, files: File[]) {
+  async updateArtifact(
+    repoId: string,
+    contentId: string,
+    metadata,
+    files: File[],
+  ) {
     const url = this.baseUrl + encodeURIComponent(repoId) +
-      '/' + encodeURIComponent(contentId);
+      "/" + encodeURIComponent(contentId);
     const result = await this._fetchJson(
       url,
-      {method: 'post'},
+      { method: "post" },
       UpdateError,
     );
     return result.unwrap();
@@ -160,10 +165,10 @@ class Storage {
   async disableArtifact(repoId, contentId) {
     console.log("Disable artifact:", repoId, contentId);
     const url = this.baseUrl + encodeURIComponent(repoId) +
-      '/' + encodeURIComponent(contentId);
+      "/" + encodeURIComponent(contentId);
     const result = await this._fetchJson(
       url,
-      {method: 'delete'},
+      { method: "delete" },
       DeleteError,
     );
     return result.unwrap();
