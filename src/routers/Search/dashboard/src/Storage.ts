@@ -114,9 +114,9 @@ class Storage {
     }) as UploadPromise;
   }
 
-  async appendArtifact(artifactSet, metadata, files: File[]) {
+  async appendArtifact(repo: PopulatedRepo, metadata, files: File[]) {
     console.log({ action: "append", metadata, files });
-    const url = this.baseUrl + artifactSet.id + "/append";
+    const url = this.baseUrl + repo.id + "/append";
     const filenames = files.map((file: File) => file.name);
 
     const opts = {
@@ -162,11 +162,11 @@ class Storage {
     return result.unwrap();
   }
 
-  async disableArtifact(repoId, contentId) {
+  async disableArtifact(repoId: string, contentId: string) {
     console.log("Disable artifact:", repoId, contentId);
     const url = this.baseUrl + encodeURIComponent(repoId) +
       "/" + encodeURIComponent(contentId);
-    const result = await this._fetchJson(
+    const result = await this._fetch(
       url,
       { method: "delete" },
       DeleteError,

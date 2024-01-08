@@ -419,7 +419,7 @@
 {#if configuration && configuration.content.content}
   <AppendArtifactDialog
     contentType={configuration.content.content}
-    bind:set={appendItem}
+    bind:repo={appendItem}
     on:upload={() =>
       (appendMsgId = displayProgressMessage("Upload in progress"))}
     on:complete={onAppendFinish}
@@ -491,6 +491,7 @@
           on:download={(event) => onDownload(event.detail)}
           on:upload={(event) => (appendItem = event.detail.artifactSet)}
           on:copyUri={(event) => displayMessage("Copied URI: " + event.detail.name)}
+          on:repoChange={(event) => loadContents(event.detail.repo)}
         />
       {/if}
     </AppContent>

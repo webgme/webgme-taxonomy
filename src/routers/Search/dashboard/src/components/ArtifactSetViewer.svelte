@@ -16,6 +16,7 @@
   } from "@smui/list";
   import Checkbox from "@smui/checkbox";
   import DisplayTagsDialog from "./DisplayTagsDialog.svelte";
+  import type { PopulatedRepo } from "../Storage";
 
   export let artifactSet;
   export let contentType = {name: "artifact"};
@@ -64,15 +65,21 @@
     }
   }
 
-  async function onDeleteArtifact(artifact) {
+  async function onDeleteArtifact(artifact: PopulatedRepo) {
     console.log('deleting', artifact);
     await storage.disableArtifact(artifactSet.id, artifact.id);
+    // Emit an event
+    dispatch("repoChange", {
+      repo: artifactSet,
+    });
   }
 
   async function onUpdateArtifact(artifact) {
-    // TODO: emit an event???
     console.log('update', artifact);
-    //await storage.disableArtifact(artifact.parentId, artifact.id);
+    dispatch("updateArtifact", {
+      repo: artifactSet,
+      artifact: artifact,
+    });
   }
 
   async function onSelectContent() {
@@ -198,19 +205,26 @@
                 on:click$stopPropagation={() => showTags(artifact)}
                 class="material-icons"
                 size="mini"
+                title="View metadata"
               >info</IconButton>
               <IconButton
                 on:click$stopPropagation={() => onCopyLink(artifact)}
                 class="material-icons"
                 size="mini"
+                title="Copy URI"
               >link</IconButton>
-              <!-- TODO: add delete button -->
               <IconButton
                 on:click$stopPropagation={() => onDeleteArtifact(artifact)}
                 class="material-icons"
                 size="mini"
-              >link</IconButton>
-              <!-- TODO: add update button -->
+                title="Delete"
+              >delete</IconButton>
+              <IconButton
+                on:click$stopPropagation={() => onUpdateArtifact(artifact)}
+                class="material-icons"
+                size="mini"
+                title="Edit"
+              >edit</IconButton>
             </Meta>
           </Item>
         {/each}
