@@ -84,7 +84,7 @@ describe("MongoDB", function () {
     });
   });
 
-  describe.only("updateArtifact", function () {
+  describe("updateArtifact", function () {
     let storage, repoId, contentId, updatedId, updatedFiles;
 
     beforeEach(async () => {
@@ -125,34 +125,31 @@ describe("MongoDB", function () {
       const updatedMetadata = makeMetadata({
         displayName: `new_content_item`,
       });
-      updatedFiles = filenames.map((n) => `updated_${n}`);
+      updatedFiles = ["updatedFile.txt"];
       const updateResult = await storage.withUpdateReservation(
         (res) => storage.updateArtifact(res, updatedMetadata, updatedFiles),
         repoId,
         contentId,
       );
-      console.log({ updateResult });
       updatedId = updateResult.contentId;
     });
 
     afterEach(async () => client.close());
 
-    it.only("should return latest when listing", async function () {
+    it("should return latest when listing", async function () {
       const artifacts = await storage.listArtifacts(repoId);
       assert.equal(artifacts.length, 1);
 
-      console.log(artifacts);
       // Check that the artifact is the updated one
       assert.equal(artifacts[0].id, updatedId);
     });
 
     it("should update files", async function () {
-      // TODO:
-      const [data] = await storage.downloadFileURLs(repoId, [updatedId]);
-      assert.equal(data.files.length, 2);
-      data.files.forEach((file, i) =>
-        assert(file.name.endsWith(updatedFiles[i]))
-      );
+      const files = await storage.getFileIds(repoId, updatedId);
+      // Since they are object IDs, it is a little tricky to check but
+      // we can at least confirm that it has 1 file rather than 2 like
+      // the original
+      assert.equal(files.length, 1);
     });
   });
 

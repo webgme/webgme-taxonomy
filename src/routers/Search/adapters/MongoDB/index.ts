@@ -396,8 +396,8 @@ export default class MongoAdapter implements Adapter {
   }
 
   async uploadFile(
-    repoId: string,
-    index: unknown,
+    _repoId: string,
+    _id: string,
     extendedId: string,
     fileStream: stream.Readable,
   ) {
@@ -417,20 +417,23 @@ export default class MongoAdapter implements Adapter {
       .map(toArtifactMetadatav2);
   }
 
-  async getFileStreams(
-    repoId: string,
-    id: string,
-  ): Promise<FileStreamDict> {
+  private async getFileIds(repoId: string, id: string): Promise<ObjectId[]> {
     const artifactDoc = fromResult((await this.getArtifactDoc(repoId, id))
       .okOrElse(() => new ContentNotFoundError()));
 
     if (artifactDoc.disabled) {
       throw new DeletedContentError();
     }
-    const fileIds = artifactDoc.files.map((fileIdStr: string) =>
+    return artifactDoc.files.map((fileIdStr: string) =>
       new ObjectId(fileIdStr)
     );
+  }
 
+  async getFileStreams(
+    repoId: string,
+    id: string,
+  ): Promise<FileStreamDict> {
+    const fileIds = await this.getFileIds(repoId, id);
     const metadataPromise = fileIds
       .map((id) => this._files.find({ _id: id }).next());
 

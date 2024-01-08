@@ -264,16 +264,16 @@ function initialize(middlewareOpts: MiddlewareOptions) {
   RouterUtils.addContentTypeRoute(
     middlewareOpts,
     router,
-    "artifacts/:parentId/:index/:fileId/upload",
+    "artifacts/:repoId/:id/:fileId/upload",
     async function uploadFile(webgmeContext, req, res) {
-      const { parentId, index, fileId } = req.params;
+      const { repoId, id, fileId } = req.params;
       const storage = await StorageAdapter.from(
         webgmeContext,
         req,
         mainConfig,
       );
       if (storage.uploadFile) {
-        const status = await storage.uploadFile(parentId, index, fileId, req);
+        const status = await storage.uploadFile(repoId, id, fileId, req);
         res.json(status);
       } else {
         res.sendStatus(400);
