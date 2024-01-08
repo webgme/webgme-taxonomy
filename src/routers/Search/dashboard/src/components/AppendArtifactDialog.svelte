@@ -39,15 +39,21 @@
   let uploading: Promise<UploadPromise[]> | null = null;
   let selectTagDisabled = false;
   let isReference = false;
+  let newName = '';
+  let title = '';
 
   $: isReference = !!metadata?.tags?.Base?.Location;
-  $: repoName = repo?.displayName ?? "";
   $: setOpen(repo != null);
   $: progresses = uploading ? Array(files.length).fill(0) : [];
   $: selectTagDisabled = !!uploading;
 
-  $: title = isContentUpdate() ? `Update ${content.displayName}`: `Append data to ${repoName}`;
-  $: newName = content ? content.displayName : repoName;
+  $: setContext(repo, content);
+
+  function setContext(repo: PopulatedRepo, content: Artifact | null) {
+    const repoName = repo?.displayName ?? "";
+    newName = content?.displayName ?? repoName;
+    title = isContentUpdate() ? `Update ${content.displayName}`: `Append data to ${repoName}`;
+  }
 
   function isContentUpdate(): boolean {
     return !!content;

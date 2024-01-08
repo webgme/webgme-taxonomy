@@ -75,8 +75,7 @@
   }
 
   async function onUpdateArtifact(artifact) {
-    console.log('update', artifact);
-    dispatch("updateArtifact", {
+    dispatch("upload", {
       repo: artifactSet,
       artifact: artifact,
     });
@@ -101,7 +100,8 @@
 
   async function onUploadClicked() {
     dispatch("upload", {
-      artifactSet: artifactSet,
+      repo: artifactSet,
+      artifact: null,
     });
   }
 

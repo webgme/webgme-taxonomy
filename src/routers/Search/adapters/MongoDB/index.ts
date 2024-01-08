@@ -239,11 +239,9 @@ export default class MongoAdapter implements Adapter {
           (versionTuple: [ArtifactDoc[], number]) => {
             const [versions, index] = versionTuple;
             const validIndex = findIndex(
-              versions.reverse(),
+              versions.slice().reverse(),
               (v) => !v.disabled,
             );
-            console.log("versions");
-            console.log(versions);
             return validIndex.map((inverseIdx) => {
               const lastIndex = versions.length - 1;
               const versionIndex = lastIndex - inverseIdx;

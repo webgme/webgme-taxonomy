@@ -154,12 +154,32 @@ class Storage {
   ) {
     const url = this.baseUrl + encodeURIComponent(repoId) +
       "/" + encodeURIComponent(contentId);
-    const result = await this._fetchJson(
-      url,
-      { method: "post" },
-      UpdateError,
+    const filenames = files.map((file: File) => file.name);
+
+    const opts = {
+      method: "post",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        metadata,
+        filenames,
+      }),
+    };
+
+    const updateResult = await (await this._fetchJson(url, opts, UpdateError))
+      .unwrap() as { files: any[] };
+
+    return updateResult.files.map(
+      ({ name, params }: { name: string; params: UploadParams }) => {
+        const targetFile = files.find((a) => a.name == name);
+        assert(
+          !!targetFile,
+          new AppendDataError("Could not find upload info for " + name),
+        );
+        return this._uploadFile(params, targetFile);
+      },
     );
-    return result.unwrap();
   }
 
   async disableArtifact(repoId: string, contentId: string) {

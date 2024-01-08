@@ -331,7 +331,13 @@
 
   ////// Item actions //////
   let appendItem;
+  let updateTarget: Artifact | null = null;
   let appendMsgId;
+
+  async function onUpdateContent(repo: PopulatedRepo, content: Artifact) {
+    appendItem = repo;
+    updateTarget = content;
+  }
 
   function onAppendFinish(event: CustomEvent<{ error?: string }>) {
     const error = event.detail?.error;
@@ -420,6 +426,7 @@
   <AppendArtifactDialog
     contentType={configuration.content.content}
     bind:repo={appendItem}
+    bind:content={updateTarget}
     on:upload={() =>
       (appendMsgId = displayProgressMessage("Upload in progress"))}
     on:complete={onAppendFinish}
@@ -489,7 +496,11 @@
           bind:artifactSet={selectedArtifactSet}
           bind:contentType
           on:download={(event) => onDownload(event.detail)}
-          on:upload={(event) => (appendItem = event.detail.artifactSet)}
+          on:upload={(event) => {
+            const {repo, artifact} = event.detail;
+            updateTarget = artifact;
+            appendItem = repo;
+          }}
           on:copyUri={(event) => displayMessage("Copied URI: " + event.detail.name)}
           on:repoChange={(event) => loadContents(event.detail.repo)}
         />
