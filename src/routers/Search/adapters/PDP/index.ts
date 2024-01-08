@@ -53,13 +53,7 @@ import type {
   UpdateResult,
   UploadReservation,
 } from "../common/types";
-import {
-  fromResult,
-  intervals,
-  Pattern,
-  range,
-  sleep,
-} from "../../Utils";
+import { fromResult, intervals, Pattern, range, sleep } from "../../Utils";
 import { filterMapOpt } from "../../../../common/Utils";
 import {
   AppendResult,

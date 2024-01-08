@@ -447,18 +447,18 @@ export class InMemoryPdp implements PdpProvider {
     const fileData = this.getObservationData(id, index)
       .map((obsDatum) => obsDatum.fileData);
 
-    const transferFiles = fileData.map(fd => fd.files).unwrapOr([]);
-    console.log({fileData});
+    const transferFiles = fileData.map((fd) => fd.files).unwrapOr([]);
+    console.log({ fileData });
 
     if (transferFiles.length) {
-        const transferId = fileData
-          .map(fd => fd.transferId)
-          .unwrapOrElse(() => this.newTransferId());
+      const transferId = fileData
+        .map((fd) => fd.transferId)
+        .unwrapOrElse(() => this.newTransferId());
 
-        this.startTransfer(
-          transferFiles.map((fdata) => fdata.name),
-          transferId
-        );
+      this.startTransfer(
+        transferFiles.map((fdata) => fdata.name),
+        transferId,
+      );
     }
 
     return fileData;
@@ -650,11 +650,13 @@ export class InMemoryPdp implements PdpProvider {
   }
 
   private newTransferId(): string {
-        return `transfer_${Date.now()}_${this.data.counter++}`;
-    
+    return `transfer_${Date.now()}_${this.data.counter++}`;
   }
 
-  private startTransfer( filenames: string[], transferId: string = this.newTransferId()) {
+  private startTransfer(
+    filenames: string[],
+    transferId: string = this.newTransferId(),
+  ) {
     const start = new Date().toString();
     this.data.transfers[transferId] = {
       operation: "upload",
