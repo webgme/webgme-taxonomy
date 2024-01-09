@@ -12,18 +12,19 @@
     PrimaryText,
     SecondaryText,
     Meta,
-    Graphic,
   } from "@smui/list";
   import Checkbox from "@smui/checkbox";
   import DisplayTagsDialog from "./DisplayTagsDialog.svelte";
   import type { PopulatedRepo } from "../Storage";
+  import type { Artifact } from "../../../adapters/common/types";
 
-  export let artifactSet;
+  export let artifactSet: PopulatedRepo;
   export let contentType = {name: "artifact"};
   let numArtifacts = 10;
   let shownArtifacts = [];
   let selected = [];
   let menu: Menu;
+  let contentMenu: Menu;
   const formatter = new TagFormatter();
   const storage: Storage = getContext("storage");
   const dispatch = createEventDispatcher();
@@ -38,7 +39,7 @@
   let displayedTags = null;
   let displayedName = null;
   let displayTags = false;
-  async function showTags(artifact) {
+  async function showTags(artifact: Artifact) {
     displayedTags = await formatter.toHumanFormat(artifact.tags);
     displayedName = artifact.displayName;
     displayTags = true;
@@ -66,11 +67,12 @@
   }
 
   async function onDeleteArtifact(artifact: PopulatedRepo) {
+    // TODO: confirm
     console.log('deleting', artifact);
-    await storage.disableArtifact(artifactSet.id, artifact.id);
     // Emit an event
-    dispatch("repoChange", {
+    dispatch("delete", {
       repo: artifactSet,
+      artifact: artifact,
     });
   }
 
@@ -147,6 +149,7 @@
   <!-- TODO: upload times -->
   <!-- Artifact list -->
   <Card>
+  <div style="z-index:1; overflow: visible">
     <Content>
       <h2 class="mdc-typography--headline6" style="margin: 0;">
         {capitalize(contentType.name)}s in {artifactSet.displayName}
@@ -163,25 +166,25 @@
           on:click={() => menu.setOpen(true)}
           title="Options">more_vert
         </IconButton>
-        <Menu bind:this={menu} anchorCorner="BOTTOM_RIGHT">
-          <List>
-            <Item
-              on:SMUI:action={() =>
-                (numArtifacts = Math.min(
-                  artifactSet.children.length,
-                  numArtifacts + 10
-                ))}
-            >
-              <Text>Show more...</Text>
-            </Item>
-            <Item
-              on:SMUI:action={() =>
-                (numArtifacts = artifactSet.children.length)}
-            >
-              <Text>Show all...</Text>
-            </Item>
-          </List>
-        </Menu>
+          <Menu bind:this={menu} anchorCorner="BOTTOM_RIGHT">
+            <List>
+              <Item
+                on:SMUI:action={() =>
+                  (numArtifacts = Math.min(
+                    artifactSet.children.length,
+                    numArtifacts + 10
+                  ))}
+              >
+                <Text>Show more...</Text>
+              </Item>
+              <Item
+                on:SMUI:action={() =>
+                  (numArtifacts = artifactSet.children.length)}
+              >
+                <Text>Show all...</Text>
+              </Item>
+            </List>
+          </Menu>
       </h4>
       <!-- add show more button, select all -->
       <List checkList twoLine>
@@ -202,34 +205,47 @@
             </Text>
             <Meta>
               <IconButton
-                on:click$stopPropagation={() => showTags(artifact)}
-                class="material-icons"
-                size="mini"
-                title="View metadata"
-              >info</IconButton>
-              <IconButton
                 on:click$stopPropagation={() => onCopyLink(artifact)}
                 class="material-icons"
                 size="mini"
                 title="Copy URI"
               >link</IconButton>
               <IconButton
-                on:click$stopPropagation={() => onDeleteArtifact(artifact)}
                 class="material-icons"
-                size="mini"
-                title="Delete"
-              >delete</IconButton>
-              <IconButton
-                on:click$stopPropagation={() => onUpdateArtifact(artifact)}
-                class="material-icons"
-                size="mini"
-                title="Edit"
-              >edit</IconButton>
+                style="vertical-align: middle; margin: 0; padding: 0;"
+                on:click={() => contentMenu.setOpen(true)}
+                title="Options">more_vert
+              </IconButton>
+              <Menu bind:this={contentMenu} anchorCorner="BOTTOM_RIGHT">
+                <List>
+                  <Item
+                    on:SMUI:action={() => showTags(artifact)
+}
+                  >
+                    <Text>View metadata...</Text>
+                  </Item>
+                  <Item
+                    on:SMUI:action={() => onUpdateArtifact(artifact)
+      }
+                  >
+                    <Text>Edit...</Text>
+                  </Item>
+                  <Item
+                    on:SMUI:action={() => 
+          onDeleteArtifact(artifact)
+
+}
+                  >
+                    <Text>Delete</Text>
+                  </Item>
+                </List>
+              </Menu>
             </Meta>
           </Item>
         {/each}
       </List>
     </Content>
+  </div>
     <Actions>
       <Button on:click={onUploadClicked}>
         <Label>Upload</Label>

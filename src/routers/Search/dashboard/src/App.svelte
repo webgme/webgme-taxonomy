@@ -2,6 +2,7 @@
   import { setContext } from "svelte";
   import { FilterTag, LeanTag, fromDict } from "./tags";
   import { filterMap } from "./Utils";
+  import type {ConfirmData} from './ConfirmData';
   import {
     openUrl,
     encodeQueryParams,
@@ -24,14 +25,16 @@
     ArtifactSetViewer,
     TaxonomyFilter,
     CreateRepoDialog,
+    Confirm,
    } from "./components";
 
   import TaxonomyData from "./TaxonomyData";
   import TaxonomyReference from "../../../../common/TaxonomyReference";
   import Storage, { LoadState, ModelError, RequestError, ModelContext } from "./Storage";
-  import type { PopulatedRepo } from "./Storage";
+  import type { Artifact, PopulatedRepo } from "./Storage";
   import type ContentType from "./ContentType";
 
+  let confirmData: ConfirmData | null = null;
   let title: string;
   let contentType: ContentType = {
     name: "Data",
@@ -440,6 +443,18 @@
   bind:contentType
   on:create={onTryCreateRepo}
 />
+
+<Confirm
+  open={confirmData !== null}
+  title={confirmData?.title}
+  prompt={confirmData?.prompt}
+  on:confirm={() => {
+    console.log('confirmed!');
+    confirmData.action();
+    confirmData = null;
+  }}
+/>
+
 <!-- Main app -->
 <main id="app">
   <AppHeader
@@ -500,6 +515,13 @@
             const {repo, artifact} = event.detail;
             updateTarget = artifact;
             appendItem = repo;
+          }}
+          on:upload={(event) => {
+              const {repo, artifact} = event.detail;
+              confirmData = {
+                prompt: `Are you sure you want to delete ${artifact.displayName}`,
+                action: () => storage.disableArtifact(repo.id, artifact.id),
+              };
           }}
           on:copyUri={(event) => displayMessage("Copied URI: " + event.detail.name)}
           on:repoChange={(event) => loadContents(event.detail.repo)}

@@ -21,7 +21,6 @@
   export let open = true;
 
   // FIXME: check that it shows correct tags when item is changed
-
   function close() {
     open = false;
   }
@@ -46,7 +45,7 @@
     <Button on:click={close}>
       <Label>Close</Label>
     </Button>
-    <Button on:click={downloadJSON(`${displayName}_metadata`, taxonomyTags)}>
+    <Button on:click={() => downloadJSON(`${displayName}_metadata`, taxonomyTags)}>
       <Label>Download</Label>
     </Button>
   </div>

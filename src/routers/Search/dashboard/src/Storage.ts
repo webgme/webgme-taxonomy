@@ -3,6 +3,7 @@ import TaxonomyReference, {
 } from "../../../../common/TaxonomyReference";
 import { assert, Result, sleep } from "./Utils";
 import { Readable, writable } from "svelte/store";
+//import type { Artifact } from "../../adapters/common/types";
 
 type UploadParams = {
   method: string;

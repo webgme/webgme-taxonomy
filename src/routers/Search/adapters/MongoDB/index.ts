@@ -319,7 +319,19 @@ export default class MongoAdapter implements Adapter {
       await this._collection.findOne({
         _id: new ObjectId(repoId),
       }),
-    ) as Option<RepositoryDoc>;
+    )
+      .map((doc) => { // update to versioned data structure
+        doc.artifacts = doc.artifacts.map(
+          (versions: ArtifactDoc | ArtifactDoc[]) => {
+            if (!Array.isArray(versions)) {
+              versions = [versions];
+            }
+            return versions;
+          },
+        );
+
+        return doc;
+      }) as Option<RepositoryDoc>;
   }
 
   private parseContentId(id: string): [number, number] {
