@@ -24,9 +24,7 @@
   let shownArtifacts = [];
   let selected = [];
   let menu: Menu;
-  let contentMenu: Menu;
   const formatter = new TagFormatter();
-  const storage: Storage = getContext("storage");
   const dispatch = createEventDispatcher();
 
   async function onDownloadClicked() {
@@ -76,7 +74,7 @@
     });
   }
 
-  async function onUpdateArtifact(artifact) {
+  async function onUpdateArtifact(artifact: Artifact) {
     dispatch("upload", {
       repo: artifactSet,
       artifact: artifact,
