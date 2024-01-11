@@ -449,7 +449,6 @@
   title={confirmData?.title}
   prompt={confirmData?.prompt}
   on:confirm={() => {
-    console.log('confirmed!');
     confirmData.action();
     confirmData = null;
   }}
@@ -532,7 +531,6 @@
                   const failures = results.filter(res => res.status !== 'fulfilled');
                   filterMap(results, (res, i) => {
                     if (res.status !== 'fulfilled') {
-                      console.log({res})
                       return contents[i];
                     }
                   });
@@ -542,7 +540,6 @@
                     console.error(error);
                     displayError(error);
                   }
-                  console.log({failures});
                   loadContents(repo);
                 }
               };
