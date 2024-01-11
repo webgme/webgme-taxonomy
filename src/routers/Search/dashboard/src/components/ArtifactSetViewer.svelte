@@ -66,13 +66,13 @@
     }
   }
 
-  async function onDeleteArtifact(artifact: PopulatedRepo) {
-    // TODO: confirm
-    console.log('deleting', artifact);
-    // Emit an event
+  async function onDeleteArtifact(...contentIds: string[]) {
+    const contents = contentIds
+      .map(id => artifactSet.children.find(content => content.id === id));
+
     dispatch("delete", {
       repo: artifactSet,
-      artifact: artifact,
+      contents,
     });
   }
 
@@ -149,7 +149,6 @@
   <!-- TODO: upload times -->
   <!-- Artifact list -->
   <Card>
-  <div style="z-index:1; overflow: visible">
     <Content>
       <h2 class="mdc-typography--headline6" style="margin: 0;">
         {capitalize(contentType.name)}s in {artifactSet.displayName}
@@ -205,53 +204,37 @@
             </Text>
             <Meta>
               <IconButton
+                on:click$stopPropagation={() => showTags(artifact)}
+                class="material-icons"
+                size="mini"
+                title="View Metadata"
+              >link</IconButton>
+              <IconButton
                 on:click$stopPropagation={() => onCopyLink(artifact)}
                 class="material-icons"
                 size="mini"
                 title="Copy URI"
               >link</IconButton>
               <IconButton
+                on:click$stopPropagation={() => onUpdateArtifact(artifact)}
                 class="material-icons"
-                style="vertical-align: middle; margin: 0; padding: 0;"
-                on:click={() => contentMenu.setOpen(true)}
-                title="Options">more_vert
-              </IconButton>
-              <Menu bind:this={contentMenu} anchorCorner="BOTTOM_RIGHT">
-                <List>
-                  <Item
-                    on:SMUI:action={() => showTags(artifact)
-}
-                  >
-                    <Text>View metadata...</Text>
-                  </Item>
-                  <Item
-                    on:SMUI:action={() => onUpdateArtifact(artifact)
-      }
-                  >
-                    <Text>Edit...</Text>
-                  </Item>
-                  <Item
-                    on:SMUI:action={() => 
-          onDeleteArtifact(artifact)
-
-}
-                  >
-                    <Text>Delete</Text>
-                  </Item>
-                </List>
-              </Menu>
+                size="mini"
+                title="Edit"
+              >link</IconButton>
             </Meta>
           </Item>
         {/each}
       </List>
     </Content>
-  </div>
     <Actions>
       <Button on:click={onUploadClicked}>
         <Label>Upload</Label>
       </Button>
       <Button on:click={onDownloadClicked} disabled={selected.length == 0}>
         <Label>Download</Label>
+      </Button>
+      <Button on:click={() => onDeleteArtifact(...selected)} disabled={selected.length == 0}>
+        <Label>Delete</Label>
       </Button>
       {#if window.self !== window.top }
       <Button on:click={() => onSelectContent()} disabled={selected.length != 1}>

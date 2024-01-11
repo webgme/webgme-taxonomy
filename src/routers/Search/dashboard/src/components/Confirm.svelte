@@ -35,11 +35,11 @@
     {prompt}
   </Content>
   <div class="confirm-dialog-actions">
-    <Button on:click={close}>
-      <Label>No</Label>
-    </Button>
     <Button on:click={() => onConfirm()}>
       <Label>Yes</Label>
+    </Button>
+    <Button on:click={close}>
+      <Label>No</Label>
     </Button>
   </div>
 </Dialog>

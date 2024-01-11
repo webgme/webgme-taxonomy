@@ -516,11 +516,35 @@
             updateTarget = artifact;
             appendItem = repo;
           }}
-          on:upload={(event) => {
-              const {repo, artifact} = event.detail;
+          on:delete={(event) => {
+              const {repo, contents} = event.detail;
+              const prompt = contents.length === 1 ?
+                `Are you sure you want to delete ${contents[0].displayName}?` :
+                `Are you sure you want to delete the ${contents.length} items?`;
+
               confirmData = {
-                prompt: `Are you sure you want to delete ${artifact.displayName}`,
-                action: () => storage.disableArtifact(repo.id, artifact.id),
+                title: 'Delete Content?',
+                prompt,
+                action: async () => {
+                  const results = await Promise.allSettled(
+                    contents.map(content => storage.disableArtifact(repo.id, content.id))
+                  );
+                  const failures = results.filter(res => res.status !== 'fulfilled');
+                  filterMap(results, (res, i) => {
+                    if (res.status !== 'fulfilled') {
+                      console.log({res})
+                      return contents[i];
+                    }
+                  });
+                  if (failures.length > 0) {
+                    const msg = failures.map(f => f.reason).join('\n');
+                    const error = new Error(msg);
+                    console.error(error);
+                    displayError(error);
+                  }
+                  console.log({failures});
+                  loadContents(repo);
+                }
               };
           }}
           on:copyUri={(event) => displayMessage("Copied URI: " + event.detail.name)}
