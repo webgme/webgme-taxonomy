@@ -448,7 +448,6 @@ export class InMemoryPdp implements PdpProvider {
       .map((obsDatum) => obsDatum.fileData);
 
     const transferFiles = fileData.map((fd) => fd.files).unwrapOr([]);
-    console.log({ fileData });
 
     if (transferFiles.length) {
       const transferId = fileData
@@ -495,7 +494,6 @@ export class InMemoryPdp implements PdpProvider {
       .map((data) => { // add the observation
         const transferId = this.newTransferId();
         const obsDatum = this.newObsData(processId, observation, transferId);
-        console.log("append", observation);
         data.observations.push([obsDatum]);
         data.state.numObservations = data.observations.length;
         const response: AppendObservationResponse = Object.assign(
@@ -515,8 +513,6 @@ export class InMemoryPdp implements PdpProvider {
           obsDatum.fileData.files.map((fdata) => fdata.name),
           transferId,
         );
-        // TODO: add dataFiles
-        console.log(JSON.stringify(response));
 
         return response;
       });
@@ -538,7 +534,6 @@ export class InMemoryPdp implements PdpProvider {
         }
 
         observation.version = versions.length;
-        console.log("update", observation);
 
         const transferId = this.newTransferId();
         const obsDatum = this.newObsData(processId, observation, transferId);
