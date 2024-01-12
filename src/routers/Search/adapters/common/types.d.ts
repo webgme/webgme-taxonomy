@@ -1,4 +1,4 @@
-import type { AppendResult } from "./AppendResult";
+import type { AppendResult, UploadRequest } from "./AppendResult";
 import type TagFormatter from "../../../../common/TagFormatter";
 import type { Request } from "express";
 import type {
@@ -6,6 +6,12 @@ import type {
   GmeContentContext,
 } from "../../../../common/types";
 import type { Option } from "oxide.ts";
+
+type DisableResult = void;
+interface UpdateResult {
+  contentId: string;
+  files: UploadRequest[];
+}
 
 export interface Adapter {
   listRepos(): Promise<Repository[]>;
@@ -20,6 +26,21 @@ export interface Adapter {
     metadata: ArtifactMetadata,
     filenames: string[],
   ): Promise<AppendResult>;
+  /**
+   * Push an updated version of the content.
+   */
+  updateArtifact(
+    res: UpdateReservation,
+    metadata: ArtifactMetadata,
+    filenames: string[],
+  ): Promise<UpdateResult>;
+
+  /**
+   * Disable the content. Metadata will still be available when requested explicitly
+   * but content is inaccessible.
+   */
+  disableArtifact(repoId: string, contentId: string): Promise<DisableResult>;
+
   // returns fileUploadInfo
   getFileStreams(
     repoId: string,
@@ -58,11 +79,22 @@ export interface Adapter {
     fn: (res: UploadReservation) => Promise<T>,
     repoId: string,
   ): Promise<T>;
+  withUpdateReservation<T>(
+    fn: (res: UpdateReservation) => Promise<T>,
+    repoId: string,
+    contentId: string,
+  ): Promise<T>;
 }
 
 export interface UploadReservation {
   repoId?: string;
   uri: string | undefined;
+}
+
+export interface UpdateReservation {
+  repoId: string;
+  contentId: string;
+  uri: string;
 }
 
 export interface AdapterStatic<A extends Adapter> {
@@ -88,6 +120,7 @@ export interface Artifact {
   taxonomyVersion: TaxonomyVersion;
   time: string;
   files?: string[];
+  disabled?: DisabledInfo;
 }
 
 // Tags are stored in a tag dictionary like below (example is human-readable):
@@ -117,11 +150,17 @@ export interface Metadata {
 
 export type ArtifactMetadata = ArtifactMetadatav1 | ArtifactMetadatav2;
 
+export interface DisabledInfo {
+  time: string;
+  userId?: string;
+}
+
 export interface ArtifactMetadatav2 {
   displayName: string;
   tags: any;
   taxonomyVersion: TaxonomyVersion;
   time: string;
+  disabled?: DisabledInfo;
 }
 
 export interface ArtifactMetadatav1 {
@@ -129,6 +168,7 @@ export interface ArtifactMetadatav1 {
   taxonomyTags: any[];
   taxonomyVersion: TaxonomyVersion;
   time: string;
+  disabled?: DisabledInfo;
 }
 
 export type TaxonomyVersion = TaxonomyRelease | TaxonomyBranch | TaxonomyCommit;

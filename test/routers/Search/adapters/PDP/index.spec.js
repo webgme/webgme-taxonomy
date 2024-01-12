@@ -11,6 +11,127 @@ describe("PDP", function () {
   const assert = require("assert");
   const processType = "someProcessType";
 
+  function makeMetadata(md) {
+    const defaultMetadata = {
+      displayName: "metadata",
+      tags: {},
+      taxonomyVersion: {
+        id: "guest+TaxonomyProject",
+        tag: "v1.0.0",
+        commit: "abadae3",
+      },
+      time: new Date().toString(),
+    };
+    return Object.assign({}, defaultMetadata, md);
+  }
+
+  describe("updateArtifact", function () {
+    let storage, repoId, contentId, updatedId, updatedFiles;
+
+    beforeEach(async () => {
+      const api = new InMemoryPdp();
+      api.dropData();
+      const processType = "disableArtifactTest";
+      const hostUri = new HostUri("memory", processType);
+      storage = new PDP(
+        api,
+        hostUri,
+        "observerId",
+        "readToken",
+      );
+      // Create the test fixtures
+      repoId = await storage.api.createProcessHelper(
+        "observerId",
+        processType,
+        { displayName: "someRepo" },
+      );
+      const metadata = makeMetadata({
+        displayName: `content_item`,
+      });
+      const filenames = ["a.txt", "b.txt"];
+      const result = await storage.withContentReservation(
+        // TODO: should we guarantee the reservation was only used once?
+        (res) => storage.appendArtifact(res, metadata, filenames),
+        repoId,
+      );
+      contentId = result.id;
+
+      // update the content
+      const updatedMetadata = makeMetadata({
+        displayName: `content_item`,
+      });
+      updatedFiles = filenames.map((n) => `updated_${n}`);
+      const updateResult = await storage.withUpdateReservation(
+        (res) => storage.updateArtifact(res, updatedMetadata, updatedFiles),
+        repoId,
+        contentId,
+      );
+      updatedId = updateResult.contentId;
+    });
+
+    it("should return latest when listing", async function () {
+      const artifacts = await storage.listArtifacts(repoId);
+      assert.equal(artifacts.length, 1);
+
+      // Check that the artifact is the updated one
+      assert.equal(artifacts[0].id, updatedId);
+    });
+
+    it("should update files", async function () {
+      const [data] = await storage.downloadFileURLs(repoId, [updatedId]);
+      assert.equal(data.files.length, 2);
+      data.files.forEach((file, i) =>
+        assert(file.name.endsWith(updatedFiles[i]))
+      );
+    });
+  });
+
+  describe("disableArtifact", function () {
+    let storage, repoId, contentId;
+
+    beforeEach(async () => {
+      const api = new InMemoryPdp();
+      api.dropData();
+      const processType = "disableArtifactTest";
+      const hostUri = new HostUri("memory", processType);
+      storage = new PDP(
+        api,
+        hostUri,
+        "observerId",
+        "readToken",
+      );
+      // Create the test fixtures
+      repoId = await storage.api.createProcessHelper(
+        "observerId",
+        processType,
+        { displayName: "someRepo" },
+      );
+      const metadata = makeMetadata({
+        displayName: `content_item`,
+      });
+      const result = await storage.withContentReservation(
+        (res) => storage.appendArtifact(res, metadata, []),
+        repoId,
+      );
+      contentId = result.id;
+
+      // disable the content
+      await storage.disableArtifact(repoId, contentId);
+    });
+
+    it("should ignore disabled content while listing", async function () {
+      const artifacts = await storage.listArtifacts(repoId);
+      assert.equal(artifacts.length, 0);
+    });
+
+    it("should not allow downloading disabled content", async function () {
+      await assert.rejects(
+        storage.downloadFileURLs(repoId, [contentId]),
+        /Content has been deleted/,
+      );
+    });
+  });
+
   describe("getOriginalFilePath", function () {
     it("should strip prefix from filenames", function () {
       const original = "a/b/cat.txt";
@@ -221,16 +342,9 @@ describe("PDP", function () {
 
     it("should queue concurrent upload requests", async function () {
       const repoId = await pdp.withRepoReservation(async (res) => {
-        const metadata = {
+        const metadata = makeMetadata({
           displayName: "hello",
-          taxonomyTags: [],
-          taxonomyVersion: {
-            id: "guest+TaxonomyProject",
-            tag: "v1.0.0",
-            commit: "abadae3",
-          },
-          time: new Date().toString(),
-        };
+        });
         await pdp.createArtifact(res, metadata);
         // Look up the repoId. Since process creation is disabled, we can't
         // actually get the process ID
@@ -242,12 +356,7 @@ describe("PDP", function () {
       };
 
       const [metadata1, metadata2] = ["first", "second"]
-        .map((displayName) => ({
-          displayName,
-          tags: {},
-          taxonomyVersion,
-          time: new Date().toString(),
-        }));
+        .map((displayName) => makeMetadata({ displayName }));
 
       const firstUpload = await pdp.withContentReservation(
         async (res) => {
@@ -263,13 +372,26 @@ describe("PDP", function () {
       );
 
       const [result1, result2] = await Promise.all([firstUpload, secondUpload]);
+      const [i1, i2] = [result1, result2].map((res) => +res.id.split("_"));
       assert.equal(
-        result1.index + 1,
-        result2.index,
-        `Second upload index should be ${
-          result1.index + 1
-        } (found ${result2.index})`,
+        i1 + 1,
+        i2,
+        `Second upload index should be ${i1 + 1} (found ${i2})`,
       );
+    });
+  });
+
+  describe("deletion", function () {
+    let pdp;
+    before(() => {
+      const processType = "testProcessType";
+      const hostUri = new HostUri("memory", processType);
+      const api = new InMemoryPdp();
+      pdp = new PDP(api, hostUri, "someUser", "unusedToken");
+    });
+
+    it("should be able to ", function () {
+      // TODO
     });
   });
 });

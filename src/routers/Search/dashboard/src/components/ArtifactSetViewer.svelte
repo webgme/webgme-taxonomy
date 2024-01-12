@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { createEventDispatcher, getContext } from "svelte";
   import { capitalize, getTagValue } from "../Utils";
   import TagFormatter from "../Formatter";
   import Card, { Content, Actions } from "@smui/card";
@@ -11,20 +12,19 @@
     PrimaryText,
     SecondaryText,
     Meta,
-    Graphic,
   } from "@smui/list";
   import Checkbox from "@smui/checkbox";
   import DisplayTagsDialog from "./DisplayTagsDialog.svelte";
+  import type { PopulatedRepo } from "../Storage";
+  import type { Artifact } from "../../../adapters/common/types";
 
-  export let artifactSet;
+  export let artifactSet: PopulatedRepo;
   export let contentType = {name: "artifact"};
   let numArtifacts = 10;
   let shownArtifacts = [];
   let selected = [];
   let menu: Menu;
   const formatter = new TagFormatter();
-
-  import { createEventDispatcher } from "svelte";
   const dispatch = createEventDispatcher();
 
   async function onDownloadClicked() {
@@ -37,7 +37,7 @@
   let displayedTags = null;
   let displayedName = null;
   let displayTags = false;
-  async function showTags(artifact) {
+  async function showTags(artifact: Artifact) {
     displayedTags = await formatter.toHumanFormat(artifact.tags);
     displayedName = artifact.displayName;
     displayTags = true;
@@ -60,8 +60,25 @@
       })
     } catch (e) {
       console.error(`Unable to copy URI to clipboard:`, e);
-      //TODO - we should probably limit the clipboard to regular use
+      // TODO - we should probably limit the clipboard to regular use
     }
+  }
+
+  async function onDeleteArtifact(...contentIds: string[]) {
+    const contents = contentIds
+      .map(id => artifactSet.children.find(content => content.id === id));
+
+    dispatch("delete", {
+      repo: artifactSet,
+      contents,
+    });
+  }
+
+  async function onUpdateArtifact(artifact: Artifact) {
+    dispatch("upload", {
+      repo: artifactSet,
+      artifact: artifact,
+    });
   }
 
   async function onSelectContent() {
@@ -83,7 +100,8 @@
 
   async function onUploadClicked() {
     dispatch("upload", {
-      artifactSet: artifactSet,
+      repo: artifactSet,
+      artifact: null,
     });
   }
 
@@ -145,25 +163,25 @@
           on:click={() => menu.setOpen(true)}
           title="Options">more_vert
         </IconButton>
-        <Menu bind:this={menu} anchorCorner="BOTTOM_RIGHT">
-          <List>
-            <Item
-              on:SMUI:action={() =>
-                (numArtifacts = Math.min(
-                  artifactSet.children.length,
-                  numArtifacts + 10
-                ))}
-            >
-              <Text>Show more...</Text>
-            </Item>
-            <Item
-              on:SMUI:action={() =>
-                (numArtifacts = artifactSet.children.length)}
-            >
-              <Text>Show all...</Text>
-            </Item>
-          </List>
-        </Menu>
+          <Menu bind:this={menu} anchorCorner="BOTTOM_RIGHT">
+            <List>
+              <Item
+                on:SMUI:action={() =>
+                  (numArtifacts = Math.min(
+                    artifactSet.children.length,
+                    numArtifacts + 10
+                  ))}
+              >
+                <Text>Show more...</Text>
+              </Item>
+              <Item
+                on:SMUI:action={() =>
+                  (numArtifacts = artifactSet.children.length)}
+              >
+                <Text>Show all...</Text>
+              </Item>
+            </List>
+          </Menu>
       </h4>
       <!-- add show more button, select all -->
       <List checkList twoLine>
@@ -187,11 +205,19 @@
                 on:click$stopPropagation={() => showTags(artifact)}
                 class="material-icons"
                 size="mini"
-              >info</IconButton>
+                title="View Metadata"
+              >link</IconButton>
               <IconButton
                 on:click$stopPropagation={() => onCopyLink(artifact)}
                 class="material-icons"
                 size="mini"
+                title="Copy URI"
+              >link</IconButton>
+              <IconButton
+                on:click$stopPropagation={() => onUpdateArtifact(artifact)}
+                class="material-icons"
+                size="mini"
+                title="Edit"
               >link</IconButton>
             </Meta>
           </Item>
@@ -204,6 +230,9 @@
       </Button>
       <Button on:click={onDownloadClicked} disabled={selected.length == 0}>
         <Label>Download</Label>
+      </Button>
+      <Button on:click={() => onDeleteArtifact(...selected)} disabled={selected.length == 0}>
+        <Label>Delete</Label>
       </Button>
       {#if window.self !== window.top }
       <Button on:click={() => onSelectContent()} disabled={selected.length != 1}>

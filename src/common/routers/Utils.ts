@@ -56,7 +56,7 @@ export function makeCore(
 
 interface GmeRouteOpts {
   unsafe?: boolean;
-  method: "get" | "post";
+  method: "get" | "post" | "delete";
 }
 
 function getProjectContext(params: { [k: string]: string }): ProjectContext {

@@ -5,3 +5,4 @@ export { default as TaxonomyFilter } from "./TaxonomyFilter.svelte";
 export { default as TaxonomyFilterTree } from "./TaxonomyFilterTree.svelte";
 export { default as TagSelector } from "./TagSelector.svelte";
 export { default as CreateRepoDialog } from "./CreateRepoDialog.svelte";
+export { default as Confirm } from "./Confirm.svelte";

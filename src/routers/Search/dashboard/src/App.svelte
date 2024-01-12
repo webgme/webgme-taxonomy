@@ -2,6 +2,7 @@
   import { setContext } from "svelte";
   import { FilterTag, LeanTag, fromDict } from "./tags";
   import { filterMap } from "./Utils";
+  import type {ConfirmData} from './ConfirmData';
   import {
     openUrl,
     encodeQueryParams,
@@ -24,14 +25,16 @@
     ArtifactSetViewer,
     TaxonomyFilter,
     CreateRepoDialog,
+    Confirm,
    } from "./components";
 
   import TaxonomyData from "./TaxonomyData";
   import TaxonomyReference from "../../../../common/TaxonomyReference";
   import Storage, { LoadState, ModelError, RequestError, ModelContext } from "./Storage";
-  import type { PopulatedRepo } from "./Storage";
+  import type { Artifact, PopulatedRepo } from "./Storage";
   import type ContentType from "./ContentType";
 
+  let confirmData: ConfirmData | null = null;
   let title: string;
   let contentType: ContentType = {
     name: "Data",
@@ -331,7 +334,13 @@
 
   ////// Item actions //////
   let appendItem;
+  let updateTarget: Artifact | null = null;
   let appendMsgId;
+
+  async function onUpdateContent(repo: PopulatedRepo, content: Artifact) {
+    appendItem = repo;
+    updateTarget = content;
+  }
 
   function onAppendFinish(event: CustomEvent<{ error?: string }>) {
     const error = event.detail?.error;
@@ -419,7 +428,8 @@
 {#if configuration && configuration.content.content}
   <AppendArtifactDialog
     contentType={configuration.content.content}
-    bind:set={appendItem}
+    bind:repo={appendItem}
+    bind:content={updateTarget}
     on:upload={() =>
       (appendMsgId = displayProgressMessage("Upload in progress"))}
     on:complete={onAppendFinish}
@@ -433,6 +443,17 @@
   bind:contentType
   on:create={onTryCreateRepo}
 />
+
+<Confirm
+  open={confirmData !== null}
+  title={confirmData?.title}
+  prompt={confirmData?.prompt}
+  on:confirm={() => {
+    confirmData.action();
+    confirmData = null;
+  }}
+/>
+
 <!-- Main app -->
 <main id="app">
   <AppHeader
@@ -489,8 +510,42 @@
           bind:artifactSet={selectedArtifactSet}
           bind:contentType
           on:download={(event) => onDownload(event.detail)}
-          on:upload={(event) => (appendItem = event.detail.artifactSet)}
+          on:upload={(event) => {
+            const {repo, artifact} = event.detail;
+            updateTarget = artifact;
+            appendItem = repo;
+          }}
+          on:delete={(event) => {
+              const {repo, contents} = event.detail;
+              const prompt = contents.length === 1 ?
+                `Are you sure you want to delete ${contents[0].displayName}?` :
+                `Are you sure you want to delete the ${contents.length} items?`;
+
+              confirmData = {
+                title: 'Delete Content?',
+                prompt,
+                action: async () => {
+                  const results = await Promise.allSettled(
+                    contents.map(content => storage.disableArtifact(repo.id, content.id))
+                  );
+                  const failures = results.filter(res => res.status !== 'fulfilled');
+                  filterMap(results, (res, i) => {
+                    if (res.status !== 'fulfilled') {
+                      return contents[i];
+                    }
+                  });
+                  if (failures.length > 0) {
+                    const msg = failures.map(f => f.reason).join('\n');
+                    const error = new Error(msg);
+                    console.error(error);
+                    displayError(error);
+                  }
+                  loadContents(repo);
+                }
+              };
+          }}
           on:copyUri={(event) => displayMessage("Copied URI: " + event.detail.name)}
+          on:repoChange={(event) => loadContents(event.detail.repo)}
         />
       {/if}
     </AppContent>

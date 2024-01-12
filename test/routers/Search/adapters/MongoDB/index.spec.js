@@ -15,6 +15,144 @@ describe("MongoDB", function () {
     collection,
   );
 
+  function makeMetadata(md) {
+    const defaultMetadata = {
+      displayName: "metadata",
+      tags: {},
+      taxonomyVersion: {
+        id: "guest+TaxonomyProject",
+        tag: "v1.0.0",
+        commit: "abadae3",
+      },
+      time: new Date().toString(),
+    };
+    return Object.assign({}, defaultMetadata, md);
+  }
+
+  describe("disableArtifact", function () {
+    let storage, repoId, contentId;
+
+    beforeEach(async () => {
+      const collection = "__testDisableArtifact";
+      const hostUri = MongoDB.getHostUri(
+        "mongodb://127.0.0.1:27017/",
+        collection,
+      );
+
+      client = new MongoClient(defaultMongoUri);
+      const db = client.db(collection);
+      await db.dropDatabase();
+
+      storage = new MongoDB(client, collection, hostUri);
+
+      // Create the test fixtures
+      const metadata = makeMetadata({
+        displayName: `content_item`,
+      });
+      repoId = await storage.withRepoReservation(
+        async (res) => {
+          await storage.createArtifact(
+            res,
+            makeMetadata({ displayName: "repo" }),
+          );
+          return res.repoId;
+        },
+      );
+
+      const result = await storage.withContentReservation(
+        (res) => storage.appendArtifact(res, metadata, []),
+        repoId,
+      );
+      contentId = result.id;
+
+      // disable the content
+      await storage.disableArtifact(repoId, contentId);
+    });
+
+    afterEach(async () => client.close());
+
+    it("should ignore disabled content while listing", async function () {
+      const artifacts = await storage.listArtifacts(repoId);
+      assert.equal(artifacts.length, 0);
+    });
+
+    it("should not allow downloading disabled content", async function () {
+      await assert.rejects(
+        storage.getFileStreams(repoId, contentId),
+        /Content has been deleted/,
+      );
+    });
+  });
+
+  describe("updateArtifact", function () {
+    let storage, repoId, contentId, updatedId, updatedFiles;
+
+    beforeEach(async () => {
+      const collection = "__testUpdateArtifact";
+      const hostUri = MongoDB.getHostUri(
+        "mongodb://127.0.0.1:27017/",
+        collection,
+      );
+
+      client = new MongoClient(defaultMongoUri);
+      const db = client.db(collection);
+      await db.dropDatabase();
+
+      storage = new MongoDB(client, collection, hostUri);
+
+      // Create the test fixtures
+      const metadata = makeMetadata({
+        displayName: `content_item`,
+      });
+      repoId = await storage.withRepoReservation(
+        async (res) => {
+          await storage.createArtifact(
+            res,
+            makeMetadata({ displayName: "repo" }),
+          );
+          return res.repoId;
+        },
+      );
+
+      const filenames = ["a.txt", "b.txt"];
+      const result = await storage.withContentReservation(
+        (res) => storage.appendArtifact(res, metadata, filenames),
+        repoId,
+      );
+      contentId = result.id;
+
+      // update the content
+      const updatedMetadata = makeMetadata({
+        displayName: `new_content_item`,
+      });
+      updatedFiles = ["updatedFile.txt"];
+      const updateResult = await storage.withUpdateReservation(
+        (res) => storage.updateArtifact(res, updatedMetadata, updatedFiles),
+        repoId,
+        contentId,
+      );
+      updatedId = updateResult.contentId;
+    });
+
+    afterEach(async () => client.close());
+
+    it("should return latest when listing", async function () {
+      const artifacts = await storage.listArtifacts(repoId);
+      assert.equal(artifacts.length, 1);
+
+      // Check that the artifact is the updated one
+      assert.equal(artifacts[0].id, updatedId);
+    });
+
+    it("should update files", async function () {
+      const files = await storage.getFileIds(repoId, updatedId);
+      // Since they are object IDs, it is a little tricky to check but
+      // we can at least confirm that it has 1 file rather than 2 like
+      // the original
+      assert.equal(files.length, 1);
+    });
+  });
+
   describe("getUriPatterns", function () {
     const Ajv = require("ajv");
     const ajv = new Ajv();
@@ -118,12 +256,11 @@ describe("MongoDB", function () {
       );
 
       const [result1, result2] = await Promise.all([firstUpload, secondUpload]);
+      const [i1, i2] = [result1, result2].map((res) => +res.id.split("_"));
       assert.equal(
-        result1.index + 1,
-        result2.index,
-        `Second upload index should be ${
-          result1.index + 1
-        } (found ${result2.index})`,
+        i1 + 1,
+        i2,
+        `Second upload index should be ${i1 + 1} (found ${i2})`,
       );
     });
   });

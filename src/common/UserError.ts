@@ -66,3 +66,22 @@ export class MissingParameterChooseError extends UserError {
     super(`Must specify a URL parameter from: ${choices.join(" ")}`);
   }
 }
+
+export class DeletedContentError extends UserError {
+  constructor() {
+    super(`Content has been deleted and is no longer accessible.`);
+  }
+}
+
+export class MalformedContentIdError extends UserError {
+  constructor(id: string) {
+    super(`Invalid content ID: ${id}`);
+  }
+}
+
+export class ContentNotFoundError extends UserError {
+  constructor(id?: string) {
+    const message = id ? `Content not found: ${id}` : `Content not found`;
+    super(message);
+  }
+}
