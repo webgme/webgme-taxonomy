@@ -202,22 +202,22 @@
             </Text>
             <Meta>
               <IconButton
+                on:click$stopPropagation={() => onUpdateArtifact(artifact)}
+                class="material-icons"
+                size="mini"
+                title="Edit"
+              >edit</IconButton>
+              <IconButton
                 on:click$stopPropagation={() => showTags(artifact)}
                 class="material-icons"
                 size="mini"
                 title="View Metadata"
-              >link</IconButton>
+              >info</IconButton>
               <IconButton
                 on:click$stopPropagation={() => onCopyLink(artifact)}
                 class="material-icons"
                 size="mini"
                 title="Copy URI"
-              >link</IconButton>
-              <IconButton
-                on:click$stopPropagation={() => onUpdateArtifact(artifact)}
-                class="material-icons"
-                size="mini"
-                title="Edit"
               >link</IconButton>
             </Meta>
           </Item>
