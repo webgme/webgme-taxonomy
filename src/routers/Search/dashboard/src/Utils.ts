@@ -1,4 +1,4 @@
-  import type {ContentTypeConfiguration}  from "../../../../common/SearchFilterDataExporter";
+import type { ContentTypeConfiguration } from "../../../../common/SearchFilterDataExporter";
 /**
  * A Result is the result from a request. Errors can be mapped (like
  * combinators). Unwrapping the result will either throw an error (if an error
@@ -176,10 +176,10 @@ export function getTagValue(tags: any, ...fqn: string[]) {
 }
 
 export function getDefaultContentType(name: string): ContentTypeConfiguration {
-return {
+  return {
     name,
     namePlural: name,
-    nodePath: '',
-    vocabularies: []
-};
+    nodePath: "",
+    vocabularies: [],
+  };
 }
