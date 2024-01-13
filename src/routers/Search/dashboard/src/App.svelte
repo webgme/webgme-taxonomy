@@ -433,6 +433,7 @@
     on:upload={() =>
       (appendMsgId = displayProgressMessage("Upload in progress"))}
     on:complete={onAppendFinish}
+    on:confirm={event => confirmData = event.detail}
     on:error={onAppendFinish}
   />
 {/if}

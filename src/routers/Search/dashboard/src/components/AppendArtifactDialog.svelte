@@ -17,6 +17,7 @@
   import TagFormatter from "../Formatter";
   import type { Artifact, PopulatedRepo, default as Storage, UploadPromise } from "../Storage";
   import type { default as ContentType } from "../ContentType";
+    import type { ConfirmData } from "../ConfirmData";
 
   /** Event type for dropping files onto a dropzone. */
   type DropEvent = CustomEvent<{ acceptedFiles: File[] }>;
@@ -74,10 +75,18 @@
 
   async function onUploadClicked() {
     if (!files.length && !isReference) {
-      // TODO: allow empty uploads
-      return dispatchError(`${contentType.name} file required.`);
+      const confirmData: ConfirmData = {
+        title: 'Upload without files?',
+        prompt: 'Are you sure you want to upload without attaching any files?',
+        action: uploadContent,
+      };
+      return dispatch('confirm', confirmData);
+    } else {
+      uploadContent();
     }
+  }
 
+  async function uploadContent() {
     const uploadMetadata = metadata ?? {};
     uploadMetadata.displayName = newName;
     dispatch("upload");
