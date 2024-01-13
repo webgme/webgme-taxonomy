@@ -1,6 +1,6 @@
-import { GmeCore } from "./types";
+import type { GmeCore } from "./types";
 import { Option } from "oxide.ts";
-import { OutAttr, Primitive } from "webgme/common";
+import type { Primitive } from "webgme/common";
 
 /**
  * Load children explicitly specifying the type to avoid breaking plugins

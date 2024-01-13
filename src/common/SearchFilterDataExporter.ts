@@ -8,7 +8,7 @@
  *       "children": [...child nodes]
  *     }
  */
-import { GmeCore, VerifiedProjectContext } from "./types";
+import type { GmeCore, VerifiedProjectContext } from "./types";
 import Utils, { toString } from "./Utils";
 
 export interface VocabularyConfig {

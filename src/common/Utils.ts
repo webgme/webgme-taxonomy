@@ -1,6 +1,6 @@
 /// <amd-module />
 
-import { OutAttr } from "webgme/common";
+import type { OutAttr } from "webgme/common";
 import { None, Option, Some } from "oxide.ts";
 import { isTypeNamed } from "./GmeHelpers";
 import type { GmeCore } from "./types";

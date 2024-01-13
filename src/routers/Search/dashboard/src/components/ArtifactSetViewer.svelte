@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { createEventDispatcher, getContext } from "svelte";
-  import { capitalize, getTagValue } from "../Utils";
+  import { createEventDispatcher } from "svelte";
+  import { capitalize, getDefaultContentType, getTagValue } from "../Utils";
   import TagFormatter from "../Formatter";
   import Card, { Content, Actions } from "@smui/card";
   import Button, { Label } from "@smui/button";
@@ -15,11 +15,11 @@
   } from "@smui/list";
   import Checkbox from "@smui/checkbox";
   import DisplayTagsDialog from "./DisplayTagsDialog.svelte";
-  import type { PopulatedRepo } from "../Storage";
-  import type { Artifact } from "../../../adapters/common/types";
+  import type { Artifact, PopulatedRepo } from "../Storage";
+  import type { ContentTypeConfiguration } from "../../../../../common/SearchFilterDataExporter";
 
   export let artifactSet: PopulatedRepo;
-  export let contentType = {name: "artifact"};
+  export let contentType: ContentTypeConfiguration = getDefaultContentType('content');
   let numArtifacts = 10;
   let shownArtifacts = [];
   let selected = [];
@@ -43,12 +43,12 @@
     displayTags = true;
   }
 
-  async function getUri(content, tags=null) {
+  async function getUri(content: Artifact, tags=null) {
     tags = tags ?? await formatter.toHumanFormat(content.tags);
     return getTagValue(tags, 'Base', 'URI', 'value');
   }
 
-  async function onCopyLink(content) {
+  async function onCopyLink(content: Artifact) {
     const tags = await formatter.toHumanFormat(content.tags);
     const uri = await getUri(content, tags);
 
@@ -93,7 +93,7 @@
     }
   }
 
-  function getDeprecatedID(content?) {
+  function getDeprecatedID(content?: Artifact) {
     return content ? artifactSet.id + '_' + content.id : artifactSet.id;
 
   }
@@ -118,14 +118,14 @@
 
   $: setShownArtifacts(numArtifacts);
 
-  function setShownArtifacts(numArtifacts) {
+  function setShownArtifacts(numArtifacts: number) {
     if (artifactSet) {
       const start = artifactSet.children.length - numArtifacts;
       shownArtifacts = artifactSet.children.slice(start, start + numArtifacts);
     }
   }
 
-  function formatTime(timeString) {
+  function formatTime(timeString: string) {
     const date = new Date(timeString);
     const formatOpts = {
       year: "numeric",
