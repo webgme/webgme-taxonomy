@@ -8,7 +8,7 @@
  *       "children": [...child nodes]
  *     }
  */
-import { GmeCore, VerifiedProjectContext } from "./types";
+import type { GmeCore, VerifiedProjectContext } from "./types";
 import Utils, { toString } from "./Utils";
 
 export interface VocabularyConfig {
@@ -73,7 +73,7 @@ export class ContentTypeConfiguration {
   nodePath: string;
   name: string;
   vocabularies: VocabularyConfig[];
-  content: ContentTypeConfiguration | undefined;
+  content?: ContentTypeConfiguration;
 
   constructor(
     nodePath: string,

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { setContext } from "svelte";
   import { FilterTag, LeanTag, fromDict } from "./tags";
-  import { filterMap } from "./Utils";
+  import { filterMap, getDefaultContentType } from "./Utils";
   import type {ConfirmData} from './ConfirmData';
   import {
     openUrl,
@@ -32,15 +32,11 @@
   import TaxonomyReference from "../../../../common/TaxonomyReference";
   import Storage, { LoadState, ModelError, RequestError, ModelContext } from "./Storage";
   import type { Artifact, PopulatedRepo } from "./Storage";
-  import type ContentType from "./ContentType";
+  import type {ContentTypeConfiguration}  from "../../../../common/SearchFilterDataExporter";
 
   let confirmData: ConfirmData | null = null;
   let title: string;
-  let contentType: ContentType = {
-    name: "Data",
-    nodePath: '',
-    vocabularies: []
-  };
+  let contentType: ContentTypeConfiguration = getDefaultContentType('Data');
   $: title = `${contentType.name} Dashboard`;
   let vocabularies: TaxonomyData[] = [];
 
@@ -433,6 +429,7 @@
     on:upload={() =>
       (appendMsgId = displayProgressMessage("Upload in progress"))}
     on:complete={onAppendFinish}
+    on:confirm={event => confirmData = event.detail}
     on:error={onAppendFinish}
   />
 {/if}
