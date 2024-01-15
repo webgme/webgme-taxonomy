@@ -178,6 +178,7 @@ export function getTagValue(tags: any, ...fqn: string[]) {
 export function getDefaultContentType(name: string): ContentTypeConfiguration {
   return {
     name,
+    namePlural: name,
     nodePath: "",
     vocabularies: [],
   };

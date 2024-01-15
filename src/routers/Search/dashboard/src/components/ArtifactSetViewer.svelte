@@ -149,7 +149,7 @@
   <Card>
     <Content>
       <h2 class="mdc-typography--headline6" style="margin: 0;">
-        {capitalize(contentType.name)}s in {artifactSet.displayName}
+        {capitalize(contentType.content.namePlural)} in {artifactSet.displayName}
       </h2>
       <h4
         class="mdc-typography--subtitle3"

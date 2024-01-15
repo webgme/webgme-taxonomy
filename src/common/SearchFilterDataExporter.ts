@@ -72,17 +72,20 @@ class VocabExporter {
 export class ContentTypeConfiguration {
   nodePath: string;
   name: string;
+  namePlural: string;
   vocabularies: VocabularyConfig[];
   content?: ContentTypeConfiguration;
 
   constructor(
     nodePath: string,
     name: string,
+    namePlural: string,
     vocabularies: VocabularyConfig[],
     childContent: ContentTypeConfiguration | undefined,
   ) {
     this.nodePath = nodePath;
     this.name = name;
+    this.namePlural = namePlural;
     this.vocabularies = vocabularies;
     this.content = childContent;
   }
@@ -91,7 +94,11 @@ export class ContentTypeConfiguration {
     core: GmeCore,
     contentTypeNode: Core.Node,
   ): Promise<ContentTypeConfiguration> {
-    const name = core.getAttribute(contentTypeNode, "name");
+    const name = toString(core.getAttribute(contentTypeNode, "name"));
+    const namePlural = core.getAttribute(contentTypeNode, "namePlural")
+      ? toString(core.getAttribute(contentTypeNode, "namePlural"))
+      : name + "s";
+
     const exporter = new VocabExporter(core);
     // FIXME: remove this
     const vocabNodes = await Utils.getVocabulariesFor(core, contentTypeNode);
@@ -111,7 +118,8 @@ export class ContentTypeConfiguration {
     const nodePath = core.getPath(contentTypeNode);
     return new ContentTypeConfiguration(
       nodePath,
-      toString(name),
+      name,
+      namePlural,
       vocabularies,
       childType,
     );
