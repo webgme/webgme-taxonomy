@@ -95,9 +95,9 @@ export class ContentTypeConfiguration {
     contentTypeNode: Core.Node,
   ): Promise<ContentTypeConfiguration> {
     const name = toString(core.getAttribute(contentTypeNode, "name"));
-    const namePlural = core.getAttribute(contentTypeNode, "namePlural") ?
-      toString(core.getAttribute(contentTypeNode, "namePlural")) :
-      name + 's';
+    const namePlural = core.getAttribute(contentTypeNode, "namePlural")
+      ? toString(core.getAttribute(contentTypeNode, "namePlural"))
+      : name + "s";
 
     const exporter = new VocabExporter(core);
     // FIXME: remove this

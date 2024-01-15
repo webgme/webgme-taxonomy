@@ -179,7 +179,7 @@ export function getDefaultContentType(name: string): ContentTypeConfiguration {
   return {
     name,
     namePlural: name,
-    nodePath: '',
-    vocabularies: []
+    nodePath: "",
+    vocabularies: [],
   };
 }
