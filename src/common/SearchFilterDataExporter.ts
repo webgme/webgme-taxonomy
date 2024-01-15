@@ -73,7 +73,7 @@ export class ContentTypeConfiguration {
   nodePath: string;
   name: string;
   vocabularies: VocabularyConfig[];
-  content: ContentTypeConfiguration | undefined;
+  content?: ContentTypeConfiguration;
 
   constructor(
     nodePath: string,
