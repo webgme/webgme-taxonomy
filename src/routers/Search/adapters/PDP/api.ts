@@ -16,6 +16,7 @@ import { retry } from "../../Utils";
 import { Err, Ok, Option, Result } from "oxide.ts";
 import { ArtifactMetadata } from "../common/types";
 import { TestEnvOnlyError, UserError } from "../../../../common/UserError";
+import { filterMap, last } from "../../../../common/Utils";
 
 class PdpApiError extends UserError {}
 
@@ -36,6 +37,7 @@ interface ListProcessOpts extends RequestOpts {
   token?: string;
 }
 
+type AppendVersionResponse = any;
 export interface PdpProvider {
   listProcesses(
     opts?: ListProcessOpts,
@@ -72,6 +74,11 @@ export interface PdpProvider {
     observation: Observation,
     opts?: RequestOpts,
   ): Promise<Result<AppendObservationResponse, PdpApiError>>;
+  appendVersion(
+    processId: ProcessID,
+    observation: Observation,
+    opts?: RequestOpts,
+  ): Promise<Result<AppendVersionResponse, PdpApiError>>;
   getTransferState(
     processId: ProcessID,
     directoryId: string,
@@ -209,6 +216,29 @@ export default class PdpApi implements PdpProvider {
     return response;
   }
 
+  async appendVersion(
+    processId: ProcessID,
+    observation: Observation,
+    opts: RequestOpts = {},
+  ): Promise<Result<AppendVersionResponse, PdpApiError>> {
+    const fetchOpts = {
+      method: "post",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(observation),
+    };
+    Option.from(opts.token).map((token) => setAuthToken(fetchOpts, token));
+
+    const response: Result<AppendVersionResponse, PdpApiError> = await this
+      ._fetchJson(
+        `v2/Process/AppendVersion?processId=${processId}`,
+        fetchOpts,
+      );
+
+    return response;
+  }
+
   async getTransferState(
     processId: ProcessID,
     directoryId: string,
@@ -267,7 +297,7 @@ export default class PdpApi implements PdpProvider {
     try {
       const response = await retry(async () => {
         const response = await this._rawFetch(url, opts);
-        if (response.status > 399) {
+        if (!response.ok) {
           const bodyText = (await response.text()) || response.statusText;
           const message = `Received error from PDP: ${bodyText}`;
           throw new PdpApiError(message, response.status);
@@ -341,7 +371,7 @@ function setAuthToken(opts: FetchOpts, token: string): FetchOpts {
 interface ProcessData {
   metadata: Process;
   state: ProcessState;
-  observations: ObservationData[];
+  observations: ObservationData[][];
 }
 
 interface ObservationData {
@@ -389,7 +419,12 @@ export class InMemoryPdp implements PdpProvider {
     _opts: RequestOpts = {},
   ): Promise<Result<Observation[], PdpApiError>> {
     return this.getProcessData(id)
-      .map((data) => data.observations.slice(startIndex, startIndex + limit))
+      .map((data) =>
+        filterMap(
+          data.observations.slice(startIndex, startIndex + limit),
+          last,
+        )
+      )
       .map((obsData) => obsData.map((d) => d.data));
   }
 
@@ -409,8 +444,45 @@ export class InMemoryPdp implements PdpProvider {
     _version: number,
     _opts: RequestOpts = {},
   ): Promise<Result<GetObservationFilesResponse, PdpApiError>> {
-    return this.getObservationData(id, index)
+    const fileData = this.getObservationData(id, index)
       .map((obsDatum) => obsDatum.fileData);
+
+    const transferFiles = fileData.map((fd) => fd.files).unwrapOr([]);
+
+    if (transferFiles.length) {
+      const transferId = fileData
+        .map((fd) => fd.transferId)
+        .unwrapOrElse(() => this.newTransferId());
+
+      this.startTransfer(
+        transferFiles.map((fdata) => fdata.name),
+        transferId,
+      );
+    }
+
+    return fileData;
+  }
+
+  private newObsData(
+    processId: ProcessID,
+    observation: Observation,
+    transferId: string,
+  ): ObservationData {
+    return {
+      data: observation,
+      fileData: {
+        processId,
+        directoryId: "test-dat/",
+        transferId,
+        expiresOn: "unused",
+        files: observation.dataFiles.map((name) => ({
+          name,
+          sasUrl: `http://sasUrl.com/${name}`,
+          hash: `hashFor${name}`,
+          length: Math.floor(10000 * Math.random()),
+        })),
+      },
+    };
   }
 
   async appendObservation(
@@ -420,23 +492,9 @@ export class InMemoryPdp implements PdpProvider {
   ): Promise<Result<AppendObservationResponse, PdpApiError>> {
     return this.getProcessData(processId)
       .map((data) => { // add the observation
-        const transferId = `transfer_${Date.now()}_${this.data.counter++}`;
-        const obsDatum = {
-          data: observation,
-          fileData: {
-            processId,
-            directoryId: "test-dat/",
-            transferId,
-            expiresOn: "unused",
-            files: observation.dataFiles.map((name) => ({
-              name,
-              sasUrl: `http://sasUrl.com/${name}`,
-              hash: `hashFor${name}`,
-              length: Math.floor(10000 * Math.random()),
-            })),
-          },
-        };
-        data.observations.push(obsDatum);
+        const transferId = this.newTransferId();
+        const obsDatum = this.newObsData(processId, observation, transferId);
+        data.observations.push([obsDatum]);
         data.state.numObservations = data.observations.length;
         const response: AppendObservationResponse = Object.assign(
           {},
@@ -452,13 +510,40 @@ export class InMemoryPdp implements PdpProvider {
         );
 
         this.startTransfer(
-          transferId,
           obsDatum.fileData.files.map((fdata) => fdata.name),
+          transferId,
         );
-        // TODO: add dataFiles
-        console.log(JSON.stringify(response));
 
         return response;
+      });
+  }
+
+  async appendVersion(
+    processId: ProcessID,
+    observation: Observation,
+    _opts: RequestOpts = {},
+  ): Promise<Result<AppendVersionResponse, PdpApiError>> {
+    return this.getProcessData(processId)
+      .map((data) => {
+        const index = observation.index;
+        const versions = data.observations[index];
+        if (!versions) {
+          throw new Error(
+            "Cannot appendVersion when no observation exists yet!",
+          );
+        }
+
+        observation.version = versions.length;
+
+        const transferId = this.newTransferId();
+        const obsDatum = this.newObsData(processId, observation, transferId);
+        versions.push(obsDatum);
+
+        // TODO: start a transfer??
+        data.state.lastVersionIndex = Math.max(
+          observation.version,
+          data.state.lastVersionIndex,
+        );
       });
   }
 
@@ -492,6 +577,31 @@ export class InMemoryPdp implements PdpProvider {
     metadata: ArtifactMetadata,
   ): ProcessID {
     const processId = newtype<ProcessID>(`process_${this.data.counter++}`);
+    const metadataVersions: ObservationData[] = [{
+      data: {
+        isFunction: false,
+        processType,
+        processId,
+        isMeasure: false,
+        index: 0,
+        version: 0,
+        observerId,
+        startTime: new Date().toString(),
+        endTime: new Date().toString(),
+        data: [metadata],
+        dataFiles: [],
+        applicationDependencies: [],
+        processDependencies: [],
+      },
+      fileData: {
+        processId,
+        directoryId: "test-data/",
+        transferId: "",
+        expiresOn: "unused",
+        files: [],
+      },
+    }];
+
     this.data.processes.push({
       metadata: {
         processType,
@@ -504,30 +614,7 @@ export class InMemoryPdp implements PdpProvider {
         numObservations: 1,
         lastVersionIndex: 0,
       },
-      observations: [{
-        data: {
-          isFunction: false,
-          processType,
-          processId,
-          isMeasure: false,
-          index: 0,
-          version: 0,
-          observerId,
-          startTime: new Date().toString(),
-          endTime: new Date().toString(),
-          data: [metadata],
-          dataFiles: [],
-          applicationDependencies: [],
-          processDependencies: [],
-        },
-        fileData: {
-          processId,
-          directoryId: "test-data/",
-          transferId: "",
-          expiresOn: "unused",
-          files: [],
-        },
-      }],
+      observations: [metadataVersions],
     });
     return processId;
   }
@@ -553,10 +640,18 @@ export class InMemoryPdp implements PdpProvider {
         Option(data.observations[index]).okOrElse(() =>
           new PdpApiError("Observation not found.", 404)
         )
-      );
+      )
+      .map((versions) => last(versions) as ObservationData);
   }
 
-  private startTransfer(transferId: string, filenames: string[]) {
+  private newTransferId(): string {
+    return `transfer_${Date.now()}_${this.data.counter++}`;
+  }
+
+  private startTransfer(
+    filenames: string[],
+    transferId: string = this.newTransferId(),
+  ) {
     const start = new Date().toString();
     this.data.transfers[transferId] = {
       operation: "upload",

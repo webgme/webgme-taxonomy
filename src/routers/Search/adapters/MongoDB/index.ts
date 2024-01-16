@@ -2,7 +2,6 @@
  * This is a storage adapter for MongoDB which stores artifact sets
  * in documents along with any contained artifacts.
  */
-import { fileURLToPath } from "node:url";
 import fs from "fs";
 import type { Request } from "express";
 import stream from "stream";
@@ -15,11 +14,15 @@ import type {
   Artifact,
   ArtifactMetadata,
   ArtifactMetadatav2,
+  DisabledInfo,
+  DisableResult,
   DownloadInfo,
   FileStreamDict,
   Metadata,
   Repository,
   TaxonomyVersion,
+  UpdateReservation,
+  UpdateResult,
   UploadReservation,
 } from "../common/types";
 import type TagFormatter from "../../../../common/TagFormatter";
@@ -34,29 +37,35 @@ import {
 } from "../common/AppendResult";
 import { AzureGmeConfig, GmeContentContext } from "../../../../common/types";
 import { toArtifactMetadatav2 } from "../common/Helpers";
-import { filterMap } from "../../../../common/Utils";
-import { fromResult, Pattern } from "../../Utils";
+import { filterMap, filterMapOpt, findIndex } from "../../../../common/Utils";
+import { fromResult, Pattern, range, zip } from "../../Utils";
 import ScopedFnQueue from "../../ScopedFnQueue";
 import { RepositoryNotFound } from "../common/StorageError";
+import {
+  ContentNotFoundError,
+  DeletedContentError,
+} from "../../../../common/UserError";
 
 const defaultMongoUri = gmeConfig.mongo.uri;
 const defaultClient = new MongoClient(defaultMongoUri);
 
 type FileId = string;
+type ArtifactVersions = ArtifactDoc[];
 interface RepositoryDoc {
   _id: ObjectId;
   displayName: string;
   taxonomyVersion: TaxonomyVersion;
   tags: any;
-  artifacts: ArtifactDoc[];
+  artifacts: ArtifactVersions[];
 }
 
-interface ArtifactDoc {
+interface ArtifactDoc extends ArtifactMetadatav2 {
   displayName: string;
   tags: any;
   taxonomyVersion: TaxonomyVersion;
   time: string;
   files: FileId[];
+  disabled?: DisabledInfo;
 }
 
 export default class MongoAdapter implements Adapter {
@@ -65,6 +74,7 @@ export default class MongoAdapter implements Adapter {
   private _collection: Collection<Document>;
   private _hostUri: string;
   private _repoLocks: ScopedFnQueue;
+  private _contentLocks: ScopedFnQueue;
 
   constructor(client: MongoClient, collectionName: string, hostUri: string) {
     this._client = client;
@@ -74,6 +84,106 @@ export default class MongoAdapter implements Adapter {
     this._files = new GridFSBucket(db, { bucketName: name });
     this._hostUri = hostUri;
     this._repoLocks = new ScopedFnQueue();
+    this._contentLocks = new ScopedFnQueue();
+  }
+
+  async disableArtifact(
+    repoId: string,
+    contentId: string,
+  ): Promise<DisableResult> {
+    const [index, version] = this.parseContentId(contentId);
+    const artifactKey = `artifacts.${index}.${version}`;
+    const query: { [key: string]: any } = {
+      _id: new ObjectId(repoId),
+    };
+    query[artifactKey] = { "$exists": true };
+    const partial: any = {};
+    partial[`${artifactKey}.disabled`] = { time: new Date().toString() };
+    const update = { $set: partial };
+
+    const result = await this._collection.updateOne(query, update);
+    if (result.matchedCount === 0) {
+      throw new ContentNotFoundError();
+    }
+  }
+
+  async updateArtifact(
+    res: UpdateReservation,
+    metadata: ArtifactMetadatav2,
+    filenames: string[] = [],
+  ): Promise<UpdateResult> {
+    const [index, version] = this.parseContentId(res.contentId);
+    const repoId = res.repoId;
+    const fileIds = _.range(filenames.length).map(() => new ObjectId());
+    const artifact: Artifact = {
+      displayName: metadata.displayName,
+      tags: metadata.tags,
+      taxonomyVersion: metadata.taxonomyVersion,
+      time: (new Date()).toString(),
+      files: fileIds.map((id) => id.toString()),
+    };
+    const artifactKey = `artifacts.${index}`;
+    const query: { [key: string]: any } = {
+      _id: new ObjectId(res.repoId),
+    };
+    query[artifactKey] = { "$exists": true };
+    const pushData: any = {};
+    pushData[artifactKey] = artifact;
+    const update = { $push: pushData };
+
+    const result = await this._collection.updateOne(query, update);
+
+    if (result.matchedCount == 0) {
+      throw new ContentNotFoundError();
+    }
+
+    const contentId = `${index}_${version}`;
+    const files = this.getFileUploadReqs(
+      repoId,
+      contentId,
+      zip(filenames, fileIds),
+    );
+    return {
+      contentId,
+      files,
+    };
+  }
+
+  async withUpdateReservation<T>(
+    fn: (res: UpdateReservation) => Promise<T>,
+    repoId: string,
+    contentId: string,
+  ): Promise<T> {
+    const [index /*version*/] = this.parseContentId(contentId);
+    const lockId = repoId + "/" + index;
+    return await this._contentLocks.run(lockId, async () => {
+      const versions = fromResult(
+        (await this.getRepository(repoId))
+          .okOrElse(() => new RepositoryNotFound(repoId))
+          .andThen((repo) =>
+            Option.from(repo.artifacts[index])
+              .okOrElse(() => new ContentNotFoundError())
+          ),
+      );
+
+      const nextVersion = versions.length;
+      const reservation = new ContentUpdateReservation(
+        this._hostUri,
+        repoId,
+        index,
+        nextVersion,
+      );
+
+      try {
+        const result = await fn(reservation);
+        return result;
+      } catch (err) {
+        throw err;
+      } finally {
+        // TODO: disable the reservation
+        // TODO: probably should make it a generic
+      }
+    });
   }
 
   async getBulkMetadata(
@@ -123,20 +233,32 @@ export default class MongoAdapter implements Adapter {
   }
 
   async listArtifacts(repoId: string): Promise<Artifact[]> {
-    const artifacts = (await this.getRepository(repoId))
+    const artifacts: Artifact[] = (await this.getRepository(repoId))
       .map((repo) =>
-        repo.artifacts
-          .map(toArtifactMetadatav2)
-          .map(
-            (data: ArtifactMetadatav2, index: number) => ({
-              parentId: repoId,
-              id: index.toString(),
-              displayName: data.displayName,
-              tags: data.tags,
-              taxonomyVersion: data.taxonomyVersion,
-              time: data.time,
-            }),
-          )
+        filterMapOpt(
+          zip(repo.artifacts, range(0, repo.artifacts.length)),
+          (versionTuple: [ArtifactDoc[], number]) => {
+            const [versions, index] = versionTuple;
+            const validIndex = findIndex(
+              versions.slice().reverse(),
+              (v) => !v.disabled,
+            );
+            return validIndex.map((inverseIdx) => {
+              const lastIndex = versions.length - 1;
+              const versionIndex = lastIndex - inverseIdx;
+              const latestValid = versions[versionIndex];
+
+              return ({
+                parentId: repoId,
+                id: `${index}_${versionIndex}`,
+                displayName: latestValid.displayName,
+                tags: latestValid.tags,
+                taxonomyVersion: latestValid.taxonomyVersion,
+                time: latestValid.time,
+              });
+            });
+          },
+        )
       ).unwrapOr([]); // TODO: convert to an error instead?
 
     return artifacts;
@@ -177,14 +299,17 @@ export default class MongoAdapter implements Adapter {
   }
 
   async createArtifact(res: RepoReservation, metadata: ArtifactMetadatav2) {
-    const artifactSet = {
+    const repo = {
       _id: new ObjectId(res.repoId),
       displayName: metadata.displayName,
       taxonomyVersion: metadata.taxonomyVersion,
       tags: metadata.tags,
       artifacts: [],
     };
-    const result = await this._collection.insertOne(artifactSet);
+    const result = await this._collection.insertOne(repo);
+    if (!result.acknowledged) {
+      throw new Error("Unable to save repository.");
+    }
 
     return "Created!";
   }
@@ -194,7 +319,35 @@ export default class MongoAdapter implements Adapter {
       await this._collection.findOne({
         _id: new ObjectId(repoId),
       }),
-    ) as Option<RepositoryDoc>;
+    )
+      .map((doc) => { // update to versioned data structure
+        doc.artifacts = doc.artifacts.map(
+          (versions: ArtifactDoc | ArtifactDoc[]) => {
+            if (!Array.isArray(versions)) {
+              versions = [versions];
+            }
+            return versions;
+          },
+        );
+
+        return doc;
+      }) as Option<RepositoryDoc>;
+  }
+
+  private parseContentId(id: string): [number, number] {
+    const [index, version = 0] = id.split("_").map((num) => parseInt(num));
+    return [index, version];
+  }
+
+  private async getArtifactDoc(
+    repoId: string,
+    id: string,
+  ): Promise<Option<ArtifactDoc>> {
+    const [index, version] = this.parseContentId(id);
+
+    return (await this.getRepository(repoId))
+      .andThen((repo) => Option.from(repo.artifacts[index]))
+      .andThen((versions) => Option.from(versions[version]));
   }
 
   async getContentIds(repoId: string): Promise<Option<string[]>> {
@@ -221,29 +374,41 @@ export default class MongoAdapter implements Adapter {
     const result = await this._collection.findOneAndUpdate(
       query,
       {
-        $push: { artifacts: artifact } as Document,
+        $push: { artifacts: [artifact] } as Document,
       },
       { returnDocument: "after" },
     );
 
     if (!result.value) {
-      // TODO: handle artifact not found case
+      throw new RepositoryNotFound(res.repoId);
     }
 
-    const index = res.index;
-    const files = _.zip(filenames, fileIds).map(([name, id]) => {
+    const contentId = `${res.index}_0`;
+    const files = this.getFileUploadReqs(
+      repoId,
+      contentId,
+      zip(filenames, fileIds),
+    );
+    return new AppendResult(contentId, files);
+  }
+
+  private getFileUploadReqs(
+    repoId: string,
+    contentId: string,
+    files: [string, ObjectId][],
+  ): UploadRequest[] {
+    return files.map(([name, id]) => {
       const extendedId = encodeURIComponent(id + "_" + name);
-      const url = `./artifacts/${repoId}/${index}/${extendedId}/upload`;
+      const url = `./artifacts/${repoId}/${contentId}/${extendedId}/upload`;
       // TODO: add an authorization header
       const params = new UploadParams(url, "POST");
       return new UploadRequest(name, params);
     });
-    return new AppendResult(index, files);
   }
 
   async uploadFile(
-    repoId: string,
-    index: unknown,
+    _repoId: string,
+    _id: string,
     extendedId: string,
     fileStream: stream.Readable,
   ) {
@@ -259,26 +424,29 @@ export default class MongoAdapter implements Adapter {
     repoId: string,
     contentId: string,
   ): Promise<Option<ArtifactMetadatav2>> {
-    const idx = parseInt(contentId);
-    return (await this.getRepository(repoId))
-      .andThen((repo) => Option.from(repo.artifacts[idx]))
+    return (await this.getArtifactDoc(repoId, contentId))
       .map(toArtifactMetadatav2);
+  }
+
+  private async getFileIds(repoId: string, id: string): Promise<ObjectId[]> {
+    const artifactDoc = fromResult((await this.getArtifactDoc(repoId, id))
+      .okOrElse(() => new ContentNotFoundError()));
+
+    if (artifactDoc.disabled) {
+      throw new DeletedContentError();
+    }
+    return artifactDoc.files.map((fileIdStr: string) =>
+      new ObjectId(fileIdStr)
+    );
   }
 
   async getFileStreams(
     repoId: string,
     id: string,
   ): Promise<FileStreamDict> {
-    const idx = parseInt(id);
-    const fileIds = (await this.getRepository(repoId))
-      .andThen((repo) => Option(repo.artifacts[idx]))
-      .map((artifact) =>
-        artifact.files.map((fileIdStr: string) => new ObjectId(fileIdStr))
-      );
-
+    const fileIds = await this.getFileIds(repoId, id);
     const metadataPromise = fileIds
-      .map((ids) => ids.map((id) => this._files.find({ _id: id }).next()))
-      .unwrapOr([]);
+      .map((id) => this._files.find({ _id: id }).next());
 
     const metadata = await Promise.all(metadataPromise);
     const entries = filterMap(metadata, (fileMd) => {
@@ -289,6 +457,7 @@ export default class MongoAdapter implements Adapter {
         ];
       }
     });
+
     return Object.fromEntries(entries);
   }
 
@@ -412,6 +581,18 @@ class ContentReservation implements UploadReservation {
     this.repoId = repoId;
     this.index = index;
     this.uri = `${hostUri}/${this.repoId}/${index}`;
+  }
+}
+
+class ContentUpdateReservation implements UpdateReservation {
+  repoId: string;
+  contentId: string;
+  uri: string;
+
+  constructor(hostUri: string, repoId: string, index: number, version: number) {
+    this.repoId = repoId;
+    this.contentId = `${index}_${version}`;
+    this.uri = `${hostUri}/${this.repoId}/${this.contentId}`;
   }
 }
 

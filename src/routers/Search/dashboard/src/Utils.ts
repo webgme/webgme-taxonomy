@@ -1,3 +1,4 @@
+import type { ContentTypeConfiguration } from "../../../../common/SearchFilterDataExporter";
 /**
  * A Result is the result from a request. Errors can be mapped (like
  * combinators). Unwrapping the result will either throw an error (if an error
@@ -172,4 +173,13 @@ export async function sleep(duration: number): Promise<void> {
 
 export function getTagValue(tags: any, ...fqn: string[]) {
   return fqn.reduce((tagData, name) => tagData && tagData[name], tags);
+}
+
+export function getDefaultContentType(name: string): ContentTypeConfiguration {
+  return {
+    name,
+    namePlural: name,
+    nodePath: "",
+    vocabularies: [],
+  };
 }

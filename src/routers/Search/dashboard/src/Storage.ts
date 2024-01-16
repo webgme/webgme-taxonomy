@@ -3,6 +3,7 @@ import TaxonomyReference, {
 } from "../../../../common/TaxonomyReference";
 import { assert, Result, sleep } from "./Utils";
 import { Readable, writable } from "svelte/store";
+//import type { Artifact } from "../../adapters/common/types";
 
 type UploadParams = {
   method: string;
@@ -114,9 +115,9 @@ class Storage {
     }) as UploadPromise;
   }
 
-  async appendArtifact(artifactSet, metadata, files: File[]) {
+  async appendArtifact(repo: PopulatedRepo, metadata, files: File[]) {
     console.log({ action: "append", metadata, files });
-    const url = this.baseUrl + artifactSet.id + "/append";
+    const url = this.baseUrl + repo.id + "/append";
     const filenames = files.map((file: File) => file.name);
 
     const opts = {
@@ -146,8 +147,52 @@ class Storage {
     );
   }
 
-  async updateArtifact(metadata, newContent) {
-    console.log("Updating artifact:", metadata, newContent);
+  async updateArtifact(
+    repoId: string,
+    contentId: string,
+    metadata,
+    files: File[],
+  ) {
+    const url = this.baseUrl + encodeURIComponent(repoId) +
+      "/" + encodeURIComponent(contentId);
+    const filenames = files.map((file: File) => file.name);
+
+    const opts = {
+      method: "post",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        metadata,
+        filenames,
+      }),
+    };
+
+    const updateResult = await (await this._fetchJson(url, opts, UpdateError))
+      .unwrap() as { files: any[] };
+
+    return updateResult.files.map(
+      ({ name, params }: { name: string; params: UploadParams }) => {
+        const targetFile = files.find((a) => a.name == name);
+        assert(
+          !!targetFile,
+          new AppendDataError("Could not find upload info for " + name),
+        );
+        return this._uploadFile(params, targetFile);
+      },
+    );
+  }
+
+  async disableArtifact(repoId: string, contentId: string) {
+    console.log("Disable artifact:", repoId, contentId);
+    const url = this.baseUrl + encodeURIComponent(repoId) +
+      "/" + encodeURIComponent(contentId);
+    const result = await this._fetch(
+      url,
+      { method: "delete" },
+      DeleteError,
+    );
+    return result.unwrap();
   }
 
   async createRepo(metadata) {
@@ -232,7 +277,19 @@ class StorageError extends RequestError {
 
 class ListError extends StorageError {
   constructor(msg: string) {
-    super("list artifacts", msg); // FIXME: rename "artifact"?
+    super("list contents", msg); // FIXME: rename "artifact"?
+  }
+}
+
+class UpdateError extends StorageError {
+  constructor(msg: string) {
+    super("update content", msg);
+  }
+}
+
+class DeleteError extends StorageError {
+  constructor(msg: string) {
+    super("delete content", msg);
   }
 }
 

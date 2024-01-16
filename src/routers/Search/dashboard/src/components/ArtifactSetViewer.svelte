@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { capitalize, getTagValue } from "../Utils";
+  import { createEventDispatcher } from "svelte";
+  import { capitalize, getDefaultContentType, getTagValue } from "../Utils";
   import TagFormatter from "../Formatter";
   import Card, { Content, Actions } from "@smui/card";
   import Button, { Label } from "@smui/button";
@@ -11,20 +12,19 @@
     PrimaryText,
     SecondaryText,
     Meta,
-    Graphic,
   } from "@smui/list";
   import Checkbox from "@smui/checkbox";
   import DisplayTagsDialog from "./DisplayTagsDialog.svelte";
+  import type { Artifact, PopulatedRepo } from "../Storage";
+  import type { ContentTypeConfiguration } from "../../../../../common/SearchFilterDataExporter";
 
-  export let artifactSet;
-  export let contentType = {name: "artifact"};
+  export let artifactSet: PopulatedRepo;
+  export let contentType: ContentTypeConfiguration = getDefaultContentType('content');
   let numArtifacts = 10;
   let shownArtifacts = [];
   let selected = [];
   let menu: Menu;
   const formatter = new TagFormatter();
-
-  import { createEventDispatcher } from "svelte";
   const dispatch = createEventDispatcher();
 
   async function onDownloadClicked() {
@@ -37,18 +37,18 @@
   let displayedTags = null;
   let displayedName = null;
   let displayTags = false;
-  async function showTags(artifact) {
+  async function showTags(artifact: Artifact) {
     displayedTags = await formatter.toHumanFormat(artifact.tags);
     displayedName = artifact.displayName;
     displayTags = true;
   }
 
-  async function getUri(content, tags=null) {
+  async function getUri(content: Artifact, tags=null) {
     tags = tags ?? await formatter.toHumanFormat(content.tags);
     return getTagValue(tags, 'Base', 'URI', 'value');
   }
 
-  async function onCopyLink(content) {
+  async function onCopyLink(content: Artifact) {
     const tags = await formatter.toHumanFormat(content.tags);
     const uri = await getUri(content, tags);
 
@@ -60,8 +60,25 @@
       })
     } catch (e) {
       console.error(`Unable to copy URI to clipboard:`, e);
-      //TODO - we should probably limit the clipboard to regular use
+      // TODO - we should probably limit the clipboard to regular use
     }
+  }
+
+  async function onDeleteArtifact(...contentIds: string[]) {
+    const contents = contentIds
+      .map(id => artifactSet.children.find(content => content.id === id));
+
+    dispatch("delete", {
+      repo: artifactSet,
+      contents,
+    });
+  }
+
+  async function onUpdateArtifact(artifact: Artifact) {
+    dispatch("upload", {
+      repo: artifactSet,
+      artifact: artifact,
+    });
   }
 
   async function onSelectContent() {
@@ -76,14 +93,15 @@
     }
   }
 
-  function getDeprecatedID(content?) {
+  function getDeprecatedID(content?: Artifact) {
     return content ? artifactSet.id + '_' + content.id : artifactSet.id;
 
   }
 
   async function onUploadClicked() {
     dispatch("upload", {
-      artifactSet: artifactSet,
+      repo: artifactSet,
+      artifact: null,
     });
   }
 
@@ -100,14 +118,14 @@
 
   $: setShownArtifacts(numArtifacts);
 
-  function setShownArtifacts(numArtifacts) {
+  function setShownArtifacts(numArtifacts: number) {
     if (artifactSet) {
       const start = artifactSet.children.length - numArtifacts;
       shownArtifacts = artifactSet.children.slice(start, start + numArtifacts);
     }
   }
 
-  function formatTime(timeString) {
+  function formatTime(timeString: string) {
     const date = new Date(timeString);
     const formatOpts = {
       year: "numeric",
@@ -131,7 +149,7 @@
   <Card>
     <Content>
       <h2 class="mdc-typography--headline6" style="margin: 0;">
-        {capitalize(contentType.name)}s in {artifactSet.displayName}
+        {capitalize(contentType.content.namePlural)} in {artifactSet.displayName}
       </h2>
       <h4
         class="mdc-typography--subtitle3"
@@ -145,25 +163,25 @@
           on:click={() => menu.setOpen(true)}
           title="Options">more_vert
         </IconButton>
-        <Menu bind:this={menu} anchorCorner="BOTTOM_RIGHT">
-          <List>
-            <Item
-              on:SMUI:action={() =>
-                (numArtifacts = Math.min(
-                  artifactSet.children.length,
-                  numArtifacts + 10
-                ))}
-            >
-              <Text>Show more...</Text>
-            </Item>
-            <Item
-              on:SMUI:action={() =>
-                (numArtifacts = artifactSet.children.length)}
-            >
-              <Text>Show all...</Text>
-            </Item>
-          </List>
-        </Menu>
+          <Menu bind:this={menu} anchorCorner="BOTTOM_RIGHT">
+            <List>
+              <Item
+                on:SMUI:action={() =>
+                  (numArtifacts = Math.min(
+                    artifactSet.children.length,
+                    numArtifacts + 10
+                  ))}
+              >
+                <Text>Show more...</Text>
+              </Item>
+              <Item
+                on:SMUI:action={() =>
+                  (numArtifacts = artifactSet.children.length)}
+              >
+                <Text>Show all...</Text>
+              </Item>
+            </List>
+          </Menu>
       </h4>
       <!-- add show more button, select all -->
       <List checkList twoLine>
@@ -184,14 +202,22 @@
             </Text>
             <Meta>
               <IconButton
+                on:click$stopPropagation={() => onUpdateArtifact(artifact)}
+                class="material-icons"
+                size="mini"
+                title="Edit"
+              >edit</IconButton>
+              <IconButton
                 on:click$stopPropagation={() => showTags(artifact)}
                 class="material-icons"
                 size="mini"
+                title="View Metadata"
               >info</IconButton>
               <IconButton
                 on:click$stopPropagation={() => onCopyLink(artifact)}
                 class="material-icons"
                 size="mini"
+                title="Copy URI"
               >link</IconButton>
             </Meta>
           </Item>
@@ -204,6 +230,9 @@
       </Button>
       <Button on:click={onDownloadClicked} disabled={selected.length == 0}>
         <Label>Download</Label>
+      </Button>
+      <Button on:click={() => onDeleteArtifact(...selected)} disabled={selected.length == 0}>
+        <Label>Delete</Label>
       </Button>
       {#if window.self !== window.top }
       <Button on:click={() => onSelectContent()} disabled={selected.length != 1}>
