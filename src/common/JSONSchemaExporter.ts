@@ -66,6 +66,7 @@ interface CompoundFieldSchema extends BaseFieldSchema {
   type: "object";
   properties: { [k: string]: any };
   additionalProperties: false;
+  required?: [string];
 }
 interface SetFieldSchema extends BaseFieldSchema {
   type: "array";
@@ -439,6 +440,7 @@ export default class JSONSchemaExporter {
           type: "object",
           properties,
           additionalProperties: false,
+          required: [name],
         };
       }
       case "SetField": {
@@ -490,8 +492,15 @@ export default class JSONSchemaExporter {
     }
 
     const childSchemas = await Promise.all(
-      children.map((c) => this.getFieldSchema(c)),
-    ) as CompoundFieldSchema[];
+      children.map(async (c: Core.Node) => {
+        const schema = await this.getFieldSchema(c) as CompoundFieldSchema;
+        const name = toString(this.core.getAttribute(c, "name"));
+        schema.required = [name];
+        return schema;
+      }),
+    );
+
+    // In the anyOf, the options have required name properties
     // FIXME: do we need 'type'?
     // let type = unique(childSchemas.map((s) => s.type));
     // if (type.length < 2) {
