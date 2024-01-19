@@ -34,7 +34,22 @@ describe("JSONSchemaExporter", function () {
     });
   });
 
+  describe("text field", function () {
+    it("should include a description field", async function () {
+      const schema = await getJsonSchema(["Subject"]);
+      const weightSchema = schema.properties.Subject.properties.Weight;
+      assert.equal(weightSchema.description, "(pounds)");
+    });
+  });
+
   async function getErrors(tags, onlyReleased = true) {
+    const schema = await getJsonSchema(Object.keys(tags), onlyReleased);
+
+    const validate = ajv.compile(schema);
+    validate(tags);
+    return validate.errors;
+  }
+  async function getJsonSchema(vocabNames, onlyReleased = true) {
     const root = await Utils.getNewRootNode(project, commitHash, core);
     const exporter = JSONSchemaExporter.from(core, root);
     const taxonomy = (await core.loadChildren(root))
@@ -45,7 +60,7 @@ describe("JSONSchemaExporter", function () {
 
     const name = core.getAttribute(taxonomy, "name");
     const vocabs = await Promise.all(
-      Object.keys(tags).map(async (vocabName) => {
+      vocabNames.map(async (vocabName) => {
         const allVocabs = await core.loadChildren(taxonomy);
         return allVocabs.find((v) =>
           core.getAttribute(v, "name") === vocabName
@@ -57,9 +72,6 @@ describe("JSONSchemaExporter", function () {
       name,
       onlyReleased,
     );
-
-    const validate = ajv.compile(schema);
-    validate(tags);
-    return validate.errors;
+    return schema;
   }
 });
