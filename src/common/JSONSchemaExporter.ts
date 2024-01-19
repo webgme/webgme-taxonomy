@@ -32,10 +32,12 @@ interface TermSchema {
   properties: { [name: string]: FieldSchema };
   required: string[];
   additionalProperties: false;
+  description?: string;
 }
 
 interface BaseFieldSchema {
   title: string;
+  description?: string;
 }
 interface IntegerFieldSchema extends BaseFieldSchema {
   type: "integer";
@@ -189,13 +191,15 @@ export default class JSONSchemaExporter {
       properties.map((prop) => [prop.name, prop.schema]),
     );
 
-    const schema: TermSchema = {
+    let schema: TermSchema = {
       title: toString(this.core.getAttribute(node, "name")),
       type: "object",
       properties: propDict,
       required,
       additionalProperties: false,
     };
+
+    schema = this.tryAddDescription(node, schema);
     // const termFields = await Promise.all(
     //   parentTerms.map((n) => this.getDefinition(n)),
     // );
@@ -214,6 +218,20 @@ export default class JSONSchemaExporter {
     let selection: SelectionConstraint = selectionStr as SelectionConstraint;
 
     return new Term(name, schema, selection);
+  }
+
+  /**
+   * Try to add a description field to the schema based on the given node.
+   */
+  tryAddDescription<T extends { description?: string }>(
+    node: Core.Node,
+    schema: T,
+  ): T {
+    const descAttr = this.core.getAttribute(node, "description");
+    if (descAttr) {
+      schema.description = toString(descAttr);
+    }
+    return schema;
   }
 
   /**
@@ -370,7 +388,7 @@ export default class JSONSchemaExporter {
         if (value) {
           fieldSchema.default = parseInt(value);
         }
-        return fieldSchema;
+        return this.tryAddDescription(node, fieldSchema);
       }
       case "FloatField": {
         const fieldSchema: FloatFieldSchema = {
@@ -381,7 +399,7 @@ export default class JSONSchemaExporter {
         if (value) {
           fieldSchema.default = parseFloat(value);
         }
-        return fieldSchema;
+        return this.tryAddDescription(node, fieldSchema);
       }
       case "BooleanField": {
         const fieldSchema: BooleanFieldSchema = {
@@ -392,7 +410,7 @@ export default class JSONSchemaExporter {
         if (value) {
           fieldSchema.default = value === "true";
         }
-        return fieldSchema;
+        return this.tryAddDescription(node, fieldSchema);
       }
       case "TextField": {
         const fieldSchema: TextFieldSchema = {
@@ -403,7 +421,7 @@ export default class JSONSchemaExporter {
         if (value) {
           fieldSchema.default = value;
         }
-        return fieldSchema;
+        return this.tryAddDescription(node, fieldSchema);
       }
       case "UriField": {
         const fieldSchema: UriFieldSchema = {
@@ -418,7 +436,7 @@ export default class JSONSchemaExporter {
         if (value) { // FIXME: validate the default URI?
           fieldSchema.default = value;
         }
-        return fieldSchema;
+        return this.tryAddDescription(node, fieldSchema);
       }
       case "EnumField": {
         const { anyOf } = await this._getAnyOfSchema(node);
@@ -430,18 +448,20 @@ export default class JSONSchemaExporter {
           anyOf,
           // TODO: make the name a required field
         };
-        return fieldSchema;
+        return this.tryAddDescription(node, fieldSchema);
       }
       case "CompoundField": {
         const properties: { [k: string]: any } = {};
         properties[name] = await this.getDefinition(node);
-        return {
+        const fieldSchema: CompoundFieldSchema = {
           title: name,
           type: "object",
           properties,
           additionalProperties: false,
           required: [name],
         };
+
+        return this.tryAddDescription(node, fieldSchema);
       }
       case "SetField": {
         const { anyOf } = await this._getAnyOfSchema(node);
@@ -451,7 +471,7 @@ export default class JSONSchemaExporter {
           uniqueItems: true,
           items: { anyOf },
         };
-        return fieldSchema;
+        return this.tryAddDescription(node, fieldSchema);
       }
       default:
         throw new Error("Unsupported field type: " + baseName); // FIXME: should this be a user error?
