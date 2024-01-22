@@ -1,5 +1,6 @@
 import { GmeCore, GuidTags, HumanReadableTags } from "./types";
 import { mapObjectEntries, toString } from "./Utils";
+import { getName } from "./GmeHelpers";
 
 /**
  * This converts to and from a human-readable format for tags. Specifically, this will replace the GUIDs with display names for all the terms and properties.
@@ -28,7 +29,7 @@ export default class TagFormatter {
 
   _toGuidFormat(node: TaxonomyJson, tag: HumanReadableTags, currentTag = {}) {
     return mapObjectEntries(tag, (data, name) => {
-      const tagNode = this._findTagNode(node, name);
+      const tagNode = this._findTagNode(node, name.trim());
       const tagData = this._convertTagData(
         data,
         (datum: HumanReadableTags) =>
@@ -93,7 +94,7 @@ export default class TagFormatter {
       return {
         guid: core.getGuid(node),
         attributes: {
-          name: toString(core.getAttribute(node, "name")),
+          name: getName(core, node),
         },
         children: await Promise.all(children.map(load)),
       };
