@@ -451,16 +451,8 @@ export default class JSONSchemaExporter {
         return this.tryAddDescription(node, fieldSchema);
       }
       case "CompoundField": {
-        const properties: { [k: string]: any } = {};
-        properties[name] = await this.getDefinition(node);
-        const fieldSchema: CompoundFieldSchema = {
-          title: name,
-          type: "object",
-          properties,
-          additionalProperties: false,
-          required: [name],
-        };
-
+        const fieldSchema =
+          (await this.getDefinition(node)) as CompoundFieldSchema;
         return this.tryAddDescription(node, fieldSchema);
       }
       case "SetField": {
@@ -513,9 +505,18 @@ export default class JSONSchemaExporter {
 
     const childSchemas = await Promise.all(
       children.map(async (c: Core.Node) => {
-        const schema = await this.getFieldSchema(c) as CompoundFieldSchema;
+        const properties: { [k: string]: any } = {};
+        const childData = await this.getFieldSchema(c);
         const name = toString(this.core.getAttribute(c, "name"));
-        schema.required = [name];
+
+        properties[name] = childData;
+        const schema: CompoundFieldSchema = {
+          title: name,
+          type: "object",
+          properties,
+          additionalProperties: false,
+          required: [name],
+        };
         return schema;
       }),
     );

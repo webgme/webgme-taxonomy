@@ -42,6 +42,24 @@ describe("JSONSchemaExporter", function () {
     });
   });
 
+  describe("compound field", function () {
+    it("should place nested fields under the field name", async function () {
+      const schema = await getJsonSchema(["DemoTerms"]);
+      const compoundProps =
+        schema.properties.DemoTerms.properties.TermWithCompound.properties
+          .compound.properties;
+      const compoundKeys = Object.keys(compoundProps);
+      assert.equal(
+        compoundKeys.length,
+        2,
+        "Expected 2 properties in compound but found: " +
+          JSON.stringify(compoundKeys),
+      );
+      assert(compoundKeys.includes("text1"));
+      assert(compoundKeys.includes("text2"));
+    });
+  });
+
   async function getErrors(tags, onlyReleased = true) {
     const schema = await getJsonSchema(Object.keys(tags), onlyReleased);
 
