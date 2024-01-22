@@ -5,6 +5,7 @@ import StorageAdapters from "../routers/Search/adapters/index";
 import { Pattern } from "../routers/Search/Utils";
 import { GmeCore } from "./types";
 import { toString } from "./Utils";
+import { getName } from "./GmeHelpers";
 
 // subsets of JSON schema targeted:
 export interface Schemas {
@@ -108,7 +109,7 @@ export default class JSONSchemaExporter {
     taxonomyNode: Core.Node,
     onlyReleased = false,
   ): Promise<Schemas> {
-    const taxonomyName = toString(this.core.getAttribute(taxonomyNode, "name"));
+    const taxonomyName = getName(this.core, taxonomyNode);
     const vocabs = await this.core.loadChildren(taxonomyNode);
     return this.getVocabSchemas(vocabs, taxonomyName, onlyReleased);
   }
@@ -173,7 +174,7 @@ export default class JSONSchemaExporter {
       required,
     };
 
-    const name = toString(this.core.getAttribute(vocabNode, "name"));
+    const name = getName(this.core, vocabNode);
     return new Vocabulary(name, schema, terms);
     // FIXME: this is assuming that it is flat atm
     // TODO: add a test for deeper hierarchies
@@ -181,7 +182,7 @@ export default class JSONSchemaExporter {
 
   async getTermFromNode(node: Core.Node): Promise<Term> {
     // const parentTerms = this.getAncestorTerms(node);
-    const name = toString(this.core.getAttribute(node, "name"));
+    const name = getName(this.core, node);
     const properties = await this.getProperties(node);
     const required = properties
       .filter((prop) => prop.required)
@@ -192,7 +193,7 @@ export default class JSONSchemaExporter {
     );
 
     let schema: TermSchema = {
-      title: toString(this.core.getAttribute(node, "name")),
+      title: name,
       type: "object",
       properties: propDict,
       required,
@@ -298,7 +299,7 @@ export default class JSONSchemaExporter {
   isTypeOf(node: Core.Node, name: string): boolean {
     let iternode: Core.Node | null = this.core.getMetaType(node);
     while (iternode) {
-      const baseName = this.core.getAttribute(iternode, "name");
+      const baseName = getName(this.core, iternode);
       if (baseName === name) {
         return true;
       }
@@ -342,7 +343,7 @@ export default class JSONSchemaExporter {
       );
 
       return {
-        title: toString(this.core.getAttribute(node, "name")),
+        title: getName(this.core, node),
         type: "object",
         properties: propDict,
         required,
@@ -374,9 +375,9 @@ export default class JSONSchemaExporter {
    * Get the JSON schema for the given field node.
    */
   async getFieldSchema(node: Core.Node): Promise<FieldSchema> {
-    const name = (this.core.getAttribute(node, "name") || "").toString();
-    const baseNode = this.core.getMetaType(node);
-    const baseName = this.core.getAttribute(baseNode, "name");
+    const name = getName(this.core, node);
+    const baseNode = this.core.getMetaType(node) || node;
+    const baseName = getName(this.core, baseNode);
 
     switch (baseName) {
       case "IntegerField": {
@@ -498,7 +499,7 @@ export default class JSONSchemaExporter {
     const children = await this.core.loadChildren(node);
     if (!children.length) { // FIXME: Should we throw an error instead?
       throw new Error(
-        "No valid candidates found for " + this.core.getAttribute(node, "name"),
+        "No valid candidates found for " + getName(this.core, node),
       );
       //return { type: "null" };
     }
@@ -507,7 +508,7 @@ export default class JSONSchemaExporter {
       children.map(async (c: Core.Node) => {
         const properties: { [k: string]: any } = {};
         const childData = await this.getFieldSchema(c);
-        const name = toString(this.core.getAttribute(c, "name"));
+        const name = getName(this.core, c);
 
         properties[name] = childData;
         const schema: CompoundFieldSchema = {
@@ -552,7 +553,7 @@ export default class JSONSchemaExporter {
   static from(core: GmeCore, node: Core.Node) {
     const metanodes = Object.values(core.getAllMetaNodes(node));
     const meta = Object.fromEntries(
-      metanodes.map((n) => [core.getAttribute(n, "name"), n]),
+      metanodes.map((n) => [getName(core, n), n]),
     );
     return new JSONSchemaExporter(core, meta);
   }
@@ -620,7 +621,7 @@ export class Property {
   static async from(exporter: JSONSchemaExporter, node: Core.Node) {
     const core = exporter.core;
     const schema = await exporter.getFieldSchema(node);
-    const name = toString(core.getAttribute(node, "name"));
+    const name = getName(core, node);
 
     // FIXME: Due to a limitation in the tag forms, fields can only
     // be considered required if they are contained in a required term

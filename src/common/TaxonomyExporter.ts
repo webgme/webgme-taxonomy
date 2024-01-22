@@ -14,6 +14,7 @@ import {
   getBoolAttribute,
   getFloatAttribute,
   getIntAttribute,
+  getName,
   getStringAttribute,
   isTypeNamed,
   loadChildren,
@@ -31,7 +32,7 @@ async function toNameDict<T>(
   valueFn: (n: Core.Node) => Promise<T> | T,
 ): Promise<{ [name: string]: T }> {
   const entries = await Promise.all(nodes.map(async (node) => {
-    const name = toString(core.getAttribute(node, "name"));
+    const name = getName(core, node);
     return [name, await valueFn(node)];
   }));
   return Object.fromEntries(entries);
@@ -82,7 +83,7 @@ async function exportVariant(
   );
   return {
     id: core.getGuid(node),
-    name: toString(core.getAttribute(node, "name")),
+    name: getName(core, node),
     fields,
   };
 }
@@ -92,7 +93,7 @@ async function getFieldContent(
   fieldNode: Core.Node,
 ): Promise<FieldContent> {
   const metaType = core.getMetaType(fieldNode) || fieldNode;
-  const typeName = toString(core.getAttribute(metaType, "name"));
+  const typeName = getName(core, metaType);
 
   switch (typeName) {
     case "TextField": {
