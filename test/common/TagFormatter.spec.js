@@ -5,7 +5,7 @@ describe("TagFormatter", function () {
   const assert = require("assert");
   const Utils = require("../Utils");
   const Importer = testFixture.requirejs("webgme-json-importer/JSONImporter");
-  let formatter, nodesByGuid, storage, gmeAuth;
+  let formatter, nodesByGuid, storage, gmeAuth, taxonomyNode, core;
 
   function keysAtDepth(obj, depth) {
     let objects = [obj];
@@ -24,7 +24,8 @@ describe("TagFormatter", function () {
       "TagFormatter",
       "test",
     );
-    const { core, project, commitHash } = params;
+    core = params.core;
+    const { project, commitHash } = params;
     storage = params.storage;
     gmeAuth = params.gmeAuth;
     const root = await Utils.getNewRootNode(project, commitHash, core);
@@ -48,13 +49,15 @@ describe("TagFormatter", function () {
 
     const taxonomyType = Object.values(core.getAllMetaNodes(root))
       .find((node) => core.getAttribute(node, "name") === "Taxonomy");
-    const taxonomy = core.createNode({ base: taxonomyType, parent: root });
+    taxonomyNode = (await core.loadChildren(root))
+      .find((n) => core.getBase(n) === taxonomyType);
 
     const importer = new Importer(core, root);
-    await Promise.all(vocabRoots.map((vr) => importer.import(taxonomy, vr)));
+    await Promise.all(
+      vocabRoots.map((vr) => importer.import(taxonomyNode, vr)),
+    );
 
-    console.log({ TagFormatter });
-    formatter = await TagFormatter.from(core, taxonomy);
+    formatter = await TagFormatter.from(core, taxonomyNode);
     nodesByGuid = Object.fromEntries(
       formatter._allNodes(formatter.taxonomy).map((node) => [node.guid, node]),
     );
@@ -171,4 +174,44 @@ describe("TagFormatter", function () {
     const guidTag = formatter.toGuidFormat(tag);
     assert(!guidTag.Base, "Vocabulary name not converted to a GUID");
   });
+
+  it("should convert compound field to GUID", async function () {
+    const tag = {
+      DemoTerms: { TermWithCompound: { compound: { text1: "value1" } } },
+    };
+    const guidTag = formatter.toGuidFormat(tag);
+    const allKeys = nestedKeys(guidTag);
+    const compoundNode = await getTagNode(
+      "DemoTerms",
+      "TermWithCompound",
+      "compound",
+    );
+    assert(
+      allKeys.includes(core.getGuid(compoundNode)),
+      "Compound guid not found in formatted tag object.",
+    );
+  });
+
+  function nestedKeys(obj) {
+    return Object.entries(obj).flatMap(([key, value]) => {
+      if (typeof value === "object") {
+        return nestedKeys(value).concat(key);
+      }
+      return [key];
+    });
+  }
+
+  async function getTagNode(...path) {
+    return path.reduce(async (parentP, name) => {
+      const parent = await parentP;
+      const children = await core.loadChildren(parent);
+      const child = children.find((n) => core.getAttribute(n, "name") === name);
+      if (!child) {
+        throw new Error(
+          `Could not find ${name} in ${core.getAttribute(parent, "name")}`,
+        );
+      }
+      return child;
+    }, Promise.resolve(taxonomyNode));
+  }
 });
