@@ -1,7 +1,8 @@
 describe("JSONSchemaExporter", function () {
   const testFixture = require("../globals");
-  const JSONSchemaExporter =
-    require("../../build/common/JSONSchemaExporter").default;
+  const { default: JSONSchemaExporter, Property } = require(
+    "../../build/common/JSONSchemaExporter",
+  );
   const Ajv = require("ajv");
   const ajv = new Ajv();
   const assert = require("assert");
@@ -31,6 +32,27 @@ describe("JSONSchemaExporter", function () {
       const tags = { Subject: { Sex: { value: { Male: {} } } } };
       const errors = await getErrors(tags);
       assert(!errors);
+    });
+
+    it("should set variant names as required", async function () {
+      const schema = await getJsonSchema(["Subject"]);
+      const enumSchema = schema.properties.Subject.properties.Sex.properties
+        .value;
+      const variants = enumSchema.anyOf;
+      variants.forEach((schema) => {
+        assert.deepEqual(schema.required, [schema.title]);
+        assert(schema.properties.hasOwnProperty(schema.title));
+      });
+    });
+
+    it("should preserve nested properties", async function () {
+      const schema = await getJsonSchema(["Subject"]);
+      const enumSchema = schema.properties.Subject.properties.Sex.properties
+        .value;
+      const otherVariant = enumSchema.anyOf.find((schema) =>
+        schema.title === "Other"
+      );
+      assert.deepEqual(otherVariant.properties.Other.required, ["specify"]);
     });
   });
 
@@ -66,6 +88,32 @@ describe("JSONSchemaExporter", function () {
       );
       assert(compoundKeys.includes("text1"));
       assert(compoundKeys.includes("text2"));
+    });
+  });
+
+  describe("Property", function () {
+    it("should detect required field", async function () {
+      const root = await Utils.getNewRootNode(project, commitHash, core);
+      const exporter = JSONSchemaExporter.from(core, root);
+      const node = await core.loadByPath(root, "/s/s/H/u");
+      const prop = await Property.from(exporter, node);
+      assert(prop.required);
+    });
+
+    it("should detect (nested) required field", async function () {
+      const root = await Utils.getNewRootNode(project, commitHash, core);
+      const exporter = await JSONSchemaExporter.from(core, root);
+      const node = await core.loadByPath(root, "/s/s/H/u/X");
+      const prop = await Property.from(exporter, node);
+      assert(prop.required);
+    });
+
+    it("should detect (nested) optional field", async function () {
+      const root = await Utils.getNewRootNode(project, commitHash, core);
+      const exporter = await JSONSchemaExporter.from(core, root);
+      const node = await core.loadByPath(root, "/s/s/H/u/s");
+      const prop = await Property.from(exporter, node);
+      assert(!prop.required);
     });
   });
 

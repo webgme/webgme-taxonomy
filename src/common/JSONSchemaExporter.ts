@@ -447,7 +447,6 @@ export default class JSONSchemaExporter {
           title: name,
           type: "object",
           anyOf,
-          // TODO: make the name a required field
         };
         return this.tryAddDescription(node, fieldSchema);
       }
@@ -622,18 +621,7 @@ export class Property {
     const core = exporter.core;
     const schema = await exporter.getFieldSchema(node);
     const name = getName(core, node);
-
-    // FIXME: Due to a limitation in the tag forms, fields can only
-    // be considered required if they are contained in a required term
-    const parentTerm = getContainmentAncestors(core, node)
-      .find((node) => exporter.isTerm(node));
-
-    if (parentTerm === undefined) {
-      throw new Error("Found field not contained in term: " + name);
-    }
-    const isTermRequired =
-      toString(core.getAttribute(parentTerm, "selection")) === "required";
-    const required = isTermRequired && !!core.getAttribute(node, "required");
+    const required = !!core.getAttribute(node, "required");
 
     return new Property(name, schema, required);
   }
