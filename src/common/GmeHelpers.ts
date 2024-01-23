@@ -61,6 +61,14 @@ export function getStringAttribute(
     .map((value) => value.toString());
 }
 
+export function getName(
+  core: GmeCore,
+  node: Core.Node,
+): string {
+  return getStringAttribute(core, node, "name").map((value) => value.trim())
+    .unwrapOr("");
+}
+
 export function isTypeNamed(
   core: GmeCore,
   node: Core.Node | null,

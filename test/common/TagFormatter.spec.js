@@ -175,6 +175,15 @@ describe("TagFormatter", function () {
     assert(!guidTag.Base, "Vocabulary name not converted to a GUID");
   });
 
+  it("should trim whitespace when converting to GUID", async function () {
+    const tag = { " Base ": { name: "test name" } };
+    const vocabNode = await getTagNode("Base");
+    const guid = core.getGuid(vocabNode);
+
+    formatter.toGuidFormat(tag);
+    // Throws an error if tag is not found so no check necessary
+  });
+
   it("should convert compound field to GUID", async function () {
     const tag = {
       DemoTerms: { TermWithCompound: { compound: { text1: "value1" } } },
