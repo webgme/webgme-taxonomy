@@ -42,6 +42,15 @@ describe("JSONSchemaExporter", function () {
     });
   });
 
+  describe("trailing spaces", function () {
+    it("should trim whitespace", async function () {
+      const schema = await getJsonSchema(["DemoTerms"]);
+      const termsDict = schema.properties.DemoTerms.properties;
+
+      assert(termsDict.hasOwnProperty("TermWithTrailingSpaces"));
+    });
+  });
+
   describe("compound field", function () {
     it("should place nested fields under the field name", async function () {
       const schema = await getJsonSchema(["DemoTerms"]);
