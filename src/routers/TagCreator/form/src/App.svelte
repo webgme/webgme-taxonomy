@@ -47,7 +47,7 @@
       </Row>
     </TopAppBar>
     <SchemaLoading />
-  {:then {schema, taxonomyVersion, formData: data, uiSchema}}
+  {:then {schema, taxonomyVersion, formData: data = {}, uiSchema}}
     {@const uischema = {...defaultUischema, ...uiSchema} }
     <TopAppBar variant="static">
       <Row>
