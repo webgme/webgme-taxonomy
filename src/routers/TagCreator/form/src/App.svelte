@@ -8,7 +8,7 @@
   import SchemaLoading from './SchemaLoading.svelte';
 
   let configuration = fetchSchema();
-  const defaultUischema = { collapse: "unrequired" } as const;
+  const defaultUischema = { ":ui:": { "collapse": "unrequired" }} as const;
 
   let schemaForm: SchemaForm;
   let errorSnackbar: Snackbar;
