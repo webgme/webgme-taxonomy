@@ -324,6 +324,11 @@ describe("PDP", function () {
       assert(validate(idString));
     });
 
+    it("should allow process types with _'s'", function () {
+      const idString = "pdp://127.0.0.1:435/some_type/PROCESS_ID/9/0";
+      assert(validate(idString));
+    });
+
     it("should allow repo/process version", function () {
       const idString =
         "pdp://127.0.0.1:435/processType/e0de6a4a-5257-4f2c-b3ce-470e3299fc4a";
