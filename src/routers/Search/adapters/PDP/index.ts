@@ -835,7 +835,7 @@ export default class PDP implements Adapter {
     const indexPattern = "[0-9]+";
     const versionPattern = "[0-9]+";
 
-    const typePattern = "[a-zA-Z]+";
+    const typePattern = "[a-zA-Z_]+";
     const hostPattern = `pdp://${Pattern.URL}/${typePattern}/`;
 
     const newProcessPattern = `PROCESS_ID`;
