@@ -4,6 +4,7 @@ import type { CompoundContent } from "./CompoundContent";
 import type { EnumContent } from "./EnumContent";
 import type { FloatContent } from "./FloatContent";
 import type { IntegerContent } from "./IntegerContent";
+import type { ReferenceContent } from "./ReferenceContent";
 import type { SetContent } from "./SetContent";
 import type { TextContent } from "./TextContent";
 import type { UriContent } from "./UriContent";
@@ -14,6 +15,7 @@ export type FieldContent =
   | { "Float": FloatContent }
   | { "Boolean": BooleanContent }
   | { "Uri": UriContent }
+  | { "Reference": ReferenceContent }
   | { "Enum": EnumContent }
   | { "Set": SetContent }
   | { "Compound": CompoundContent };

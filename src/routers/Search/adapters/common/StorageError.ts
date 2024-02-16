@@ -11,3 +11,9 @@ export class UnsupportedUriFormat extends UserError {
     super("Unsupported URI: " + uri);
   }
 }
+
+export class UnsupportedMethodFormat extends UserError {
+  constructor(adapter: string, method: string) {
+    super(`${adapter} does not support method: ${method}`);
+  }
+}

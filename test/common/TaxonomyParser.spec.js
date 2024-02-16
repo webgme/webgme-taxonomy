@@ -13,6 +13,17 @@ describe("TaxonomyParser", function () {
     assert.equal(taxonomy.attributes.description, "someDescription");
   });
 
+  it("should support ReferenceFields", function () {
+    const text = `
+        someTag(term),
+        ,someRef(ref),
+        `;
+    const [taxonomy] = parser.fromCSV(text);
+    const field = taxonomy.children[0];
+    assert.equal(field.pointers.base, "@meta:ReferenceField");
+    assert.equal(field.attributes.name, "someRef");
+  });
+
   it('should set description to "" if unset', function () {
     const text = `
         someTag (term),,
