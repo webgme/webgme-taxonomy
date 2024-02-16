@@ -5,7 +5,7 @@ export class AppendResult {
    * This has been deprecated in favor of "id" since this attribute leaks the concept of an "index" from PDP.
    * The goal is to move away from these PDP-specific concepts rather than bake these concepts into every
    * supported storage adapter.
-   * 
+   *
    * @deprecated
    */
   index: number;
