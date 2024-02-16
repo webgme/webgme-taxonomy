@@ -44,13 +44,14 @@ import type {
   Artifact,
   ArtifactMetadata,
   ArtifactMetadatav2,
+  ContentReservation,
   DisableResult,
   DownloadInfo,
   FileStreamDict,
+  RepoReservation,
   Repository,
   UpdateReservation,
   UpdateResult,
-  UploadReservation,
 } from "../common/types";
 import { fromResult, intervals, Pattern, range, sleep } from "../../Utils";
 import { filterMapOpt } from "../../../../common/Utils";
@@ -249,7 +250,7 @@ export default class PDP implements Adapter {
       const reservation = new ObservationUpdateReservation(
         processId,
         index,
-        version,
+        latestObservation.version,
         this.getUri(processId, index, version),
       );
 
@@ -942,12 +943,8 @@ export class HostUri {
     return new HostUri(baseUrl, processType);
   }
 }
-interface PdpReservation extends UploadReservation {
-  uri: string;
-  repoId: string;
-}
 
-class ProcessReservation implements PdpReservation {
+class ProcessReservation implements RepoReservation {
   uri: string;
   repoId: string;
 
@@ -957,12 +954,13 @@ class ProcessReservation implements PdpReservation {
   }
 }
 
-class ObservationReservation implements PdpReservation {
-  uri: string;
-  repoId: string;
-  index: number;
-  version: number;
-  processId: ProcessID;
+class ObservationReservation implements ContentReservation {
+  readonly uri: string;
+  readonly repoId: string;
+  readonly index: number;
+  readonly version: number;
+  readonly processId: ProcessID;
+  readonly contentId: string;
 
   constructor(
     processId: ProcessID,
@@ -975,30 +973,32 @@ class ObservationReservation implements PdpReservation {
     this.index = index;
     this.version = version;
     this.uri = uri;
+    this.contentId = `${index}_${version}`;
   }
 }
 
 class ObservationUpdateReservation implements UpdateReservation {
-  repoId: string;
-  contentId: string;
-  uri: string;
-
-  processId: ProcessID;
-  index: number;
-  version: number;
+  readonly repoId: string;
+  readonly contentId: string;
+  readonly targetContentId: string;
+  readonly uri: string;
+  readonly processId: ProcessID;
+  readonly index: number;
+  readonly version: number;
 
   constructor(
     processId: ProcessID,
     index: number,
-    version: number,
+    currentVersion: number,
     uri: string,
   ) {
     this.processId = processId;
     this.index = index;
-    this.version = version;
+    this.version = currentVersion + 1;
 
     this.repoId = processId.toString();
-    this.contentId = `${index}_${version}`;
+    this.contentId = `${index}_${this.version}`;
+    this.targetContentId = `${index}_${currentVersion}`;
     this.uri = uri;
   }
 }

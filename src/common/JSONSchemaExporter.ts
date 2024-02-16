@@ -61,6 +61,11 @@ interface UriFieldSchema extends BaseFieldSchema {
   pattern: string;
   default?: string;
 }
+interface ReferenceFieldSchema extends BaseFieldSchema {
+  type: "string";
+  pattern: string;
+  default?: string;
+}
 interface EnumFieldSchema extends BaseFieldSchema {
   type: "object";
   anyOf: CompoundFieldSchema[];
@@ -84,6 +89,7 @@ type FieldSchema =
   | CompoundFieldSchema
   | EnumFieldSchema
   | UriFieldSchema
+  | ReferenceFieldSchema
   | TextFieldSchema
   | BooleanFieldSchema
   | FloatFieldSchema
@@ -431,6 +437,19 @@ export default class JSONSchemaExporter {
           pattern: Pattern.exact(Pattern.anyIn(
             ...StorageAdapters.getUriPatterns(),
           )),
+        };
+
+        const value = toString(this.core.getAttribute(node, "value"));
+        if (value) { // FIXME: validate the default URI?
+          fieldSchema.default = value;
+        }
+        return this.tryAddDescription(node, fieldSchema);
+      }
+      case "ReferenceField": {
+        const fieldSchema: ReferenceFieldSchema = {
+          title: name,
+          type: "string",
+          pattern: Pattern.METADATA_REFERENCE,
         };
 
         const value = toString(this.core.getAttribute(node, "value"));
