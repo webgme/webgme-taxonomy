@@ -1,9 +1,18 @@
 export class AppendResult {
   id: string;
   files: UploadRequest[];
+  /**
+   * This has been deprecated in favor of "id" since this attribute leaks the concept of an "index" from PDP.
+   * The goal is to move away from these PDP-specific concepts rather than bake these concepts into every
+   * supported storage adapter.
+   * 
+   * @deprecated
+   */
+  index: number;
 
-  constructor(id: string, files: UploadRequest[]) {
+  constructor(id: string, files: UploadRequest[], index: number) {
     this.id = id;
+    this.index = index;
     this.files = files;
   }
 }

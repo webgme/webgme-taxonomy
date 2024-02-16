@@ -460,7 +460,7 @@ export default class PDP implements Adapter {
       return new UploadRequest(name, params);
     });
 
-    return new AppendResult(`${index}_0`, files);
+    return new AppendResult(`${index}_0`, files, index);
   }
 
   // TODO: this should probably take a reservation

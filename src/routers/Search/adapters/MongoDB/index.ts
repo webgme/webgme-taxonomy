@@ -389,7 +389,7 @@ export default class MongoAdapter implements Adapter {
       contentId,
       zip(filenames, fileIds),
     );
-    return new AppendResult(contentId, files);
+    return new AppendResult(contentId, files, res.index);
   }
 
   private getFileUploadReqs(
