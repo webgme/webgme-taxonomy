@@ -51,9 +51,11 @@ import {
   Adapter,
   ArtifactMetadata,
   ArtifactMetadatav2,
-  UploadReservation,
+  ContentReservation,
+  RepoReservation,
 } from "./adapters/common/types";
 import { UserError } from "../../common/UserError";
+import { GremlinAdapter } from "./adapters/metadata";
 
 /* N.B. gmeAuth, safeStorage and workerManager are not ready to use until the start function is called.
  * (However inside an incoming request they are all ensured to have been initialized.)
@@ -224,6 +226,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
             gmeContext,
             metadata,
           );
+          // TODO: should we upload to the graph db here?
           return await storage.createArtifact(reservation, metadata);
         },
       );
@@ -617,6 +620,27 @@ function initialize(middlewareOpts: MiddlewareOptions) {
     { method: "post" },
   );
 
+  RouterUtils.addContentTypeRoute(
+    middlewareOpts,
+    router,
+    "gremlin",
+    async function runGremlin(webgmeContext, req, res) {
+      // TODO: get the IDs for the specific observations to get
+      // TODO: run a gremlin query
+      // TODO: load the metadata
+      //const gremlin = <string> req.body.gremlin;
+      // TODO: pass this along to the graph DB
+
+      //const formatter = await getFormatter(webgmeContext);
+      //const storage = new GremlinAdapter();
+      //storage.
+      // Fetch all the metadata
+      throw new Error("Unimplemented!");
+      //res.json(id);
+    },
+    { method: "post" },
+  );
+
   logger.debug("ready");
 }
 
@@ -628,7 +652,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
  */
 async function addChildSystemTags(
   metadata: ArtifactMetadatav2,
-  reservation: UploadReservation,
+  reservation: ContentReservation,
   gmeContext: GmeContentContext,
   userId: string,
   filenames: string[],
@@ -655,7 +679,7 @@ async function addChildSystemTags(
 
 async function addSystemTags(
   metadata: ArtifactMetadatav2,
-  reservation: UploadReservation,
+  reservation: RepoReservation,
   gmeContext: GmeContentContext,
   userId: string,
   filenames: string[],
@@ -675,7 +699,7 @@ async function addSystemTags(
 async function addContentTypeSystemTags(
   contentType: Core.Node,
   metadata: ArtifactMetadatav2,
-  reservation: UploadReservation,
+  reservation: RepoReservation,
   gmeContext: GmeContentContext,
   userId: string,
   filenames: string[] = [],

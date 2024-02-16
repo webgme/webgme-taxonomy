@@ -9,7 +9,7 @@
  *     }
  */
 import type { GmeCore, VerifiedProjectContext } from "./types";
-import Utils, { toString } from "./Utils";
+import Utils, { getPrototype, toString } from "./Utils";
 
 export interface VocabularyConfig {
   id: string;
@@ -27,7 +27,7 @@ class VocabExporter {
 
   async toSchema(node: Core.Node): Promise<VocabularyConfig> {
     const base = this.core.getBaseType(node);
-    const prototype = this.getPrototype(node);
+    const prototype = getPrototype(this.core, node);
     const children = await this.core.loadChildren(node);
 
     return {
@@ -53,19 +53,6 @@ class VocabExporter {
       iternode = this.core.getBase(iternode);
     }
     return false;
-  }
-
-  getPrototype(node: Core.Node): Core.Node {
-    const base = this.core.getBaseType(node);
-
-    while (this.core.getBase(node) !== base) {
-      // This cannot be null. If `getBase` is null, then getBaseType must be null
-      // and we know they aren't equal. If the first call is null, the provided node
-      // will be returned.
-      node = this.core.getBase(node) as Core.Node;
-    }
-
-    return node;
   }
 }
 

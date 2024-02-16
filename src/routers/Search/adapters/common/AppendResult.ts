@@ -1,5 +1,6 @@
 export class AppendResult {
   //id: string;
+  //uri: string;
   files: UploadRequest[];
   /**
    * This has been deprecated in favor of "id" since this attribute leaks the concept of an "index" from PDP.

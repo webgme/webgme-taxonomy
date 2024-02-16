@@ -5,7 +5,7 @@ import fs from "node:fs/promises";
 //@ts-ignore
 const Core = webgme.requirejs("common/core/coreQ");
 import jwt from "jsonwebtoken";
-import { filterMap } from "../../common/Utils";
+import { filterMap, getTaxonomyNode } from "../../common/Utils";
 import { SemanticVersion } from "../TaxonomyReference";
 import type {
   GmeContentContext,
@@ -443,11 +443,8 @@ export function responseClose(res: Response) {
 export async function getFormatter(
   gmeContext: GmeContext,
 ): Promise<TagFormatter> {
-  const { root, core } = gmeContext;
-  const node = await Utils.findTaxonomyNode(core, root);
-  if (node == null) {
-    throw new TaxNodeNotFoundError(gmeContext);
-  }
+  const node = await getTaxonomyNode(gmeContext);
+  const { core } = gmeContext;
   return await TagFormatter.from(core, node);
 }
 
