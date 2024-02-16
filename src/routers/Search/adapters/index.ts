@@ -8,11 +8,11 @@ import type {
 import type { Request } from "express";
 import { InvalidStorageError, StorageNotFoundError } from "./common/ModelError";
 import type { Adapter, AdapterStatic } from "./common/types";
-import assert from "assert";
 import { UnsupportedUriFormat } from "./common/StorageError";
 import { UserError } from "../../../common/UserError";
 import PDP from "./PDP/index";
 import MongoDB from "./MongoDB/index";
+import { GremlinAdapter, StorageWithGraphSearch } from "./metadata";
 
 export default class Adapters {
   static async from(
@@ -36,7 +36,7 @@ export default class Adapters {
     req: Request,
     storageNode: Core.Node,
     config: any,
-  ): Promise<Adapter> {
+  ): Promise<StorageWithGraphSearch<Adapter, GremlinAdapter>> {
     const { core } = gmeContext;
     const adapterType = core.getAttribute(
       core.getMetaType(storageNode),
@@ -74,7 +74,14 @@ export default class Adapters {
       commitObject: gmeContext.commitObject,
       contentType: parent,
     };
-    return await AdapterType.from(contentContext, storageNode, req, config);
+    const content = await AdapterType.from(
+      contentContext,
+      storageNode,
+      req,
+      config,
+    );
+    const metadata = new GremlinAdapter(); // FIXME: how to configure this?
+    return new StorageWithGraphSearch(content, metadata);
   }
 
   static async fromUri(
