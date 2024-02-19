@@ -1,5 +1,5 @@
 export class AppendResult {
-  id: string;
+  //id: string;
   files: UploadRequest[];
   /**
    * This has been deprecated in favor of "id" since this attribute leaks the concept of an "index" from PDP.
@@ -10,8 +10,9 @@ export class AppendResult {
    */
   index: number;
 
-  constructor(id: string, files: UploadRequest[], index: number) {
-    this.id = id;
+  // FIXME: disable the id field for now since the CLI cannot handle it currently
+  constructor(_id: string, files: UploadRequest[], index: number) {
+    //this.id = id;
     this.index = index;
     this.files = files;
   }
