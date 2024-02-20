@@ -10,9 +10,11 @@ import { InvalidStorageError, StorageNotFoundError } from "./common/ModelError";
 import type { Adapter, AdapterStatic } from "./common/types";
 import { UnsupportedUriFormat } from "./common/StorageError";
 import { UserError } from "../../../common/UserError";
+import { getTaxonomyNode } from "../../../common/Utils";
 import PDP from "./PDP/index";
 import MongoDB from "./MongoDB/index";
 import { GremlinAdapter, StorageWithGraphSearch } from "./metadata";
+import exportTaxonomy from "../../../common/TaxonomyExporter";
 
 export default class Adapters {
   static async from(
@@ -80,7 +82,11 @@ export default class Adapters {
       req,
       config,
     );
-    const metadata = new GremlinAdapter(); // FIXME: how to configure this?
+    // TODO: get the taxonomy node and export
+    const taxNode = await getTaxonomyNode(gmeContext);
+    const exchange = await exportTaxonomy(gmeContext.core, taxNode);
+    const metadata = new GremlinAdapter(exchange); // FIXME: how to configure this?
+    // TODO: can we get a reference to the exchange format?
     return new StorageWithGraphSearch(content, metadata);
   }
 

@@ -9,7 +9,7 @@ import type { Request } from "express";
 import TagFormatter from "../../../common/TagFormatter";
 import { AppendResult } from "./common/AppendResult";
 import { UnsupportedMethodFormat } from "./common/StorageError";
-import { toGraph } from "./graphml";
+import { addNodeData, toGraph } from "./graphml";
 import type { Option } from "oxide.ts";
 import type {
   Adapter,
@@ -25,6 +25,7 @@ import type {
   UploadReservation,
 } from "./common/types";
 import { toArtifactMetadatav2 } from "../Utils";
+import { Taxonomy } from "../../../common/exchange/Taxonomy";
 
 export class StorageWithGraphSearch<
   C extends Adapter,
@@ -50,7 +51,8 @@ export class StorageWithGraphSearch<
     metadata: ArtifactMetadata,
     filenames: string[],
   ): Promise<AppendResult> {
-    // TODO: create the metadata as a child of the repo
+    await this.metadata.create(metadata);
+    // TODO: connect the content item to the parent (child relationship)
     return this.content.appendArtifact(res, metadata, filenames);
   }
 
@@ -68,6 +70,7 @@ export class StorageWithGraphSearch<
     contentId: string,
   ): Promise<DisableResult> {
     // TODO: mark it as disabled in the metadata store
+    await this.metadata.delete();
     return this.content.disableArtifact(repoId, contentId);
   }
 
@@ -178,7 +181,8 @@ export class StorageWithGraphSearch<
 
 export interface MetadataAdapter {
   create(metadata: ArtifactMetadata): Promise<void>;
-  update(): Promise<void>;
+  //createChild(metadata: ArtifactMetadata): Promise<void>;
+  update(metadata: ArtifactMetadata): Promise<void>;
   delete(): Promise<void>;
 }
 
@@ -187,8 +191,16 @@ export interface MetadataAdapter {
 const traversal = gremlin.process.AnonymousTraversalSource.traversal;
 const DriverRemoteConnection = gremlin.driver.DriverRemoteConnection;
 export class GremlinAdapter implements MetadataAdapter {
+  private taxonomy: Taxonomy;
+  constructor(taxonomy: Taxonomy) {
+    this.taxonomy = taxonomy;
+  }
+
   async create(metadata: ArtifactMetadata): Promise<void> {
-    const graph = toGraph(toArtifactMetadatav2(metadata));
+    const graph = addNodeData(
+      this.taxonomy,
+      toGraph(toArtifactMetadatav2(metadata)),
+    );
     const content = graph.toGraphMl();
     console.log("GraphML content:");
     console.log(content);
@@ -211,19 +223,29 @@ export class GremlinAdapter implements MetadataAdapter {
     console.log("saved graphml:", filename);
     try {
       await g.io(filename).read().iterate();
+      //await fsp.rm(tmpDir, { recursive: true });
     } catch (err) {
       console.log("---------------- ERROR ----------------");
       console.log(err);
+      //await fsp.rm(tmpDir, { recursive: true });
       throw err;
     }
 
-    //await fsp.rm(tmpDir, { recursive: true });
     console.log("imported data into graphdb!");
   }
-  async update(): Promise<void> {
+  async update(metadata: ArtifactMetadata): Promise<void> {
     // TODO
   }
   async delete(): Promise<void> {
     // TODO
+  }
+
+  async runGremlin(query: string): Promise<any> {
+    const g = traversal().withRemote(
+      new DriverRemoteConnection("ws://localhost:8182/gremlin"),
+    );
+    throw new Error("Unimplemented!");
+    //g.withStrategies(ReadOnlyStrategy.instance());
+    //g.eval
   }
 }

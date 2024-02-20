@@ -1,9 +1,15 @@
+import type { Field } from "../../../common/exchange/Field";
+import type { Taxonomy } from "../../../common/exchange/Taxonomy";
+import type { Term } from "../../../common/exchange/Term";
+import type { FieldName } from "../../../common/exchange/FieldName";
+import type { Variant } from "../../../common/exchange/Variant";
+import type { CompoundContent } from "../../../common/exchange/CompoundContent";
 import { isObject, unique } from "../Utils";
 import { ArtifactMetadatav2 } from "./common/types";
 
 export class Graph {
-  private nodes: Node[];
-  private edges: Edge[];
+  readonly nodes: Node[];
+  readonly edges: Edge[];
 
   constructor(nodes: Node[], edges: Edge[]) {
     this.nodes = nodes;
@@ -146,15 +152,17 @@ type EdgeLabel = "tagged_with" | "using_taxonomy";
 class NamedNode extends Node {
   constructor(
     label: string,
-    originalName: string,
+    id?: string,
     value?: string | number | boolean,
   ) {
     const attrDict: AttrDict = {
       labelV: label,
-      originalName,
     };
     if (value !== undefined) {
       attrDict.value = value;
+    }
+    if (id !== undefined) {
+      attrDict.id = id;
     }
     super(attrDict);
   }
@@ -173,10 +181,121 @@ class LabeledEdge extends Edge {
   }
 }
 
-export function toGraph(metadata: ArtifactMetadatav2): Graph {
-  const contentNode = new NamedNode("Content", metadata.displayName);
-  const [nodes, edges] = fromTags(contentNode.id, metadata.tags); // TODO: pass the exchange format, too
+export function toGraph(
+  metadata: ArtifactMetadatav2,
+): Graph {
+  const contentNode = new NamedNode("Content");
+  contentNode.attributes.originalName = metadata.displayName;
+
+  const [nodes, edges] = fromTags(contentNode.id, metadata.tags);
   return new Graph(nodes.concat(contentNode), edges);
+}
+
+/**
+ * Add node data ("originalName", "labelV") to the nodes in the graph.
+ *
+ * The original name is recorded for easier debugging. It is explicitly recorded
+ * as "originalName" to be clear that renames will get this out of sync.
+ *
+ * Do not use the originalName for queries.
+ */
+export function addNodeData(taxonomy: Taxonomy, graph: Graph): Graph {
+  // Build a dictionary of IDs to display names
+  const nodeData = getNameTypeDict(taxonomy);
+  console.log({ nodeData });
+
+  // for each node, add the original name and set the label
+  // TODO: rename id to tagId?
+  graph.nodes.forEach((node) => {
+    if (typeof node.attributes.id === "string") {
+      const data = nodeData[node.attributes.id];
+      if (data) {
+        if (data.name) {
+          node.attributes.originalName = data.name;
+        }
+        node.attributes.labelV = data.type;
+      }
+    }
+  });
+  return graph;
+}
+
+type NodeType =
+  | "Vocabulary"
+  | "Term"
+  | "Text"
+  | "Integer"
+  | "Float"
+  | "Boolean"
+  | "Uri"
+  | "Enum"
+  | "Set"
+  | "Compound";
+interface NameTypeData {
+  name: string;
+  type: NodeType;
+}
+
+export function getNameTypeDict(taxonomy: Taxonomy): NameDict {
+  const vocabTuples: NameTuple = Object.entries(taxonomy.vocabularies)
+    .map(([name, data]) => [data.id, { name, type: "Vocabulary" }]);
+  const termTuples: NameTuple = Object.values(taxonomy.vocabularies)
+    .flatMap((vocab) =>
+      Object.entries(vocab.terms).flatMap(([name, term]) =>
+        getTermNameTuples(name, term)
+      )
+    );
+
+  return Object.fromEntries(vocabTuples.concat(termTuples));
+}
+
+type NameDict = { [id: string]: NameTypeData };
+type ID = string;
+type NameTuple = [ID, NameTypeData][];
+export function getTermNameTuples(
+  name: string,
+  term: Term | Variant,
+): NameTuple {
+  const namePairs: NameTuple = Object.entries(term.fields)
+    .flatMap(([name, field]) => getFieldNameTuples(name, field));
+
+  const type = isVariant(term) ? "Compound" : "Term";
+  namePairs.push([term.id, { name, type }]);
+  return namePairs;
+}
+
+function isVariant(t: Term | Variant): t is Variant {
+  return "name" in t;
+}
+
+export function getFieldNameTuples(
+  name: string,
+  field: Field,
+): NameTuple {
+  const type = Object.keys(field.content)[0] as NodeType; // it would be nice if TS could figure this out on its own...
+  let tuples: NameTuple = [[field.id, { name, type }]];
+
+  // Handle children, if they exist
+  if ("Compound" in field.content) {
+    tuples.push(
+      ...Object.entries(field.content.Compound.fields)
+        .flatMap(([name, field]) => getFieldNameTuples(name, field)),
+    );
+  } else if ("Enum" in field.content) {
+    const variants = field.content.Enum.variants;
+    tuples.push(
+      ...variants
+        .flatMap((variant) => getTermNameTuples(variant.name, variant)),
+    );
+  } else if ("Set" in field.content) {
+    const variants = field.content.Set.variants;
+    tuples.push(
+      ...variants
+        .flatMap((variant) => getTermNameTuples(variant.name, variant)),
+    );
+  }
+
+  return tuples;
 }
 
 // FIXME: use the exchange format to use better types

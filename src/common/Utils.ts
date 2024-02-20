@@ -3,7 +3,8 @@
 import type { OutAttr } from "webgme/common";
 import { None, Option, Some } from "oxide.ts";
 import { isTypeNamed } from "./GmeHelpers";
-import type { GmeCore } from "./types";
+import type { GmeContext, GmeCore } from "./types";
+import { TaxNodeNotFoundError } from "../routers/Search/adapters/common/ModelError";
 
 export function toString(attr: OutAttr): string {
   if (attr) {
@@ -68,35 +69,66 @@ export function last<T>(l: T[]): T | undefined {
   return l[l.length - 1];
 }
 
+/**
+ * Get the first instance of the node type that isn't in the metamodel.
+ * In most cases, this is the main instance. However, this isn't necessarily
+ * the case when there are longer prototypal inheritance chains (like the Base
+ * vocabulary).
+ */
+export function getPrototype(core: GmeCore, node: Core.Node): Core.Node {
+  const base = core.getBaseType(node);
+
+  while (core.getBase(node) !== base) {
+    // This cannot be null. If `getBase` is null, then getBaseType must be null
+    // and we know they aren't equal. If the first call is null, the provided node
+    // will be returned.
+    node = core.getBase(node) as Core.Node;
+  }
+
+  return node;
+}
+
+export async function getTaxonomyNode(
+  gmeContext: GmeContext,
+): Promise<Core.Node> {
+  const { root, core } = gmeContext;
+  const node = await findTaxonomyNode(core, root);
+  if (node == null) {
+    throw new TaxNodeNotFoundError(gmeContext);
+  }
+  return node;
+}
+
+export async function findTaxonomyNode(
+  core: GmeCore,
+  node: Core.Node,
+): Promise<Core.Node | undefined> {
+  // This finds the first taxonomy node and uses it
+  // In the future, it might be nice to find all of them
+  const isTaxonomyNode = (n: Core.Node) => {
+    const baseNode = core.getMetaType(n);
+    return baseNode && core.getAttribute(baseNode, "name") === "Taxonomy";
+  };
+  const searchLocations: Core.Node[] = [
+    core.getRoot(node),
+    ...core
+      .getLibraryNames(node)
+      .map((name) => core.getLibraryRoot(node, name)),
+  ].filter((node: Core.Node | null): node is Core.Node => !!node);
+
+  const initialResult: Promise<Core.Node | undefined> = Promise.resolve(
+    undefined,
+  );
+  return searchLocations.reduce(async (prevSearch, location) => {
+    const taxNode = await prevSearch;
+    if (taxNode) return taxNode;
+
+    const children = await core.loadChildren(location);
+    return children.find(isTaxonomyNode);
+  }, initialResult);
+}
+
 export default {
-  async findTaxonomyNode(
-    core: GmeCore,
-    node: Core.Node,
-  ): Promise<Core.Node | undefined> {
-    // This finds the first taxonomy node and uses it
-    // In the future, it might be nice to find all of them
-    const isTaxonomyNode = (n: Core.Node) => {
-      const baseNode = core.getMetaType(n);
-      return baseNode && core.getAttribute(baseNode, "name") === "Taxonomy";
-    };
-    const searchLocations: Core.Node[] = [
-      core.getRoot(node),
-      ...core
-        .getLibraryNames(node)
-        .map((name) => core.getLibraryRoot(node, name)),
-    ].filter((node: Core.Node | null): node is Core.Node => !!node);
-
-    const initialResult: Promise<Core.Node | undefined> = Promise.resolve(
-      undefined,
-    );
-    return searchLocations.reduce(async (prevSearch, location) => {
-      const taxNode = await prevSearch;
-      if (taxNode) return taxNode;
-
-      const children = await core.loadChildren(location);
-      return children.find(isTaxonomyNode);
-    }, initialResult);
-  },
   async getVocabulariesFor(core: GmeCore, contentType: Core.Node) {
     const children = await core.loadChildren(contentType);
     const container = children.find((node) => {
