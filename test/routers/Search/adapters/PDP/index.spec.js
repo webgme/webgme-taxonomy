@@ -54,7 +54,7 @@ describe("PDP", function () {
         (res) => storage.appendArtifact(res, metadata, filenames),
         repoId,
       );
-      contentId = result.id;
+      contentId = result.getContentId();
 
       // update the content
       const updatedMetadata = makeMetadata({
@@ -113,7 +113,7 @@ describe("PDP", function () {
         (res) => storage.appendArtifact(res, metadata, []),
         repoId,
       );
-      contentId = result.id;
+      contentId = result.getContentId();
 
       // disable the content
       await storage.disableArtifact(repoId, contentId);
@@ -377,7 +377,7 @@ describe("PDP", function () {
       );
 
       const [result1, result2] = await Promise.all([firstUpload, secondUpload]);
-      const [i1, i2] = [result1, result2].map((res) => +res.id.split("_"));
+      const [i1, i2] = [result1, result2].map((res) => res.index);
       assert.equal(
         i1 + 1,
         i2,

@@ -6,7 +6,8 @@ export class AppendResult {
    * The goal is to move away from these PDP-specific concepts rather than bake these concepts into every
    * supported storage adapter.
    *
-   * @deprecated
+   * TODO: Deprecate this and add 'id' back. I removed the deprecation since there is no
+   * alternative yet...
    */
   index: number;
 
@@ -15,6 +16,16 @@ export class AppendResult {
     //this.id = id;
     this.index = index;
     this.files = files;
+  }
+
+  /**
+   * Get the content ID for the append result. Appending content is adding a new content
+   * item for a repository so its version is guaranteed to be 0.
+   *
+   * I would prefer this be an attribute but this is disabled (for now) as described above.
+   */
+  getContentId(): string {
+    return `${this.index}_0`;
   }
 }
 
