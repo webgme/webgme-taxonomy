@@ -9,7 +9,7 @@ import type { Request } from "express";
 import TagFormatter from "../../../common/TagFormatter";
 import { AppendResult } from "./common/AppendResult";
 import { UnsupportedMethodFormat } from "./common/StorageError";
-import { addNodeData, toGraph } from "./graphml";
+import { addNodeData, AttrDict, ContentLabel, Prop, toGraph } from "./graphml";
 import type { Option } from "oxide.ts";
 import type {
   Adapter,
@@ -43,7 +43,7 @@ export class StorageWithGraphSearch<
     res: UploadReservation,
     metadata: ArtifactMetadata,
   ): Promise<string> {
-    await this.metadata.create(metadata);
+    await this.metadata.create(res.repoId, metadata);
     return await this.content.createArtifact(res, metadata);
   }
   async appendArtifact(
@@ -51,7 +51,7 @@ export class StorageWithGraphSearch<
     metadata: ArtifactMetadata,
     filenames: string[],
   ): Promise<AppendResult> {
-    await this.metadata.create(metadata);
+    //await this.metadata.create(metadata);
     // TODO: connect the content item to the parent (child relationship)
     return this.content.appendArtifact(res, metadata, filenames);
   }
@@ -61,7 +61,10 @@ export class StorageWithGraphSearch<
     metadata: ArtifactMetadata,
     filenames: string[],
   ): Promise<UpdateResult> {
-    // TODO
+    await this.metadata.update(
+      new ChildContentReference(res.repoId, res.contentId), // FIXME: this is the new content's ID - Not the existing one!
+      metadata,
+    );
     return this.content.updateArtifact(res, metadata, filenames);
   }
 
@@ -69,8 +72,7 @@ export class StorageWithGraphSearch<
     repoId: string,
     contentId: string,
   ): Promise<DisableResult> {
-    // TODO: mark it as disabled in the metadata store
-    await this.metadata.delete();
+    await this.metadata.delete(new ChildContentReference(repoId, contentId));
     return this.content.disableArtifact(repoId, contentId);
   }
 
@@ -179,11 +181,50 @@ export class StorageWithGraphSearch<
   }
 }
 
+type GremlinGraph = gremlin.process.GraphTraversalSource<
+  gremlin.process.GraphTraversal
+>;
+interface ImplicitGraphQuery {
+  getVertices(
+    g: GremlinGraph,
+  ): gremlin.process.GraphTraversal;
+}
+
+class ContentReference implements ImplicitGraphQuery {
+  private id: string;
+
+  constructor(id: string) {
+    this.id = id;
+  }
+
+  getVertices(g: GremlinGraph): gremlin.process.GraphTraversal {
+    return g.V()
+      .has(ContentLabel, Prop.ContentId, this.id);
+  }
+}
+
+class ChildContentReference implements ImplicitGraphQuery {
+  private id: string;
+  private parentId: string;
+
+  constructor(parentId: string, id: string) {
+    this.id = id;
+    this.parentId = parentId;
+  }
+
+  getVertices(g: GremlinGraph): gremlin.process.GraphTraversal {
+    return g.V()
+      .has(ContentLabel, Prop.ContentId, this.parentId)
+      .out("contains")
+      .has(ContentLabel, Prop.ContentId, this.id);
+  }
+}
+
 export interface MetadataAdapter {
-  create(metadata: ArtifactMetadata): Promise<void>;
+  create(id: string, metadata: ArtifactMetadata): Promise<void>;
   //createChild(metadata: ArtifactMetadata): Promise<void>;
-  update(metadata: ArtifactMetadata): Promise<void>;
-  delete(): Promise<void>;
+  update(query: ImplicitGraphQuery, metadata: ArtifactMetadata): Promise<void>;
+  delete(query: ImplicitGraphQuery, parentId?: string): Promise<void>;
 }
 
 // TODO: load the configuration for this...
@@ -196,10 +237,12 @@ export class GremlinAdapter implements MetadataAdapter {
     this.taxonomy = taxonomy;
   }
 
-  async create(metadata: ArtifactMetadata): Promise<void> {
+  async create(id: string, metadata: ArtifactMetadata): Promise<void> {
+    const contentAttributes: AttrDict = {};
+    contentAttributes[Prop.ContentId] = id;
     const graph = addNodeData(
       this.taxonomy,
-      toGraph(toArtifactMetadatav2(metadata)),
+      toGraph(toArtifactMetadatav2(metadata), contentAttributes),
     );
     const content = graph.toGraphMl();
     console.log("GraphML content:");
@@ -233,11 +276,29 @@ export class GremlinAdapter implements MetadataAdapter {
 
     console.log("imported data into graphdb!");
   }
-  async update(metadata: ArtifactMetadata): Promise<void> {
+  async update(
+    query: ImplicitGraphQuery,
+    metadata: ArtifactMetadata,
+  ): Promise<void> {
+    // create the given node and connect it to the prior one
+    // TODO
+    // create the given node and connect it to the prior one
     // TODO
   }
-  async delete(): Promise<void> {
-    // TODO
+
+  /**
+   * Mark the content as deleted
+   */
+  async delete(query: ImplicitGraphQuery, parentId?: string): Promise<void> {
+    const g = traversal().withRemote(
+      new DriverRemoteConnection("ws://localhost:8182/gremlin"),
+    );
+
+    query.getVertices(g)
+      .property(Prop.Delete, true);
+
+    console.log("deleted metadata", query);
+    // TODO: Should we capture the user ID who disabled it and the timestamp?
   }
 
   async runGremlin(query: string): Promise<any> {

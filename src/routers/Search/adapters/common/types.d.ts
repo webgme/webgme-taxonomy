@@ -87,7 +87,7 @@ export interface Adapter {
 }
 
 export interface UploadReservation {
-  repoId?: string;
+  repoId: string;
   uri: string | undefined;
 }
 

@@ -1,10 +1,8 @@
 import type { Field } from "../../../common/exchange/Field";
 import type { Taxonomy } from "../../../common/exchange/Taxonomy";
 import type { Term } from "../../../common/exchange/Term";
-import type { FieldName } from "../../../common/exchange/FieldName";
 import type { Variant } from "../../../common/exchange/Variant";
-import type { CompoundContent } from "../../../common/exchange/CompoundContent";
-import { isObject, unique } from "../Utils";
+import { isObject } from "../Utils";
 import { ArtifactMetadatav2 } from "./common/types";
 
 export class Graph {
@@ -97,7 +95,7 @@ function getKeyTypes(attrDicts: AttrDict[]): [string, string][] {
 
 type NodeId = number;
 type EdgeId = number;
-type AttrDict = { [name: string]: string | number | boolean };
+export type AttrDict = { [name: string]: string | number | boolean };
 class Node {
   readonly id: NodeId;
   readonly attributes: AttrDict;
@@ -181,11 +179,21 @@ class LabeledEdge extends Edge {
   }
 }
 
+export const ContentLabel = "Content";
+export const Prop = {
+  Delete: "disabled",
+  ContentId: "contentId",
+};
+
 export function toGraph(
   metadata: ArtifactMetadatav2,
+  attrs: AttrDict = {},
 ): Graph {
-  const contentNode = new NamedNode("Content");
+  const contentNode = new NamedNode(ContentLabel);
   contentNode.attributes.originalName = metadata.displayName;
+
+  Object.entries(attrs)
+    .forEach(([name, value]) => contentNode.attributes[name] = value);
 
   const [nodes, edges] = fromTags(contentNode.id, metadata.tags);
   return new Graph(nodes.concat(contentNode), edges);
@@ -207,8 +215,8 @@ export function addNodeData(taxonomy: Taxonomy, graph: Graph): Graph {
   // for each node, add the original name and set the label
   // TODO: rename id to tagId?
   graph.nodes.forEach((node) => {
-    if (typeof node.attributes.id === "string") {
-      const data = nodeData[node.attributes.id];
+    if (typeof node.attributes.tagId === "string") {
+      const data = nodeData[node.attributes.tagId];
       if (data) {
         if (data.name) {
           node.attributes.originalName = data.name;
@@ -249,7 +257,7 @@ export function getNameTypeDict(taxonomy: Taxonomy): NameDict {
   return Object.fromEntries(vocabTuples.concat(termTuples));
 }
 
-type NameDict = { [id: string]: NameTypeData };
+type NameDict = { [tagId: string]: NameTypeData };
 type ID = string;
 type NameTuple = [ID, NameTypeData][];
 export function getTermNameTuples(
