@@ -51,7 +51,8 @@ import {
   Adapter,
   ArtifactMetadata,
   ArtifactMetadatav2,
-  UploadReservation,
+  ContentReservation,
+  RepoReservation,
 } from "./adapters/common/types";
 import { UserError } from "../../common/UserError";
 import { GremlinAdapter } from "./adapters/metadata";
@@ -601,7 +602,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
  */
 async function addChildSystemTags(
   metadata: ArtifactMetadatav2,
-  reservation: UploadReservation,
+  reservation: ContentReservation,
   gmeContext: GmeContentContext,
   userId: string,
   filenames: string[],
@@ -628,7 +629,7 @@ async function addChildSystemTags(
 
 async function addSystemTags(
   metadata: ArtifactMetadatav2,
-  reservation: UploadReservation,
+  reservation: RepoReservation,
   gmeContext: GmeContentContext,
   userId: string,
   filenames: string[],
@@ -648,7 +649,7 @@ async function addSystemTags(
 async function addContentTypeSystemTags(
   contentType: Core.Node,
   metadata: ArtifactMetadatav2,
-  reservation: UploadReservation,
+  reservation: RepoReservation,
   gmeContext: GmeContentContext,
   userId: string,
   filenames: string[] = [],

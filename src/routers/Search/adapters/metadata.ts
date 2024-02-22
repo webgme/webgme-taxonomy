@@ -9,20 +9,28 @@ import type { Request } from "express";
 import TagFormatter from "../../../common/TagFormatter";
 import { AppendResult } from "./common/AppendResult";
 import { UnsupportedMethodFormat } from "./common/StorageError";
-import { addNodeData, AttrDict, ContentLabel, Prop, toGraph } from "./graphml";
+import {
+  addNodeData,
+  AttrDict,
+  ContentLabel,
+  EdgeLabel,
+  Prop,
+  toGraph,
+} from "./graphml";
 import type { Option } from "oxide.ts";
 import type {
   Adapter,
   Artifact,
   ArtifactMetadata,
   ArtifactMetadatav2,
+  ContentReservation,
   DisableResult,
   DownloadInfo,
   FileStreamDict,
+  RepoReservation,
   Repository,
   UpdateReservation,
   UpdateResult,
-  UploadReservation,
 } from "./common/types";
 import { toArtifactMetadatav2 } from "../Utils";
 import { Taxonomy } from "../../../common/exchange/Taxonomy";
@@ -40,19 +48,21 @@ export class StorageWithGraphSearch<
   }
 
   async createArtifact(
-    res: UploadReservation,
+    res: RepoReservation,
     metadata: ArtifactMetadata,
   ): Promise<string> {
-    await this.metadata.create(res.repoId, metadata);
+    await this.metadata.create(new ContentReference(res.repoId), metadata);
     return await this.content.createArtifact(res, metadata);
   }
   async appendArtifact(
-    res: UploadReservation,
+    res: ContentReservation,
     metadata: ArtifactMetadata,
     filenames: string[],
   ): Promise<AppendResult> {
-    //await this.metadata.create(metadata);
-    // TODO: connect the content item to the parent (child relationship)
+    await this.metadata.create(
+      new ChildContentReference(res.repoId, res.contentId),
+      metadata,
+    );
     return this.content.appendArtifact(res, metadata, filenames);
   }
 
@@ -61,8 +71,13 @@ export class StorageWithGraphSearch<
     metadata: ArtifactMetadata,
     filenames: string[],
   ): Promise<UpdateResult> {
-    await this.metadata.update(
-      new ChildContentReference(res.repoId, res.contentId), // FIXME: this is the new content's ID - Not the existing one!
+    // FIXME: for now, we can only update content but we should be able to update repos, too...
+    await this.metadata.create(
+      new UpdatedChildContentReference(
+        res.repoId,
+        res.targetContentId,
+        res.contentId,
+      ),
       metadata,
     );
     return this.content.updateArtifact(res, metadata, filenames);
@@ -146,14 +161,14 @@ export class StorageWithGraphSearch<
   }
 
   withRepoReservation<T>(
-    fn: (res: UploadReservation) => Promise<T>,
+    fn: (res: RepoReservation) => Promise<T>,
   ): Promise<T> {
     return this.content.withRepoReservation(
       fn,
     );
   }
   withContentReservation<T>(
-    fn: (res: UploadReservation) => Promise<T>,
+    fn: (res: ContentReservation) => Promise<T>,
     repoId: string,
   ): Promise<T> {
     return this.content.withContentReservation(
@@ -181,30 +196,76 @@ export class StorageWithGraphSearch<
   }
 }
 
-type GremlinGraph = gremlin.process.GraphTraversalSource<
-  gremlin.process.GraphTraversal
->;
-interface ImplicitGraphQuery {
-  getVertices(
-    g: GremlinGraph,
-  ): gremlin.process.GraphTraversal;
+type GraphTraversal = gremlin.process.GraphTraversal;
+type GremlinGraph = gremlin.process.GraphTraversalSource<GraphTraversal>;
+
+/**
+ * This is an object that references a specific node in a graph. This
+ * can be used to search for a node w/ the given relationships, etc, in
+ * the graph or it can be used to establish the given relationships with
+ * an existing node.
+ */
+interface NodeInContext {
+  /**
+   * Get the ID of the given node.
+   */
+  id: string;
+  find(
+    g: GraphTraversal,
+  ): GraphTraversal;
+  /**
+   * Apply the given relationships to the given node(s).
+   */
+  apply(g: GremlinGraph, node: GraphTraversal): void;
 }
 
-class ContentReference implements ImplicitGraphQuery {
-  private id: string;
+class ContentReference implements NodeInContext {
+  id: string;
 
   constructor(id: string) {
     this.id = id;
   }
 
-  getVertices(g: GremlinGraph): gremlin.process.GraphTraversal {
-    return g.V()
+  find(g: GraphTraversal): GraphTraversal {
+    return g
       .has(ContentLabel, Prop.ContentId, this.id);
+  }
+
+  apply(_g: GremlinGraph, _node: GraphTraversal) {
+    // explicitly a no-op since there are no relationships here and
+    // the ID has been set in the original import
   }
 }
 
-class ChildContentReference implements ImplicitGraphQuery {
-  private id: string;
+class InEdgeContentReference implements NodeInContext {
+  id: string;
+  private sourceId: string;
+  private label: string;
+
+  constructor(label: string, sourceId: string, id: string) {
+    this.label = label;
+    this.id = id;
+    this.sourceId = sourceId;
+  }
+
+  find(g: GraphTraversal): GraphTraversal {
+    return g
+      .has(ContentLabel, Prop.ContentId, this.sourceId)
+      .out(this.label)
+      .has(ContentLabel, Prop.ContentId, this.id);
+  }
+
+  apply(g: GremlinGraph, node: GraphTraversal): void {
+    g.V()
+      .has(ContentLabel, Prop.ContentId, this.sourceId)
+      .addE(this.label)
+      .to(node);
+  }
+}
+
+// TODO: it would be nice to have more composable versions of these...
+class ChildContentReference implements NodeInContext {
+  id: string;
   private parentId: string;
 
   constructor(parentId: string, id: string) {
@@ -212,19 +273,53 @@ class ChildContentReference implements ImplicitGraphQuery {
     this.parentId = parentId;
   }
 
-  getVertices(g: GremlinGraph): gremlin.process.GraphTraversal {
-    return g.V()
+  find(g: GraphTraversal): gremlin.process.GraphTraversal {
+    return g
       .has(ContentLabel, Prop.ContentId, this.parentId)
-      .out("contains")
+      .out(EdgeLabel.Contains)
       .has(ContentLabel, Prop.ContentId, this.id);
+  }
+
+  apply(g: GremlinGraph, node: GraphTraversal): void {
+    g.V()
+      .has(ContentLabel, Prop.ContentId, this.parentId)
+      .addE(EdgeLabel.Contains)
+      .to(node);
+  }
+}
+
+class UpdatedChildContentReference extends ChildContentReference
+  implements NodeInContext {
+  private prevId: string;
+
+  constructor(parentId: string, prevId: string, id: string) {
+    super(parentId, id);
+    this.prevId = prevId;
+  }
+
+  find(g: GraphTraversal): gremlin.process.GraphTraversal {
+    return super.find(g).where(
+      g.has(ContentLabel, Prop.ContentId, this.prevId)
+        .out(EdgeLabel.NextVersion)
+        .has(ContentLabel, Prop.ContentId, this.id),
+    );
+  }
+
+  apply(g: GremlinGraph, node: GraphTraversal): void {
+    super.apply(g, node);
+
+    // Add the version edge
+    g.V()
+      .has(ContentLabel, Prop.ContentId, this.prevId)
+      .addE(EdgeLabel.NextVersion)
+      .to(node);
   }
 }
 
 export interface MetadataAdapter {
-  create(id: string, metadata: ArtifactMetadata): Promise<void>;
+  create(context: NodeInContext, metadata: ArtifactMetadata): Promise<void>;
   //createChild(metadata: ArtifactMetadata): Promise<void>;
-  update(query: ImplicitGraphQuery, metadata: ArtifactMetadata): Promise<void>;
-  delete(query: ImplicitGraphQuery, parentId?: string): Promise<void>;
+  delete(context: NodeInContext): Promise<void>;
 }
 
 // TODO: load the configuration for this...
@@ -237,9 +332,12 @@ export class GremlinAdapter implements MetadataAdapter {
     this.taxonomy = taxonomy;
   }
 
-  async create(id: string, metadata: ArtifactMetadata): Promise<void> {
+  async create(node: NodeInContext, metadata: ArtifactMetadata): Promise<void> {
     const contentAttributes: AttrDict = {};
-    contentAttributes[Prop.ContentId] = id;
+    contentAttributes[Prop.ContentId] = node.id; // This is not guaranteed to be unique!
+
+    // TODO: How can I establish edges to existing nodes?
+    // TODO: I don't know the IDs of the targets...
     const graph = addNodeData(
       this.taxonomy,
       toGraph(toArtifactMetadatav2(metadata), contentAttributes),
@@ -266,38 +364,33 @@ export class GremlinAdapter implements MetadataAdapter {
     console.log("saved graphml:", filename);
     try {
       await g.io(filename).read().iterate();
-      //await fsp.rm(tmpDir, { recursive: true });
+      await fsp.rm(tmpDir, { recursive: true });
     } catch (err) {
       console.log("---------------- ERROR ----------------");
       console.log(err);
-      //await fsp.rm(tmpDir, { recursive: true });
+      await fsp.rm(tmpDir, { recursive: true });
       throw err;
     }
 
+    // set up any relationships defined in the node's context (NodeInContext)
+    const contentNode = graph.nodes[0];
+    node.apply(g, g.V(contentNode.id));
+
     console.log("imported data into graphdb!");
-  }
-  async update(
-    query: ImplicitGraphQuery,
-    metadata: ArtifactMetadata,
-  ): Promise<void> {
-    // create the given node and connect it to the prior one
-    // TODO
-    // create the given node and connect it to the prior one
-    // TODO
   }
 
   /**
    * Mark the content as deleted
    */
-  async delete(query: ImplicitGraphQuery, parentId?: string): Promise<void> {
+  async delete(context: NodeInContext): Promise<void> {
     const g = traversal().withRemote(
       new DriverRemoteConnection("ws://localhost:8182/gremlin"),
     );
 
-    query.getVertices(g)
+    context.find(g.V())
       .property(Prop.Delete, true);
 
-    console.log("deleted metadata", query);
+    console.log("deleted metadata", context);
     // TODO: Should we capture the user ID who disabled it and the timestamp?
   }
 

@@ -18,11 +18,11 @@ export interface Adapter {
   getRepoMetadata(repoId: string): Promise<Repository>;
   listArtifacts(repoId: string): Promise<Artifact[]>;
   createArtifact(
-    res: UploadReservation,
+    res: RepoReservation,
     metadata: ArtifactMetadata,
   ): Promise<string>;
   appendArtifact(
-    res: UploadReservation,
+    res: ContentReservation,
     metadata: ArtifactMetadata,
     filenames: string[],
   ): Promise<AppendResult>;
@@ -73,10 +73,10 @@ export interface Adapter {
    * RAII-style reservations for uploading data
    */
   withRepoReservation<T>(
-    fn: (res: UploadReservation) => Promise<T>,
+    fn: (res: RepoReservation) => Promise<T>,
   ): Promise<T>;
   withContentReservation<T>(
-    fn: (res: UploadReservation) => Promise<T>,
+    fn: (res: ContentReservation) => Promise<T>,
     repoId: string,
   ): Promise<T>;
   withUpdateReservation<T>(
@@ -86,15 +86,28 @@ export interface Adapter {
   ): Promise<T>;
 }
 
-export interface UploadReservation {
-  repoId: string;
-  uri: string | undefined;
+export interface RepoReservation {
+  readonly repoId: string;
+  readonly uri: string | undefined;
 }
 
-export interface UpdateReservation {
-  repoId: string;
-  contentId: string;
-  uri: string;
+export interface ContentReservation {
+  readonly repoId: string;
+  readonly contentId: string;
+  readonly uri: string | undefined;
+}
+
+export interface UpdateReservation extends ContentReservation {
+  readonly repoId: string;
+  /**
+   * ID to be issued to the new (updated) content.
+   */
+  readonly contentId: string;
+  /**
+   * ID of the content to update.
+   */
+  readonly targetContentId: string;
+  readonly uri: string;
 }
 
 export interface AdapterStatic<A extends Adapter> {

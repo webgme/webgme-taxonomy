@@ -4,6 +4,7 @@ import type { Term } from "../../../common/exchange/Term";
 import type { Variant } from "../../../common/exchange/Variant";
 import { isObject } from "../Utils";
 import { ArtifactMetadatav2 } from "./common/types";
+import { v4 as uuidv4 } from "uuid";
 
 export class Graph {
   readonly nodes: Node[];
@@ -93,8 +94,6 @@ function getKeyTypes(attrDicts: AttrDict[]): [string, string][] {
   return Object.entries(getKeyTypeDict(attrDicts));
 }
 
-type NodeId = number;
-type EdgeId = number;
 export type AttrDict = { [name: string]: string | number | boolean };
 class Node {
   readonly id: NodeId;
@@ -141,16 +140,16 @@ class Edge {
   }
 }
 
-// TODO: dynamically read the label from the exchange format?
-function newId() {
-  return Date.now() + Math.floor(10000 * Math.random());
+type NodeId = string;
+type EdgeId = string;
+function newId(): NodeId {
+  return uuidv4();
 }
 
-type EdgeLabel = "tagged_with" | "using_taxonomy";
 class NamedNode extends Node {
   constructor(
     label: string,
-    id?: string,
+    tagId?: string,
     value?: string | number | boolean,
   ) {
     const attrDict: AttrDict = {
@@ -159,8 +158,8 @@ class NamedNode extends Node {
     if (value !== undefined) {
       attrDict.value = value;
     }
-    if (id !== undefined) {
-      attrDict.id = id;
+    if (tagId !== undefined) {
+      attrDict.tagId = tagId;
     }
     super(attrDict);
   }
@@ -184,7 +183,17 @@ export const Prop = {
   Delete: "disabled",
   ContentId: "contentId",
 };
+export const EdgeLabel = {
+  NextVersion: "nextVersion",
+  TaggedWith: "taggedWith",
+  Contains: "contains",
+};
 
+/**
+ * Get a graph representation of the given metadata.
+ *
+ * *The node representing the content is the first node in the graph.*
+ */
 export function toGraph(
   metadata: ArtifactMetadatav2,
   attrs: AttrDict = {},
@@ -196,7 +205,9 @@ export function toGraph(
     .forEach(([name, value]) => contentNode.attributes[name] = value);
 
   const [nodes, edges] = fromTags(contentNode.id, metadata.tags);
-  return new Graph(nodes.concat(contentNode), edges);
+
+  // Return the content node as the first element in the nodes list
+  return new Graph([contentNode, ...nodes], edges);
 }
 
 /**
@@ -315,7 +326,7 @@ export function fromTags(parentId: NodeId, tags: any): [Node[], Edge[]] {
         : new NamedNode("TagData", guid, data); // FIXME: get the actual types
 
       nodes.push(tagNode);
-      edges.push(new LabeledEdge("tagged_with", parentId, tagNode.id));
+      edges.push(new LabeledEdge(EdgeLabel.TaggedWith, parentId, tagNode.id));
 
       if (isObject(data)) {
         const [children, subEdges] = fromTags(tagNode.id, data);
