@@ -101,6 +101,7 @@ class Node {
   constructor(attributes: { [name: string]: any }) {
     this.id = newId();
     this.attributes = attributes;
+    this.attributes[Prop.Uuid] = this.id;
   }
 
   toGraphMl(): string {
@@ -180,6 +181,7 @@ class LabeledEdge extends Edge {
 
 export const ContentLabel = "Content";
 export const Prop = {
+  Uuid: "uuid",
   Delete: "disabled",
   ContentId: "contentId",
 };

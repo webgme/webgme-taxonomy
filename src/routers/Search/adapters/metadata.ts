@@ -198,6 +198,8 @@ export class StorageWithGraphSearch<
 
 type GraphTraversal = gremlin.process.GraphTraversal;
 type GremlinGraph = gremlin.process.GraphTraversalSource<GraphTraversal>;
+// FIXME: what is a better type for the nodes queried from the graph?
+type GraphNode = IteratorResult<any, any>;
 
 /**
  * This is an object that references a specific node in a graph. This
@@ -216,7 +218,7 @@ interface NodeInContext {
   /**
    * Apply the given relationships to the given node(s).
    */
-  apply(g: GremlinGraph, node: GraphTraversal): void;
+  apply(g: GremlinGraph, node: GraphNode): Promise<void>;
 }
 
 class ContentReference implements NodeInContext {
@@ -231,7 +233,7 @@ class ContentReference implements NodeInContext {
       .has(ContentLabel, Prop.ContentId, this.id);
   }
 
-  apply(_g: GremlinGraph, _node: GraphTraversal) {
+  async apply(_g: GremlinGraph, _node: GraphNode): Promise<void> {
     // explicitly a no-op since there are no relationships here and
     // the ID has been set in the original import
   }
@@ -255,7 +257,7 @@ class InEdgeContentReference implements NodeInContext {
       .has(ContentLabel, Prop.ContentId, this.id);
   }
 
-  apply(g: GremlinGraph, node: GraphTraversal): void {
+  async apply(g: GremlinGraph, node: GraphNode): Promise<void> {
     g.V()
       .has(ContentLabel, Prop.ContentId, this.sourceId)
       .addE(this.label)
@@ -280,11 +282,14 @@ class ChildContentReference implements NodeInContext {
       .has(ContentLabel, Prop.ContentId, this.id);
   }
 
-  apply(g: GremlinGraph, node: GraphTraversal): void {
-    g.V()
+  async apply(g: GremlinGraph, node: GraphNode): Promise<void> {
+    const parent = await g.V()
       .has(ContentLabel, Prop.ContentId, this.parentId)
+      .next();
+
+    await g.V(parent.value)
       .addE(EdgeLabel.Contains)
-      .to(node);
+      .to(node.value).iterate();
   }
 }
 
@@ -305,14 +310,17 @@ class UpdatedChildContentReference extends ChildContentReference
     );
   }
 
-  apply(g: GremlinGraph, node: GraphTraversal): void {
+  async apply(g: GremlinGraph, node: GraphTraversal): Promise<void> {
     super.apply(g, node);
 
     // Add the version edge
-    g.V()
+    const prev = await g.V()
       .has(ContentLabel, Prop.ContentId, this.prevId)
+      .next();
+
+    await g.V(prev.value)
       .addE(EdgeLabel.NextVersion)
-      .to(node);
+      .to(node.value).iterate();
   }
 }
 
@@ -324,6 +332,7 @@ export interface MetadataAdapter {
 
 // TODO: load the configuration for this...
 // maybe it should be its own metamodel?
+const GREMLIN_ENDPOINT = "ws://localhost:8182/gremlin"; // TODO: make this configurable
 const traversal = gremlin.process.AnonymousTraversalSource.traversal;
 const DriverRemoteConnection = gremlin.driver.DriverRemoteConnection;
 export class GremlinAdapter implements MetadataAdapter {
@@ -335,19 +344,15 @@ export class GremlinAdapter implements MetadataAdapter {
   async create(node: NodeInContext, metadata: ArtifactMetadata): Promise<void> {
     const contentAttributes: AttrDict = {};
     contentAttributes[Prop.ContentId] = node.id; // This is not guaranteed to be unique!
+    contentAttributes[Prop.Delete] = false;
 
-    // TODO: How can I establish edges to existing nodes?
-    // TODO: I don't know the IDs of the targets...
     const graph = addNodeData(
       this.taxonomy,
       toGraph(toArtifactMetadatav2(metadata), contentAttributes),
     );
     const content = graph.toGraphMl();
-    console.log("GraphML content:");
-    console.log(content);
-
     const g = traversal().withRemote(
-      new DriverRemoteConnection("ws://localhost:8182/gremlin"),
+      new DriverRemoteConnection(GREMLIN_ENDPOINT),
     );
 
     // Unfortunately, gremlin imports graphml only as files
@@ -374,7 +379,18 @@ export class GremlinAdapter implements MetadataAdapter {
 
     // set up any relationships defined in the node's context (NodeInContext)
     const contentNode = graph.nodes[0];
-    node.apply(g, g.V(contentNode.id));
+    console.log("connecting to node with UUID:", contentNode.attributes.uuid);
+    const graphNode = await g.V().has(
+      ContentLabel,
+      Prop.Uuid,
+      contentNode.attributes.uuid,
+    ).next();
+    console.log({ graphNode });
+
+    node.apply(
+      g,
+      graphNode,
+    );
 
     console.log("imported data into graphdb!");
   }
@@ -384,11 +400,15 @@ export class GremlinAdapter implements MetadataAdapter {
    */
   async delete(context: NodeInContext): Promise<void> {
     const g = traversal().withRemote(
-      new DriverRemoteConnection("ws://localhost:8182/gremlin"),
+      new DriverRemoteConnection(GREMLIN_ENDPOINT),
     );
 
-    context.find(g.V())
-      .property(Prop.Delete, true);
+    const node = await context.find(g.V())
+      .next();
+
+    console.log("about to set", Prop.Delete, "on", node.value);
+    await g.V(node.value)
+      .property(Prop.Delete, true).iterate();
 
     console.log("deleted metadata", context);
     // TODO: Should we capture the user ID who disabled it and the timestamp?
@@ -396,7 +416,7 @@ export class GremlinAdapter implements MetadataAdapter {
 
   async runGremlin(query: string): Promise<any> {
     const g = traversal().withRemote(
-      new DriverRemoteConnection("ws://localhost:8182/gremlin"),
+      new DriverRemoteConnection(GREMLIN_ENDPOINT),
     );
     throw new Error("Unimplemented!");
     //g.withStrategies(ReadOnlyStrategy.instance());
