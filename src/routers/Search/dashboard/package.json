@@ -44,7 +44,7 @@
     "svelte": "^3.0.0",
     "svelte-check": "^2.0.0",
     "svelte-file-dropzone": "^1.0.0",
-    "svelte-jsonschema-form": "github:webgme/svelte-jsonschema-form#v0.7.5",
+    "svelte-jsonschema-form": "github:webgme/svelte-jsonschema-form#v0.7.6",
     "svelte-portal": "^2.2.0",
     "svelte-preprocess": "^4.0.0",
     "ts-mocha": "^10.0.0",
