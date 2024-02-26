@@ -4,9 +4,4 @@ import type { Term } from "./Term";
 import type { TermName } from "./TermName";
 import type { VocabularyId } from "./VocabularyId";
 
-export interface VocabularyData {
-  id: VocabularyId;
-  description?: string;
-  releaseState?: ReleaseState;
-  terms: Record<TermName, Term>;
-}
+export interface VocabularyData { id: VocabularyId, description?: string, releaseState?: ReleaseState, terms: Record<TermName, Term>, }

@@ -5,11 +5,4 @@ import type { ReleaseState } from "./ReleaseState";
 import type { SelectionConstraint } from "./SelectionConstraint";
 import type { TermId } from "./TermId";
 
-export interface Term {
-  id: TermId;
-  selection: SelectionConstraint;
-  description?: string;
-  releaseState?: ReleaseState;
-  readOnly: boolean;
-  fields: Record<FieldName, Field>;
-}
+export interface Term { id: TermId, selection: SelectionConstraint, description?: string, releaseState?: ReleaseState, readOnly: boolean, fields: Record<FieldName, Field>, }

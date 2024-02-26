@@ -2,9 +2,4 @@
 import type { FieldContent } from "./FieldContent";
 import type { FieldId } from "./FieldId";
 
-export interface Field {
-  id: FieldId;
-  description: string;
-  required: boolean;
-  content: FieldContent;
-}
+export interface Field { id: FieldId, description: string, required: boolean, content: FieldContent, }

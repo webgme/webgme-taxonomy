@@ -395,6 +395,13 @@ export namespace Pattern {
   const DOMAIN_NAME = "[a-zA-Z_\.-]+";
   const PORT = ":[0-9]+";
   export const URL = `(${anyIn(DOMAIN_NAME, IP_ADDRESS)})(${PORT})?`;
+  const HEX_DIGIT = "[0-9a-fA-F]";
+  export const UUID =
+    `${HEX_DIGIT}{8}-${HEX_DIGIT}{4}-${HEX_DIGIT}{4}-${HEX_DIGIT}{4}-${HEX_DIGIT}{12}`;
+  /**
+   * A URI to metadata (used in ReferenceFields)
+   */
+  export const METADATA_REFERENCE = exact(`metadata://${URL}/${UUID}`);
 }
 
 export class UniqueNames {

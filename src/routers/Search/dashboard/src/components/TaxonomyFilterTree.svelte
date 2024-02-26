@@ -65,7 +65,7 @@
         <Checkbox bind:checked indeterminate={checked === null} />
         <Autocomplete combobox label={name} bind:value {search} />
       </FormField>
-    {:else if tree.type === "UriField"}
+    {:else if tree.type === "UriField" || tree.type === 'ReferenceField'}
       <FormField>
         <Checkbox bind:checked indeterminate={checked === null} />
         <Autocomplete combobox label={name} bind:value {search} />

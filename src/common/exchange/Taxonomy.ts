@@ -3,7 +3,4 @@ import type { Version } from "./Version";
 import type { VocabularyData } from "./VocabularyData";
 import type { VocabularyName } from "./VocabularyName";
 
-export interface Taxonomy {
-  version: Version;
-  vocabularies: Record<VocabularyName, VocabularyData>;
-}
+export interface Taxonomy { version: Version, vocabularies: Record<VocabularyName, VocabularyData>, }

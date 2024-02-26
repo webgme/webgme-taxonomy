@@ -223,10 +223,8 @@ export function toGraph(
 export function addNodeData(taxonomy: Taxonomy, graph: Graph): Graph {
   // Build a dictionary of IDs to display names
   const nodeData = getNameTypeDict(taxonomy);
-  console.log({ nodeData });
 
   // for each node, add the original name and set the label
-  // TODO: rename id to tagId?
   graph.nodes.forEach((node) => {
     if (typeof node.attributes.tagId === "string") {
       const data = nodeData[node.attributes.tagId];

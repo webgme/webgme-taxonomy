@@ -27,6 +27,7 @@ import {
 import { BooleanContent } from "./exchange/BooleanContent";
 import { TextContent } from "./exchange/TextContent";
 import { UriContent } from "./exchange/UriContent";
+import { ReferenceContent } from "./exchange/ReferenceContent";
 
 /**
  * Create a dictionary of node values by node name.
@@ -137,6 +138,14 @@ async function getFieldContent(
         .unwrapOrElse(() => ({}));
       return {
         Uri: data,
+      };
+    }
+    case "ReferenceField": {
+      const data = getStringAttribute(core, fieldNode, "value")
+        .map((value): ReferenceContent => ({ value }))
+        .unwrapOrElse(() => ({}));
+      return {
+        Reference: data,
       };
     }
     case "EnumField": {

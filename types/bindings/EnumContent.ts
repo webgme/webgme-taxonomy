@@ -2,7 +2,4 @@
 import type { Variant } from "./Variant";
 import type { VariantId } from "./VariantId";
 
-export interface EnumContent {
-  value?: VariantId;
-  variants: Array<Variant>;
-}
+export interface EnumContent { value?: VariantId, variants: Array<Variant>, }
