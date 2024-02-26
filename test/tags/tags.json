@@ -1,0 +1,44 @@
+{
+  "taxonomy": {
+    "id": "guest+p2",
+    "branch": "master",
+    "commit": "#55cbee4a4b91bf92de0ddf15222f87d29e5c0683",
+    "url": "127.0.0.1"
+  },
+  "taxonomyTags": [
+    {
+      "CompoundTest": {
+        "iron_scan_MRI": {
+          "iron_scan_MRI_output_image": true,
+          "Processing Pipeline": { "None": {} },
+          "iron_scan_MRI_output_tabular": true
+        }
+      }
+    },
+    {
+      "SetTest": {
+        "CurrentTreatment": {
+            "TreatmentType": [
+                {
+                    "SAINT ": {}
+                },
+                {
+                    "TMS ": {}
+                },
+                {
+                    "Ultrasound Pulsation": {}
+                }
+            ]
+        }
+      }
+    },
+
+    { "EnumTest": { "EnumData": { "value": { "C": {} } } } },
+    { "TextTest": { "TextData": { "value": "hewrwerew" } } },
+    { "BoolTest": { "BoolData": { "value": true } } },
+    { "FloatTest": { "FloatData": { "value": 222.3 } } },
+    { "IntTest": { "IntData": { "value": 5 } } }
+
+    
+  ]
+}
