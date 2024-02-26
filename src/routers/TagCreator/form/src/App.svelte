@@ -1,6 +1,6 @@
 <script lang="ts">
   import 'svelte-jsonschema-form/theme/default';
-  import SchemaForm, { type ValidationError, type JSONSchema7 } from 'svelte-jsonschema-form';
+  import SchemaForm, { ValidationError } from 'svelte-jsonschema-form';
   import TopAppBar, { Row, Section, Title } from "@smui/top-app-bar";
   import Button, { Label } from '@smui/button';
   import Snackbar, { Label as SBLabel, Actions } from '@smui/snackbar';
@@ -12,9 +12,9 @@
 
   let schemaForm: SchemaForm;
   let errorSnackbar: Snackbar;
-  let validationError: ValidationError | null = null;
+  let schemaError: Error | ValidationError | null = null;
 
-  $: if (validationError != null) errorSnackbar.open();
+  $: if (schemaError != null) errorSnackbar.open();
 
   async function fetchSchema() {
     const url = "../configuration.json";    
@@ -32,8 +32,14 @@
         transform: (tags: any) => ({ tags, taxonomyVersion })
       });
     } catch (error) {
-      validationError = error as ValidationError;
+      schemaError = error as Error | ValidationError;
     }
+  }
+
+  function handleSchemaFormError(event: CustomEvent<Error | ValidationError>) {
+    debugger;
+    console.log("handleSchemaFormError", event.detail);
+    schemaError = event.detail;
   }
 </script>
 
@@ -58,7 +64,7 @@
         </Section>
       </Row>
     </TopAppBar>
-    <SchemaForm {schema} {uischema} {data} bind:this={schemaForm}>
+    <SchemaForm {schema} {uischema} {data} bind:this={schemaForm} on:error={handleSchemaFormError}>
       <Button on:click={() => download(taxonomyVersion)} type="button" variant="raised">
         <Label>Download</Label>
       </Button>
@@ -69,13 +75,15 @@
 
   <Snackbar class="schema-error" bind:this={errorSnackbar}>
     <SBLabel>
-      {#if validationError}
-        {validationError.message}
-        <ul>
-          {#each validationError.errors as error}
-            <li>{error.message}</li>
-          {/each}
-        </ul>
+      {#if schemaError}
+        {schemaError.message}
+        {#if schemaError instanceof ValidationError}
+          <ul>
+            {#each schemaError.errors as error}
+              <li>{error.message}</li>
+            {/each}
+          </ul>
+        {/if}
       {:else}
         Unknown error
       {/if}
