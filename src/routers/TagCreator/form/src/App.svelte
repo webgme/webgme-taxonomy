@@ -3,18 +3,14 @@
   import SchemaForm, { ValidationError } from 'svelte-jsonschema-form';
   import TopAppBar, { Row, Section, Title } from "@smui/top-app-bar";
   import Button, { Label } from '@smui/button';
-  import Snackbar, { Label as SBLabel, Actions } from '@smui/snackbar';
-  import IconButton from '@smui/icon-button';
   import SchemaLoading from './SchemaLoading.svelte';
+  import SchemaError from './SchemaError.svelte';
 
   let configuration = fetchSchema();
   const defaultUischema = { ":ui:": { "collapse": "unrequired" }} as const;
 
   let schemaForm: SchemaForm;
-  let errorSnackbar: Snackbar;
   let schemaError: string | Error | ValidationError | null = null;
-
-  $: if (schemaError != null) errorSnackbar.open();
 
   async function fetchSchema() {
     const url = "../configuration.json";    
@@ -77,27 +73,7 @@
     <div class="error">ERROR: {error.message}</div>
   {/await}
 
-  <Snackbar class="schema-error" bind:this={errorSnackbar}>
-    <SBLabel>
-        {#if typeof schemaError === 'string'}
-          {schemaError}
-        {:else if schemaError instanceof Error}
-          {schemaError.message}
-        {:else}
-          Unknown error
-        {/if}
-        {#if schemaError instanceof ValidationError}
-          <ul>
-            {#each schemaError.errors as error}
-              <li>{error.message}</li>
-            {/each}
-          </ul>
-        {/if}
-    </SBLabel>
-    <Actions>
-      <IconButton class="material-icons" title="Dismiss">close</IconButton>
-    </Actions>
-  </Snackbar>
+  <SchemaError bind:error={schemaError} />
 </main>
 
 <style lang="scss">
