@@ -12,7 +12,7 @@
 
   let schemaForm: SchemaForm;
   let errorSnackbar: Snackbar;
-  let schemaError: Error | ValidationError | null = null;
+  let schemaError: string | Error | ValidationError | null = null;
 
   $: if (schemaError != null) errorSnackbar.open();
 
@@ -37,9 +37,13 @@
   }
 
   function handleSchemaFormError(event: CustomEvent<Error | ValidationError>) {
-    debugger;
-    console.log("handleSchemaFormError", event.detail);
-    schemaError = event.detail;
+    console.error(event.detail);
+    if (event.detail instanceof ValidationError) {
+      schemaError = event.detail;
+    }
+    else {
+      schemaError = "Invalid JSON Schema. Please check the configuration file.";
+    }
   }
 </script>
 
@@ -75,8 +79,13 @@
 
   <Snackbar class="schema-error" bind:this={errorSnackbar}>
     <SBLabel>
-      {#if schemaError}
-        {schemaError.message}
+        {#if typeof schemaError === 'string'}
+          {schemaError}
+        {:else if schemaError instanceof Error}
+          {schemaError.message}
+        {:else}
+          Unknown error
+        {/if}
         {#if schemaError instanceof ValidationError}
           <ul>
             {#each schemaError.errors as error}
@@ -84,9 +93,6 @@
             {/each}
           </ul>
         {/if}
-      {:else}
-        Unknown error
-      {/if}
     </SBLabel>
     <Actions>
       <IconButton class="material-icons" title="Dismiss">close</IconButton>
