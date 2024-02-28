@@ -329,6 +329,12 @@ describe("PDP", function () {
       assert(validate(idString));
     });
 
+    it("should allow process types with numbers", function () {
+      const idString =
+        "pdp://leappremonitiondev.azurewebsites.net/sandbox_eegv1/51336660-a9c2-4a28-84e4-f6c3bdcc7e4e/1/0";
+      assert(validate(idString));
+    });
+
     it("should allow repo/process version", function () {
       const idString =
         "pdp://127.0.0.1:435/processType/e0de6a4a-5257-4f2c-b3ce-470e3299fc4a";
