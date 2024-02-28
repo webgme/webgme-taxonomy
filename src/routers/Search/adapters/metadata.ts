@@ -54,6 +54,7 @@ export class StorageWithGraphSearch<
     await this.metadata.create(new ContentReference(res.repoId), metadata);
     return await this.content.createArtifact(res, metadata);
   }
+
   async appendArtifact(
     res: ContentReservation,
     metadata: ArtifactMetadata,
@@ -105,6 +106,7 @@ export class StorageWithGraphSearch<
       id,
     );
   }
+
   downloadFileURLs(
     repoId: string,
     contentIds: string[],
@@ -114,6 +116,7 @@ export class StorageWithGraphSearch<
       contentIds,
     );
   }
+
   getMetadata(
     repoId: string,
     contentId: string,
@@ -123,6 +126,7 @@ export class StorageWithGraphSearch<
       contentId,
     );
   }
+
   getBulkMetadata(
     repoId: string,
     contentIds: string[],
@@ -167,6 +171,7 @@ export class StorageWithGraphSearch<
       fn,
     );
   }
+
   withContentReservation<T>(
     fn: (res: ContentReservation) => Promise<T>,
     repoId: string,
@@ -176,6 +181,7 @@ export class StorageWithGraphSearch<
       repoId,
     );
   }
+
   withUpdateReservation<T>(
     fn: (res: UpdateReservation) => Promise<T>,
     repoId: string,
@@ -187,6 +193,7 @@ export class StorageWithGraphSearch<
       contentId,
     );
   }
+
   async getRepoMetadata(repoId: string): Promise<Repository> {
     return this.content.getRepoMetadata(repoId);
   }
@@ -343,39 +350,17 @@ export class GremlinAdapter implements MetadataAdapter {
 
   async create(node: NodeInContext, metadata: ArtifactMetadata): Promise<void> {
     const contentAttributes: AttrDict = {};
-    contentAttributes[Prop.ContentId] = node.id; // This is not guaranteed to be unique!
+    contentAttributes[Prop.ContentId] = node.id; // This ID is not guaranteed to be unique!
     contentAttributes[Prop.Delete] = false;
 
     const graph = addNodeData(
       this.taxonomy,
       toGraph(toArtifactMetadatav2(metadata), contentAttributes),
     );
-    const content = graph.toGraphMl();
     const g = traversal().withRemote(
       new DriverRemoteConnection(GREMLIN_ENDPOINT),
     );
-
-    // Unfortunately, gremlin imports graphml only as files
-    // so we will write the graph to a file then pass the
-    // filename to the API...
-    const tmpDir = await fsp.mkdtemp(
-      path.join(os.tmpdir(), "webgme-taxonomy-"),
-    );
-    await fsp.chmod(tmpDir, 0o777);
-    // TODO: use a volume shared by the graph db server
-    const filename = path.join(tmpDir, "graph.xml");
-    await fsp.writeFile(filename, content);
-
-    console.log("saved graphml:", filename);
-    try {
-      await g.io(filename).read().iterate();
-      await fsp.rm(tmpDir, { recursive: true });
-    } catch (err) {
-      console.log("---------------- ERROR ----------------");
-      console.log(err);
-      await fsp.rm(tmpDir, { recursive: true });
-      throw err;
-    }
+    const addGraphStep = graph.instantiate(g.inject(0));
 
     // set up any relationships defined in the node's context (NodeInContext)
     const contentNode = graph.nodes[0];
@@ -388,7 +373,7 @@ export class GremlinAdapter implements MetadataAdapter {
     console.log({ graphNode });
 
     node.apply(
-      g,
+      addGraphStep,
       graphNode,
     );
 

@@ -5,6 +5,10 @@ import type { Variant } from "../../../common/exchange/Variant";
 import { isObject } from "../Utils";
 import { ArtifactMetadatav2 } from "./common/types";
 import { v4 as uuidv4 } from "uuid";
+import gremlin from "gremlin";
+
+type GraphTraversal = gremlin.process.GraphTraversal;
+type GremlinGraph = gremlin.process.GraphTraversalSource<GraphTraversal>;
 
 export class Graph {
   readonly nodes: Node[];
@@ -15,27 +19,28 @@ export class Graph {
     this.edges = edges;
   }
 
-  toGraphMl(): string {
-    const nodeKeysXml = getKeyTypes(this.nodes.map((n) => n.attributes))
-      .map(([name, type]) =>
-        `<key id="${name}" for="node" attr.name="${name}" attr.type="${type}"/>`
-      ).join("\n");
-    const edgeKeysXml = getKeyTypes(this.edges.map((n) => n.attributes))
-      .map(([name, type]) =>
-        `<key id="${name}" for="edge" attr.name="${name}" attr.type="${type}"/>`
-      ).join("\n");
-    const nodeXml = this.nodes.map((node) => node.toGraphMl()).join("\n");
-    const edgeXml = this.edges.map((edge) => edge.toGraphMl()).join("\n");
-    return `
-      <graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.1/graphml.xsd">
-        ${nodeKeysXml}
-        ${edgeKeysXml}
-        <graph edgedefault="directed">
-          ${nodeXml}
-          ${edgeXml}
-        </graph>
-      </graphml>
-      `;
+  instantiate(graph: GraphTraversal): GraphTraversal {
+    // create nodes
+    const nodesTraversal = this.nodes.reduce(
+      (g, node) => node.instantiate(g),
+      graph,
+    );
+
+    // find any nodes referenced by the edges
+    const newIds = new Set(this.nodes.map((n) => n.id));
+    const existingIds = this.edges
+      .flatMap((e) => [e.sourceId, e.targetId])
+      .filter((id) => !newIds.has(id));
+
+    existingIds.map((id) =>
+      nodesTraversal.V().has(ContentLabel, Prop.Uuid, id).as(id)
+    );
+
+    // create edges
+    return this.edges.reduce(
+      (g, edge) => edge.instantiate(g),
+      nodesTraversal,
+    );
   }
 }
 
@@ -97,11 +102,20 @@ function getKeyTypes(attrDicts: AttrDict[]): [string, string][] {
 export type AttrDict = { [name: string]: string | number | boolean };
 class Node {
   readonly id: NodeId;
+  label: string;
   readonly attributes: AttrDict;
-  constructor(attributes: { [name: string]: any }) {
+  constructor(label: string, attributes: { [name: string]: any }) {
     this.id = newId();
+    this.label = label;
     this.attributes = attributes;
     this.attributes[Prop.Uuid] = this.id;
+  }
+
+  instantiate(g: GraphTraversal): GraphTraversal {
+    return Object.entries(this.attributes).reduce(
+      (g, [name, value]) => g.property(name, value),
+      g.addV(this.label),
+    ).as(this.id);
   }
 
   toGraphMl(): string {
@@ -115,29 +129,29 @@ class Node {
 }
 
 class Edge {
-  private id: EdgeId;
-  private sourceId: NodeId;
-  private targetId: NodeId;
+  readonly id: EdgeId;
+  readonly label: string;
+  readonly sourceId: NodeId;
+  readonly targetId: NodeId;
   readonly attributes: AttrDict;
 
   constructor(
+    label: string,
     sourceId: NodeId,
     targetId: NodeId,
     attributes: AttrDict = {},
   ) {
     this.id = newId();
+    this.label = label;
     this.sourceId = sourceId;
     this.targetId = targetId;
     this.attributes = attributes;
   }
 
-  toGraphMl(): string {
-    const attrs = Object.entries(this.attributes).map(([name, value]) =>
-      `<data key="${name}">${value}</data>`
-    ).join("\n");
-    return `<edge id="${this.id}" source="${this.sourceId}" target="${this.targetId}">
-      ${attrs}
-    </edge>`;
+  instantiate(g: GraphTraversal): GraphTraversal {
+    // FIXME: what if they are referencing an existing node?
+    // FIXME: maybe we need to make sure they are looked up first?
+    return g.addE(this.label).from_(this.sourceId).to(this.targetId);
   }
 }
 
@@ -153,16 +167,14 @@ class NamedNode extends Node {
     tagId?: string,
     value?: string | number | boolean,
   ) {
-    const attrDict: AttrDict = {
-      labelV: label,
-    };
+    const attrDict: AttrDict = {};
     if (value !== undefined) {
       attrDict.value = value;
     }
     if (tagId !== undefined) {
       attrDict.tagId = tagId;
     }
-    super(attrDict);
+    super(label, attrDict);
   }
 }
 
@@ -172,10 +184,8 @@ class LabeledEdge extends Edge {
     sourceId: NodeId,
     targetId: NodeId,
   ) {
-    const attrDict: AttrDict = {
-      labelE: label,
-    };
-    super(sourceId, targetId, attrDict);
+    const attrDict: AttrDict = {};
+    super(label, sourceId, targetId, attrDict);
   }
 }
 
@@ -213,7 +223,7 @@ export function toGraph(
 }
 
 /**
- * Add node data ("originalName", "labelV") to the nodes in the graph.
+ * Add node data ("originalName", "label") to the nodes in the graph.
  *
  * The original name is recorded for easier debugging. It is explicitly recorded
  * as "originalName" to be clear that renames will get this out of sync.
@@ -232,7 +242,7 @@ export function addNodeData(taxonomy: Taxonomy, graph: Graph): Graph {
         if (data.name) {
           node.attributes.originalName = data.name;
         }
-        node.attributes.labelV = data.type;
+        node.label = data.type;
       }
     }
   });
