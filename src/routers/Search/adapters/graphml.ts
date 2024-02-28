@@ -32,14 +32,16 @@ export class Graph {
       .flatMap((e) => [e.sourceId, e.targetId])
       .filter((id) => !newIds.has(id));
 
-    existingIds.map((id) =>
-      nodesTraversal.V().has(ContentLabel, Prop.Uuid, id).as(id)
+    // Add aliases for existing nodes
+    const allNodesTraversal = existingIds.reduce(
+      (traversal, id) => traversal.V().has(ContentLabel, Prop.Uuid, id).as(id),
+      nodesTraversal,
     );
 
     // create edges
     return this.edges.reduce(
       (g, edge) => edge.instantiate(g),
-      nodesTraversal,
+      allNodesTraversal,
     );
   }
 }
@@ -149,8 +151,6 @@ class Edge {
   }
 
   instantiate(g: GraphTraversal): GraphTraversal {
-    // FIXME: what if they are referencing an existing node?
-    // FIXME: maybe we need to make sure they are looked up first?
     return g.addE(this.label).from_(this.sourceId).to(this.targetId);
   }
 }
