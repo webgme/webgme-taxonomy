@@ -156,6 +156,8 @@ const buildRouters = Object.entries(webgmeSetup.components.routers).map(
 
 // If testing, we should build common files so they can be tested
 console.log("NODE_ENV is", process.env.NODE_ENV);
+let allBuildFiles = buildRouters.concat(buildPlugins);
+
 if (process.env.NODE_ENV === "test") {
   const files = (await readdir("./src/common"))
     .concat(
@@ -203,20 +205,22 @@ if (process.env.NODE_ENV === "test") {
 
   if (process.env.TEST_TARGETS) {
     const inputs = process.env.TEST_TARGETS.split(",");
-    configs = configs.filter((cfg) =>
+    allBuildFiles = configs.filter((cfg) =>
       inputs.find((name) => cfg.input.includes(name))
     );
+  } else {
+    allBuildFiles.push(...configs);
   }
 
-  console.log(`About to build ${configs.length} files for testing:`);
+  console.log(`About to build ${allBuildFiles.length} files for testing:`);
   console.log(
-    configs.map((cfg) => cfg.output.file).map((name) => "\t" + name).join("\n"),
+    allBuildFiles.map((cfg) => cfg.output.file).map((name) => "\t" + name).join(
+      "\n",
+    ),
   );
-
-  buildRouters.push(...configs);
 }
 
-export default buildRouters.concat(buildPlugins);
+export default allBuildFiles;
 
 /**
  * Read a directory recursively and return a list of all files
