@@ -225,7 +225,7 @@ interface NodeInContext {
   /**
    * Apply the given relationships to the given node(s).
    */
-  apply(g: GremlinGraph, node: GraphNode): Promise<void>;
+  apply(g: GraphTraversal, nodeAlias: string): GraphTraversal;
 }
 
 class ContentReference implements NodeInContext {
@@ -240,35 +240,10 @@ class ContentReference implements NodeInContext {
       .has(ContentLabel, Prop.ContentId, this.id);
   }
 
-  async apply(_g: GremlinGraph, _node: GraphNode): Promise<void> {
+  apply(g: GraphTraversal, _nodeAlias: string): GraphTraversal {
     // explicitly a no-op since there are no relationships here and
     // the ID has been set in the original import
-  }
-}
-
-class InEdgeContentReference implements NodeInContext {
-  id: string;
-  private sourceId: string;
-  private label: string;
-
-  constructor(label: string, sourceId: string, id: string) {
-    this.label = label;
-    this.id = id;
-    this.sourceId = sourceId;
-  }
-
-  find(g: GraphTraversal): GraphTraversal {
-    return g
-      .has(ContentLabel, Prop.ContentId, this.sourceId)
-      .out(this.label)
-      .has(ContentLabel, Prop.ContentId, this.id);
-  }
-
-  async apply(g: GremlinGraph, node: GraphNode): Promise<void> {
-    g.V()
-      .has(ContentLabel, Prop.ContentId, this.sourceId)
-      .addE(this.label)
-      .to(node);
+    return g;
   }
 }
 
@@ -289,14 +264,18 @@ class ChildContentReference implements NodeInContext {
       .has(ContentLabel, Prop.ContentId, this.id);
   }
 
-  async apply(g: GremlinGraph, node: GraphNode): Promise<void> {
-    const parent = await g.V()
+  /**
+   * Add the containment relationship from the given node to the parent
+   */
+  apply(g: GraphTraversal, nodeAlias: string): GraphTraversal {
+    const addParentAlias = g.V()
       .has(ContentLabel, Prop.ContentId, this.parentId)
-      .next();
+      .as(this.parentId);
 
-    await g.V(parent.value)
+    return addParentAlias
       .addE(EdgeLabel.Contains)
-      .to(node.value).iterate();
+      .from_(this.parentId)
+      .to(nodeAlias);
   }
 }
 
@@ -317,17 +296,18 @@ class UpdatedChildContentReference extends ChildContentReference
     );
   }
 
-  async apply(g: GremlinGraph, node: GraphTraversal): Promise<void> {
-    super.apply(g, node);
+  apply(g: GraphTraversal, nodeAlias: string): GraphTraversal {
+    const addChildEdge = super.apply(g, nodeAlias);
 
     // Add the version edge
-    const prev = await g.V()
+    const addPrevAlias = addChildEdge.V()
       .has(ContentLabel, Prop.ContentId, this.prevId)
-      .next();
+      .as(this.prevId);
 
-    await g.V(prev.value)
+    return addPrevAlias
       .addE(EdgeLabel.NextVersion)
-      .to(node.value).iterate();
+      .from_(this.prevId)
+      .to(nodeAlias);
   }
 }
 
@@ -364,18 +344,14 @@ export class GremlinAdapter implements MetadataAdapter {
 
     // set up any relationships defined in the node's context (NodeInContext)
     const contentNode = graph.nodes[0];
-    console.log("connecting to node with UUID:", contentNode.attributes.uuid);
-    const graphNode = await g.V().has(
-      ContentLabel,
-      Prop.Uuid,
-      contentNode.attributes.uuid,
-    ).next();
-    console.log({ graphNode });
+    console.log("connecting to node with UUID:", contentNode.id);
 
-    node.apply(
+    const allSteps = node.apply(
       addGraphStep,
-      graphNode,
+      contentNode.id,
     );
+
+    await allSteps.iterate();
 
     console.log("imported data into graphdb!");
   }
