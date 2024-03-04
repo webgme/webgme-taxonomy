@@ -72,8 +72,35 @@ function getRenameables(taxonomy: Taxonomy): Renameable[] {
   return renameables;
 }
 
-function getRenameables(taxonomy: Taxonomy): Renameable[] {
-  }
+interface HasFields {
+  fields: Record<FieldName, Field>;
+}
+
+function getFieldRenameables(termVariantOrCompound: HasFields): Renameable[] {
+  const renameables = RenameableDict.fromDict(termOrVariant.fields);
+
+  // Extract the renameables from 
+  const nestedRenameables = Object.values(termOrVariant.fields)
+    .flatMap(field => {
+      if ("Compound" in content) {
+        return getFieldRenameables(content.Compound);
+      } else if ("Set" in content) {
+        return content.Set.variants.map(variant => getVariantRenameables(variant));
+      } else if ("Enum" in content) {
+        return content.Enum.variants.map(variant => getVariantRenameables(variant));
+      }
+      return [];
+  });
+
+  return renameables;
+}
+
+function getVariantRenameables(variant: Variant): Renameable[] {
+    return [
+      new RenameableData(variant),
+      ...getFieldRenameables(variant)
+    ];
+}
 
 export default function renameDuplicates(taxonomy: Taxonomy) {
   // Make a dictionary of all names with:
