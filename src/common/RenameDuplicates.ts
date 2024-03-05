@@ -81,7 +81,7 @@ function getFieldRenameables(termVariantOrCompound: HasFields): Renameable[] {
 
   // Extract the renameables from 
   const nestedRenameables = Object.values(termOrVariant.fields)
-    .flatMap(field => {
+    .flatMap(({content}) => {
       if ("Compound" in content) {
         return getFieldRenameables(content.Compound);
       } else if ("Set" in content) {
@@ -109,5 +109,8 @@ export default function renameDuplicates(taxonomy: Taxonomy) {
   // TODO
   // TODO: Extract the renameables from the taxonomy
   const renameables = RenameableDict.fromDict(taxonomy.vocabularies)
-    .concat(Object.values(taxonomy.vocabularies).flatMap(v => RenameableDict.fromDict(v.terms))
+    .concat(Object.values(taxonomy.vocabularies)
+    .flatMap(v => RenameableDict.fromDict(v.terms));
+
+  // TODO: actually collect the names and do the renaming!
 }
