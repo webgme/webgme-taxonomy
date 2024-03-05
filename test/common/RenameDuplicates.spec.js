@@ -1,8 +1,8 @@
-describe('RenameDuplicates', function() {
+describe("RenameDuplicates", function () {
   const renameDuplicates = require("../../build/common/RenameDuplicates");
   const assert = require("assert");
 
-  it.only('should rename duplicate names among parent-child', function() {
+  it.only("should rename duplicate names among parent-child", function () {
     const partialTax = {
       vocabularies: {
         TestVocab: {
@@ -10,17 +10,16 @@ describe('RenameDuplicates', function() {
             SomeName: {
               fields: {
                 SomeName: {
-                  content: {Text: {}}
-                }
-              }
-           }
-          }
-          
-        }
+                  content: { Text: {} },
+                },
+              },
+            },
+          },
+        },
       },
     };
 
     renameDuplicates(partialTax);
-    assert(!partialTax.vocabularies.TestVocab.terms.hasOwnProperty('SomeName'));
+    assert(!partialTax.vocabularies.TestVocab.terms.hasOwnProperty("SomeName"));
   });
 });
