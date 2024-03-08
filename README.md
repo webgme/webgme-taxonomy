@@ -9,9 +9,14 @@ First, install the webgme-taxonomy following:
 
 Second, start mongodb locally by running the `mongod` executable in your mongodb
 installation (you may need to create a `data` directory or set `--dbpath`).
+Alternatively use docker:
+
+```
+docker run --name webgme-mongo -d -p 27017:27017 mongo:5
+```
 
 Then, run `webgme start` from the project root to start . Finally, navigate to
-`http://localhost:8888` to start using webgme-taxonomy!
+`http://localhost:8080` to start using webgme-taxonomy!
 
 ## Creating a Taxonomy
 
@@ -54,18 +59,18 @@ configured using projects in the design studio:
   generalize. (Generalization has been the hopes :).)
   - This is available at:
     `<deployment url>/routers/Search/<projectId>/branch/<branch>/static/index.html`
-  - For example, if it is running locally on port 8888, and you want to open a
+  - For example, if it is running locally on port 8080, and you want to open a
     dashboard using a taxonomy project named `TaxonomyDemo` and owned by
     `guest`, you can open the dashboard using the master branch with
-    [http://localhost:8888/routers/Search/guest%2BTaxonomyDemo/branch/master/static/index.html](http://localhost:8888/routers/Search/guest%2BTaxonomyDemo/branch/master/static/index.html)
+    [http://localhost:8080/routers/Search/guest%2BTaxonomyDemo/branch/master/static/index.html](http://localhost:8080/routers/Search/guest%2BTaxonomyDemo/branch/master/static/index.html)
 - Taxonomy Term Creator (Form): This is a web-based form for selecting terms
   given the taxonomy defined in the studio.
   - This is available at:
     `<deployment url>/routers/TagCreator/<projectId>/branch/<branch>/static/index.html`
-  - For example, if it is running locally on port 8888, and you want to open the
+  - For example, if it is running locally on port 8080, and you want to open the
     term creator form using a taxonomy project named `TaxonomyDemo` and owned by
     `guest`, you can open the dashboard using the master branch with
-    [http://localhost:8888/routers/TagCreator/guest%2BTaxonomyDemo/branch/master/static/index.html](http://localhost:8888/routers/TagCreator/guest%2BTaxonomyDemo/branch/master/static/index.html)
+    [http://localhost:8080/routers/TagCreator/guest%2BTaxonomyDemo/branch/master/static/index.html](http://localhost:8080/routers/TagCreator/guest%2BTaxonomyDemo/branch/master/static/index.html)
 
 ## Misc To Do
 
