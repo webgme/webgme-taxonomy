@@ -8,7 +8,9 @@ First, install the webgme-taxonomy following:
 - [MongoDB](https://www.mongodb.com/)
 
 Second, start mongodb locally by running the `mongod` executable in your mongodb
-installation (you may need to create a `data` directory or set `--dbpath`). Alternatively use docker:
+installation (you may need to create a `data` directory or set `--dbpath`).
+Alternatively use docker:
+
 ```
 docker run --name webgme-mongo -d -p 27017:27017 mongo:4.4
 ```
