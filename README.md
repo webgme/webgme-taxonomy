@@ -12,7 +12,7 @@ installation (you may need to create a `data` directory or set `--dbpath`).
 Alternatively use docker:
 
 ```
-docker run --name webgme-mongo -d -p 27017:27017 mongo:4.4
+docker run --name webgme-mongo -d -p 27017:27017 mongo:5
 ```
 
 Then, run `webgme start` from the project root to start . Finally, navigate to
