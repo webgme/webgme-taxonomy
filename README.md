@@ -51,7 +51,9 @@ the steps:
 ## Integrated Tools
 
 There are a few integrated tools in the design studio which are automatically
-configured using projects in the design studio. However, if you want the following links to work, you will first need to create the example project with the following command:
+configured using projects in the design studio. However, if you want the
+following links to work, you will first need to create the example project with
+the following command:
 
 ```
 npm run import -- seeds/test/test.webgmex -p TaxonomyDemo
