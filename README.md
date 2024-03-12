@@ -66,19 +66,19 @@ The main integrated tools are listed below.
   Platform is supported to store artifacts but this shouldn't be hard to
   generalize. (Generalization has been the hopes :).)
   - This is available at:
-    `<deployment url>/routers/Search/<projectId>/branch/<branch>/static/index.html`
+    `<deployment url>/routers/Search/<projectId>/branch/<branch>/<content type>/static/index.html`
   - For example, if it is running locally on port 8080, and you want to open a
     dashboard using a taxonomy project named `TaxonomyDemo` and owned by
     `guest`, you can open the dashboard using the master branch with
-    [http://localhost:8080/routers/Search/guest%2BTaxonomyDemo/branch/master/static/index.html](http://localhost:8080/routers/Search/guest%2BTaxonomyDemo/branch/master/static/index.html)
+    [http://localhost:8080/routers/Search/guest%2BTaxonomyDemo/branch/master/%2Fa/static/index.html](http://localhost:8080/routers/Search/guest%2BTaxonomyDemo/branch/master/%2Fa/static/index.html)
 - Taxonomy Term Creator (Form): This is a web-based form for selecting terms
   given the taxonomy defined in the studio.
   - This is available at:
-    `<deployment url>/routers/TagCreator/<projectId>/branch/<branch>/static/index.html`
+    `<deployment url>/routers/TagCreator/<projectId>/branch/<branch>/<content type>/static/index.html`
   - For example, if it is running locally on port 8080, and you want to open the
     term creator form using a taxonomy project named `TaxonomyDemo` and owned by
     `guest`, you can open the dashboard using the master branch with
-    [http://localhost:8080/routers/TagCreator/guest%2BTaxonomyDemo/branch/master/static/index.html](http://localhost:8080/routers/TagCreator/guest%2BTaxonomyDemo/branch/master/static/index.html)
+    [http://localhost:8080/routers/TagCreator/guest%2BTaxonomyDemo/branch/master/%2Fa/static/index.html](http://localhost:8080/routers/TagCreator/guest%2BTaxonomyDemo/branch/master/%2Fa/static/index.html)
 
 ## Misc To Do
 
