@@ -28,12 +28,14 @@
       <IconButton
         class="material-icons"
         aria-label="Upload dataset"
+        title="Upload dataset"
         ripple={false}
         on:click={createArtifact}>file_upload
       </IconButton>
       <IconButton
         class="material-icons"
         aria-label="Edit taxonomy"
+        title="Edit taxonomy"
         ripple={false}
         on:click={openEditor}>open_in_new
       </IconButton>

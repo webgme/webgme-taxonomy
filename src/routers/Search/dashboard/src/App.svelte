@@ -8,10 +8,12 @@
     encodeQueryParams,
   } from "./Utils";
   import Textfield from "@smui/textfield";
+  import IconButton from "@smui/icon-button";
   import { SvelteToast, SvelteToastOptions, toast } from "@zerodevx/svelte-toast";
   /*import Chip from "@smui/chips";*/
   import List, {
     Item,
+    Meta,
     Text,
     PrimaryText,
     SecondaryText,
@@ -489,8 +491,19 @@
               >
                 <Text>
                   <PrimaryText>{item.displayName}</PrimaryText>
-                  <SecondaryText />
+                  <SecondaryText>{item.id}</SecondaryText>
                 </Text>
+                <Meta>
+                    <IconButton
+                      on:click$stopPropagation={() => {
+                        navigator.clipboard.writeText(item.id);
+                        displayMessage(`ID copied to Clipboard`);
+                      }}
+                      class="material-icons"
+                      size="mini"
+                      title="Copy ID to Clipboard"
+                    >content_copy</IconButton>
+                  </Meta>
               </Item>
             {/each}
           </List>

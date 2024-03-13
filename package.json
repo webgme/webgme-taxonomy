@@ -18,6 +18,7 @@
     "users": "node ./node_modules/webgme-engine/src/bin/usermanager.js",
     "clean_up": "node ./node_modules/webgme-engine/src/bin/clean_up.js",
     "typecheck": "tsc --noEmit",
+    "lint": "deno fmt --config deno.json",
     "build": "rollup -c",
     "prepublish": "husky install",
     "prepare-docker": "node scripts/prepare-docker.js",
