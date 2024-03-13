@@ -2,15 +2,20 @@ Overview
 ========
 This page will contain an overview of the codebase/development.
 
-Spinning Up Development Environment
------------------------------------
-
 Extending the Metamodel
 -----------------------
-- copy typescript
+When extending the taxonomy metamodel, such as defining a new field type, there are a number of implications this has on the code base:
+- the exchange format needs to be updated to be able to represent this (`types/src/lib.rs`)
+- the exporter logic (`src/common/TaxonomyExporter`)
+- the JSON schema generator needs to be updated (`src/common/JSONSchemaExporter.ts`)
+- the taxonomy parser - which imports from CSV (`src/common/TaxonomyParser.ts`)
+- the filters on the data dashboard need to use the appropriate widget (`src/routers/Search/dashboard/src/components/TaxonomyFilterTree.svelte`)
+
+Usually, I simply grep for an existing field, like `UriField` to see where it is used in the code base when reminding myself of the places that need updating. :)
 
 Metadata Storage
 ----------------
+We are working toward storing the metadata separately in a graph database. This will allow us to support more robust graph queries using gremlin.
 
 Storage Adapters
 ----------------
@@ -31,7 +36,6 @@ As PDP is an immutable data store, deletion support is a little more complex. Ob
 
 MongoDB
 ^^^^^^^
-When storing content using the MongoDB adapter, all repository and content metadata is stored in a document. The document contains the repository metadata along with the metadata for all the content (and every version of each content item). Files are stored using GridFS (which is available out of the box with MongoDB).
-
-Data Organization
->>>>>>>>>>>>>>>>>
+When storing content using the MongoDB adapter, all repository and content metadata is stored in a document.
+The document contains the repository metadata along with the metadata for all the content (and every version of each content item).
+Files are stored using GridFS (which is available out of the box with MongoDB).
