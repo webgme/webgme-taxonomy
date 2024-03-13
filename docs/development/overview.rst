@@ -1,3 +1,41 @@
 Overview
 ========
 This page will contain an overview of the codebase/development.
+
+Extending the Metamodel
+-----------------------
+When extending the taxonomy metamodel, such as defining a new field type, there are a number of implications this has on the code base:
+- the exchange format needs to be updated to be able to represent this (`types/src/lib.rs`)
+- the exporter logic (`src/common/TaxonomyExporter`)
+- the JSON schema generator needs to be updated (`src/common/JSONSchemaExporter.ts`)
+- the taxonomy parser - which imports from CSV (`src/common/TaxonomyParser.ts`)
+- the filters on the data dashboard need to use the appropriate widget (`src/routers/Search/dashboard/src/components/TaxonomyFilterTree.svelte`)
+
+Usually, I simply grep for an existing field, like `UriField` to see where it is used in the code base when reminding myself of the places that need updating. :)
+
+Metadata Storage
+----------------
+We are working toward storing the metadata separately in a graph database. This will allow us to support more robust graph queries using gremlin.
+
+Storage Adapters
+----------------
+When modeling content types in the design studio (see :ref:`Creating Content Types`), the storage location must be specified, such as MongoDB or PDP.
+These storage backends are supported through corresponding storage adapters which implement methods for creating, updating, deleting, or listing content (among others).
+All supported storage adapters can be found in `src/routers/Search/adapters/`. More information about specific storage adapters can be found below.
+
+Currently, the storage adapters assume a two-level deep hierarchy of content. That is, they expect repositories to be created which contain content.
+
+PDP
+^^^
+The PDP adapter stores content on the Premonition Data Platform. The central concepts in PDP are the `Process` which contains `Observations`.
+Processes are a list of observations. Each observation is essentially a structured JSON object with both an index and version number. Observations also contain the metadata (in the `data` field) and metadata about the associated files.
+
+In PDP, repository metadata is stored in the first observation (index 0) and content is stored in the subsequent observations.
+
+As PDP is an immutable data store, deletion support is a little more complex. Observations can contain either 1) content metadata, 2) content update events - including the new metadata, or 3) content deletion events. As a result, observations are technically more of an oplog.
+
+MongoDB
+^^^^^^^
+When storing content using the MongoDB adapter, all repository and content metadata is stored in a document.
+The document contains the repository metadata along with the metadata for all the content (and every version of each content item).
+Files are stored using GridFS (which is available out of the box with MongoDB).
