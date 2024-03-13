@@ -48,6 +48,43 @@ the steps:
   file generated in the second step.
 - All done!
 
+## Development
+This project uses rollup to build and bundle the Typescript files (and copy over the client files for the routers).
+At a high level, client files are independent svelte projects served up by routers, all WebGME entrypoints (e.g. routers, plugins) are bundled with their dependencies (e.g., `src/common/` files).
+Information about a few common use-cases can be found below.
+
+### Manually testing
+After making changes to any of the server-side source files, run `npm run build`. For client-side changes, run `npm run prepare`.
+
+### Unit testing
+Since rollup bundles all dependencies with the WebGME entrypoints, modules in `src/common` will not be available in `build/common` unless building for testing explicitly.
+
+When unit testing non-client code, set `NODE_ENV=test` before running `npm run build` as below.
+
+```
+NODE_ENV=test npm run build  
+```
+
+As this builds all modules for testing by default, it is recommended to use the `TEST_TARGETS` environment variable to set the targets to build for testing. `TEST_TARGETS` does not need to be an exact match and simply builds the files with the given string in the file path.
+
+For example, if we want to test the `JSONSchemaExporter`, we can build only these files using:
+
+```
+NODE_ENV=test TEST_TARGETS=JSONSchemaExporter npm run build  
+```
+
+### Adding new WebGME components
+Adding WebGME components requires a couple extra steps since this project is using Typescript. Specifically, the WebGME entrypoints for components is in `build/` instead of `src/` for plugins and routers. Seeds are stored in `seeds/` instead of `src/seeds`. For more details, see below.
+
+#### Adding new plugins
+1. Create the plugin with `webgme new plugin <name>`.
+2. Open webgme-setup.json and change the `src` value in `<plugin name>` to `build`. For example, if the plugin is called `TestPlugin` set `src` to `build/plugins/TestPlugin`.
+3. Copy an existing Typescript plugin source file, say `OpenTagForm`, to the plugin source directory and name it `<plugin name>.ts`. Rename `OpenTagForm` to the plugin name and start writing your plugin!
+
+#### Adding new routers
+
+#### Adding new seeds
+
 ## Integrated Tools
 
 There are a few integrated tools in the design studio which are automatically
@@ -79,15 +116,3 @@ The main integrated tools are listed below.
     term creator form using a taxonomy project named `TaxonomyDemo` and owned by
     `guest`, you can open the dashboard using the master branch with
     [http://localhost:8080/routers/TagCreator/guest%2BTaxonomyDemo/branch/master/%2Fa/static/index.html](http://localhost:8080/routers/TagCreator/guest%2BTaxonomyDemo/branch/master/%2Fa/static/index.html)
-
-## Misc To Do
-
-- [ ] use it for webgme libraries?
-  - publish from within webgme
-  - define a taxonomy
-  - storage adapter?
-    - mongodb, right?
-      - MongoDB+Blob
-    - configuration opts:
-      - collection name
-        - validation so not colliding with others
