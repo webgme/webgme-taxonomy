@@ -82,8 +82,15 @@ Adding WebGME components requires a couple extra steps since this project is usi
 3. Copy an existing Typescript plugin source file, say `OpenTagForm`, to the plugin source directory and name it `<plugin name>.ts`. Rename `OpenTagForm` to the plugin name and start writing your plugin!
 
 #### Adding new routers
+1. Create the router with `webgme new router <name>`.
+2. Open webgme-setup.json and change the `src` value in `<router name>` to `build`. For example, if the router is called `TestRouter` set `src` to `build/routers/TestRouter`.
+3. If the router includes any static assets, such as client files, add an `assets` field to the entry in the webgme-setup.json file.
+4. Copy an existing Typescript router source file, say `Insights`, to the router source directory and name it `<router name>.ts`. Start writing your router!
 
 #### Adding new seeds
+1. Create the seed with `webgme new seed <name>`.
+2. Open webgme-setup.json and change `src` in `<seed name>` to `seeds/<seed name>`.
+3. Move the webgmex file from `src/seeds/<seed name>/<seed name>.webgmex` to `seeds/<seed name>/<seed name>.webgmex`.
 
 ## Integrated Tools
 
