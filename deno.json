@@ -4,7 +4,8 @@
       "src/routers/Insights/dashboard/public/echarts.min.js",
       "src/routers/Insights/dashboard/src/components/echarts.min.js",
       "lib/react-dom.production.min.js",
-      "lib/react.production.min.js"
+      "lib/react.production.min.js",
+      "build"
     ]
   }
 }
