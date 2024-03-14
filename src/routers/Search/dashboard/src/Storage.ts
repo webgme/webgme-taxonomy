@@ -4,6 +4,7 @@ import TaxonomyReference, {
 import { assert, Result, sleep } from "./Utils";
 import { Readable, writable } from "svelte/store";
 //import type { Artifact } from "../../adapters/common/types";
+import type { AppendResult } from "../../adapters/common/AppendResult";
 
 type UploadParams = {
   method: string;
@@ -133,10 +134,10 @@ class Storage {
 
     const appendResult =
       await (await this._fetchJson(url, opts, AppendDataError))
-        .unwrap() as { files: any[] };
+        .unwrap() as AppendResult;
 
     return appendResult.files.map(
-      ({ name, params }: { name: string; params: UploadParams }) => {
+      ({ name, params }) => {
         const targetFile = files.find((a) => a.name == name);
         assert(
           !!targetFile,
