@@ -39,3 +39,6 @@ Welcome to documentation for the Taxonomy Design Studio!
    :caption: Development
 
    development/overview.rst
+   development/metamodel.rst
+   development/storage.rst
+   development/tag-formats.rst
