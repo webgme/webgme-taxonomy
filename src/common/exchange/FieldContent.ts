@@ -9,4 +9,13 @@ import type { SetContent } from "./SetContent";
 import type { TextContent } from "./TextContent";
 import type { UriContent } from "./UriContent";
 
-export type FieldContent = { "Text": TextContent } | { "Integer": IntegerContent } | { "Float": FloatContent } | { "Boolean": BooleanContent } | { "Uri": UriContent } | { "Reference": ReferenceContent } | { "Enum": EnumContent } | { "Set": SetContent } | { "Compound": CompoundContent };
+export type FieldContent =
+  | { "Text": TextContent }
+  | { "Integer": IntegerContent }
+  | { "Float": FloatContent }
+  | { "Boolean": BooleanContent }
+  | { "Uri": UriContent }
+  | { "Reference": ReferenceContent }
+  | { "Enum": EnumContent }
+  | { "Set": SetContent }
+  | { "Compound": CompoundContent };

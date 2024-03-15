@@ -3,4 +3,8 @@ import type { Field } from "./Field";
 import type { FieldName } from "./FieldName";
 import type { VariantId } from "./VariantId";
 
-export interface Variant { id: VariantId, name: string, fields: Record<FieldName, Field>, }
+export interface Variant {
+  id: VariantId;
+  name: string;
+  fields: Record<FieldName, Field>;
+}
