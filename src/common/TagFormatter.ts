@@ -3,7 +3,8 @@ import { mapObjectEntries, toString } from "./Utils";
 import { getName } from "./GmeHelpers";
 
 /**
- * This converts to and from a human-readable format for tags. Specifically, this will replace the GUIDs with display names for all the terms and properties.
+ * This converts to and from a human-readable format for tags. Specifically, this will replace the GUIDs
+ * with display names for all the terms and properties.
  */
 export default class TagFormatter {
   private taxonomy: TaxonomyJson;
