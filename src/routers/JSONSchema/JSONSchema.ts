@@ -64,7 +64,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
       request: Request,
       response: Response,
     ) {
-      const onlyReleased = request.params.hasOwnProperty("onlyReleased");
+      const onlyReleased = request.query.hasOwnProperty("onlyReleased");
       const { root, core, contentType } = gmeContext;
       const exporter = JSONSchemaExporter.from(core, root);
       const vocabularies = await Utils.getVocabulariesFor(core, contentType);
