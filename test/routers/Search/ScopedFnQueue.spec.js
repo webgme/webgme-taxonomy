@@ -1,4 +1,4 @@
-describe.only("ScopedFnQueue", function () {
+describe("ScopedFnQueue", function () {
   const assert = require("assert");
   const ScopedFnQueue = require(
     "../../../build/routers/Search/ScopedFnQueue",
