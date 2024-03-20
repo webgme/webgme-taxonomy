@@ -1,6 +1,6 @@
 // Scoped queue for async functions
 
-const nop = () => { };
+const nop = () => {};
 
 const lasts: { [name: string]: Promise<any> } = {};
 
