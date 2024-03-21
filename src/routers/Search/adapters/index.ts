@@ -8,11 +8,13 @@ import type {
 import type { Request } from "express";
 import { InvalidStorageError, StorageNotFoundError } from "./common/ModelError";
 import type { Adapter, AdapterStatic } from "./common/types";
-import assert from "assert";
 import { UnsupportedUriFormat } from "./common/StorageError";
 import { UserError } from "../../../common/UserError";
+import { getTaxonomyNode } from "../../../common/Utils";
 import PDP from "./PDP/index";
 import MongoDB from "./MongoDB/index";
+import { GremlinAdapter, StorageWithGraphSearch } from "./metadata";
+import exportTaxonomy from "../../../common/TaxonomyExporter";
 
 export default class Adapters {
   static async from(
@@ -36,7 +38,7 @@ export default class Adapters {
     req: Request,
     storageNode: Core.Node,
     config: any,
-  ): Promise<Adapter> {
+  ): Promise<StorageWithGraphSearch<Adapter, GremlinAdapter>> {
     const { core } = gmeContext;
     const adapterType = core.getAttribute(
       core.getMetaType(storageNode),
@@ -74,7 +76,18 @@ export default class Adapters {
       commitObject: gmeContext.commitObject,
       contentType: parent,
     };
-    return await AdapterType.from(contentContext, storageNode, req, config);
+    const content = await AdapterType.from(
+      contentContext,
+      storageNode,
+      req,
+      config,
+    );
+    // TODO: get the taxonomy node and export
+    const taxNode = await getTaxonomyNode(gmeContext);
+    const exchange = await exportTaxonomy(gmeContext.core, taxNode);
+    const metadata = new GremlinAdapter(exchange); // FIXME: how to configure this?
+    // TODO: can we get a reference to the exchange format?
+    return new StorageWithGraphSearch(content, metadata);
   }
 
   static async fromUri(

@@ -26,13 +26,12 @@ struct TermName(String);
 struct FieldName(String);
 #[derive(TS, Deserialize, Serialize)]
 #[ts(export)]
-struct Version(String); // TODO: make this semver
+struct Version(String); // TODO: make this semver?
 
 #[derive(TS, Deserialize, Serialize)]
 #[ts(export)]
 struct Taxonomy {
-    // TODO: uncomment this once we have settled on a semantic hashing/versioning scheme
-    //version: Version,
+    version: Version,
     vocabularies: HashMap<VocabularyName, VocabularyData>,
 }
 
@@ -97,6 +96,7 @@ enum FieldContent {
     Float(FloatContent),
     Boolean(BooleanContent),
     Uri(UriContent),
+    Reference(ReferenceContent),
     Enum(EnumContent),
     Set(SetContent),
     Compound(CompoundContent),
@@ -134,6 +134,13 @@ struct BooleanContent {
 #[derive(TS, Deserialize, Serialize)]
 #[ts(export)]
 struct UriContent {
+    #[ts(optional)]
+    value: Option<String>,
+}
+
+#[derive(TS, Deserialize, Serialize)]
+#[ts(export)]
+struct ReferenceContent {
     #[ts(optional)]
     value: Option<String>,
 }

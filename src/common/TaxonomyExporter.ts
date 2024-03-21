@@ -1,7 +1,12 @@
 import { GmeCore } from "./types";
 import type { Taxonomy } from "./exchange/Taxonomy";
 import { VocabularyData } from "./exchange/VocabularyData";
-import { InvalidVariantError, parseEnum, toString } from "./Utils";
+import {
+  getPrototype,
+  InvalidVariantError,
+  parseEnum,
+  toString,
+} from "./Utils";
 import { Term } from "./exchange/Term";
 import { Field } from "./exchange/Field";
 import { FieldContent } from "./exchange/FieldContent";
@@ -22,6 +27,7 @@ import {
 import { BooleanContent } from "./exchange/BooleanContent";
 import { TextContent } from "./exchange/TextContent";
 import { UriContent } from "./exchange/UriContent";
+import { ReferenceContent } from "./exchange/ReferenceContent";
 
 /**
  * Create a dictionary of node values by node name.
@@ -82,7 +88,7 @@ async function exportVariant(
     (n) => exportField(core, n),
   );
   return {
-    id: core.getGuid(node),
+    id: getProtoGuid(core, node),
     name: getName(core, node),
     fields,
   };
@@ -134,6 +140,14 @@ async function getFieldContent(
         Uri: data,
       };
     }
+    case "ReferenceField": {
+      const data = getStringAttribute(core, fieldNode, "value")
+        .map((value): ReferenceContent => ({ value }))
+        .unwrapOrElse(() => ({}));
+      return {
+        Reference: data,
+      };
+    }
     case "EnumField": {
       const variantNodes = await loadChildren(core, fieldNode, "CompoundField");
       return {
@@ -173,7 +187,7 @@ async function exportField(
   fieldNode: Core.Node,
 ): Promise<Field> {
   return {
-    id: core.getGuid(fieldNode),
+    id: getProtoGuid(core, fieldNode),
     required: getBoolAttribute(core, fieldNode, "required").unwrapOr(false),
     description: toString(core.getAttribute(fieldNode, "description")),
     content: await getFieldContent(core, fieldNode),
@@ -200,7 +214,7 @@ async function exportTerm(
     ? "optional"
     : getSelectionConstraint(core, termNode);
   return {
-    id: core.getGuid(termNode),
+    id: getProtoGuid(core, termNode),
     description: toString(core.getAttribute(termNode, "description")),
     selection,
     releaseState: getReleaseState(core, termNode),
@@ -220,11 +234,19 @@ async function exportVocabulary(
     (n) => exportTerm(core, n),
   );
   return {
-    id: core.getGuid(vocabNode),
+    id: getProtoGuid(core, vocabNode),
     description: toString(core.getAttribute(vocabNode, "description")),
     releaseState: getReleaseState(core, vocabNode),
     terms,
   };
+}
+
+/**
+ * Get the GUID of the prototype of the given node.
+ */
+function getProtoGuid(core: GmeCore, node: Core.Node): string {
+  const prototype = getPrototype(core, node);
+  return core.getGuid(prototype);
 }
 
 export default async function exportTaxonomy(

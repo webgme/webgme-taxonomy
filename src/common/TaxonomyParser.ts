@@ -4,6 +4,7 @@ type OptionField = "EnumField" | "SetField";
 type TermField =
   | "TextField"
   | "UriField"
+  | "ReferenceField"
   | "IntegerField"
   | "FloatField"
   | "BooleanField"
@@ -19,6 +20,7 @@ const UNKNOWN_FIELD_TYPE = "TextOrEnumField";
 const FieldTypes: TermField[] = [
   "TextField",
   "UriField",
+  "ReferenceField",
   "IntegerField",
   "FloatField",
   "BooleanField",

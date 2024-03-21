@@ -1,5 +1,6 @@
 describe("Utils", function () {
   const assert = require("assert");
+  const uuid = require("uuid");
   const {
     deepMerge,
     retry,
@@ -334,6 +335,22 @@ describe("Utils", function () {
       it("should allow subdomain w/ port", function () {
         assert(validate("editor.netsblox.org:443"));
         assert(validate("dev-test.netsblox.org:4033"));
+      });
+    });
+
+    describe("UUID (v4)", function () {
+      const urlSchema = {
+        type: "string",
+        pattern: Pattern.exact(Pattern.UUID),
+      };
+      const validate = ajv.compile(urlSchema);
+
+      it("should allow randomly generated uuid's", function () {
+        range(1, 100).forEach(() => assert(validate(uuid.v4())));
+      });
+
+      it("should not allow someRandomString", function () {
+        assert(!validate("someRandomString"));
       });
     });
 
