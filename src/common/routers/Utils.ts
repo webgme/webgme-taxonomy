@@ -42,6 +42,12 @@ type GmeProjectRoute = (
   res: Response,
 ) => Promise<void> | void;
 
+/**
+ * Create a new Core instance.
+ * @param project
+ * @param opts
+ * @returns
+ */
 export function makeCore(
   project: UserProject,
   opts: MiddlewareOptions,
@@ -85,6 +91,12 @@ function getProjectContext(params: { [k: string]: string }): ProjectContext {
 }
 
 export default {
+  /**
+   * Get the GME context and use authorization from the userId in the request.
+   * @param middlewareOpts
+   * @param req
+   * @returns Resolves to GmeContext
+   */
   async getWebGMEContext(middlewareOpts: MiddlewareOptions, req: Request) {
     const { getUserId } = middlewareOpts;
     const userId = getUserId(req);
@@ -96,8 +108,13 @@ export default {
       projectContext,
     );
   },
+
   /**
    * Get the GME context without checking userId authorization.
+   * @param middlewareOpts
+   * @param userId
+   * @param projectContext
+   * @returns Resolves to GmeContext
    */
   async getWebGMEContextUnsafe(
     middlewareOpts: MiddlewareOptions,
@@ -177,6 +194,11 @@ export default {
     };
   },
 
+  /**
+   * What is this?
+   * @param token
+   * @returns
+   */
   getObserverIdFromToken(token: string): string | undefined {
     const tokenData = jwt.decode(token);
     if (typeof tokenData !== "string" && tokenData) {
@@ -184,19 +206,23 @@ export default {
     }
   },
 
-  // Helpers for endpoints to a router that is prefixed with a variety of ways to specify
-  // a webgme project context (branch, tag, commit)
+  /**
+   * Creates router endpoints with contentTypePath that are prefixed with a variety of ways to specify
+   * a webgme project context (branch, tag, commit).
+   * @param route
+   * @returns routes using brach, tag or commit
+   */
   getContentTypeRoutes(route = "") {
     const contentTypeRoute = `:contentTypePath/${route}`;
     return this.getProjectScopedRoutes(contentTypeRoute);
   },
 
-  // FIXME: remove this
-  getContentTypeVocabRoutes(route = "") {
-    const vocabRoute = `:vocabScope(data|repo)/${route}`;
-    return this.getContentTypeRoutes(vocabRoute);
-  },
-
+  /**
+   * Creates router endpoints that are prefixed with a variety of ways to specify
+   * a webgme project context (branch, tag, commit).
+   * @param route - route to which the project scope is prefixed
+   * @returns Routes using brach, tag, commit..
+   */
   getProjectScopedRoutes(route = ""): string[] {
     return [
       `/:projectId/branch/:branch/${route}`,
@@ -205,6 +231,15 @@ export default {
     ];
   },
 
+  /**
+   * Utility for endpoints that act on a content type in the context of a webgme model. This utililty loads and passes
+   * on the webgme context for the specific content type.
+   * @param middlewareOpts - passed to router by webgme framework
+   * @param router - express router
+   * @param path - last part of endpoint url (is prefixed with project routes and contentTypePath)
+   * @param handler - async request handler that addtionally receives the gme-context
+   * @param options - options with e.g. method type, and safe/unsafe specified
+   */
   addContentTypeRoute(
     middlewareOpts: MiddlewareOptions,
     router: Router,
@@ -236,6 +271,15 @@ export default {
     );
   },
 
+  /**
+   * Utility for endpoints that act on a specific webgme project. This utililty loads and passes
+   * on the webgme context for the project.
+   * @param middlewareOpts - passed to router by webgme framework
+   * @param router - express router
+   * @param path - last part of endpoint url (is prefixed with project routes)
+   * @param handler - async request handler that addtionally receives the gme-context
+   * @param options - options with e.g. method type, and safe/unsafe specified
+   */
   addProjectRoute(
     middlewareOpts: MiddlewareOptions,
     router: Router,
@@ -272,6 +316,12 @@ export default {
     );
   },
 
+  /**
+   * Redirects requests targeting "latest" tag to the tag with the highest semantic version.
+   * @param middlewareOpts - passed to router by webgme framework
+   * @param router - express router
+   * @returns the same router
+   */
   addLatestVersionRedirect(middlewareOpts: MiddlewareOptions, router: Router) {
     const { logger } = middlewareOpts;
     router.use(
@@ -320,6 +370,12 @@ export default {
   },
 };
 
+/**
+ * Helper for consistent error handling in routers.
+ * @param logger
+ * @param fn
+ * @returns
+ */
 export function handleUserErrors(logger: GmeLogger, fn: WebgmeHandler) {
   return async function (
     req: Request,
@@ -359,6 +415,12 @@ export function responseClose(res: Response) {
   return eventEmitted(res, "close");
 }
 
+/**
+ * Creates and returns a tag-formatter based on the taxonomy in the supplied gmeContext.
+ * Use this whenever you need to switch between guid based adn name based tag formats.
+ * @param gmeContext
+ * @returns
+ */
 export async function getFormatter(
   gmeContext: GmeContext,
 ): Promise<TagFormatter> {

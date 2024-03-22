@@ -69,6 +69,12 @@ export function last<T>(l: T[]): T | undefined {
 }
 
 export default {
+  /**
+   * Looks for and returns the first encountered taxonomy node.
+   * @param core
+   * @param node - any node in the
+   * @returns
+   */
   async findTaxonomyNode(
     core: GmeCore,
     node: Core.Node,
@@ -97,6 +103,12 @@ export default {
       return children.find(isTaxonomyNode);
     }, initialResult);
   },
+  /**
+   * Loads all the vocabularies (as nodes) defined for the contextType node.
+   * @param core
+   * @param contentType
+   * @returns
+   */
   async getVocabulariesFor(core: GmeCore, contentType: Core.Node) {
     const children = await core.loadChildren(contentType);
     const container = children.find((node) => {

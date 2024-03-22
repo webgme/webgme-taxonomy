@@ -13,6 +13,9 @@ interface UpdateResult {
   files: UploadRequest[];
 }
 
+/**
+ * Interface for storage-adapter.
+ */
 export interface Adapter {
   listRepos(): Promise<Repository[]>;
   getRepoMetadata(repoId: string): Promise<Repository>;
