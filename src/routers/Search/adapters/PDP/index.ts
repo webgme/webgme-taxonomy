@@ -454,11 +454,13 @@ export default class PDP implements Adapter {
     );
 
     // TODO: refactor this...
-    const files = result.uploadDataFiles.files.map((file) => {
-      const name = PDP.getOriginalFilePath(file.name);
-      const params = new UploadParams(file.sasUrl, "PUT", UPLOAD_HEADERS);
-      return new UploadRequest(name, params);
-    });
+    const files = result.uploadDataFiles === null
+      ? []
+      : result.uploadDataFiles.files.map((file) => {
+        const name = PDP.getOriginalFilePath(file.name);
+        const params = new UploadParams(file.sasUrl, "PUT", UPLOAD_HEADERS);
+        return new UploadRequest(name, params);
+      });
 
     return new AppendResult(`${index}_0`, files, index);
   }

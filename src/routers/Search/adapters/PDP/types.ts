@@ -62,7 +62,7 @@ export interface LatestMetadata {
 export interface AppendObservationResponse extends Observation {
   uploadDataFiles: {
     files: UploadDataFile[];
-  };
+  } | null;
 }
 
 export interface UploadDataFile {
