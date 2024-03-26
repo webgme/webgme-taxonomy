@@ -38,4 +38,19 @@ describe("ScopedFnQueue", function () {
     const [r1, r2] = await Promise.all([p1, p2]);
     assert(r1 > r2);
   });
+
+  it("two instances should still use same queue", async function () {
+    const queue1 = new ScopedFnQueue();
+    const queue2 = new ScopedFnQueue();
+
+    const p1 = queue1.run("thing", async () => {
+      await sleep(10);
+      const timestamp = Date.now();
+      await sleep(5);
+      return timestamp;
+    });
+    const p2 = queue2.run("thing", async () => Date.now());
+    const [r1, r2] = await Promise.all([p1, p2]);
+    assert(r1 < r2);
+  });
 });
