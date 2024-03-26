@@ -225,7 +225,7 @@
       </List>
     </Content>
     <Actions>
-      <Button on:click={onUploadClicked}>
+      <Button aria-label="Upload content to repository" on:click={onUploadClicked}>
         <Label>Upload</Label>
       </Button>
       <Button on:click={onDownloadClicked} disabled={selected.length == 0}>
