@@ -1,5 +1,4 @@
-describe("JSONSchemaExporter", function () {
-  const testFixture = require("../globals");
+describe.only("JSONSchemaExporter", function () {
   const { default: JSONSchemaExporter, Property } = require(
     "../../build/common/JSONSchemaExporter",
   );
@@ -102,7 +101,7 @@ describe("JSONSchemaExporter", function () {
 
     it("should detect (nested) required field", async function () {
       const root = await Utils.getNewRootNode(project, commitHash, core);
-      const exporter = await JSONSchemaExporter.from(core, root);
+      const exporter = JSONSchemaExporter.from(core, root);
       const node = await core.loadByPath(root, "/s/s/H/u/X");
       const prop = await Property.from(exporter, node);
       assert(prop.required);
@@ -110,7 +109,7 @@ describe("JSONSchemaExporter", function () {
 
     it("should detect (nested) optional field", async function () {
       const root = await Utils.getNewRootNode(project, commitHash, core);
-      const exporter = await JSONSchemaExporter.from(core, root);
+      const exporter = JSONSchemaExporter.from(core, root);
       const node = await core.loadByPath(root, "/s/s/H/u/s");
       const prop = await Property.from(exporter, node);
       assert(!prop.required);
