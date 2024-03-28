@@ -1,4 +1,4 @@
 Overview
 ========
-This page will contain an overview of the codebase/development.
+For releases, debugging and other hands on dev-documentation see the main READMD.md.
 
