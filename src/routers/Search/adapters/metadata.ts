@@ -35,6 +35,10 @@ import type {
 import { toArtifactMetadatav2 } from "../Utils";
 import { Taxonomy } from "../../../common/exchange/Taxonomy";
 
+// TODO: load the configuration for this...
+// maybe it should be its own metamodel?
+const GREMLIN_ENDPOINT = "ws://localhost:8182/gremlin"; // TODO: make this configurable
+
 export class StorageWithGraphSearch<
   C extends Adapter,
   M extends MetadataAdapter,
@@ -317,9 +321,6 @@ export interface MetadataAdapter {
   delete(context: NodeInContext): Promise<void>;
 }
 
-// TODO: load the configuration for this...
-// maybe it should be its own metamodel?
-const GREMLIN_ENDPOINT = "ws://localhost:8182/gremlin"; // TODO: make this configurable
 const traversal = gremlin.process.AnonymousTraversalSource.traversal;
 const DriverRemoteConnection = gremlin.driver.DriverRemoteConnection;
 export class GremlinAdapter implements MetadataAdapter {
