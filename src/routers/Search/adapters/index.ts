@@ -82,13 +82,7 @@ export default class Adapters {
     uri: string,
     config: AzureGmeConfig,
   ): Promise<Adapter> {
-    if (isUriFor(PDP, uri)) {
-      return PDP.fromUri(config, req, uri);
-    } else if (isUriFor(MongoDB, uri)) {
-      return MongoDB.fromUri(config, req, uri);
-    }
-
-    throw new UnsupportedUriFormat(uri);
+    return getAdapterClassFromUri(uri).fromUri(config, req, uri);
   }
 
   static getUriPatterns(): string[] {
@@ -97,6 +91,22 @@ export default class Adapters {
       MongoDB.getUriPatterns(),
     ].flat();
   }
+
+  static resolveUri(uri: string): [string, string] {
+    return getAdapterClassFromUri(uri).resolveUri(uri);
+  }
+}
+
+function getAdapterClassFromUri(uri: string): AdapterStatic<Adapter> {
+  if (isUriFor(PDP, uri)) {
+    return PDP;
+  }
+
+  if (isUriFor(MongoDB, uri)) {
+    return MongoDB;
+  }
+
+  throw new UnsupportedUriFormat(uri);
 }
 
 function isUriFor<A extends Adapter>(

@@ -12,9 +12,10 @@
 
 import * as express from "express";
 import * as path from "path";
-import type { MiddlewareOptions } from "../../common/types";
+import type { AzureGmeConfig, MiddlewareOptions } from "../../common/types";
 import RouterUtils from "../../common/routers/Utils";
 import ContextFacade from "./ContextFacade";
+import StorageAdapter from '../Search/adapters';
 
 export const router = express.Router();
 const staticPath = path.join(__dirname, "app", "dist");
@@ -57,13 +58,33 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
     router,
     "info",
     async function getDashboardConfig(gmeContext, _req, res) {
-      console.log("1. res.headersSent", res.headersSent);
+      logger.debug(`1. res.headersSent ${res.headersSent}`);
       const context = new ContextFacade(gmeContext);
-      console.log("2. res.headersSent", res.headersSent);
+      logger.debug(`2. res.headersSent ${res.headersSent}`);
       const body = await context.getProjectInfo();
-      console.log("3. res.headersSent", res.headersSent);
+      logger.debug(`3. res.headersSent ${res.headersSent}`);
       res.json(body);
     },
+  );
+
+  RouterUtils.addProjectRoute(
+    middlewareOpts,
+    router,
+    "resolve-url",
+    async function getDashboardConfig(gmeContext, req, res) {
+      const { uri } = req.body;
+      const context = new ContextFacade(gmeContext);
+      const projectInfo = await context.getProjectInfo();
+      const [repo, content] = StorageAdapter.resolveUri(uri);
+      logger.info(`uri="${uri}", with repo="${repo}", content="${content}"`)
+      for (const { name, path } of projectInfo.contentTypes) {
+        logger.info(`at content type ${name} ${path}`);
+
+      }
+
+      res.json({ url: 'the url' });
+    },
+    { method: "post" }
   );
 
   logger.debug("ready");

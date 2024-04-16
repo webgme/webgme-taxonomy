@@ -220,11 +220,15 @@ export default class MongoAdapter implements Adapter {
   }
 
   async listRepos(): Promise<Repository[]> {
-    const documents = (await this._collection.find({})
-      .toArray()) as RepositoryDoc[];
-    const repos: Repository[] = documents.map(toRepository);
-
-    return repos;
+    try {
+      const documents = (await this._collection.find({})
+        .toArray()) as RepositoryDoc[];
+      const repos: Repository[] = documents.map(toRepository);
+      return repos;
+    } catch (err) {
+      console.error('Failed to list repos at mongoUri:', this._hostUri);
+      throw err;
+    }
   }
 
   async getRepoMetadata(id: string): Promise<Repository> {
@@ -539,6 +543,10 @@ export default class MongoAdapter implements Adapter {
   }
 
   resolveUri(uri: string): [string, string] {
+    return MongoAdapter.resolveUri(uri);
+  }
+
+  static resolveUri(uri: string): [string, string] {
     const chunks = uri.split("/");
     const content = chunks.pop() as string;
     const repo = chunks.pop() as string;

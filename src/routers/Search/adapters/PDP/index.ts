@@ -823,6 +823,10 @@ export default class PDP implements Adapter {
   }
 
   resolveUri(uri: string): [string, string] {
+    return PDP.resolveUri(uri);
+  }
+
+  static resolveUri(uri: string): [string, string] {
     const chunks = uri.split("/");
     const version = chunks.pop() as string;
     const index = chunks.pop() as string;
