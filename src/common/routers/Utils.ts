@@ -253,17 +253,7 @@ export default {
       `:contentTypePath/${path}`,
       async (gmeContext, req, res) => {
         const { contentTypePath } = req.params;
-        const { core, root } = gmeContext;
-        const contentType = await core.loadByPath(root, contentTypePath);
-        assert(contentType, new ContentTypeNotFoundError(contentTypePath));
-        const context = {
-          project: gmeContext.project,
-          projectVersion: gmeContext.projectVersion,
-          core: gmeContext.core,
-          root: gmeContext.root,
-          commitObject: gmeContext.commitObject,
-          contentType,
-        };
+        const context = await getContentContext(gmeContext, contentTypePath);
         console.log("CTX received:", req.originalUrl);
         await handler(context, req, res);
       },
@@ -369,6 +359,28 @@ export default {
     return router;
   },
 };
+
+/**
+ * Creates a GmeContentContext from the provided GmeContext and path.
+ * @param gmeContext 
+ * @param gmeContentPath 
+ * @returns 
+ */
+export async function getContentContext(gmeContext: GmeContext, gmeContentPath: string): Promise<GmeContentContext> {
+  const { core, root } = gmeContext;
+  const contentType = await core.loadByPath(root, gmeContentPath);
+  assert(contentType, new ContentTypeNotFoundError(gmeContentPath));
+  const context = {
+    project: gmeContext.project,
+    projectVersion: gmeContext.projectVersion,
+    core: gmeContext.core,
+    root: gmeContext.root,
+    commitObject: gmeContext.commitObject,
+    contentType,
+  };
+
+  return context;
+}
 
 /**
  * Helper for consistent error handling in routers.

@@ -12,8 +12,8 @@
 
 import * as express from "express";
 import * as path from "path";
-import type { AzureGmeConfig, MiddlewareOptions } from "../../common/types";
-import RouterUtils from "../../common/routers/Utils";
+import type { MiddlewareOptions } from "../../common/types";
+import RouterUtils, { getContentContext } from "../../common/routers/Utils";
 import ContextFacade from "./ContextFacade";
 import StorageAdapter from '../Search/adapters';
 
@@ -71,18 +71,40 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
     middlewareOpts,
     router,
     "resolve-url",
-    async function getDashboardConfig(gmeContext, req, res) {
+    async function resolveUrl(gmeContext, req, res) {
       const { uri } = req.body;
-      const context = new ContextFacade(gmeContext);
-      const projectInfo = await context.getProjectInfo();
-      const [repo, content] = StorageAdapter.resolveUri(uri);
-      logger.info(`uri="${uri}", with repo="${repo}", content="${content}"`)
-      for (const { name, path } of projectInfo.contentTypes) {
-        logger.info(`at content type ${name} ${path}`);
+      // FIXME: This doesn't work for repositories..
+      const [repoId, contentId] = StorageAdapter.resolveUri(uri);
+      logger.info(`uri="${uri}", with repoId="${repoId}", contentId="${contentId}"`);
+      // Grab all contentTypes for the project..
+      const projectInfo = await (new ContextFacade(gmeContext)).getProjectInfo();
 
+      let url = null;
+
+      for (const { name, path } of projectInfo.contentTypes) {
+        logger.info(`At content type ${name} ${path}`);
+        const contentContext = await getContentContext(gmeContext, path);
+        const storage = await StorageAdapter.from(
+          contentContext,
+          req,
+          middlewareOpts.gmeConfig,
+        );
+        // List all the repos for each such..
+        for (const repo of await storage.listRepos()) {
+          if (repo.id === repoId) {
+            logger.info(`found matching repository: ${JSON.stringify(repo)}`);
+            // original: /routers/Dashboard/guest%2BmongoPipeline/branch/master/resolve-url
+            // url: /routers/Search/guest%2BmongoPipeline/branch/master/%2FA/static/index.html?repoId=6617fab6596a7edfc2fb9cff&contentId=0
+            url = `${req.originalUrl.split("?")[0].replace(/Dashboard/, "Search").split("/").slice(0, -1).join("/")}` +
+              `/${encodeURIComponent(path)}/static/index.html?repoId=${repoId}&contentId=${contentId}`;
+            break;
+            // TODO: We could try to find a matching content
+          }
+        }
       }
 
-      res.json({ url: 'the url' });
+      // TODO: Check that this works behind secure proxy..
+      res.json({ host: `${req.protocol}://${req.get("host")}`, url });
     },
     { method: "post" }
   );
