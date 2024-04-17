@@ -20,9 +20,11 @@
 
   export let artifactSet: PopulatedRepo;
   export let contentType: ContentTypeConfiguration = getDefaultContentType('content');
+  export let initSelected: string[];
   let numArtifacts = 10;
-  let shownArtifacts = [];
-  let selected = [];
+  let shownArtifacts = ( initSelected && artifactSet ) ? artifactSet.children : [];
+
+  let selected = initSelected || [];
   let menu: Menu;
   const formatter = new TagFormatter();
   const dispatch = createEventDispatcher();
@@ -109,6 +111,7 @@
 
   onArtifactSetChange();
   function onArtifactSetChange() {
+    console.log('onArtifactSetChange');
     if (artifactSet) {
       selected = [];
       numArtifacts = Math.min(artifactSet.children.length, 10);
@@ -117,6 +120,7 @@
   }
 
   $: setShownArtifacts(numArtifacts);
+  $: console.log('shownArtifacts.length=', shownArtifacts.length, JSON.stringify(selected));
 
   function setShownArtifacts(numArtifacts: number) {
     if (artifactSet) {
@@ -172,13 +176,13 @@
                     numArtifacts + 10
                   ))}
               >
-                <Text>Show more...</Text>
+                <Text>SHOW MORE</Text>
               </Item>
               <Item
                 on:SMUI:action={() =>
                   (numArtifacts = artifactSet.children.length)}
               >
-                <Text>Show all...</Text>
+                <Text>SHOW ALL</Text>
               </Item>
             </List>
           </Menu>

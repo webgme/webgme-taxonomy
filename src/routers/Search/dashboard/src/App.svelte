@@ -51,6 +51,10 @@
   const params = new URLSearchParams(location.search);
   let searchQuery: string = params.get("searchQuery") || "";
   let filterTags: FilterTag[] = [];
+
+  let initialRepoId = params.get("repoId");
+  let initialContentId = params.get("contentId");
+
   function parseTagParams(filterTagString: string | null): FilterTag[] {
     if (filterTagString) {
       const leanTags: LeanTag[] = JSON.parse(filterTagString);
@@ -235,7 +239,8 @@
     vocabularies = trimTaxonomy(dataVocabs);
     filterTags = parseTagParams(params.get("filterTags"));
     contentType = configuration.content;
-    fetchData();
+    await fetchData();
+    selectedArtifactSetId = initialRepoId || null;
   }
 
   async function onTryCreateRepo(event) {
@@ -257,9 +262,10 @@
     repo.children = validArtifacts;
     repo.loadState = LoadState.Complete;
 
-    if (selectedArtifactSet?.id === repo.id) {
-      selectedArtifactSet = selectedArtifactSet;
-    }
+    // FIXME: Does this make sense?
+    // if (selectedArtifactSet?.id === repo.id) {
+    //   selectedArtifactSet = selectedArtifactSet;
+    // }
   }
 
   async function fetchData() {
@@ -275,9 +281,6 @@
           loadState: LoadState.Pending,
         }));
 
-      if (selectedArtifactSet) {
-        selectedArtifactSet = allItems.find(repo => repo.id === selectedArtifactSet.id);
-      }
       allItems.forEach((repo) => loadContents(repo));
     } catch (err) {
       displayError(err);
@@ -325,7 +328,7 @@
     listeners.forEach(([listener, origin]) =>
       listener.postMessage(new SelectEvent(item), origin)
     );
-    selectedArtifactSet = item;
+    selectedArtifactSetId = item.id;
   }
 
   initialize();
@@ -399,9 +402,15 @@
   }
 
   //////// Artifact Sets ////////
-  let selectedArtifactSet;
-  $: if (!items.includes(selectedArtifactSet)) {
+  let selectedArtifactSetId = null;
+  let selectedArtifactSet = null;
+  console.log(items.length, selectedArtifactSetId, selectedArtifactSet);
+  $: console.log(selectedArtifactSetId, selectedArtifactSet);
+  $: if(items.some(({ id }) => id === selectedArtifactSetId)) {
+    selectedArtifactSet = items.find(({ id }) => id === selectedArtifactSetId);
+  } else {
     selectedArtifactSet = null;
+    selectedArtifactSetId = null;
   }
 
   //////// Edit taxonomy ////////
@@ -486,7 +495,7 @@
             {#each items as item (item.id)}
               <Item
                 data-testid={item.displayName}
-                selected={item === selectedArtifactSet}
+                selected={item.id === selectedArtifactSetId}
                 on:SMUI:action={() => onItemClicked(item)}
               >
                 <Text>
@@ -515,8 +524,9 @@
           </Paper>
         {/if}
       </main>
-      {#if selectedArtifactSet}
+      {#if selectedArtifactSetId}
         <ArtifactSetViewer
+          initSelected={initialContentId ? [initialContentId] : []}
           bind:artifactSet={selectedArtifactSet}
           bind:contentType
           on:download={(event) => onDownload(event.detail)}
