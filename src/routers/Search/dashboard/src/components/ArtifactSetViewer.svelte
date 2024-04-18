@@ -22,9 +22,9 @@
   export let contentType: ContentTypeConfiguration = getDefaultContentType('content');
   export let initSelected: string[];
   let numArtifacts = 10;
-  let shownArtifacts = ( initSelected && artifactSet ) ? artifactSet.children : [];
+  let shownArtifacts = [];
+  let selected = [];
 
-  let selected = initSelected || [];
   let menu: Menu;
   const formatter = new TagFormatter();
   const dispatch = createEventDispatcher();
@@ -107,12 +107,21 @@
     });
   }
 
-  $: artifactSet, onArtifactSetChange();
+  $: artifactSetId = artifactSet?.id;
+  $: artifactSetId, onArtifactSetChange();
 
-  onArtifactSetChange();
+  // onArtifactSetChange();
   function onArtifactSetChange() {
-    console.log('onArtifactSetChange');
-    if (artifactSet) {
+    console.log('onArtifactSetChange', artifactSet?.id);
+    if (artifactSet && initSelected.length > 0) {
+      console.log('onArtifactSetChange init phase with initSelected');
+      // In initial load and content was set from url query param and passed in here..
+      numArtifacts = artifactSet.children.length; // expand all
+      selected = [ ...initSelected ];
+      initSelected = [];
+      setShownArtifacts(numArtifacts);
+    } else if (artifactSet) {
+      console.log('onArtifactSetChange none init phase');
       selected = [];
       numArtifacts = Math.min(artifactSet.children.length, 10);
       setShownArtifacts(numArtifacts);

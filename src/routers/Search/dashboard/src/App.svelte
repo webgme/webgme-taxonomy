@@ -281,7 +281,7 @@
           loadState: LoadState.Pending,
         }));
 
-      allItems.forEach((repo) => loadContents(repo));
+      await Promise.all(allItems.map((repo) => loadContents(repo)));
     } catch (err) {
       displayError(err);
 
