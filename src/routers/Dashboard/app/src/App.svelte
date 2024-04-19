@@ -1,17 +1,18 @@
 <script lang="ts">
-  import { getProjectInfo } from "./data";
+  import { API } from "./data";
   import { AppHeader, ContentTypeCard } from "./components";
   import LayoutGrid, { Cell } from "@smui/layout-grid";
 
   let apiBaseUrl = window.location.href.split("/").slice(0, -2).join("/");
-  let projectInfo = getProjectInfo(apiBaseUrl);
+  const api = new API(apiBaseUrl);
+  let projectInfo = api.getProjectInfo();
   let title = "";
 
   $: projectInfo.then(({ name }) => (title = name));
 </script>
 
 <main>
-  <AppHeader {title} />
+  <AppHeader {title} {api}/>
   <LayoutGrid>
     {#await projectInfo}
       <div class="loading">Loading content types...</div>

@@ -79,7 +79,7 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
       // Grab all contentTypes for the project..
       const projectInfo = await (new ContextFacade(gmeContext)).getProjectInfo();
 
-      let url = null;
+      let url: string | null = null;
 
       for (const { name, path } of projectInfo.contentTypes) {
         logger.info(`At content type ${name} ${path}`);
@@ -94,11 +94,10 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
           if (repo.id === repoId) {
             logger.info(`found matching repository: ${JSON.stringify(repo)}`);
             // original: /routers/Dashboard/guest%2BmongoPipeline/branch/master/resolve-url
-            // url: /routers/Search/guest%2BmongoPipeline/branch/master/%2FA/static/index.html?repoId=6617fab6596a7edfc2fb9cff&contentId=0
+            // url: /routers/Search/guest%2BmongoPipeline/branch/master/%2FA/static/index.html?repoId=6617fab6596a7edfc2fb9cff&contentId=1_1
             url = `${req.originalUrl.split("?")[0].replace(/Dashboard/, "Search").split("/").slice(0, -1).join("/")}` +
               `/${encodeURIComponent(path)}/static/index.html?repoId=${repoId}&contentId=${contentId}`;
             break;
-            // TODO: We could try to find a matching content
           }
         }
       }
