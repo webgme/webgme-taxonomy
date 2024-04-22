@@ -15,7 +15,7 @@ import * as path from "path";
 import type { MiddlewareOptions } from "../../common/types";
 import RouterUtils, { getContentContext } from "../../common/routers/Utils";
 import ContextFacade from "./ContextFacade";
-import StorageAdapter from '../Search/adapters';
+import StorageAdapter from "../Search/adapters";
 
 export const router = express.Router();
 const staticPath = path.join(__dirname, "app", "dist");
@@ -75,9 +75,12 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
       const { uri } = req.body;
       // FIXME: This doesn't work for repositories..
       const [repoId, contentId] = StorageAdapter.resolveUri(uri);
-      logger.info(`uri="${uri}", with repoId="${repoId}", contentId="${contentId}"`);
+      logger.info(
+        `uri="${uri}", with repoId="${repoId}", contentId="${contentId}"`,
+      );
       // Grab all contentTypes for the project..
-      const projectInfo = await (new ContextFacade(gmeContext)).getProjectInfo();
+      const projectInfo = await (new ContextFacade(gmeContext))
+        .getProjectInfo();
 
       let url: string | null = null;
 
@@ -95,8 +98,14 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
             logger.info(`found matching repository: ${JSON.stringify(repo)}`);
             // original: /routers/Dashboard/guest%2BmongoPipeline/branch/master/resolve-url
             // url: /routers/Search/guest%2BmongoPipeline/branch/master/%2FA/static/index.html?repoId=6617fab6596a7edfc2fb9cff&contentId=1_1
-            url = `${req.originalUrl.split("?")[0].replace(/Dashboard/, "Search").split("/").slice(0, -1).join("/")}` +
-              `/${encodeURIComponent(path)}/static/index.html?repoId=${repoId}&contentId=${contentId}`;
+            url =
+              `${
+                req.originalUrl.split("?")[0].replace(/Dashboard/, "Search")
+                  .split("/").slice(0, -1).join("/")
+              }` +
+              `/${
+                encodeURIComponent(path)
+              }/static/index.html?repoId=${repoId}&contentId=${contentId}`;
             break;
           }
         }
@@ -105,7 +114,7 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
       // TODO: Check that this works behind secure proxy..
       res.json({ host: `${req.protocol}://${req.get("host")}`, url });
     },
-    { method: "post" }
+    { method: "post" },
   );
 
   logger.debug("ready");

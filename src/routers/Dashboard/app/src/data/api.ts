@@ -9,7 +9,6 @@ type Project = Readonly<{
   contentTypes: readonly ContentType[];
 }>;
 
-
 export default class API {
   apiBaseUrl: string;
 
@@ -21,18 +20,18 @@ export default class API {
     const url = this.apiBaseUrl + "/info";
     const response = await fetch(url);
     return response.json() as Promise<Project>;
-  }
+  };
 
   getDashboardUrlFromUri = async (uri: string) => {
     const postUrl = this.apiBaseUrl + "/resolve-url";
     const response = await fetch(postUrl, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({ uri }),
     });
 
-    return await response.json() as { url: string, host: string };
-  }
+    return await response.json() as { url: string; host: string };
+  };
 }

@@ -226,7 +226,7 @@ export default class MongoAdapter implements Adapter {
       const repos: Repository[] = documents.map(toRepository);
       return repos;
     } catch (err) {
-      console.error('Failed to list repos at mongoUri:', this._hostUri);
+      console.error("Failed to list repos at mongoUri:", this._hostUri);
       throw err;
     }
   }

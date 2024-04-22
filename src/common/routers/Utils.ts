@@ -362,11 +362,14 @@ export default {
 
 /**
  * Creates a GmeContentContext from the provided GmeContext and path.
- * @param gmeContext 
- * @param gmeContentPath 
- * @returns 
+ * @param gmeContext
+ * @param gmeContentPath
+ * @returns
  */
-export async function getContentContext(gmeContext: GmeContext, gmeContentPath: string): Promise<GmeContentContext> {
+export async function getContentContext(
+  gmeContext: GmeContext,
+  gmeContentPath: string,
+): Promise<GmeContentContext> {
   const { core, root } = gmeContext;
   const contentType = await core.loadByPath(root, gmeContentPath);
   assert(contentType, new ContentTypeNotFoundError(gmeContentPath));
