@@ -24,7 +24,7 @@ export default class API {
 
   getDashboardUrlFromUri = async (uri: string) => {
     if (!uri) {
-      throw new Error('URI cannot be empty');
+      throw new Error("URI cannot be empty");
     }
 
     const postUrl = this.apiBaseUrl + "/resolve-url";
