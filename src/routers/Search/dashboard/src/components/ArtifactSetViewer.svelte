@@ -112,16 +112,13 @@
 
   // onArtifactSetChange();
   function onArtifactSetChange() {
-    console.log('onArtifactSetChange', artifactSet?.id);
     if (artifactSet && initSelected.length > 0) {
-      console.log('onArtifactSetChange init phase with initSelected');
       // In initial load and content was set from url query param and passed in here..
       numArtifacts = artifactSet.children.length; // expand all
       selected = [ ...initSelected ];
       initSelected = [];
       setShownArtifacts(numArtifacts);
     } else if (artifactSet) {
-      console.log('onArtifactSetChange none init phase');
       selected = [];
       numArtifacts = Math.min(artifactSet.children.length, 10);
       setShownArtifacts(numArtifacts);
@@ -129,7 +126,6 @@
   }
 
   $: setShownArtifacts(numArtifacts);
-  $: console.log('shownArtifacts.length=', shownArtifacts.length, JSON.stringify(selected));
 
   function setShownArtifacts(numArtifacts: number) {
     if (artifactSet) {

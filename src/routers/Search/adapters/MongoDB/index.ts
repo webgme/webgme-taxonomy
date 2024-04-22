@@ -548,7 +548,12 @@ export default class MongoAdapter implements Adapter {
 
   static resolveUri(uri: string): [string, string] {
     const chunks = uri.split("/");
-    const content = chunks.pop() as string;
+    let content = chunks.pop() as string;
+    if (!content.includes('_')) {
+      // Fix for first versions that only includes the index and no version
+      content += "_0";
+    }
+
     const repo = chunks.pop() as string;
     return [repo, content];
   }

@@ -8,7 +8,6 @@
   export let api: API;
 
   function openSearchDialog() {
-    console.log('openSearchDialog', showSearchDialog);
     showSearchDialog = true;
   }
 
@@ -20,7 +19,6 @@
   open={showSearchDialog}
   on:close={() => {
     showSearchDialog = false;
-    console.log('on:close', showSearchDialog);
   }}
 />
 

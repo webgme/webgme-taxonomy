@@ -17,10 +17,6 @@
   export let open = true;
   let searchStr = '';
 
-  function onChange() {
-    console.log(searchStr);
-  }
-
   function onClose() {
     dispatch('close');
   }
@@ -60,7 +56,6 @@
       type="text"
       placeholder="Enter or paste URI ..."
       bind:value={searchStr}
-      on:input={onChange}
     />
     <Button on:click={onSearch}>
       <Label>Go</Label>

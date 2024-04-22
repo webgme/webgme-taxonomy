@@ -23,6 +23,10 @@ export default class API {
   };
 
   getDashboardUrlFromUri = async (uri: string) => {
+    if (!uri) {
+      throw new Error('URI cannot be empty');
+    }
+
     const postUrl = this.apiBaseUrl + "/resolve-url";
     const response = await fetch(postUrl, {
       method: "POST",
@@ -31,6 +35,11 @@ export default class API {
       },
       body: JSON.stringify({ uri }),
     });
+
+    if (!response.ok) {
+      const errorMessage = `${response.status} - ${response.statusText}`;
+      throw new Error(errorMessage);
+    }
 
     return await response.json() as { url: string; host: string };
   };

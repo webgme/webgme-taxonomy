@@ -404,8 +404,6 @@
   //////// Artifact Sets ////////
   let selectedArtifactSetId = null;
   let selectedArtifactSet = null;
-  console.log(items.length, selectedArtifactSetId, selectedArtifactSet);
-  $: console.log(selectedArtifactSetId, selectedArtifactSet);
   $: if(items.some(({ id }) => id === selectedArtifactSetId)) {
     selectedArtifactSet = items.find(({ id }) => id === selectedArtifactSetId);
   } else {
