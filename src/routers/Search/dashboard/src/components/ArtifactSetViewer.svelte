@@ -15,12 +15,12 @@
   } from "@smui/list";
   import Checkbox from "@smui/checkbox";
   import DisplayTagsDialog from "./DisplayTagsDialog.svelte";
-  import type { Artifact, PopulatedRepo } from "../Storage";
+  import { LoadState, type Artifact, type PopulatedRepo } from "../Storage";
   import type { ContentTypeConfiguration } from "../../../../../common/SearchFilterDataExporter";
 
   export let artifactSet: PopulatedRepo;
   export let contentType: ContentTypeConfiguration = getDefaultContentType('content');
-  export let initSelected: string[];
+  export let initSelected: string|null;
   let numArtifacts = 10;
   let shownArtifacts = [];
   let selected = [];
@@ -107,21 +107,54 @@
     });
   }
 
-  $: artifactSetId = artifactSet?.id;
-  $: artifactSetId, onArtifactSetChange();
+  let artifactSetId = null;
+  let artifactSetChildrenIds: string[] = [];
+  $: artifactSet, onArtifactSetChange();
 
-  // onArtifactSetChange();
   function onArtifactSetChange() {
-    if (artifactSet && initSelected.length > 0) {
+    if (!artifactSet || artifactSet.loadState === LoadState.Pending) {
+      artifactSetId = null;
+      artifactSetChildrenIds = [];
+      return;
+    }
+
+    const prevSelectedId = artifactSetId;
+    const prevChildrenIds = new Set(artifactSetChildrenIds);
+    artifactSetId = artifactSet.id;
+    artifactSetChildrenIds = artifactSet.children.map((artifact) => artifact.id);
+
+    if (initSelected) {
       // In initial load and content was set from url query param and passed in here..
       numArtifacts = artifactSet.children.length; // expand all
-      selected = [ ...initSelected ];
-      initSelected = [];
-      setShownArtifacts(numArtifacts);
-    } else if (artifactSet) {
-      selected = [];
-      numArtifacts = Math.min(artifactSet.children.length, 10);
-      setShownArtifacts(numArtifacts);
+      if (artifactSetChildrenIds.includes(initSelected)) {
+        selected = [ initSelected ];
+      } else {
+        const [idx] = initSelected.split('_');
+        selected = [];
+        for (const childId of artifactSetChildrenIds) {
+          if (childId.split('_')[0] === idx) {
+            selected = [ childId ];
+            break;
+          }
+        }
+
+        console.error("TODO: This will be handled differently when versions are displayed.");
+        alert(selected.length > 0 ?
+          "Different version of artifact from URI will be selected" : "Could not find matching artifact for URI.");
+      }
+
+      initSelected = null;
+    } else {
+      if (prevSelectedId !== artifactSetId) {
+        // Switched artifact set.
+        selected = [];
+      }
+
+      if (prevChildrenIds.size !== artifactSetChildrenIds.length) {
+        numArtifacts = Math.min(artifactSet.children.length, 10);
+      } else if (artifactSetChildrenIds.some((id) => !prevChildrenIds.has(id))) {
+        setShownArtifacts(numArtifacts);
+      }
     }
   }
 

@@ -522,9 +522,9 @@
           </Paper>
         {/if}
       </main>
-      {#if selectedArtifactSetId}
+      {#if selectedArtifactSet}
         <ArtifactSetViewer
-          initSelected={initialContentId ? [initialContentId] : []}
+          initSelected={initialContentId || null}
           bind:artifactSet={selectedArtifactSet}
           bind:contentType
           on:download={(event) => onDownload(event.detail)}
@@ -563,7 +563,6 @@
               };
           }}
           on:copyUri={(event) => displayMessage("Copied URI: " + event.detail.name)}
-          on:repoChange={(event) => loadContents(event.detail.repo)}
         />
       {/if}
     </AppContent>
