@@ -11,8 +11,10 @@
     "prepare": "npm run build"
   },
   "devDependencies": {
-    "@smui/button": "^7.0.0-beta.0",
+    "@smui/button": "^6.1.4",
     "@smui/card": "^6.1.4",
+    "@smui/dialog": "^6.1.4",
+    "@smui/icon-button": "^6.1.4",
     "@smui/layout-grid": "^6.1.4",
     "@smui/top-app-bar": "^6.1.4",
     "@sveltejs/vite-plugin-svelte": "^2.4.4",

@@ -113,6 +113,7 @@ export interface AdapterStatic<A extends Adapter> {
     uri: string,
   ): Promise<A>;
   getUriPatterns(): string[];
+  resolveUri(uri: string): [string, string];
 }
 
 export interface Artifact {

@@ -15,14 +15,16 @@
   } from "@smui/list";
   import Checkbox from "@smui/checkbox";
   import DisplayTagsDialog from "./DisplayTagsDialog.svelte";
-  import type { Artifact, PopulatedRepo } from "../Storage";
+  import { LoadState, type Artifact, type PopulatedRepo } from "../Storage";
   import type { ContentTypeConfiguration } from "../../../../../common/SearchFilterDataExporter";
 
   export let artifactSet: PopulatedRepo;
   export let contentType: ContentTypeConfiguration = getDefaultContentType('content');
+  export let initSelected: string|null;
   let numArtifacts = 10;
   let shownArtifacts = [];
   let selected = [];
+
   let menu: Menu;
   const formatter = new TagFormatter();
   const dispatch = createEventDispatcher();
@@ -105,14 +107,54 @@
     });
   }
 
+  let artifactSetId = null;
+  let artifactSetChildrenIds: string[] = [];
   $: artifactSet, onArtifactSetChange();
 
-  onArtifactSetChange();
   function onArtifactSetChange() {
-    if (artifactSet) {
-      selected = [];
-      numArtifacts = Math.min(artifactSet.children.length, 10);
-      setShownArtifacts(numArtifacts);
+    if (!artifactSet || artifactSet.loadState === LoadState.Pending) {
+      artifactSetId = null;
+      artifactSetChildrenIds = [];
+      return;
+    }
+
+    const prevSelectedId = artifactSetId;
+    const prevChildrenIds = new Set(artifactSetChildrenIds);
+    artifactSetId = artifactSet.id;
+    artifactSetChildrenIds = artifactSet.children.map((artifact) => artifact.id);
+
+    if (initSelected) {
+      // In initial load and content was set from url query param and passed in here..
+      numArtifacts = artifactSet.children.length; // expand all
+      if (artifactSetChildrenIds.includes(initSelected)) {
+        selected = [ initSelected ];
+      } else {
+        const [idx] = initSelected.split('_');
+        selected = [];
+        for (const childId of artifactSetChildrenIds) {
+          if (childId.split('_')[0] === idx) {
+            selected = [ childId ];
+            break;
+          }
+        }
+
+        console.error("TODO: This will be handled differently when versions are displayed.");
+        alert(selected.length > 0 ?
+          "Different version of artifact from URI will be selected" : "Could not find matching artifact for URI.");
+      }
+
+      initSelected = null;
+    } else {
+      if (prevSelectedId !== artifactSetId) {
+        // Switched artifact set.
+        selected = [];
+      }
+
+      if (prevChildrenIds.size !== artifactSetChildrenIds.length) {
+        numArtifacts = Math.min(artifactSet.children.length, 10);
+      } else if (artifactSetChildrenIds.some((id) => !prevChildrenIds.has(id))) {
+        setShownArtifacts(numArtifacts);
+      }
     }
   }
 
@@ -172,13 +214,13 @@
                     numArtifacts + 10
                   ))}
               >
-                <Text>Show more...</Text>
+                <Text>SHOW MORE</Text>
               </Item>
               <Item
                 on:SMUI:action={() =>
                   (numArtifacts = artifactSet.children.length)}
               >
-                <Text>Show all...</Text>
+                <Text>SHOW ALL</Text>
               </Item>
             </List>
           </Menu>
