@@ -13,7 +13,7 @@ export class StatusError extends Error {
   statusCode: number;
 
   constructor(message: string, statusCode: number) {
-    super(message)
+    super(message);
     this.statusCode = statusCode;
   }
 }
@@ -46,7 +46,10 @@ export default class DashboardAPI {
     });
 
     if (!response.ok) {
-      throw new StatusError(`${response.status} - ${response.statusText}`, response.status);
+      throw new StatusError(
+        `${response.status} - ${response.statusText}`,
+        response.status,
+      );
     }
 
     return await response.json() as { url: string; host: string };
