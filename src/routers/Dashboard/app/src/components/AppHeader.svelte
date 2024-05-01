@@ -2,10 +2,8 @@
   import TopAppBar, { Row, Section, Title } from "@smui/top-app-bar";
   import IconButton from "@smui/icon-button";
   import SearchDialog from "./SearchDialog.svelte";
-  import type { API } from "../data";
 
   export let title: string | null = null;
-  export let api: API;
 
   function openSearchDialog() {
     showSearchDialog = true;
@@ -15,7 +13,6 @@
 </script>
 
 <SearchDialog
-  {api}
   open={showSearchDialog}
   on:close={() => {
     showSearchDialog = false;
