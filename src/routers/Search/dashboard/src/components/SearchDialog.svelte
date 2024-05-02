@@ -13,6 +13,7 @@
 
   export let open = true;
   let searchStr = '';
+  let loading = false;
   const api: DashboardAPI = getContext("dashboard-api");
 
   function onClose() {
@@ -21,8 +22,9 @@
 
   async function onSearch() {
     try {
+      loading = true;
       const res = await api.getDashboardUrlFromUri(searchStr);
-      window.location.href = `${res.host}${res.url}`;
+      window.location.href = `${window.location.origin}${res.url}`;
     } catch (err: any) {
       if (err.statusCode === 400) {
         alert('Invalid URI provided!');
@@ -30,6 +32,8 @@
         alert(err.message);
       }
     }
+
+    loading = false;
   }
   $: if (!open) {
     searchStr = '';
@@ -52,13 +56,14 @@
       class="search-input"
       type="text"
       placeholder="Enter or paste URI ..."
+      disabled={loading}
       bind:value={searchStr}
       on:keydown={(e) => {
         if (e.key === "Enter") {
           onSearch();
         }}}
     />
-    <Button on:click={onSearch}>
+    <Button on:click={onSearch} disabled={loading}>
       <Label>Go</Label>
     </Button>
   </Content>
