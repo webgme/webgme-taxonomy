@@ -34,6 +34,7 @@
   import TaxonomyReference from "../../../../common/TaxonomyReference";
   import Storage, { LoadState, ModelError, RequestError, ModelContext } from "./Storage";
   import type { Artifact, PopulatedRepo } from "./Storage";
+  import DashboardAPI from "./DashboardAPI";
   import type {ContentTypeConfiguration}  from "../../../../common/SearchFilterDataExporter";
 
   let confirmData: ConfirmData | null = null;
@@ -42,8 +43,12 @@
   $: title = `${contentType.name} Dashboard`;
   let vocabularies: TaxonomyData[] = [];
 
-  const storage = setContext("storage", new Storage());
+  // location.pathname /routers/Search/guest%2BmongoPipeline/branch/master/%2FM/static/index.html
+  // dashboard-url: /routers/Dashboard/guest%2BmongoPipeline/branch/master
+  const mainDashboardUrl =  window.location.pathname.replace(/Search/, 'Dashboard').split('/').slice(0, -3).join('/');
 
+  setContext("dashboard-api", new DashboardAPI(mainDashboardUrl));
+  const storage = setContext("storage", new Storage());
 
   let allItems: PopulatedRepo[] = [];
   let items: PopulatedRepo[] = [];

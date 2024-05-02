@@ -9,7 +9,16 @@ type Project = Readonly<{
   contentTypes: readonly ContentType[];
 }>;
 
-export default class API {
+export class StatusError extends Error {
+  statusCode: number;
+
+  constructor(message: string, statusCode: number) {
+    super(message);
+    this.statusCode = statusCode;
+  }
+}
+
+export default class DashboardAPI {
   apiBaseUrl: string;
 
   constructor(apiBaseUrl: string) {
@@ -37,8 +46,10 @@ export default class API {
     });
 
     if (!response.ok) {
-      const errorMessage = `${response.status} - ${response.statusText}`;
-      throw new Error(errorMessage);
+      throw new StatusError(
+        `${response.status} - ${response.statusText}`,
+        response.status,
+      );
     }
 
     return await response.json() as { url: string; host: string };
