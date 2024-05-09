@@ -21,6 +21,12 @@ Thirdly, start the janus graph:
 docker run --name janusgraph -p 8182:8182 -d janusgraph/janusgraph:latest
 ```
 
+Finally and optionally if you want to be able to visualize the graph-db data at http://localhost:3000 (psst `g.V()` returns
+all vertices).
+```
+docker run -d --name=gremlin-visualizer --network=host prabushitha/gremlin-visualizer:latest
+```
+
 Then, run `webgme start` from the project root to start . Finally, navigate to
 `http://localhost:8080` to start using webgme-taxonomy!
 
