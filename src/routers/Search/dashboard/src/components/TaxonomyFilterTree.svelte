@@ -44,7 +44,7 @@
   $: {
     //if (checked !== tree.selected) {
 
-    console.log("checked:", checked);
+    // console.log("checked:", checked);
     tree.selected = checked;
     tree.value = value;
     //tree.children.forEach(child => child.selected = checked);

@@ -8,13 +8,16 @@
 
   const api: DashboardAPI = setContext("dashboard-api", new DashboardAPI(apiBaseUrl));
   let projectInfo = api.getProjectInfo();
+  let packageJson = api.getPackageJSON();
   let title = "";
+  let taxonomyInfo = "";
 
   $: projectInfo.then(({ name }) => (title = name));
+  $: packageJson.then(({ name, version }) => (taxonomyInfo = `${name}@v${version}`));
 </script>
 
 <main>
-  <AppHeader {title}/>
+  <AppHeader {title} {taxonomyInfo}/>
   <LayoutGrid>
     {#await projectInfo}
       <div class="loading">Loading content types...</div>

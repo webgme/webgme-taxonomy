@@ -4,6 +4,7 @@
   import SearchDialog from "./SearchDialog.svelte";
 
   export let title: string | null = null;
+  export let taxonomyInfo: string | null = null;
 
   function openSearchDialog() {
     showSearchDialog = true;
@@ -23,7 +24,7 @@
   <Row>
     <Section>
       {#if title}
-        <Title>{title}</Title>
+        <Title title={taxonomyInfo}>{title}</Title>
       {/if}
     </Section>
     <Section align="end" toolbar>

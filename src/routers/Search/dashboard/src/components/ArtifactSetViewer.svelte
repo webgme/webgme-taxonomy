@@ -66,8 +66,8 @@
     }
   }
 
-  async function onDeleteArtifact(...contentIds: string[]) {
-    const contents = contentIds
+  async function onDeleteArtifact() {
+    const contents = selected
       .map(id => artifactSet.children.find(content => content.id === id));
 
     dispatch("delete", {
@@ -112,6 +112,7 @@
   $: artifactSet, onArtifactSetChange();
 
   function onArtifactSetChange() {
+    console.log('onArtifactSetChange');
     if (!artifactSet || artifactSet.loadState === LoadState.Pending) {
       artifactSetId = null;
       artifactSetChildrenIds = [];
@@ -145,18 +146,24 @@
 
       initSelected = null;
     } else {
-      if (prevSelectedId !== artifactSetId) {
-        // Switched artifact set.
-        selected = [];
-      }
-
       if (prevChildrenIds.size !== artifactSetChildrenIds.length) {
         numArtifacts = Math.min(artifactSet.children.length, 10);
       } else if (artifactSetChildrenIds.some((id) => !prevChildrenIds.has(id))) {
         setShownArtifacts(numArtifacts);
       }
+
+      if (prevSelectedId !== artifactSetId || selected.some(id => !artifactSetChildrenIds.includes(id))) {
+        // Switched artifact set or some where deleted.
+        setTimeout(()=> {
+          // This is just debugging this annoying magic framework.. lol
+          console.log('selected reset');
+          selected = [];
+        }, 500);
+      }
     }
   }
+
+  $: console.log("selected", JSON.stringify(selected));
 
   $: setShownArtifacts(numArtifacts);
 
@@ -270,14 +277,14 @@
       <Button on:click={onUploadClicked}>
         <Label>Upload</Label>
       </Button>
-      <Button on:click={onDownloadClicked} disabled={selected.length == 0}>
+      <Button on:click={onDownloadClicked} disabled={selected.length === 0}>
         <Label>Download</Label>
       </Button>
-      <Button on:click={() => onDeleteArtifact(...selected)} disabled={selected.length == 0}>
+      <Button on:click={() => onDeleteArtifact()} disabled={selected.length === 0}>
         <Label>Delete</Label>
       </Button>
       {#if window.self !== window.top }
-      <Button on:click={() => onSelectContent()} disabled={selected.length != 1}>
+      <Button on:click={() => onSelectContent()} disabled={selected.length !== 1}>
         <Label>Select</Label>
       </Button>
       {/if}

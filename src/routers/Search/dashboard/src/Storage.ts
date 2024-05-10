@@ -328,7 +328,6 @@ function parseRepo(
 }
 
 function parseArtifact(data: ArtifactData): Artifact {
-  console.log("parse artifact", data);
   return {
     id: data.id,
     displayName: data.displayName,

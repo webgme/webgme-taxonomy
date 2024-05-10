@@ -36,6 +36,7 @@
   import type { Artifact, PopulatedRepo } from "./Storage";
   import DashboardAPI from "./DashboardAPI";
   import type {ContentTypeConfiguration}  from "../../../../common/SearchFilterDataExporter";
+    import Actions from "@smui/card/src/Actions.svelte";
 
   let confirmData: ConfirmData | null = null;
   let title: string;
@@ -50,8 +51,10 @@
   setContext("dashboard-api", new DashboardAPI(mainDashboardUrl));
   const storage = setContext("storage", new Storage());
 
-  let allItems: PopulatedRepo[] = [];
-  let items: PopulatedRepo[] = [];
+  let allRepos: PopulatedRepo[] = [];
+  let repos: PopulatedRepo[] = [];
+  let selectedRepoId = null;
+  let selectedRepo = null;
 
   const params = new URLSearchParams(location.search);
   let searchQuery: string = params.get("searchQuery") || "";
@@ -88,7 +91,7 @@
   }
 
   function onFilterUpdate(searchQuery: string, filterTags: FilterTag[]) {
-    const filter = (item) => {
+    repos = allRepos.filter((item) => {
       const { displayName, tags = {} } = item;
 
       const matchingTags = FilterTag.applyFilters(tags, filterTags);
@@ -104,9 +107,7 @@
       }
 
       return false;
-    };
-
-    items = allItems.filter((item) => filter(item));
+    });
 
     const params = new URLSearchParams();
     params.set("searchQuery", searchQuery);
@@ -118,7 +119,7 @@
   $: onFilterUpdate(searchQuery, filterTags);
 
   // FIXME: what should this be?
-  $: itemTags = items.flatMap((item) => item.tags ?? {});
+  $: itemTags = repos.flatMap((item) => item.tags ?? {});
 
   function setQueryStringParams(newParams: URLSearchParams) {
     const params = new URLSearchParams(location.search);
@@ -128,17 +129,6 @@
       "",
       `${location.pathname}?${params.toString()}`
     );
-  }
-
-  function getTag(id) {
-    const queue = vocabularies;
-    while (queue.length) {
-      const node = queue.shift();
-      if (node.id === id) {
-        return node;
-      }
-      queue.push(...node.children);
-    }
   }
 
   async function fetchConfiguration() {
@@ -207,6 +197,7 @@
       duration: duration,
     });
   }
+
   function clearProgressMessage(id: number) {
     toast.pop(id);
   }
@@ -244,8 +235,8 @@
     vocabularies = trimTaxonomy(dataVocabs);
     filterTags = parseTagParams(params.get("filterTags"));
     contentType = configuration.content;
-    await fetchData();
-    selectedArtifactSetId = initialRepoId || null;
+    await fetchAllRepositories();
+    selectedRepoId = initialRepoId || null;
   }
 
   async function onTryCreateRepo(event) {
@@ -253,11 +244,11 @@
     displayMessage(status);
     if (status.includes("Created!")) {
       // FIXME: replace this with a proper enum
-      await fetchData();
+      await fetchAllRepositories();
     }
   }
 
-  async function loadContents(repo: PopulatedRepo) {
+  async function loadRepoContents(repo: PopulatedRepo, forceStateUpdate: boolean = false) {
     repo.loadState = LoadState.Pending;
     const children = await storage.listArtifacts(repo.id);
     // TODO: keep all and just show if they are valid or not...
@@ -267,16 +258,19 @@
     repo.children = validArtifacts;
     repo.loadState = LoadState.Complete;
 
-    // FIXME: Does this make sense?
-    // if (selectedArtifactSet?.id === repo.id) {
-    //   selectedArtifactSet = selectedArtifactSet;
-    // }
+    if (forceStateUpdate) {
+      // New reference to allRepos and the updated repo.
+      allRepos = allRepos.map((r) => r.id === repo.id ? {...repo} : r);
+      // Apply filter will update "repos" variable.
+      onFilterUpdate(searchQuery, filterTags);
+      // "repos" in turn will update the selectedRepo reference and the UI will render.
+    }
   }
 
-  async function fetchData() {
+  async function fetchAllRepositories() {
     isLoading = true;
     try {
-      allItems = (await storage.listRepos(currentTaxonomy))
+      allRepos = (await storage.listRepos(currentTaxonomy))
         .map(repo => ({
           id: repo.id,
           displayName: repo.displayName,
@@ -286,7 +280,7 @@
           loadState: LoadState.Pending,
         }));
 
-      await Promise.all(allItems.map((repo) => loadContents(repo)));
+      await Promise.all(allRepos.map((repo) => loadRepoContents(repo)));
     } catch (err) {
       displayError(err);
 
@@ -299,43 +293,6 @@
     onFilterUpdate(searchQuery, filterTags);
   }
 
-  class EmbeddedEvent {
-    type: string;
-    data: string;
-
-    constructor(type: string, data: any) {
-      this.type = type;
-      this.data = data;
-    }
-  }
-
-  class SelectEvent extends EmbeddedEvent {
-    constructor(item: any) {
-      super("ItemSelected", item);
-    }
-  }
-
-  const listeners = [];
-  let selectedItem;
-  function receiveMessage(event) {
-    const { data } = event;
-    if (data.type === "subscribe") {
-      listeners.push([event.source, event.origin]);
-      if (selectedItem) {
-        event.source.postMessage(new SelectEvent(selectedItem), event.origin);
-      }
-    }
-  }
-
-  window.addEventListener("message", receiveMessage, false);
-  function onItemClicked(item) {
-    selectedItem = item;
-    listeners.forEach(([listener, origin]) =>
-      listener.postMessage(new SelectEvent(item), origin)
-    );
-    selectedArtifactSetId = item.id;
-  }
-
   initialize();
 
   ////// Item actions //////
@@ -343,16 +300,11 @@
   let updateTarget: Artifact | null = null;
   let appendMsgId;
 
-  async function onUpdateContent(repo: PopulatedRepo, content: Artifact) {
-    appendItem = repo;
-    updateTarget = content;
-  }
-
   function onAppendFinish(event: CustomEvent<{ error?: string }>) {
     const error = event.detail?.error;
     if (error == null) {
       displayMessage("Upload complete!");
-      fetchData().catch(displayError);
+      fetchAllRepositories().catch(displayError);
     } else {
       displayError(error);
     }
@@ -365,17 +317,6 @@
   ////// Artifact Upload //////
   const queryDict = parseQueryString(window.location.href);
   let creatingRepo = queryDict.action === "create";
-  let artifactFiles = [];
-
-  function onFileDrop(event) {
-    const { acceptedFiles } = event.detail;
-    if (acceptedFiles.length) {
-      artifactFiles = acceptedFiles;
-    }
-    // TODO: handle rejections
-  }
-
-  let artifactName = "";
 
   function parseQueryString(url: string) {
     return Object.fromEntries(
@@ -406,14 +347,13 @@
     }
   }
 
-  //////// Artifact Sets ////////
-  let selectedArtifactSetId = null;
-  let selectedArtifactSet = null;
-  $: if(items.some(({ id }) => id === selectedArtifactSetId)) {
-    selectedArtifactSet = items.find(({ id }) => id === selectedArtifactSetId);
+  //////// Selected repos ////////
+  $: if(repos.some(({ id }) => id === selectedRepoId)) {
+    console.log('selected repos triggered');
+    selectedRepo = repos.find(({ id }) => id === selectedRepoId);
   } else {
-    selectedArtifactSet = null;
-    selectedArtifactSetId = null;
+    selectedRepo = null;
+    selectedRepoId = null;
   }
 
   //////// Edit taxonomy ////////
@@ -493,13 +433,13 @@
     <AppContent>
       <main style="display: inline-block; vertical-align: top; min-width: 33%">
         <!-- Artifact list -->
-        {#if items.length}
+        {#if repos.length}
           <List twoLine avatarList>
-            {#each items as item (item.id)}
+            {#each repos as item (item.id)}
               <Item
                 data-testid={item.displayName}
-                selected={item.id === selectedArtifactSetId}
-                on:SMUI:action={() => onItemClicked(item)}
+                selected={item.id === selectedRepoId}
+                on:SMUI:action={() => selectedRepoId = item.id}
               >
                 <Text>
                   <PrimaryText>{item.displayName}</PrimaryText>
@@ -527,10 +467,10 @@
           </Paper>
         {/if}
       </main>
-      {#if selectedArtifactSet}
+      {#if selectedRepo}
         <ArtifactSetViewer
           initSelected={initialContentId || null}
-          bind:artifactSet={selectedArtifactSet}
+          artifactSet={selectedRepo}
           bind:contentType
           on:download={(event) => onDownload(event.detail)}
           on:upload={(event) => {
@@ -551,19 +491,16 @@
                   const results = await Promise.allSettled(
                     contents.map(content => storage.disableArtifact(repo.id, content.id))
                   );
+
                   const failures = results.filter(res => res.status !== 'fulfilled');
-                  filterMap(results, (res, i) => {
-                    if (res.status !== 'fulfilled') {
-                      return contents[i];
-                    }
-                  });
                   if (failures.length > 0) {
                     const msg = failures.map(f => f.reason).join('\n');
                     const error = new Error(msg);
                     console.error(error);
                     displayError(error);
                   }
-                  loadContents(repo);
+
+                  loadRepoContents(repo, true);
                 }
               };
           }}
