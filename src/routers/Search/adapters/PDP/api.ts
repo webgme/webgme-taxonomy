@@ -19,7 +19,7 @@ import { ArtifactMetadata } from "../common/types";
 import { TestEnvOnlyError, UserError } from "../../../../common/UserError";
 import { filterMap, last } from "../../../../common/Utils";
 
-class PdpApiError extends UserError {}
+class PdpApiError extends UserError { }
 
 interface RequestOpts {
   token?: string;
@@ -139,7 +139,7 @@ export default class PdpApi implements PdpProvider {
     const observations: Result<Observation[], PdpApiError> = await this
       ._fetchJson(
         `v2/Process/PeekObservations?processId=${processId}&obsIndex=${startIndex}` +
-          `&maxReturn=${limit}`,
+        `&maxReturn=${limit}`,
         fetchOpts.unwrapOrElse(DefaultFetchOpts),
       );
 
@@ -227,7 +227,7 @@ export default class PdpApi implements PdpProvider {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(observation),
+      body: JSON.stringify([observation]),
     };
     Option.from(opts.token).map((token) => setAuthToken(fetchOpts, token));
 
