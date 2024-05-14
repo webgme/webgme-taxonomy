@@ -155,10 +155,9 @@
       if (prevSelectedId !== artifactSetId || selected.some(id => !artifactSetChildrenIds.includes(id))) {
         // Switched artifact set or some where deleted.
         setTimeout(()=> {
-          // This is just debugging this annoying magic framework.. lol
           console.log('selected reset');
           selected = [];
-        }, 500);
+        });
       }
     }
   }

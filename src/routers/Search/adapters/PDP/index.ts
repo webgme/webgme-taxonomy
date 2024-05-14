@@ -553,7 +553,7 @@ export default class PDP implements Adapter {
       console.log({ deletion });
       console.log("appending", obs);
 
-      return await this.api.appendVersion(processId, obs);
+      return fromResult(await this.api.appendVersion(processId, obs));
     }, repoId);
   }
 

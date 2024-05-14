@@ -407,6 +407,7 @@ export function handleUserErrors(logger: GmeLogger, fn: WebgmeHandler) {
       }
     } catch (e) {
       if (e instanceof UserError) {
+        logger.error(e.stack);
         e.sendVia(res);
       } else {
         if (e instanceof Error) {
