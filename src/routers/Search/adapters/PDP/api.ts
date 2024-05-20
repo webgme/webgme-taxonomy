@@ -232,7 +232,7 @@ export default class PdpApi implements PdpProvider {
     Option.from(opts.token).map((token) => setAuthToken(fetchOpts, token));
 
     const response: Result<AppendVersionResponse, PdpApiError> = await this
-      ._fetchJson(
+      ._fetch(
         `v2/Process/AppendVersion?processId=${processId}`,
         fetchOpts,
       );

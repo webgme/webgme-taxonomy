@@ -477,6 +477,9 @@ export default class PDP implements Adapter {
 
       const state = fromResult(await this.api.getProcessState(processId));
       const latestVersion = state.lastVersionIndex;
+      // Versions are shared across observations in a process.
+      // They all start out at 0.
+      // latestVersion here is the highest such "global" version number.
 
       if (version > latestVersion) {
         throw new ContentNotFoundError(contentId);
@@ -491,6 +494,7 @@ export default class PDP implements Adapter {
       );
 
       const datum = getObservationData(lastObs);
+      // What does validVersions mean?
       const validVersions = without(
         matchObsDatum(datum, {
           ArtifactMetadata(_md) {
@@ -549,6 +553,9 @@ export default class PDP implements Adapter {
         deletion,
         index,
       );
+
+      // FIX for deletion bug - the version number must be bumped.
+      obs.version = latestVersion + 1;
 
       console.log({ deletion });
       console.log("appending", obs);
