@@ -62,6 +62,7 @@ export interface PdpProvider {
     processId: ProcessID,
     startIndex: number,
     limit?: number,
+    version?: number,
     opts?: RequestOpts,
   ): Promise<Result<Observation[], PdpApiError>>;
   getObservationFiles(
@@ -131,6 +132,7 @@ export default class PdpApi implements PdpProvider {
     processId: ProcessID,
     startIndex: number,
     limit: number = 20,
+    version: number = 0,
     opts: RequestOpts = {},
   ): Promise<Result<Observation[], PdpApiError>> {
     const fetchOpts = Option.from(opts.token).map((token) =>
@@ -139,7 +141,7 @@ export default class PdpApi implements PdpProvider {
     const observations: Result<Observation[], PdpApiError> = await this
       ._fetchJson(
         `v2/Process/PeekObservations?processId=${processId}&obsIndex=${startIndex}` +
-        `&maxReturn=${limit}`,
+        `&maxReturn=${limit}&version=${version}`,
         fetchOpts.unwrapOrElse(DefaultFetchOpts),
       );
 
@@ -417,6 +419,7 @@ export class InMemoryPdp implements PdpProvider {
     id: ProcessID,
     startIndex: number,
     limit: number = 20,
+    version: number = 0,
     _opts: RequestOpts = {},
   ): Promise<Result<Observation[], PdpApiError>> {
     return this.getProcessData(id)

@@ -164,6 +164,7 @@ export default class PDP implements Adapter {
             pid,
             start,
             len,
+            obsInfo.lastVersionIndex,
             { token: this._readToken },
           )
         ),
