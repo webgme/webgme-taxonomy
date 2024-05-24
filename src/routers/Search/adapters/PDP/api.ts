@@ -128,6 +128,10 @@ export default class PdpApi implements PdpProvider {
     return state;
   }
 
+  /**
+   * From start index gets all observations of versions up till and including provided version number.
+   * Limit return using limit.
+   */
   async getObservations(
     processId: ProcessID,
     startIndex: number,
@@ -148,6 +152,12 @@ export default class PdpApi implements PdpProvider {
     return observations;
   }
 
+  /**
+   * Returns the observation at index obsIndex at its latest version that still is <= provided version.
+   * If the provided version is > "the latest across all observations in the process" (ProcessState.lastIndexVersion) 400 is returned
+   * 
+   * So to get the latest version of a specific observation in a process. Pass its index and the ProcessState.lastIndexVersion. 
+   */
   async getObservation(
     processId: ProcessID,
     obsIndex: number,
