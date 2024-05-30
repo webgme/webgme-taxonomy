@@ -172,6 +172,8 @@ class Storage {
     const updateResult = await (await this._fetchJson(url, opts, UpdateError))
       .unwrap() as { files: any[] };
 
+    console.log({ updateResult });
+
     return updateResult.files.map(
       ({ name, params }: { name: string; params: UploadParams }) => {
         const targetFile = files.find((a) => a.name == name);

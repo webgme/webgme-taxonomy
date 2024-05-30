@@ -38,7 +38,6 @@ interface ListProcessOpts extends RequestOpts {
   token?: string;
 }
 
-type AppendVersionResponse = any;
 export interface PdpProvider {
   listProcesses(
     opts?: ListProcessOpts,
@@ -80,7 +79,7 @@ export interface PdpProvider {
     processId: ProcessID,
     observation: Observation,
     opts?: RequestOpts,
-  ): Promise<Result<AppendVersionResponse, PdpApiError>>;
+  ): Promise<Result<AppendObservationResponse, PdpApiError>>;
   getTransferState(
     processId: ProcessID,
     directoryId: string,
@@ -233,7 +232,7 @@ export default class PdpApi implements PdpProvider {
     processId: ProcessID,
     observation: Observation,
     opts: RequestOpts = {},
-  ): Promise<Result<AppendVersionResponse, PdpApiError>> {
+  ): Promise<Result<AppendObservationResponse, PdpApiError>> {
     const fetchOpts = {
       method: "post",
       headers: {
@@ -243,9 +242,9 @@ export default class PdpApi implements PdpProvider {
     };
     Option.from(opts.token).map((token) => setAuthToken(fetchOpts, token));
 
-    const response: Result<AppendVersionResponse, PdpApiError> = await this
-      ._fetch(
-        `v2/Process/AppendVersion?processId=${processId}`,
+    const response: Result<AppendObservationResponse, PdpApiError> = await this
+      ._fetchJson(
+        `v3/Process/AppendVersion?processId=${processId}&uploadExpiresInMins=180`,
         fetchOpts,
       );
 
@@ -510,18 +509,16 @@ export class InMemoryPdp implements PdpProvider {
         const obsDatum = this.newObsData(processId, observation, transferId);
         data.observations.push([obsDatum]);
         data.state.numObservations = data.observations.length;
-        const response: AppendObservationResponse = Object.assign(
-          {},
-          observation,
-          { // the new field in the append response
-            uploadDataFiles: {
-              files: obsDatum.fileData.files.map((fdata) => ({
-                name: `dat/${fdata.name}`,
-                sasUrl: fdata.sasUrl,
-              })),
-            },
-          },
-        );
+        const response: AppendObservationResponse = {
+          ...observation,
+          // the new field in the append response
+          uploadDataFiles: {
+            files: obsDatum.fileData.files.map((fdata) => ({
+              name: `dat/${fdata.name}`,
+              sasUrl: fdata.sasUrl,
+            })),
+          }
+        };
 
         this.startTransfer(
           obsDatum.fileData.files.map((fdata) => fdata.name),
@@ -536,7 +533,7 @@ export class InMemoryPdp implements PdpProvider {
     processId: ProcessID,
     observation: Observation,
     _opts: RequestOpts = {},
-  ): Promise<Result<AppendVersionResponse, PdpApiError>> {
+  ): Promise<Result<AppendObservationResponse, PdpApiError>> {
     return this.getProcessData(processId)
       .map((data) => {
         const index = observation.index;
@@ -558,6 +555,17 @@ export class InMemoryPdp implements PdpProvider {
           observation.version,
           data.state.lastVersionIndex,
         );
+
+        return {
+          ...observation,
+          // the new field in the append response
+          uploadDataFiles: {
+            files: obsDatum.fileData.files.map((fdata) => ({
+              name: `dat/${fdata.name}`,
+              sasUrl: fdata.sasUrl,
+            })),
+          }
+        };
       });
   }
 

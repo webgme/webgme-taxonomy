@@ -234,6 +234,8 @@ function initialize(middlewareOpts: MiddlewareOptions) {
             userId,
             filenames,
           );
+
+          console.log({ metadata, filenames });
           await toGuidFormat(
             gmeContext,
             metadata,
@@ -538,6 +540,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
             userId,
             filenames,
           );
+          console.log({ metadata, filenames });
           await toGuidFormat(
             gmeContext,
             metadata,

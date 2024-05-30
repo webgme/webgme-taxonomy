@@ -444,27 +444,25 @@ export default class PDP implements Adapter {
     const procInfo = fromResult(await this.api.getProcessState(processId));
     const index = procInfo.numObservations;
     const version = 0;
-    const result = fromResult(
-      await this._appendObservationWithFiles(
-        processId,
-        index,
-        version,
-        this.processType,
-        metadata,
-        filenames,
-      ),
-    );
 
-    // TODO: refactor this...
-    const files = result.uploadDataFiles === null
-      ? []
-      : result.uploadDataFiles.files.map((file) => {
+    const observation = this._createObservationData(processId, this.processType, metadata, version, index);
+    // Add the data-files to the observation
+    const remoteFileDir = `${index}/${version}/`;
+    observation.dataFiles = filenames.map((filename: string) => remoteFileDir + filename);
+    const appendObservationResult = fromResult(await this.api.appendObservation(processId, observation));
+
+    let uploadFileRequests: UploadRequest[] = [];
+
+    console.log({ appendObservationResult });
+    if (appendObservationResult.uploadDataFiles && appendObservationResult.uploadDataFiles.files) {
+      uploadFileRequests = appendObservationResult.uploadDataFiles.files.map((file) => {
         const name = PDP.getOriginalFilePath(file.name);
         const params = new UploadParams(file.sasUrl, "PUT", UPLOAD_HEADERS);
         return new UploadRequest(name, params);
       });
+    }
 
-    return new AppendResult(`${index}_0`, files, index);
+    return new AppendResult(`${index}_0`, uploadFileRequests, index);
   }
 
   // TODO: this should probably take a reservation
@@ -565,12 +563,17 @@ export default class PDP implements Adapter {
     metadata: ArtifactMetadatav2,
     filenames: string[] = [],
   ): Promise<UpdateResult> {
-    // get the list of validVersions for the index (append the new version)
-    const latestData = await this.getObservationData(
-      res.processId,
-      res.index,
-      res.version - 1, // P: The new version hasn't been submitted..
+
+    const lastObservation = fromResult(
+      await this.api.getObservation(
+        res.processId,
+        res.index,
+        res.version - 1, // P: The new version hasn't been submitted..
+      )
     );
+
+    const latestData = getObservationData(lastObservation);
+
     const validVersions = matchObsDatum(latestData, {
       ArtifactMetadata(_md) { // only the first version can be this format
         return [0];
@@ -583,7 +586,8 @@ export default class PDP implements Adapter {
       },
     });
 
-    console.log({ latestData, validVersions });
+    const latestVersion = validVersions[validVersions.length - 1];
+    console.log({ latestData, validVersions, latestVersion });
     validVersions.push(res.version);
 
     // store the observation
@@ -599,16 +603,33 @@ export default class PDP implements Adapter {
       res.index,
     );
 
-    this._addDataFiles(observation, ...filenames);
+    const reuseFiles = filenames.length === 0;
 
-    console.log({ observation });
+    // Add the data-files to the observation
+    if (reuseFiles) {
+      console.log('Reusing files from previous lastObservation', lastObservation);
+      observation.dataFiles = lastObservation.dataFiles;
+    } else {
+      const remoteFileDir = `${res.index}/${res.version}/`;
+      observation.dataFiles = filenames.map((filename: string) => remoteFileDir + filename);
+    }
 
-    const response = fromResult(await this.api.appendVersion(res.processId, observation));
-    //.map(appendResponse => );
+    const appendVersionResult = fromResult(await this.api.appendVersion(res.processId, observation));
+
+    console.log({ observation, appendVersionResult });
+    let uploadFileRequests: UploadRequest[] = [];
+
+    if (!reuseFiles && appendVersionResult.uploadDataFiles && appendVersionResult.uploadDataFiles.files) {
+      uploadFileRequests = appendVersionResult.uploadDataFiles.files.map((file) => {
+        const name = PDP.getOriginalFilePath(file.name);
+        const params = new UploadParams(file.sasUrl, "PUT", UPLOAD_HEADERS);
+        return new UploadRequest(name, params);
+      });
+    }
 
     return {
       contentId: res.contentId,
-      files: [], // FIXME
+      files: uploadFileRequests,
     };
   }
 
@@ -708,21 +729,6 @@ export default class PDP implements Adapter {
       data: [data],
       dataFiles: [],
     };
-  }
-
-  async _appendObservationWithFiles(
-    processId: ProcessID,
-    index: number,
-    version: number,
-    type: string,
-    data: ArtifactMetadata,
-    files: string[],
-  ): Promise<Result<AppendObservationResponse, Error>> {
-    const observation = this._createObservationData(processId, type, data, version, index);
-
-    this._addDataFiles(observation, ...files);
-
-    return await this.api.appendObservation(processId, observation);
   }
 
   private _addDataFiles(
