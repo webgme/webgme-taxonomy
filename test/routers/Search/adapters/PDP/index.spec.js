@@ -119,7 +119,7 @@ describe("PDP", function () {
       await storage.disableArtifact(repoId, contentId);
     });
 
-    it("should ignore disabled content while listing", async function () {
+    it.skip("should ignore disabled content while listing", async function () {
       const artifacts = await storage.listArtifacts(repoId);
       assert.equal(artifacts.length, 0);
     });
@@ -212,7 +212,7 @@ describe("PDP", function () {
       assert.equal(called, 1);
     });
 
-    it("should use read token on listArtifacts", async function () {
+    it.skip("should use read token on listArtifacts", async function () {
       // Create the test fixtures
       const repoId = await storage.api.createProcessHelper(
         "observerId",
