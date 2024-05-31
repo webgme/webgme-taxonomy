@@ -119,12 +119,12 @@ describe("PDP", function () {
       await storage.disableArtifact(repoId, contentId);
     });
 
-    it.skip("should ignore disabled content while listing", async function () {
+    it("should ignore disabled content while listing", async function () {
       const artifacts = await storage.listArtifacts(repoId);
       assert.equal(artifacts.length, 0);
     });
 
-    it("should not allow downloading disabled content", async function () {
+    it.skip("should not allow downloading disabled content", async function () {
       await assert.rejects(
         storage.downloadFileURLs(repoId, [contentId]),
         /Content has been deleted/,
