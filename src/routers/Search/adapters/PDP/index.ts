@@ -385,7 +385,7 @@ export default class PDP implements Adapter {
         const obs = fromResult(
           await this.api.getObservation(processId, index, lastVersion),
         );
-        if (!isValidVersion(obs, version)) {
+        if (isContentDeletion(obs)) {
           throw new DeletedContentError();
         }
       }),
@@ -1041,6 +1041,7 @@ interface ObsDatumCases<T> {
   ContentUpdate: (md: ContentUpdate) => T;
   ContentDeletion: (md: ContentDeletion) => T;
 }
+
 export function matchObsDatum<T>(
   datum: ObservationData,
   actionDict: ObsDatumCases<T>,
@@ -1088,31 +1089,6 @@ function parseContentID(contentId: string): ContentId {
     throw new MalformedContentIdError(contentId);
   }
   return { index, version };
-}
-
-/**
- * Given the latest observation, check if the given version is valid. If the latest
- * data is just an artifact metadata, then it should be the only upload.
- */
-export function isValidVersion(latest: Observation, version: number): boolean {
-  if (latest.version === version) {
-    return true;
-  } else if (latest.data[0]) {
-    const datum = latest.data[0];
-    return matchObsDatum(datum, {
-      ArtifactMetadata(_md) {
-        return false; // if the version doesn't already match, this is a problem
-      },
-      ContentDeletion(md) {
-        return md.validVersions.includes(version);
-      },
-      ContentUpdate(md) {
-        return md.validVersions.includes(version);
-      },
-    });
-  }
-
-  return false;
 }
 
 function getObservationData(obs: Observation): ObservationData {
