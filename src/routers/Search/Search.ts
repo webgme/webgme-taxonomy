@@ -175,7 +175,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
       const userId = middlewareOpts.getUserId(req);
       let metadata: ArtifactMetadatav2 = getArtifactMetadata(
         gmeContext,
-        <ArtifactMetadata>req.body.metadata,
+        <ArtifactMetadata> req.body.metadata,
       );
 
       // Upload to the storage backend
@@ -214,7 +214,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
       const userId = middlewareOpts.getUserId(req);
       let metadata: ArtifactMetadatav2 = getArtifactMetadata(
         gmeContext,
-        <ArtifactMetadata>req.body.metadata,
+        <ArtifactMetadata> req.body.metadata,
       );
 
       const { repoId } = req.params;
@@ -526,7 +526,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
       );
       let metadata: ArtifactMetadatav2 = getArtifactMetadata(
         gmeContext,
-        <ArtifactMetadata>req.body.metadata,
+        <ArtifactMetadata> req.body.metadata,
       );
 
       // update the content
@@ -538,7 +538,10 @@ function initialize(middlewareOpts: MiddlewareOptions) {
           if (filenames.length === 0) {
             // No new files were provided - reuse the ones from the previous upload.
             usedFileNames = await storage.listPreviousFileNames(reservation);
-            console.log('No new files were provided using previously uploaded ones', usedFileNames);
+            console.log(
+              "No new files were provided using previously uploaded ones",
+              usedFileNames,
+            );
           }
 
           await addChildSystemTags(
@@ -546,7 +549,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
             reservation,
             gmeContext,
             userId,
-            usedFileNames
+            usedFileNames,
           );
           console.log({ metadata, filenames });
           await toGuidFormat(

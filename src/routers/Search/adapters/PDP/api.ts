@@ -19,7 +19,7 @@ import { ArtifactMetadata } from "../common/types";
 import { TestEnvOnlyError, UserError } from "../../../../common/UserError";
 import { filterMap, last } from "../../../../common/Utils";
 
-class PdpApiError extends UserError { }
+class PdpApiError extends UserError {}
 
 interface RequestOpts {
   token?: string;
@@ -144,7 +144,7 @@ export default class PdpApi implements PdpProvider {
     const observations: Result<Observation[], PdpApiError> = await this
       ._fetchJson(
         `v2/Process/PeekObservations?processId=${processId}&obsIndex=${startIndex}` +
-        `&maxReturn=${limit}&version=${version}`,
+          `&maxReturn=${limit}&version=${version}`,
         fetchOpts.unwrapOrElse(DefaultFetchOpts),
       );
 
@@ -154,8 +154,8 @@ export default class PdpApi implements PdpProvider {
   /**
    * Returns the observation at index obsIndex at its latest version that still is <= provided version.
    * If the provided version is > "the latest across all observations in the process" (ProcessState.lastIndexVersion) 400 is returned
-   * 
-   * So to get the latest version of a specific observation in a process. Pass its index and the ProcessState.lastIndexVersion. 
+   *
+   * So to get the latest version of a specific observation in a process. Pass its index and the ProcessState.lastIndexVersion.
    */
   async getObservation(
     processId: ProcessID,
@@ -517,7 +517,7 @@ export class InMemoryPdp implements PdpProvider {
               name: `dat/${fdata.name}`,
               sasUrl: fdata.sasUrl,
             })),
-          }
+          },
         };
 
         this.startTransfer(
@@ -564,7 +564,7 @@ export class InMemoryPdp implements PdpProvider {
               name: `dat/${fdata.name}`,
               sasUrl: fdata.sasUrl,
             })),
-          }
+          },
         };
       });
   }

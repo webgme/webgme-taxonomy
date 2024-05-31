@@ -2,7 +2,7 @@ import { iso, Newtype } from "newtype-ts";
 import type { ArtifactMetadata } from "../common/types";
 
 export interface ProcessID
-  extends Newtype<{ readonly ProcessID: unique symbol }, string> { }
+  extends Newtype<{ readonly ProcessID: unique symbol }, string> {}
 
 export function newtype<T extends Newtype<any, any>>(value: any): T {
   const factory = iso<T>();
@@ -107,8 +107,8 @@ export interface ProcessState {
   processId: ProcessID;
   numObservations: number;
   /**
-  * The latest verison across all observations in the process. Note that all observations in a process share 
-  * version counter. With the exception that a new index always starts at 0.
-  */
+   * The latest verison across all observations in the process. Note that all observations in a process share
+   * version counter. With the exception that a new index always starts at 0.
+   */
   lastVersionIndex: number;
 }

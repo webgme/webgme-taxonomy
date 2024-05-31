@@ -44,13 +44,12 @@ export default class DashboardAPI {
   async getProjectInfo() {
     const url = this.apiBaseUrl + "/info";
     return this.handleResponse<Project>(await fetch(url));
-
-  };
+  }
 
   async getPackageJSON() {
     const url = this.apiBaseUrl + "/package-json";
     return this.handleResponse<PackageJSON>(await fetch(url));
-  };
+  }
 
   async getDashboardUrlFromUri(uri: string) {
     if (!uri) {
@@ -67,5 +66,5 @@ export default class DashboardAPI {
     });
 
     return this.handleResponse<{ url: string; host: string }>(response);
-  };
+  }
 }

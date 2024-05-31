@@ -13,7 +13,10 @@
 import * as express from "express";
 import * as path from "path";
 import type { MiddlewareOptions } from "../../common/types";
-import RouterUtils, { getContentContext, handleUserErrors } from "../../common/routers/Utils";
+import RouterUtils, {
+  getContentContext,
+  handleUserErrors,
+} from "../../common/routers/Utils";
 import ContextFacade from "./ContextFacade";
 import StorageAdapter from "../Search/adapters";
 
@@ -53,10 +56,12 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
     express.static(staticPath),
   );
 
-  router.get(RouterUtils.getProjectScopedRoutes("package-json"), handleUserErrors(middlewareOpts.logger,
-    async (req, res) => {
+  router.get(
+    RouterUtils.getProjectScopedRoutes("package-json"),
+    handleUserErrors(middlewareOpts.logger, async (req, res) => {
       res.send(await RouterUtils.getPackageJSON());
-    }));
+    }),
+  );
 
   RouterUtils.addProjectRoute(
     middlewareOpts,
@@ -104,10 +109,12 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
             // original: /routers/Dashboard/guest%2BmongoPipeline/branch/master/resolve-url
             // url: /routers/Search/guest%2BmongoPipeline/branch/master/%2FA/static/index.html?repoId=6617fab6596a7edfc2fb9cff&contentId=1_1
             url =
-              `${req.originalUrl.split("?")[0].replace(/Dashboard/, "Search")
-                .split("/").slice(0, -1).join("/")
+              `${
+                req.originalUrl.split("?")[0].replace(/Dashboard/, "Search")
+                  .split("/").slice(0, -1).join("/")
               }` +
-              `/${encodeURIComponent(path)
+              `/${
+                encodeURIComponent(path)
               }/static/index.html?repoId=${repoId}&contentId=${contentId}`;
             break;
           }

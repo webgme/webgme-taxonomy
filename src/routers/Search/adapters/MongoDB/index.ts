@@ -88,13 +88,16 @@ export default class MongoAdapter implements Adapter {
   }
 
   async listPreviousFileNames(res: UpdateReservation): Promise<string[]> {
-    const prevDoc = fromResult((await this.getPreviousArtifactDoc(res.repoId, res.contentId))
-      .okOrElse(() => new ContentNotFoundError()));
+    const prevDoc = fromResult(
+      (await this.getPreviousArtifactDoc(res.repoId, res.contentId))
+        .okOrElse(() => new ContentNotFoundError()),
+    );
 
     const result: string[] = [];
 
     for (const fileId of prevDoc.files) {
-      const metadata = await this._files.find({ _id: new ObjectId(fileId) }).next();
+      const metadata = await this._files.find({ _id: new ObjectId(fileId) })
+        .next();
       if (metadata) {
         result.push(metadata?.filename);
       }
@@ -136,8 +139,10 @@ export default class MongoAdapter implements Adapter {
     let usedFileIds: string[];
 
     if (reuseFiles) {
-      const prevDoc = fromResult((await this.getPreviousArtifactDoc(res.repoId, res.contentId))
-        .okOrElse(() => new ContentNotFoundError()));
+      const prevDoc = fromResult(
+        (await this.getPreviousArtifactDoc(res.repoId, res.contentId))
+          .okOrElse(() => new ContentNotFoundError()),
+      );
       usedFileIds = prevDoc.files;
     } else {
       usedFileIds = fileIds.map((id) => id.toString());
@@ -148,7 +153,7 @@ export default class MongoAdapter implements Adapter {
       tags: metadata.tags,
       taxonomyVersion: metadata.taxonomyVersion,
       time: (new Date()).toString(),
-      files: usedFileIds
+      files: usedFileIds,
     };
     const artifactKey = `artifacts.${index}`;
     const query: { [key: string]: any } = {
@@ -178,7 +183,7 @@ export default class MongoAdapter implements Adapter {
 
     return {
       contentId,
-      files: uploadFileRequests
+      files: uploadFileRequests,
     };
   }
 
@@ -394,7 +399,7 @@ export default class MongoAdapter implements Adapter {
     const [index, version] = this.parseContentId(id);
 
     if (version === 0) {
-      throw new Error('Version is 0 - cannot load previous');
+      throw new Error("Version is 0 - cannot load previous");
     }
 
     return (await this.getRepository(repoId))

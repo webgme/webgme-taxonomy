@@ -451,16 +451,15 @@ export async function getFormatter(
   return await TagFormatter.from(core, node);
 }
 
-
 let _packageJSon: PackageJSON;
 export async function getPackageJSON(): Promise<PackageJSON> {
   if (!_packageJSon) {
     try {
-      const packgeStr = await fs.readFile('package.json', 'utf8');
+      const packgeStr = await fs.readFile("package.json", "utf8");
       _packageJSon = JSON.parse(packgeStr) as PackageJSON;
     } catch (err) {
-      console.error('Could not read package.json', err);
-      _packageJSon = { version: 'N/A', name: 'webgme-taxonomy' };
+      console.error("Could not read package.json", err);
+      _packageJSon = { version: "N/A", name: "webgme-taxonomy" };
     }
   }
 

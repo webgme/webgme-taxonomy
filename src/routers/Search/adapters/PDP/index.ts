@@ -434,16 +434,20 @@ export default class PDP implements Adapter {
     return responseObservation.andThen(getArtifactMetadata);
   }
 
-  async listPreviousFileNames(res: ObservationUpdateReservation): Promise<string[]> {
+  async listPreviousFileNames(
+    res: ObservationUpdateReservation,
+  ): Promise<string[]> {
     const lastObservation = fromResult(
       await this.api.getObservation(
         res.processId,
         res.index,
         res.version - 1,
-      )
+      ),
     );
 
-    return lastObservation.dataFiles.map(dataFile => dataFile.split('/').pop() as string);
+    return lastObservation.dataFiles.map((dataFile) =>
+      dataFile.split("/").pop() as string
+    );
   }
 
   async appendArtifact(
@@ -456,21 +460,36 @@ export default class PDP implements Adapter {
     const index = procInfo.numObservations;
     const version = 0;
 
-    const observation = this._createObservationData(processId, this.processType, metadata, version, index);
+    const observation = this._createObservationData(
+      processId,
+      this.processType,
+      metadata,
+      version,
+      index,
+    );
     // Add the data-files to the observation
     const remoteFileDir = `${index}/${version}/`;
-    observation.dataFiles = filenames.map((filename: string) => remoteFileDir + filename);
-    const appendObservationResult = fromResult(await this.api.appendObservation(processId, observation));
+    observation.dataFiles = filenames.map((filename: string) =>
+      remoteFileDir + filename
+    );
+    const appendObservationResult = fromResult(
+      await this.api.appendObservation(processId, observation),
+    );
 
     let uploadFileRequests: UploadRequest[] = [];
 
     console.log({ appendObservationResult });
-    if (appendObservationResult.uploadDataFiles && appendObservationResult.uploadDataFiles.files) {
-      uploadFileRequests = appendObservationResult.uploadDataFiles.files.map((file) => {
-        const name = PDP.getOriginalFilePath(file.name);
-        const params = new UploadParams(file.sasUrl, "PUT", UPLOAD_HEADERS);
-        return new UploadRequest(name, params);
-      });
+    if (
+      appendObservationResult.uploadDataFiles &&
+      appendObservationResult.uploadDataFiles.files
+    ) {
+      uploadFileRequests = appendObservationResult.uploadDataFiles.files.map(
+        (file) => {
+          const name = PDP.getOriginalFilePath(file.name);
+          const params = new UploadParams(file.sasUrl, "PUT", UPLOAD_HEADERS);
+          return new UploadRequest(name, params);
+        },
+      );
     }
 
     return new AppendResult(`${index}_0`, uploadFileRequests, index);
@@ -525,13 +544,17 @@ export default class PDP implements Adapter {
       if (validVersions.length > 0) {
         const latestVersion = validVersions[validVersions.length - 1];
 
-        const alreadyFetchedLatest = latestVersion === latestObservation.version;
+        const alreadyFetchedLatest =
+          latestVersion === latestObservation.version;
         if (alreadyFetchedLatest) {
           latest = {
             version: latestVersion,
             metadata: getMetadataFromObservationData(latestData),
           };
-        } else if (isContentDeletion(latestData) && latestData.latest?.version === latestVersion) {
+        } else if (
+          isContentDeletion(latestData) &&
+          latestData.latest?.version === latestVersion
+        ) {
           // Latest fetched references the actual latest (ie, we have "stacked deletions")
           latest = latestData.latest;
         } else { // need to fetch the latest
@@ -558,8 +581,8 @@ export default class PDP implements Adapter {
         processId,
         this.processType,
         deletion,
-        latestVersion + 1,// P: FIX for deletion bug - the version number must be bumped.
-        index
+        latestVersion + 1, // P: FIX for deletion bug - the version number must be bumped.
+        index,
       );
 
       console.log({ deletion });
@@ -574,13 +597,12 @@ export default class PDP implements Adapter {
     metadata: ArtifactMetadatav2,
     filenames: string[] = [],
   ): Promise<UpdateResult> {
-
     const lastObservation = fromResult(
       await this.api.getObservation(
         res.processId,
         res.index,
         res.version - 1, // P: The new version hasn't been submitted..
-      )
+      ),
     );
 
     const latestData = getObservationData(lastObservation);
@@ -618,24 +640,36 @@ export default class PDP implements Adapter {
 
     // Add the data-files to the observation
     if (reuseFiles) {
-      console.log('Reusing files from previous lastObservation', lastObservation);
+      console.log(
+        "Reusing files from previous lastObservation",
+        lastObservation,
+      );
       observation.dataFiles = lastObservation.dataFiles;
     } else {
       const remoteFileDir = `${res.index}/${res.version}/`;
-      observation.dataFiles = filenames.map((filename: string) => remoteFileDir + filename);
+      observation.dataFiles = filenames.map((filename: string) =>
+        remoteFileDir + filename
+      );
     }
 
-    const appendVersionResult = fromResult(await this.api.appendVersion(res.processId, observation));
+    const appendVersionResult = fromResult(
+      await this.api.appendVersion(res.processId, observation),
+    );
 
     console.log({ observation, appendVersionResult });
     let uploadFileRequests: UploadRequest[] = [];
 
-    if (!reuseFiles && appendVersionResult.uploadDataFiles && appendVersionResult.uploadDataFiles.files) {
-      uploadFileRequests = appendVersionResult.uploadDataFiles.files.map((file) => {
-        const name = PDP.getOriginalFilePath(file.name);
-        const params = new UploadParams(file.sasUrl, "PUT", UPLOAD_HEADERS);
-        return new UploadRequest(name, params);
-      });
+    if (
+      !reuseFiles && appendVersionResult.uploadDataFiles &&
+      appendVersionResult.uploadDataFiles.files
+    ) {
+      uploadFileRequests = appendVersionResult.uploadDataFiles.files.map(
+        (file) => {
+          const name = PDP.getOriginalFilePath(file.name);
+          const params = new UploadParams(file.sasUrl, "PUT", UPLOAD_HEADERS);
+          return new UploadRequest(name, params);
+        },
+      );
     }
 
     return {
