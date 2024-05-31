@@ -36,7 +36,6 @@
   import type { Artifact, PopulatedRepo } from "./Storage";
   import DashboardAPI from "./DashboardAPI";
   import type {ContentTypeConfiguration}  from "../../../../common/SearchFilterDataExporter";
-    import Actions from "@smui/card/src/Actions.svelte";
 
   let confirmData: ConfirmData | null = null;
   let title: string;

@@ -21,7 +21,6 @@ import {
 } from "./types";
 import { Option, Result } from "oxide.ts";
 import type {
-  AppendObservationResponse,
   GetObservationFilesResponse,
   Observation,
   ProcessID,
@@ -433,6 +432,18 @@ export default class PDP implements Adapter {
       version,
     )).ok();
     return responseObservation.andThen(getArtifactMetadata);
+  }
+
+  async listPreviousFileNames(res: ObservationUpdateReservation): Promise<string[]> {
+    const lastObservation = fromResult(
+      await this.api.getObservation(
+        res.processId,
+        res.index,
+        res.version - 1,
+      )
+    );
+
+    return lastObservation.dataFiles.map(dataFile => dataFile.split('/').pop() as string);
   }
 
   async appendArtifact(

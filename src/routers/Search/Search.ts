@@ -533,12 +533,20 @@ function initialize(middlewareOpts: MiddlewareOptions) {
       const updateResult = await storage.withUpdateReservation(
         async (reservation) => {
           const filenames = req.body.filenames;
+          let usedFileNames: string[] = filenames;
+
+          if (filenames.length === 0) {
+            // No new files were provided - reuse the ones from the previous upload.
+            usedFileNames = await storage.listPreviousFileNames(reservation);
+            console.log('No new files were provided using previously uploaded ones', usedFileNames);
+          }
+
           await addChildSystemTags(
             metadata,
             reservation,
             gmeContext,
             userId,
-            filenames,
+            usedFileNames
           );
           console.log({ metadata, filenames });
           await toGuidFormat(
@@ -548,7 +556,9 @@ function initialize(middlewareOpts: MiddlewareOptions) {
           return await storage.updateArtifact(
             reservation,
             metadata,
-            filenames,
+            filenames, // Pass the originally provided filenames.
+            // If this is empty the storage will take care of linking the previous files.
+            // (Except adding it to the "guid-encoded" metadata which is handled above.)
           );
         },
         repoId,

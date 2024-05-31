@@ -80,6 +80,11 @@
         prompt: 'Are you sure you want to upload without attaching any files?',
         action: uploadContent,
       };
+
+      if (isContentUpdate()) {
+        confirmData.title = 'Reuse existing files?';
+        confirmData.prompt = 'Are you sure you only want to update the metadata?';
+      }
       return dispatch('confirm', confirmData);
     } else {
       uploadContent();

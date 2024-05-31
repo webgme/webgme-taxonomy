@@ -87,6 +87,22 @@ export default class MongoAdapter implements Adapter {
     this._contentLocks = new ScopedFnQueue();
   }
 
+  async listPreviousFileNames(res: UpdateReservation): Promise<string[]> {
+    const prevDoc = fromResult((await this.getPreviousArtifactDoc(res.repoId, res.contentId))
+      .okOrElse(() => new ContentNotFoundError()));
+
+    const result: string[] = [];
+
+    for (const fileId of prevDoc.files) {
+      const metadata = await this._files.find({ _id: new ObjectId(fileId) }).next();
+      if (metadata) {
+        result.push(metadata?.filename);
+      }
+    }
+
+    return result;
+  }
+
   async disableArtifact(
     repoId: string,
     contentId: string,
@@ -114,13 +130,25 @@ export default class MongoAdapter implements Adapter {
   ): Promise<UpdateResult> {
     const [index, version] = this.parseContentId(res.contentId);
     const repoId = res.repoId;
-    const fileIds = _.range(filenames.length).map(() => new ObjectId());
+    const reuseFiles = filenames.length === 0;
+
+    let fileIds = _.range(filenames.length).map(() => new ObjectId());
+    let usedFileIds: string[];
+
+    if (reuseFiles) {
+      const prevDoc = fromResult((await this.getPreviousArtifactDoc(res.repoId, res.contentId))
+        .okOrElse(() => new ContentNotFoundError()));
+      usedFileIds = prevDoc.files;
+    } else {
+      usedFileIds = fileIds.map((id) => id.toString());
+    }
+
     const artifact: Artifact = {
       displayName: metadata.displayName,
       tags: metadata.tags,
       taxonomyVersion: metadata.taxonomyVersion,
       time: (new Date()).toString(),
-      files: fileIds.map((id) => id.toString()),
+      files: usedFileIds
     };
     const artifactKey = `artifacts.${index}`;
     const query: { [key: string]: any } = {
@@ -138,14 +166,19 @@ export default class MongoAdapter implements Adapter {
     }
 
     const contentId = `${index}_${version}`;
-    const files = this.getFileUploadReqs(
-      repoId,
-      contentId,
-      zip(filenames, fileIds),
-    );
+    let uploadFileRequests: UploadRequest[] = [];
+
+    if (!reuseFiles) {
+      uploadFileRequests = this.getFileUploadReqs(
+        repoId,
+        contentId,
+        zip(filenames, fileIds),
+      );
+    }
+
     return {
       contentId,
-      files,
+      files: uploadFileRequests
     };
   }
 
@@ -352,6 +385,21 @@ export default class MongoAdapter implements Adapter {
     return (await this.getRepository(repoId))
       .andThen((repo) => Option.from(repo.artifacts[index]))
       .andThen((versions) => Option.from(versions[version]));
+  }
+
+  private async getPreviousArtifactDoc(
+    repoId: string,
+    id: string,
+  ): Promise<Option<ArtifactDoc>> {
+    const [index, version] = this.parseContentId(id);
+
+    if (version === 0) {
+      throw new Error('Version is 0 - cannot load previous');
+    }
+
+    return (await this.getRepository(repoId))
+      .andThen((repo) => Option.from(repo.artifacts[index]))
+      .andThen((versions) => Option.from(versions[version - 1]));
   }
 
   async getContentIds(repoId: string): Promise<Option<string[]>> {
