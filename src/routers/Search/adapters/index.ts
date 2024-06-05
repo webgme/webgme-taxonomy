@@ -8,7 +8,6 @@ import type {
 import type { Request } from "express";
 import { InvalidStorageError, StorageNotFoundError } from "./common/ModelError";
 import type { Adapter, AdapterStatic } from "./common/types";
-import assert from "assert";
 import { UnsupportedUriFormat } from "./common/StorageError";
 import { UserError } from "../../../common/UserError";
 import PDP from "./PDP/index";

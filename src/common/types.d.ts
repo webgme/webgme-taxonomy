@@ -195,3 +195,8 @@ export type WebgmeHandler = (
   req: Request,
   res: Response,
 ) => void | Promise<void>;
+
+export interface PackageJSON {
+  name: string;
+  version: string;
+}

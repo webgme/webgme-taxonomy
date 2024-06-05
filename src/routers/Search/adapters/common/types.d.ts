@@ -37,6 +37,10 @@ export interface Adapter {
     metadata: ArtifactMetadata,
     filenames: string[],
   ): Promise<UpdateResult>;
+  /**
+   * List the file-names from the previously uploaded version.
+   */
+  listPreviousFileNames(res: UpdateReservation): Promise<string[]>;
 
   /**
    * Disable the content. Metadata will still be available when requested explicitly

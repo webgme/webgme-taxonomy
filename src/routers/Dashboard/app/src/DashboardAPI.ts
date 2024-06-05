@@ -9,6 +9,11 @@ type Project = Readonly<{
   contentTypes: readonly ContentType[];
 }>;
 
+export interface PackageJSON {
+  name: string;
+  version: string;
+}
+
 export class StatusError extends Error {
   statusCode: number;
 
@@ -25,13 +30,28 @@ export default class DashboardAPI {
     this.apiBaseUrl = apiBaseUrl;
   }
 
-  getProjectInfo = async () => {
-    const url = this.apiBaseUrl + "/info";
-    const response = await fetch(url);
-    return response.json() as Promise<Project>;
-  };
+  private async handleResponse<T>(response: Response) {
+    if (!response.ok) {
+      throw new StatusError(
+        `${response.status} - ${response.statusText}`,
+        response.status,
+      );
+    }
 
-  getDashboardUrlFromUri = async (uri: string) => {
+    return response.json() as Promise<T>;
+  }
+
+  async getProjectInfo() {
+    const url = this.apiBaseUrl + "/info";
+    return this.handleResponse<Project>(await fetch(url));
+  }
+
+  async getPackageJSON() {
+    const url = this.apiBaseUrl + "/package-json";
+    return this.handleResponse<PackageJSON>(await fetch(url));
+  }
+
+  async getDashboardUrlFromUri(uri: string) {
     if (!uri) {
       throw new Error("URI cannot be empty");
     }
@@ -45,13 +65,6 @@ export default class DashboardAPI {
       body: JSON.stringify({ uri }),
     });
 
-    if (!response.ok) {
-      throw new StatusError(
-        `${response.status} - ${response.statusText}`,
-        response.status,
-      );
-    }
-
-    return await response.json() as { url: string; host: string };
-  };
+    return this.handleResponse<{ url: string; host: string }>(response);
+  }
 }

@@ -13,7 +13,10 @@
 import * as express from "express";
 import * as path from "path";
 import type { MiddlewareOptions } from "../../common/types";
-import RouterUtils, { getContentContext } from "../../common/routers/Utils";
+import RouterUtils, {
+  getContentContext,
+  handleUserErrors,
+} from "../../common/routers/Utils";
 import ContextFacade from "./ContextFacade";
 import StorageAdapter from "../Search/adapters";
 
@@ -51,6 +54,13 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
   router.use(
     RouterUtils.getProjectScopedRoutes("static/"),
     express.static(staticPath),
+  );
+
+  router.get(
+    RouterUtils.getProjectScopedRoutes("package-json"),
+    handleUserErrors(middlewareOpts.logger, async (req, res) => {
+      res.send(await RouterUtils.getPackageJSON());
+    }),
   );
 
   RouterUtils.addProjectRoute(

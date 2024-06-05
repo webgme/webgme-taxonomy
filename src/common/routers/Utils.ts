@@ -1,6 +1,7 @@
 /// <amd-module />
 import assert from "assert";
 import webgme from "webgme";
+import fs from "node:fs/promises";
 //@ts-ignore
 const Core = webgme.requirejs("common/core/coreQ");
 import jwt from "jsonwebtoken";
@@ -12,6 +13,7 @@ import type {
   GmeCore,
   GmeLogger,
   MiddlewareOptions,
+  PackageJSON,
   ProjectContext,
   UserProject,
   VerifiedProjectContext,
@@ -358,6 +360,7 @@ export default {
     );
     return router;
   },
+  getPackageJSON,
 };
 
 /**
@@ -404,6 +407,7 @@ export function handleUserErrors(logger: GmeLogger, fn: WebgmeHandler) {
       }
     } catch (e) {
       if (e instanceof UserError) {
+        logger.error(e.stack);
         e.sendVia(res);
       } else {
         if (e instanceof Error) {
@@ -445,4 +449,19 @@ export async function getFormatter(
     throw new TaxNodeNotFoundError(gmeContext);
   }
   return await TagFormatter.from(core, node);
+}
+
+let _packageJSon: PackageJSON;
+export async function getPackageJSON(): Promise<PackageJSON> {
+  if (!_packageJSon) {
+    try {
+      const packgeStr = await fs.readFile("package.json", "utf8");
+      _packageJSon = JSON.parse(packgeStr) as PackageJSON;
+    } catch (err) {
+      console.error("Could not read package.json", err);
+      _packageJSon = { version: "N/A", name: "webgme-taxonomy" };
+    }
+  }
+
+  return _packageJSon;
 }

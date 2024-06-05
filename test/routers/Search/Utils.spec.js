@@ -260,6 +260,11 @@ describe("Utils", function () {
       assert.deepEqual(oneToFour, [1, 2, 3, 4]);
     });
 
+    it("should not return the last value", function () {
+      let zero = range(0, 1);
+      assert.deepEqual(zero, [0]);
+    });
+
     it("should change by step", function () {
       let list = range(2, 6, 2);
       assert.deepEqual(list, [2, 4]);

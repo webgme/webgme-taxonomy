@@ -41,7 +41,7 @@ export interface ContentUpdate {
 }
 
 export interface ContentDeletion {
-  version: number;
+  version: number; // What version??
   validVersions: number[];
   /**
    * A reference to the latest metadata after the content has been deleted.
@@ -106,5 +106,9 @@ export interface ProcessState {
   processType: string;
   processId: ProcessID;
   numObservations: number;
+  /**
+   * The latest verison across all observations in the process. Note that all observations in a process share
+   * version counter. With the exception that a new index always starts at 0.
+   */
   lastVersionIndex: number;
 }

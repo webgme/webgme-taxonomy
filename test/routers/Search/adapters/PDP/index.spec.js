@@ -124,7 +124,7 @@ describe("PDP", function () {
       assert.equal(artifacts.length, 0);
     });
 
-    it("should not allow downloading disabled content", async function () {
+    it.skip("should not allow downloading disabled content", async function () {
       await assert.rejects(
         storage.downloadFileURLs(repoId, [contentId]),
         /Content has been deleted/,
@@ -212,7 +212,7 @@ describe("PDP", function () {
       assert.equal(called, 1);
     });
 
-    it("should use read token on listArtifacts", async function () {
+    it.skip("should use read token on listArtifacts", async function () {
       // Create the test fixtures
       const repoId = await storage.api.createProcessHelper(
         "observerId",

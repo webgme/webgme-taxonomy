@@ -38,7 +38,6 @@ interface ListProcessOpts extends RequestOpts {
   token?: string;
 }
 
-type AppendVersionResponse = any;
 export interface PdpProvider {
   listProcesses(
     opts?: ListProcessOpts,
@@ -62,6 +61,7 @@ export interface PdpProvider {
     processId: ProcessID,
     startIndex: number,
     limit?: number,
+    version?: number,
     opts?: RequestOpts,
   ): Promise<Result<Observation[], PdpApiError>>;
   getObservationFiles(
@@ -79,7 +79,7 @@ export interface PdpProvider {
     processId: ProcessID,
     observation: Observation,
     opts?: RequestOpts,
-  ): Promise<Result<AppendVersionResponse, PdpApiError>>;
+  ): Promise<Result<AppendObservationResponse, PdpApiError>>;
   getTransferState(
     processId: ProcessID,
     directoryId: string,
@@ -127,10 +127,15 @@ export default class PdpApi implements PdpProvider {
     return state;
   }
 
+  /**
+   * From start index gets all observations of versions up till and including provided version number.
+   * Limit return using limit.
+   */
   async getObservations(
     processId: ProcessID,
     startIndex: number,
     limit: number = 20,
+    version: number = 0,
     opts: RequestOpts = {},
   ): Promise<Result<Observation[], PdpApiError>> {
     const fetchOpts = Option.from(opts.token).map((token) =>
@@ -139,13 +144,19 @@ export default class PdpApi implements PdpProvider {
     const observations: Result<Observation[], PdpApiError> = await this
       ._fetchJson(
         `v2/Process/PeekObservations?processId=${processId}&obsIndex=${startIndex}` +
-          `&maxReturn=${limit}`,
+          `&maxReturn=${limit}&version=${version}`,
         fetchOpts.unwrapOrElse(DefaultFetchOpts),
       );
 
     return observations;
   }
 
+  /**
+   * Returns the observation at index obsIndex at its latest version that still is <= provided version.
+   * If the provided version is > "the latest across all observations in the process" (ProcessState.lastIndexVersion) 400 is returned
+   *
+   * So to get the latest version of a specific observation in a process. Pass its index and the ProcessState.lastIndexVersion.
+   */
   async getObservation(
     processId: ProcessID,
     obsIndex: number,
@@ -221,19 +232,19 @@ export default class PdpApi implements PdpProvider {
     processId: ProcessID,
     observation: Observation,
     opts: RequestOpts = {},
-  ): Promise<Result<AppendVersionResponse, PdpApiError>> {
+  ): Promise<Result<AppendObservationResponse, PdpApiError>> {
     const fetchOpts = {
       method: "post",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(observation),
+      body: JSON.stringify([observation]),
     };
     Option.from(opts.token).map((token) => setAuthToken(fetchOpts, token));
 
-    const response: Result<AppendVersionResponse, PdpApiError> = await this
+    const response: Result<AppendObservationResponse, PdpApiError> = await this
       ._fetchJson(
-        `v2/Process/AppendVersion?processId=${processId}`,
+        `v3/Process/AppendVersion?processId=${processId}&uploadExpiresInMins=180`,
         fetchOpts,
       );
 
@@ -417,6 +428,7 @@ export class InMemoryPdp implements PdpProvider {
     id: ProcessID,
     startIndex: number,
     limit: number = 20,
+    version: number = 0,
     _opts: RequestOpts = {},
   ): Promise<Result<Observation[], PdpApiError>> {
     return this.getProcessData(id)
@@ -497,18 +509,16 @@ export class InMemoryPdp implements PdpProvider {
         const obsDatum = this.newObsData(processId, observation, transferId);
         data.observations.push([obsDatum]);
         data.state.numObservations = data.observations.length;
-        const response: AppendObservationResponse = Object.assign(
-          {},
-          observation,
-          { // the new field in the append response
-            uploadDataFiles: {
-              files: obsDatum.fileData.files.map((fdata) => ({
-                name: `dat/${fdata.name}`,
-                sasUrl: fdata.sasUrl,
-              })),
-            },
+        const response: AppendObservationResponse = {
+          ...observation,
+          // the new field in the append response
+          uploadDataFiles: {
+            files: obsDatum.fileData.files.map((fdata) => ({
+              name: `dat/${fdata.name}`,
+              sasUrl: fdata.sasUrl,
+            })),
           },
-        );
+        };
 
         this.startTransfer(
           obsDatum.fileData.files.map((fdata) => fdata.name),
@@ -523,7 +533,7 @@ export class InMemoryPdp implements PdpProvider {
     processId: ProcessID,
     observation: Observation,
     _opts: RequestOpts = {},
-  ): Promise<Result<AppendVersionResponse, PdpApiError>> {
+  ): Promise<Result<AppendObservationResponse, PdpApiError>> {
     return this.getProcessData(processId)
       .map((data) => {
         const index = observation.index;
@@ -545,6 +555,17 @@ export class InMemoryPdp implements PdpProvider {
           observation.version,
           data.state.lastVersionIndex,
         );
+
+        return {
+          ...observation,
+          // the new field in the append response
+          uploadDataFiles: {
+            files: obsDatum.fileData.files.map((fdata) => ({
+              name: `dat/${fdata.name}`,
+              sasUrl: fdata.sasUrl,
+            })),
+          },
+        };
       });
   }
 

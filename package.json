@@ -24,7 +24,7 @@
     "prepare-docker": "node scripts/prepare-docker.js",
     "prepare": "cd src/routers/Dashboard/app && npm install && cd ../../Search/dashboard && npm install && cd ../../TagCreator/form && npm install && cd ../../Insights/dashboard && npm install && cd ../.. && npm run build"
   },
-  "version": "1.7.8",
+  "version": "1.7.9-beta",
   "devDependencies": {
     "@playwright/test": "^1.36.0",
     "@rollup/plugin-commonjs": "^25.0.7",
@@ -59,7 +59,7 @@
     "mongodb": "^4.11.0",
     "node-fetch": "^2.6.6",
     "svelte": "^3.50.0",
-    "webgme": "^2.45.1",
+    "webgme": "^2.46.0",
     "webgme-json-importer": "^1.4.1",
     "webgme-transformations": "^0.5.1",
     "zip-a-folder": "^1.1.5"

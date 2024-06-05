@@ -21,7 +21,6 @@ import {
 } from "./types";
 import { Option, Result } from "oxide.ts";
 import type {
-  AppendObservationResponse,
   GetObservationFilesResponse,
   Observation,
   ProcessID,
@@ -164,6 +163,7 @@ export default class PDP implements Adapter {
             pid,
             start,
             len,
+            obsInfo.lastVersionIndex,
             { token: this._readToken },
           )
         ),
@@ -240,10 +240,11 @@ export default class PDP implements Adapter {
       const processId = newtype<ProcessID>(repoId);
       const state = fromResult(await this.api.getProcessState(processId));
       const lastVersion = state.lastVersionIndex;
-      const latestObservation = fromResult(
-        await this.api.getObservation(processId, index, lastVersion),
-      );
-      const version = latestObservation.version + 1;
+      // FIXED: Why use this version???? The version is a global counter?
+      // const latestObservation = fromResult(
+      //   await this.api.getObservation(processId, index, lastVersion),
+      // );
+      const version = lastVersion + 1;
 
       const reservation = new ObservationUpdateReservation(
         processId,
@@ -384,7 +385,7 @@ export default class PDP implements Adapter {
         const obs = fromResult(
           await this.api.getObservation(processId, index, lastVersion),
         );
-        if (!isValidVersion(obs, version)) {
+        if (isContentDeletion(obs)) {
           throw new DeletedContentError();
         }
       }),
@@ -433,6 +434,22 @@ export default class PDP implements Adapter {
     return responseObservation.andThen(getArtifactMetadata);
   }
 
+  async listPreviousFileNames(
+    res: ObservationUpdateReservation,
+  ): Promise<string[]> {
+    const lastObservation = fromResult(
+      await this.api.getObservation(
+        res.processId,
+        res.index,
+        res.version - 1,
+      ),
+    );
+
+    return lastObservation.dataFiles.map((dataFile) =>
+      dataFile.split("/").pop() as string
+    );
+  }
+
   async appendArtifact(
     res: ObservationReservation,
     metadata: ArtifactMetadata,
@@ -442,27 +459,40 @@ export default class PDP implements Adapter {
     const procInfo = fromResult(await this.api.getProcessState(processId));
     const index = procInfo.numObservations;
     const version = 0;
-    const result = fromResult(
-      await this._appendObservationWithFiles(
-        processId,
-        index,
-        version,
-        this.processType,
-        metadata,
-        filenames,
-      ),
+
+    const observation = this._createObservationData(
+      processId,
+      this.processType,
+      metadata,
+      version,
+      index,
+    );
+    // Add the data-files to the observation
+    const remoteFileDir = `${index}/${version}/`;
+    observation.dataFiles = filenames.map((filename: string) =>
+      remoteFileDir + filename
+    );
+    const appendObservationResult = fromResult(
+      await this.api.appendObservation(processId, observation),
     );
 
-    // TODO: refactor this...
-    const files = result.uploadDataFiles === null
-      ? []
-      : result.uploadDataFiles.files.map((file) => {
-        const name = PDP.getOriginalFilePath(file.name);
-        const params = new UploadParams(file.sasUrl, "PUT", UPLOAD_HEADERS);
-        return new UploadRequest(name, params);
-      });
+    let uploadFileRequests: UploadRequest[] = [];
 
-    return new AppendResult(`${index}_0`, files, index);
+    console.log({ appendObservationResult });
+    if (
+      appendObservationResult.uploadDataFiles &&
+      appendObservationResult.uploadDataFiles.files
+    ) {
+      uploadFileRequests = appendObservationResult.uploadDataFiles.files.map(
+        (file) => {
+          const name = PDP.getOriginalFilePath(file.name);
+          const params = new UploadParams(file.sasUrl, "PUT", UPLOAD_HEADERS);
+          return new UploadRequest(name, params);
+        },
+      );
+    }
+
+    return new AppendResult(`${index}_0`, uploadFileRequests, index);
   }
 
   // TODO: this should probably take a reservation
@@ -477,12 +507,15 @@ export default class PDP implements Adapter {
 
       const state = fromResult(await this.api.getProcessState(processId));
       const latestVersion = state.lastVersionIndex;
+      // P: Versions are shared across observations in a process.
+      // P: They all start out at 0 but when changed the get that global version number.
+      // P: latestVersion here is the highest such "global" version number.
 
       if (version > latestVersion) {
         throw new ContentNotFoundError(contentId);
       }
 
-      const lastObs = fromResult(
+      const latestObservation = fromResult(
         await this.api.getObservation(
           processId,
           index,
@@ -490,39 +523,40 @@ export default class PDP implements Adapter {
         ),
       );
 
-      const datum = getObservationData(lastObs);
-      const validVersions = without(
-        matchObsDatum(datum, {
-          ArtifactMetadata(_md) {
-            return range(0, lastObs.version + 1);
-          },
-          ContentUpdate(md) {
-            return md.validVersions;
-          },
-          ContentDeletion(md) {
-            return md.validVersions;
-          },
-        }),
-        version,
-      );
-      console.log({ lastObs, datum, validVersions });
+      const latestData = getObservationData(latestObservation);
+
+      const validVersions = matchObsDatum(latestData, {
+        ArtifactMetadata(_md) {
+          return [0];
+        },
+        ContentUpdate(md) {
+          return md.validVersions;
+        },
+        ContentDeletion(md) {
+          return md.validVersions;
+        },
+      });
+
+      console.log({ latestObservation, latestData, validVersions });
 
       // Get the latest metadata
       let latest: LatestMetadata | undefined;
       if (validVersions.length > 0) {
         const latestVersion = validVersions[validVersions.length - 1];
 
-        const alreadyFetchedLatest = latestVersion === lastObs.version;
+        const alreadyFetchedLatest =
+          latestVersion === latestObservation.version;
         if (alreadyFetchedLatest) {
           latest = {
             version: latestVersion,
-            metadata: getMetadataFromObservationData(datum),
+            metadata: getMetadataFromObservationData(latestData),
           };
         } else if (
-          isContentDeletion(datum) && datum.latest?.version === latestVersion
+          isContentDeletion(latestData) &&
+          latestData.latest?.version === latestVersion
         ) {
           // Latest fetched references the actual latest (ie, we have "stacked deletions")
-          latest = datum.latest;
+          latest = latestData.latest;
         } else { // need to fetch the latest
           const metadata = await this.getMetadataSnapshot(
             processId,
@@ -547,13 +581,14 @@ export default class PDP implements Adapter {
         processId,
         this.processType,
         deletion,
+        latestVersion + 1, // P: FIX for deletion bug - the version number must be bumped.
         index,
       );
 
       console.log({ deletion });
       console.log("appending", obs);
 
-      return await this.api.appendVersion(processId, obs);
+      return fromResult(await this.api.appendVersion(processId, obs));
     }, repoId);
   }
 
@@ -562,12 +597,16 @@ export default class PDP implements Adapter {
     metadata: ArtifactMetadatav2,
     filenames: string[] = [],
   ): Promise<UpdateResult> {
-    // get the list of validVersions for the index (append the new version)
-    const latestData = await this.getObservationData(
-      res.processId,
-      res.index,
-      res.version,
+    const lastObservation = fromResult(
+      await this.api.getObservation(
+        res.processId,
+        res.index,
+        res.version - 1, // P: The new version hasn't been submitted..
+      ),
     );
+
+    const latestData = getObservationData(lastObservation);
+
     const validVersions = matchObsDatum(latestData, {
       ArtifactMetadata(_md) { // only the first version can be this format
         return [0];
@@ -580,7 +619,8 @@ export default class PDP implements Adapter {
       },
     });
 
-    console.log({ latestData, validVersions });
+    const latestVersion = validVersions[validVersions.length - 1];
+    console.log({ latestData, validVersions, latestVersion });
     validVersions.push(res.version);
 
     // store the observation
@@ -592,16 +632,49 @@ export default class PDP implements Adapter {
       res.processId,
       this.processType,
       update,
+      res.version,
       res.index,
     );
-    this._addDataFiles(observation, ...filenames);
 
-    const response = await this.api.appendVersion(res.processId, observation);
-    //.map(appendResponse => );
+    const reuseFiles = filenames.length === 0;
+
+    // Add the data-files to the observation
+    if (reuseFiles) {
+      console.log(
+        "Reusing files from previous lastObservation",
+        lastObservation,
+      );
+      observation.dataFiles = lastObservation.dataFiles;
+    } else {
+      const remoteFileDir = `${res.index}/${res.version}/`;
+      observation.dataFiles = filenames.map((filename: string) =>
+        remoteFileDir + filename
+      );
+    }
+
+    const appendVersionResult = fromResult(
+      await this.api.appendVersion(res.processId, observation),
+    );
+
+    console.log({ observation, appendVersionResult });
+    let uploadFileRequests: UploadRequest[] = [];
+
+    if (
+      !reuseFiles && appendVersionResult.uploadDataFiles &&
+      appendVersionResult.uploadDataFiles.files
+    ) {
+      uploadFileRequests = appendVersionResult.uploadDataFiles.files.map(
+        (file) => {
+          const name = PDP.getOriginalFilePath(file.name);
+          const params = new UploadParams(file.sasUrl, "PUT", UPLOAD_HEADERS);
+          return new UploadRequest(name, params);
+        },
+      );
+    }
 
     return {
       contentId: res.contentId,
-      files: [], // FIXME
+      files: uploadFileRequests,
     };
   }
 
@@ -682,7 +755,8 @@ export default class PDP implements Adapter {
     processId: ProcessID,
     type: string,
     data: ObservationData,
-    index: number = 0,
+    version: number,
+    index: number,
   ): Observation {
     const timestamp = new Date().toISOString();
     return {
@@ -692,7 +766,7 @@ export default class PDP implements Adapter {
       observerId: this.observerId,
       isMeasure: true,
       index,
-      version: 0,
+      version,
       startTime: timestamp,
       endTime: timestamp,
       applicationDependencies: [],
@@ -700,23 +774,6 @@ export default class PDP implements Adapter {
       data: [data],
       dataFiles: [],
     };
-  }
-
-  async _appendObservationWithFiles(
-    processId: ProcessID,
-    index: number,
-    version: number,
-    type: string,
-    data: ArtifactMetadata,
-    files: string[],
-  ): Promise<Result<AppendObservationResponse, Error>> {
-    const observation = this._createObservationData(processId, type, data);
-    observation.index = index;
-    observation.version = version;
-
-    this._addDataFiles(observation, ...files);
-
-    return await this.api.appendObservation(processId, observation);
   }
 
   private _addDataFiles(
@@ -962,11 +1019,29 @@ function getArtifactMetadata(
     .map(toArtifactMetadatav2);
 }
 
+// P: Function that makes sure the deleted artifacts are filtered out before returned.
+function getUnDeletedArtifactMetadata(
+  obs: Observation,
+): Option<ArtifactMetadatav2> {
+  return Option.from(obs.data[0])
+    .andThen((datum) =>
+      Option.from(
+        matchObsDatum(datum, {
+          ArtifactMetadata: (datum) => datum,
+          ContentUpdate: (datum) => datum.metadata,
+          ContentDeletion: () => undefined,
+        }),
+      )
+    )
+    .map(toArtifactMetadatav2);
+}
+
 interface ObsDatumCases<T> {
   ArtifactMetadata: (md: ArtifactMetadata) => T;
   ContentUpdate: (md: ContentUpdate) => T;
   ContentDeletion: (md: ContentDeletion) => T;
 }
+
 export function matchObsDatum<T>(
   datum: ObservationData,
   actionDict: ObsDatumCases<T>,
@@ -997,7 +1072,7 @@ function parseRepository(
 }
 
 function parseArtifact(obs: Observation): Option<Artifact> {
-  return getArtifactMetadata(obs)
+  return getUnDeletedArtifactMetadata(obs)
     .map((md) => ({
       parentId: obs.processId.toString(),
       id: obs.index + "_" + obs.version,
@@ -1014,31 +1089,6 @@ function parseContentID(contentId: string): ContentId {
     throw new MalformedContentIdError(contentId);
   }
   return { index, version };
-}
-
-/**
- * Given the latest observation, check if the given version is valid. If the latest
- * data is just an artifact metadata, then it should be the only upload.
- */
-export function isValidVersion(latest: Observation, version: number): boolean {
-  if (latest.version === version) {
-    return true;
-  } else if (latest.data[0]) {
-    const datum = latest.data[0];
-    return matchObsDatum(datum, {
-      ArtifactMetadata(_md) {
-        return false; // if the version doesn't already match, this is a problem
-      },
-      ContentDeletion(md) {
-        return md.validVersions.includes(version);
-      },
-      ContentUpdate(md) {
-        return md.validVersions.includes(version);
-      },
-    });
-  }
-
-  return false;
 }
 
 function getObservationData(obs: Observation): ObservationData {
