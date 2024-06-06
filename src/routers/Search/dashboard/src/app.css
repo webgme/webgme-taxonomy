@@ -2,3 +2,11 @@ body {
   padding: 0;
   max-height: 100vh;
 }
+
+input[type='file'].mdc-text-field__input::file-selector-button {
+  display: none;
+}
+
+:not(.mdc-text-field--label-floating) input[type='file'].mdc-text-field__input {
+  color: transparent;
+}
