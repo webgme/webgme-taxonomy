@@ -22,7 +22,7 @@
   let open = false;
   let title = "";
   let artifactName = "";
-  let currentStep = 0;
+  let tagging = true;
   let uploads: UploadPromise[] | null = null;
 
   /** The files to append as an artifact to this artifact set. */
@@ -35,14 +35,14 @@
     if (value !== open) open = value;
   }
 
-  function isLastStep() {
-    return currentStep === 1;
-  }
-
   function setNameAndTitle(repo: PopulatedRepo, content: Artifact | null) {
     const repoName = repo?.displayName ?? "";
     artifactName = content?.displayName ?? repoName;
     title = (content != null) ? `Update ${content.displayName}`: `Append data to ${repoName}`;
+  }
+
+  async function upload() {
+    console.log("TODO: upload the files and metadata to the repo");
   }
 </script>
   
@@ -54,14 +54,16 @@
   <Title id="upload-artifact-title">{title}</Title>
   <Content id="upload-artifact-content">
 
-    {#if currentStep === 0}
+    {#if tagging}
       <Paper variant="outlined">
+        <Subtitle>Select Tags for the Content</Subtitle>
         <Content>
           <TagsStep schema={{}}></TagsStep>
         </Content>
       </Paper>
     {:else}
       <Paper variant="outlined">
+        <Subtitle>Name and Select Content</Subtitle>
         <Content>
           <DatasetStep
             contentType={contentType.name}
@@ -74,31 +76,37 @@
     {/if}
 
   </Content>
-  <Actions>
-    {#if currentStep !== 0}
-      <div class="actions-group">
-        <Button>
+  <Actions id="upload-artifact-actions">
+    <div class="actions-group">
+      {#if !tagging}
+        <Button action={null} on:click={(e) => { tagging = true }}>
           <Icon class="material-icons">arrow_back</Icon>
           <Label>Back</Label>
         </Button>
-      </div>
-    {/if}
+      {/if}
+    </div>
     
     <div class="actions-group">
       <Button>
         <Label>Cancel</Label>
       </Button>
-      {#if isLastStep()}
-        <Button>
-          <Label>Upload</Label>
-          <Icon class="material-icons">upload</Icon>
-        </Button>
-      {:else}
-        <Button>
+      {#if tagging}
+        <Button default action={null} on:click={(e) => { tagging = false }}>
           <Label>Next</Label>
           <Icon class="material-icons">arrow_forward</Icon>
+        </Button>
+      {:else}
+        <Button default  action={null} on:click={() => upload()}>
+          <Label>Upload</Label>
+          <Icon class="material-icons">upload</Icon>
         </Button>
       {/if}
     </div>
   </Actions>
 </Dialog>
+
+<style lang="scss">
+  :global(#upload-artifact-actions) {
+    justify-content: space-between;
+  }
+</style>
