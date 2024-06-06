@@ -17,7 +17,7 @@
   import TagFormatter from "../Formatter";
   import type { Artifact, PopulatedRepo, default as Storage, UploadPromise } from "../Storage";
   import type { default as ContentType } from "../ContentType";
-    import type { ConfirmData } from "../ConfirmData";
+  import type { ConfirmData } from "../ConfirmData";
 
   /** Event type for dropping files onto a dropzone. */
   type DropEvent = CustomEvent<{ acceptedFiles: File[] }>;
