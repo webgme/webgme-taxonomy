@@ -11,5 +11,12 @@ config.plugin.allowServerExecution = true;
 config.requirejsPaths["webgme-taxonomy/lib"] = "./lib";
 config.requirejsPaths.react = "./lib/react.production.min";
 
+config.rest.components["Search"].options = {
+  metadataStorageConfig: {
+    enable: true,
+    gremlinEndpoint: "ws://localhost:8182/gremlin"
+  }
+};
+
 validateConfig(config);
 module.exports = config;

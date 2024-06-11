@@ -2,9 +2,6 @@
 // How do we configure the metadata adapter? It should probably be in the model somewhere...
 
 import gremlin from "gremlin";
-import fsp from "fs/promises";
-import path from "path";
-import os from "os";
 import type { Request } from "express";
 import TagFormatter from "../../../common/TagFormatter";
 import { AppendResult } from "./common/AppendResult";
@@ -31,13 +28,10 @@ import type {
   Repository,
   UpdateReservation,
   UpdateResult,
+  MetadataStorageConfig,
 } from "./common/types";
 import { toArtifactMetadatav2 } from "../Utils";
 import { Taxonomy } from "../../../common/exchange/Taxonomy";
-
-// TODO: load the configuration for this...
-// maybe it should be its own metamodel?
-const GREMLIN_ENDPOINT = "ws://localhost:8182/gremlin"; // TODO: make this configurable
 
 export class StorageWithGraphSearch<
   C extends Adapter,
@@ -45,8 +39,10 @@ export class StorageWithGraphSearch<
 > implements Adapter {
   private content: C;
   private metadata: M;
+  private config: MetadataStorageConfig;
 
-  constructor(content: C, metadata: M) {
+  constructor(config: MetadataStorageConfig, content: C, metadata: M) {
+    this.config = config;
     this.content = content;
     this.metadata = metadata;
   }
@@ -55,7 +51,10 @@ export class StorageWithGraphSearch<
     res: RepoReservation,
     metadata: ArtifactMetadata,
   ): Promise<string> {
-    await this.metadata.create(new ContentReference(res.repoId), metadata);
+    if (this.config.enable) {
+      await this.metadata.create(new ContentReference(res.repoId), metadata);
+    }
+
     return await this.content.createArtifact(res, metadata);
   }
 
@@ -64,10 +63,13 @@ export class StorageWithGraphSearch<
     metadata: ArtifactMetadata,
     filenames: string[],
   ): Promise<AppendResult> {
-    await this.metadata.create(
-      new ChildContentReference(res.repoId, res.contentId),
-      metadata,
-    );
+    if (this.config.enable) {
+      await this.metadata.create(
+        new ChildContentReference(res.repoId, res.contentId),
+        metadata,
+      );
+    }
+
     return this.content.appendArtifact(res, metadata, filenames);
   }
 
@@ -81,14 +83,17 @@ export class StorageWithGraphSearch<
     filenames: string[],
   ): Promise<UpdateResult> {
     // FIXME: for now, we can only update content but we should be able to update repos, too...
-    await this.metadata.create(
-      new UpdatedChildContentReference(
-        res.repoId,
-        res.targetContentId,
-        res.contentId,
-      ),
-      metadata,
-    );
+    if (this.config.enable) {
+      await this.metadata.create(
+        new UpdatedChildContentReference(
+          res.repoId,
+          res.targetContentId,
+          res.contentId,
+        ),
+        metadata,
+      );
+    }
+
     return this.content.updateArtifact(res, metadata, filenames);
   }
 
@@ -96,7 +101,10 @@ export class StorageWithGraphSearch<
     repoId: string,
     contentId: string,
   ): Promise<DisableResult> {
-    await this.metadata.delete(new ChildContentReference(repoId, contentId));
+    if (this.config.enable) {
+      await this.metadata.delete(new ChildContentReference(repoId, contentId));
+    }
+
     return this.content.disableArtifact(repoId, contentId);
   }
 
@@ -329,8 +337,11 @@ const traversal = gremlin.process.AnonymousTraversalSource.traversal;
 const DriverRemoteConnection = gremlin.driver.DriverRemoteConnection;
 export class GremlinAdapter implements MetadataAdapter {
   private taxonomy: Taxonomy;
-  constructor(taxonomy: Taxonomy) {
+  private config: MetadataStorageConfig;
+
+  constructor(config: MetadataStorageConfig, taxonomy: Taxonomy) {
     this.taxonomy = taxonomy;
+    this.config = config;
   }
 
   async create(node: NodeInContext, metadata: ArtifactMetadata): Promise<void> {
@@ -343,7 +354,7 @@ export class GremlinAdapter implements MetadataAdapter {
       toGraph(toArtifactMetadatav2(metadata), contentAttributes),
     );
     const g = traversal().withRemote(
-      new DriverRemoteConnection(GREMLIN_ENDPOINT),
+      new DriverRemoteConnection(this.config.gremlinEndpoint),
     );
     const addGraphStep = graph.instantiate(g.inject(0));
 
@@ -366,7 +377,7 @@ export class GremlinAdapter implements MetadataAdapter {
    */
   async delete(context: NodeInContext): Promise<void> {
     const g = traversal().withRemote(
-      new DriverRemoteConnection(GREMLIN_ENDPOINT),
+      new DriverRemoteConnection(this.config.gremlinEndpoint),
     );
 
     const node = await context.find(g.V())
@@ -382,7 +393,7 @@ export class GremlinAdapter implements MetadataAdapter {
 
   async runGremlin(query: string): Promise<any> {
     const g = traversal().withRemote(
-      new DriverRemoteConnection(GREMLIN_ENDPOINT),
+      new DriverRemoteConnection(this.config.gremlinEndpoint),
     );
     throw new Error("Unimplemented!");
     //g.withStrategies(ReadOnlyStrategy.instance());
