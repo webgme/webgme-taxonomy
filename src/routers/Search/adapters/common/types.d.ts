@@ -223,3 +223,8 @@ export interface FileURLInfo {
 }
 
 export type FileStreamDict = { [filename: string]: NodeJS.ReadableStream };
+
+export interface MetadataStorageConfig {
+  enable: boolean;
+  gremlinEndpoint: string;
+}

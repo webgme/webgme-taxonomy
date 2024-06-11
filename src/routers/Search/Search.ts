@@ -177,7 +177,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
       const userId = middlewareOpts.getUserId(req);
       let metadata: ArtifactMetadatav2 = getArtifactMetadata(
         gmeContext,
-        <ArtifactMetadata> req.body.metadata,
+        <ArtifactMetadata>req.body.metadata,
       );
 
       // Upload to the storage backend
@@ -217,7 +217,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
       const userId = middlewareOpts.getUserId(req);
       let metadata: ArtifactMetadatav2 = getArtifactMetadata(
         gmeContext,
-        <ArtifactMetadata> req.body.metadata,
+        <ArtifactMetadata>req.body.metadata,
       );
 
       const { repoId } = req.params;
@@ -529,7 +529,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
       );
       let metadata: ArtifactMetadatav2 = getArtifactMetadata(
         gmeContext,
-        <ArtifactMetadata> req.body.metadata,
+        <ArtifactMetadata>req.body.metadata,
       );
 
       // update the content
