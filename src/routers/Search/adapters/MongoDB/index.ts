@@ -90,7 +90,7 @@ export default class MongoAdapter implements Adapter {
 
   async listPreviousFileNames(res: UpdateReservation): Promise<string[]> {
     const prevDoc = fromResult(
-      (await this.getPreviousArtifactDoc(res.repoId, res.contentId))
+      (await this.getArtifactDoc(res.repoId, res.targetContentId))
         .okOrElse(() => new ContentNotFoundError()),
     );
 
@@ -141,7 +141,7 @@ export default class MongoAdapter implements Adapter {
 
     if (reuseFiles) {
       const prevDoc = fromResult(
-        (await this.getPreviousArtifactDoc(res.repoId, res.contentId))
+        (await this.getArtifactDoc(res.repoId, res.targetContentId))
           .okOrElse(() => new ContentNotFoundError()),
       );
       usedFileIds = prevDoc.files;
@@ -391,21 +391,6 @@ export default class MongoAdapter implements Adapter {
     return (await this.getRepository(repoId))
       .andThen((repo) => Option.from(repo.artifacts[index]))
       .andThen((versions) => Option.from(versions[version]));
-  }
-
-  private async getPreviousArtifactDoc(
-    repoId: string,
-    id: string,
-  ): Promise<Option<ArtifactDoc>> {
-    const [index, version] = this.parseContentId(id);
-
-    if (version === 0) {
-      throw new Error("Version is 0 - cannot load previous");
-    }
-
-    return (await this.getRepository(repoId))
-      .andThen((repo) => Option.from(repo.artifacts[index]))
-      .andThen((versions) => Option.from(versions[version - 1]));
   }
 
   async getContentIds(repoId: string): Promise<Option<string[]>> {

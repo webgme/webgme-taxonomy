@@ -71,6 +71,10 @@ export class StorageWithGraphSearch<
     return this.content.appendArtifact(res, metadata, filenames);
   }
 
+  async listPreviousFileNames(res: UpdateReservation): Promise<string[]> {
+    return this.content.listPreviousFileNames(res);
+  }
+
   async updateArtifact(
     res: UpdateReservation,
     metadata: ArtifactMetadata,
