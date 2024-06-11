@@ -236,21 +236,20 @@ export default class PDP implements Adapter {
     const { index /*version*/ } = parseContentID(contentId);
     const lockId = repoId + "/" + index;
     return await this._contentLocks.run(lockId, async () => {
-      // TODO: determine the latest version for the given observation
-      // TODO: create the new reservation
       const processId = newtype<ProcessID>(repoId);
       const state = fromResult(await this.api.getProcessState(processId));
-      const lastVersion = state.lastVersionIndex;
-      // FIXED: Why use this version???? The version is a global counter?
-      // const latestObservation = fromResult(
-      //   await this.api.getObservation(processId, index, lastVersion),
-      // );
-      const version = lastVersion + 1;
+      const highestVersion = state.lastVersionIndex;
+      const latestObservation = fromResult(
+        await this.api.getObservation(processId, index, highestVersion),
+      );
+
+      const version = highestVersion + 1;
 
       const reservation = new ObservationUpdateReservation(
         processId,
         index,
         latestObservation.version,
+        version,
         this.getUri(processId, index, version),
       );
 
@@ -989,16 +988,17 @@ class ObservationUpdateReservation implements UpdateReservation {
   constructor(
     processId: ProcessID,
     index: number,
-    currentVersion: number,
+    targetVersion: number, // The previous version
+    version: number, // Not the same as version + 1 (rather "highest-version-in-observation" + 1)
     uri: string,
   ) {
     this.processId = processId;
     this.index = index;
-    this.version = currentVersion + 1;
+    this.version = version;
 
     this.repoId = processId.toString();
-    this.contentId = `${index}_${this.version}`;
-    this.targetContentId = `${index}_${currentVersion}`;
+    this.contentId = `${index}_${version}`;
+    this.targetContentId = `${index}_${targetVersion}`;
     this.uri = uri;
   }
 }
