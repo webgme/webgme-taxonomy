@@ -19,13 +19,13 @@
   /** The files to append as an artifact to this artifact set. */
   export let files: File[] = [];
   /** The upload progress promises for each of the file uploads. */
-  export let uploads: UploadPromise[] | undefined = undefined;
+  export let uploads: UploadPromise[] | null = null;
 
   function removeFileAt(index: number) {
-    files = files.filter((_, i) => i !== index);
+    files = (files.splice(index, 1), files);
     if (uploads != null) {
       uploads[index]?.abort();
-      uploads = uploads.filter((_, i) => i !== index);
+      uploads = (uploads.splice(index, 1), uploads);
     }
   }
 

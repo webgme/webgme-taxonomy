@@ -6,12 +6,24 @@
   import Textfield from "@smui/textfield";
   import SchemaForm, { type JSONSchema7 } from "svelte-jsonschema-form";
 
-  export let schema: JSONSchema7;
+  export let data: any;
 
+  let schema = fetchSchema();
   let tagsFile: FileList | null = null;
-  let data;
+  let schemaForm: SchemaForm;
+  let schemaError: string | Error | ValidationError | null = null;
 
   $: mergeTagsFile(tagsFile?.[0]);
+
+  async function fetchSchema(): Promise<JSONSchema7> {
+    const url = "../schema.json";    
+    const response = await fetch(url);
+    if (response.ok) {
+      return response.json();
+    } else {
+      throw new Error(await response.text());
+    }
+  }
 
   async function mergeTagsFile(file: File | undefined) {
     if (file) {
@@ -20,6 +32,16 @@
         data = JSON.parse(reader.result as string);
       };
       reader.readAsText(file);
+    }
+  }
+
+  function handleSchemaFormError(event: CustomEvent<Error | ValidationError>) {
+    console.error(event.detail);
+    if (event.detail instanceof ValidationError) {
+      schemaError = event.detail;
+    }
+    else {
+      schemaError = "Invalid JSON Schema. Please check the configuration file.";
     }
   }
 
