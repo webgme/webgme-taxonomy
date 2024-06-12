@@ -21,6 +21,7 @@ export class Graph {
 
   instantiate(graph: GraphTraversal): GraphTraversal {
     // create nodes
+    // Why not simply: this.nodes.forEach(node => node.instantiate(graph));
     const nodesTraversal = this.nodes.reduce(
       (g, node) => node.instantiate(g),
       graph,
@@ -236,14 +237,16 @@ export function addNodeData(taxonomy: Taxonomy, graph: Graph): Graph {
 
   // for each node, add the original name and set the label
   graph.nodes.forEach((node) => {
-    if (typeof node.attributes.tagId === "string") {
-      const data = nodeData[node.attributes.tagId];
-      if (data) {
-        if (data.name) {
-          node.attributes.originalName = data.name;
-        }
-        node.label = data.type;
+    if (typeof node.attributes.tagId !== "string") {
+      return;
+    }
+
+    const data = nodeData[node.attributes.tagId];
+    if (data) {
+      if (data.name) {
+        node.attributes.originalName = data.name;
       }
+      node.label = data.type;
     }
   });
   return graph;

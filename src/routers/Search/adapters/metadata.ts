@@ -37,14 +37,14 @@ export class StorageWithGraphSearch<
   C extends Adapter,
   M extends MetadataAdapter,
 > implements Adapter {
-  private content: C;
-  private metadata: M;
+  private contentStore: C;
+  private metadataStore: M;
   private config: MetadataStorageConfig;
 
   constructor(config: MetadataStorageConfig, content: C, metadata: M) {
     this.config = config;
-    this.content = content;
-    this.metadata = metadata;
+    this.contentStore = content;
+    this.metadataStore = metadata;
   }
 
   async createArtifact(
@@ -52,10 +52,10 @@ export class StorageWithGraphSearch<
     metadata: ArtifactMetadata,
   ): Promise<string> {
     if (this.config.enable) {
-      await this.metadata.create(new ContentReference(res.repoId), metadata);
+      await this.metadataStore.create(new ContentReference(res.repoId), metadata);
     }
 
-    return await this.content.createArtifact(res, metadata);
+    return await this.contentStore.createArtifact(res, metadata);
   }
 
   async appendArtifact(
@@ -64,17 +64,17 @@ export class StorageWithGraphSearch<
     filenames: string[],
   ): Promise<AppendResult> {
     if (this.config.enable) {
-      await this.metadata.create(
+      await this.metadataStore.create(
         new ChildContentReference(res.repoId, res.contentId),
         metadata,
       );
     }
 
-    return this.content.appendArtifact(res, metadata, filenames);
+    return this.contentStore.appendArtifact(res, metadata, filenames);
   }
 
   async listPreviousFileNames(res: UpdateReservation): Promise<string[]> {
-    return this.content.listPreviousFileNames(res);
+    return this.contentStore.listPreviousFileNames(res);
   }
 
   async updateArtifact(
@@ -84,7 +84,7 @@ export class StorageWithGraphSearch<
   ): Promise<UpdateResult> {
     // FIXME: for now, we can only update content but we should be able to update repos, too...
     if (this.config.enable) {
-      await this.metadata.create(
+      await this.metadataStore.create(
         new UpdatedChildContentReference(
           res.repoId,
           res.targetContentId,
@@ -94,7 +94,7 @@ export class StorageWithGraphSearch<
       );
     }
 
-    return this.content.updateArtifact(res, metadata, filenames);
+    return this.contentStore.updateArtifact(res, metadata, filenames);
   }
 
   async disableArtifact(
@@ -102,22 +102,22 @@ export class StorageWithGraphSearch<
     contentId: string,
   ): Promise<DisableResult> {
     if (this.config.enable) {
-      await this.metadata.delete(new ChildContentReference(repoId, contentId));
+      await this.metadataStore.delete(new ChildContentReference(repoId, contentId));
     }
 
-    return this.content.disableArtifact(repoId, contentId);
+    return this.contentStore.disableArtifact(repoId, contentId);
   }
 
   // Pass through the rest of the functions to the content
   listRepos(): Promise<Repository[]> {
-    return this.content.listRepos();
+    return this.contentStore.listRepos();
   }
 
   getFileStreams(
     repoId: string,
     id: string,
   ): Promise<FileStreamDict> {
-    return this.content.getFileStreams(
+    return this.contentStore.getFileStreams(
       repoId,
       id,
     );
@@ -127,7 +127,7 @@ export class StorageWithGraphSearch<
     repoId: string,
     contentIds: string[],
   ): Promise<DownloadInfo[]> {
-    return this.content.downloadFileURLs(
+    return this.contentStore.downloadFileURLs(
       repoId,
       contentIds,
     );
@@ -137,7 +137,7 @@ export class StorageWithGraphSearch<
     repoId: string,
     contentId: string,
   ): Promise<Option<ArtifactMetadatav2>> {
-    return this.content.getMetadata(
+    return this.contentStore.getMetadata(
       repoId,
       contentId,
     );
@@ -148,7 +148,7 @@ export class StorageWithGraphSearch<
     contentIds: string[],
     formatter: TagFormatter,
   ): Promise<any[]> {
-    return this.content.getBulkMetadata(
+    return this.contentStore.getBulkMetadata(
       repoId,
       contentIds,
       formatter,
@@ -161,8 +161,8 @@ export class StorageWithGraphSearch<
     fileId: string,
     req: Request,
   ): Promise<void> {
-    if (this.content.uploadFile) {
-      return this.content.uploadFile(
+    if (this.contentStore.uploadFile) {
+      return this.contentStore.uploadFile(
         repoId,
         index,
         fileId,
@@ -170,20 +170,20 @@ export class StorageWithGraphSearch<
       );
     } else {
       throw new UnsupportedMethodFormat(
-        this.content.constructor.name,
+        this.contentStore.constructor.name,
         "uploadFile",
       );
     }
   }
 
   resolveUri(uri: string): [string, string] {
-    return this.content.resolveUri(uri);
+    return this.contentStore.resolveUri(uri);
   }
 
   withRepoReservation<T>(
     fn: (res: RepoReservation) => Promise<T>,
   ): Promise<T> {
-    return this.content.withRepoReservation(
+    return this.contentStore.withRepoReservation(
       fn,
     );
   }
@@ -192,7 +192,7 @@ export class StorageWithGraphSearch<
     fn: (res: ContentReservation) => Promise<T>,
     repoId: string,
   ): Promise<T> {
-    return this.content.withContentReservation(
+    return this.contentStore.withContentReservation(
       fn,
       repoId,
     );
@@ -203,7 +203,7 @@ export class StorageWithGraphSearch<
     repoId: string,
     contentId: string,
   ): Promise<T> {
-    return this.content.withUpdateReservation(
+    return this.contentStore.withUpdateReservation(
       fn,
       repoId,
       contentId,
@@ -211,11 +211,11 @@ export class StorageWithGraphSearch<
   }
 
   async getRepoMetadata(repoId: string): Promise<Repository> {
-    return this.content.getRepoMetadata(repoId);
+    return this.contentStore.getRepoMetadata(repoId);
   }
 
   async listArtifacts(repoId: string): Promise<Artifact[]> {
-    return this.content.listArtifacts(repoId);
+    return this.contentStore.listArtifacts(repoId);
   }
 }
 
@@ -335,6 +335,10 @@ export interface MetadataAdapter {
 
 const traversal = gremlin.process.AnonymousTraversalSource.traversal;
 const DriverRemoteConnection = gremlin.driver.DriverRemoteConnection;
+
+/**
+ * Metadata storage using with gremlin compatible database.
+ */
 export class GremlinAdapter implements MetadataAdapter {
   private taxonomy: Taxonomy;
   private config: MetadataStorageConfig;
