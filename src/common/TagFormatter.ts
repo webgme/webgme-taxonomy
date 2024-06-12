@@ -101,6 +101,8 @@ export default class TagFormatter {
       };
     };
 
+    // TODO: Consider using built-in traverse
+    // TODO: Consider caching this..
     const taxonomy = await load(taxonomyRoot);
     return new TagFormatter(taxonomy);
   }
@@ -112,7 +114,7 @@ export interface TaxonomyJson {
   children: TaxonomyJson[];
 }
 
-export class FormatError extends Error {}
+export class FormatError extends Error { }
 class TagNotFoundError extends FormatError {
   constructor(tagName: string) {
     super(`Tag not found: ${tagName}`);

@@ -21,8 +21,8 @@ Thirdly, start the janus graph:
 docker run --name janusgraph -p 8182:8182 -d janusgraph/janusgraph:latest
 ```
 
-Finally and optionally if you want to be able to visualize the graph-db data at http://localhost:3000 (psst `g.V()` returns
-all vertices).
+Optionally if you want to be able to visualize the graph-db data at http://localhost:3000 (psst `g.V()` returns
+all vertices and their edges).
 ```
 docker run -d --name=gremlin-visualizer --network=host prabushitha/gremlin-visualizer:latest
 ```

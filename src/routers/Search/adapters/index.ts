@@ -82,7 +82,7 @@ export default class Adapters {
       req,
       config,
     );
-    // TODO: get the taxonomy node and export
+    // TODO: consider caching these
     const taxNode = await getTaxonomyNode(gmeContext);
     const exchange = await exportTaxonomy(gmeContext.core, taxNode);
     const msConfig = config.rest.components.Search.options.metadataStorageConfig as MetadataStorageConfig;
