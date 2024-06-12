@@ -108,30 +108,24 @@
   on:SMUIDialog:closed={closeHandler}
 >
   <Title id="upload-artifact-title">{title}</Title>
-  <Content id="upload-artifact-content">
+  <div class:step-tags={tagging} class:step-dataset={!tagging}>
+    <Content id="upload-artifact-content">
 
-    {#if tagging}
-      <Paper variant="outlined">
-        <Subtitle>Select Tags for the Content</Subtitle>
-        <Content>
-          <TagsStep schema={{}}></TagsStep>
-        </Content>
-      </Paper>
-    {:else}
-      <Paper variant="outlined">
-        <Subtitle>Name and Select Content</Subtitle>
-        <Content>
-          <DatasetStep
-            contentType={contentType.name}
-            bind:name={artifactName}
-            bind:files={files}
-            bind:uploads={uploads}
-          />
-        </Content>
-      </Paper>
-    {/if}
+      {#if tagging}
+        <TagsStep bind:data={tags}></TagsStep>
+      {:else}
+        <DatasetStep
+          contentType={contentType.name}
+          bind:name={displayName}
+          bind:files={files}
+          bind:uploads={uploads}
+          {isReference}
+        />
+      {/if}
 
-  </Content>
+    </Content>
+  </div>
+
   <Actions id="upload-artifact-actions">
     <div class="actions-group">
       {#if !tagging}
@@ -162,6 +156,9 @@
 </Dialog>
 
 <style lang="scss">
+  :global(.mdc-dialog__content) {
+    padding: 0;
+  }
   :global(#upload-artifact-actions) {
     justify-content: space-between;
   }

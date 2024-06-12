@@ -6,6 +6,7 @@
   import { fade } from "svelte/transition";
   import type { UploadPromise } from "../../Storage";
 
+  import Paper, { Subtitle, Content } from "@smui/paper";
   import Textfield from "@smui/textfield";
   import UploadFile from "./UploadFile.svelte";
   import Dropzone from "svelte-file-dropzone";
@@ -38,16 +39,23 @@
   }
 </script>
 
-<Textfield label="Name" bind:value={name} disabled={!!uploads} />
-<p>{contentType} file(s):</p>
-<ul class="upload-files">
-  {#each files as file, index (file.name + "-" + file.lastModified)}
-    {@const upload = uploads?.[index]}
-    <li transition:fade={{ duration: 200 }}>
-      <UploadFile {file} {upload} on:remove={() => removeFileAt(index)} />
-    </li>
-  {/each}
-</ul>
+<Paper variant="unelevated">
+  <Subtitle>Name and Select Content</Subtitle>
+  <Content>
+    <Textfield label="Name" bind:value={name} disabled={!!uploads} />
+    <p>{contentType} file(s):</p>
+    <ul class="upload-files">
+      {#each files as file, index (file.name + "-" + file.lastModified)}
+        {@const upload = uploads?.[index]}
+        <li transition:fade={{ duration: 200 }}>
+          <UploadFile {file} {upload} on:remove={() => removeFileAt(index)} />
+        </li>
+      {/each}
+    </ul>
+  </Content>
+</Paper>
+
+
 
 <Dropzone
   disabled={isReference || !!uploads } 

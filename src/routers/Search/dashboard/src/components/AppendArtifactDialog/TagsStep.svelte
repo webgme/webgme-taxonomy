@@ -3,8 +3,11 @@
   The "tags" step of the append artifact dialog.
 -->
 <script lang="ts">
-  import Textfield from "@smui/textfield";
-  import SchemaForm, { type JSONSchema7 } from "svelte-jsonschema-form";
+  import Paper, { Subtitle, Content } from "@smui/paper";
+  import IconButton from "@smui/icon-button";
+  import CircularProgress from "@smui/circular-progress";
+  import Tooltip, { Wrapper } from "@smui/tooltip"
+  import SchemaForm, { ValidationError, type JSONSchema7 } from "svelte-jsonschema-form";
 
   export let data: any;
 
@@ -47,5 +50,48 @@
 
 </script>
 
-<Textfield bind:files={tagsFile} label="File" type="file" input$accept="application/json" />
-<SchemaForm {schema} bind:data={data} />
+<Paper variant="unelevated" class="tags-step">
+  <Subtitle>
+    <span>Select Tags for the Content</span>
+    <Wrapper>
+      <label class="file-button">
+        <IconButton tag="div" class="material-icons">upload_file</IconButton>
+        <input type="file" accept="application/json" />
+      </label>
+      <Tooltip yPos="above">Populate from tags file</Tooltip>
+    </Wrapper>
+  </Subtitle>
+
+  <Content>
+    {#await schema}
+      <CircularProgress indeterminate />
+      <p>Loading schema...</p>
+    {:then schema}
+      <SchemaForm {schema} bind:data={data} bind:this={schemaForm} on:error={handleSchemaFormError} />
+    {:catch error}
+      <div class="error">ERROR: {error.message}</div>
+    {/await}
+  </Content>
+</Paper>
+
+
+<style lang="scss">
+  :global(.jsonschema-form > .smui-paper--raised) {
+    box-shadow: none !important;
+    padding: 0 !important;
+
+    > :global(.smui-paper__title) {
+      display: none;
+    }
+  }
+
+  :global(.tags-step .smui-paper__subtitle) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .file-button input {
+    display: none;
+  }
+</style>
