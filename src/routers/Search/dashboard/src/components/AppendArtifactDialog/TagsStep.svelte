@@ -4,9 +4,8 @@
 -->
 <script lang="ts">
   import Paper, { Subtitle, Content } from "@smui/paper";
-  import IconButton from "@smui/icon-button";
   import CircularProgress from "@smui/circular-progress";
-  import Tooltip, { Wrapper } from "@smui/tooltip"
+  import FileButton from "../FileButton.svelte";
   import SchemaForm, { ValidationError, type JSONSchema7 } from "svelte-jsonschema-form";
 
   export let data: any;
@@ -53,13 +52,7 @@
 <Paper variant="unelevated" class="tags-step">
   <Subtitle>
     <span>Select Tags for the Content</span>
-    <Wrapper>
-      <label class="file-button">
-        <IconButton tag="div" class="material-icons">upload_file</IconButton>
-        <input type="file" accept="application/json" />
-      </label>
-      <Tooltip yPos="above">Populate from tags file</Tooltip>
-    </Wrapper>
+    <FileButton accept="application/json" tooltip="Populate from tags file" />
   </Subtitle>
 
   <Content>
@@ -89,9 +82,5 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-  }
-
-  .file-button input {
-    display: none;
   }
 </style>

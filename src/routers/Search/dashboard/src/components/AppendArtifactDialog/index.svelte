@@ -8,7 +8,6 @@
   import type { default as ContentType } from "../../ContentType";
 
   import Dialog, { Content, Title, Actions } from "@smui/dialog";
-  import Paper, { Subtitle } from "@smui/paper";
   import Button, { Label, Icon } from "@smui/button";
   import DatasetStep from "./DatasetStep.svelte";
   import TagsStep from "./TagsStep.svelte";
