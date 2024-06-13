@@ -83,4 +83,8 @@
     align-items: center;
     justify-content: space-between;
   }
+
+  :global(.tags-step.smui-paper) {
+    padding: 0;
+  }
 </style>

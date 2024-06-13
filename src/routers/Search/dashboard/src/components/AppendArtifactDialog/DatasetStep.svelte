@@ -68,3 +68,10 @@
     <p>Select dataset to upload.</p>
   {/if}
 </Dropzone>
+
+
+<style lang="scss">
+  :global(.tags-step.smui-paper) {
+    padding: 0;
+  }
+</style>

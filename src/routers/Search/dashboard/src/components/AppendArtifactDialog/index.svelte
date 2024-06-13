@@ -105,6 +105,7 @@
   aria-labelledby="upload-artifact-title"
   aria-describedby="upload-artifact-content"
   on:SMUIDialog:closed={closeHandler}
+  class="append-artifact-dialog"
 >
   <Title id="upload-artifact-title">{title}</Title>
   <div class:step-tags={tagging} class:step-dataset={!tagging}>
@@ -155,9 +156,6 @@
 </Dialog>
 
 <style lang="scss">
-  :global(.mdc-dialog__content) {
-    padding: 0;
-  }
   :global(#upload-artifact-actions) {
     justify-content: space-between;
   }
