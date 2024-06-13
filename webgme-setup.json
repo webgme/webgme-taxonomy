@@ -113,6 +113,11 @@
           "dashboard/public"
         ],
         "mount": "routers/Insights"
+      },
+      "Version": {
+        "src": "src/routers/Version",
+        "test": "test/routers/Version",
+        "mount": "version"
       }
     }
   },
