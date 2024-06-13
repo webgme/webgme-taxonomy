@@ -10,12 +10,13 @@
   export let multiple = false;
   export let tooltip: string | null = null;
   export let files: FileList | null = null;
+  export let disabled = false;
 </script>
 
 <Wrapper>
-  <label class="file-button">
+  <label class="file-button" class:disabled={disabled}>
     <IconButton tag="div" class="material-icons"><slot>upload_file</slot></IconButton>
-    <input type="file" {accept} {multiple} bind:files />
+    <input type="file" {accept} {multiple} {disabled} bind:files />
   </label>
   {#if tooltip != null}
     <Tooltip yPos="above">{tooltip}</Tooltip>
@@ -23,7 +24,21 @@
 </Wrapper>
 
 <style lang="scss">
-  .file-button input {
-    display: none;
+  .file-button {
+    &.disabled :global(.mdc-icon-button) {
+      cursor: default;
+      pointer-events: none;
+      color: var(--mdc-theme-text-disabled-on-light, rgba(0, 0, 0, 0.38));
+
+      @media (screen) and (prefers-color-scheme: dark) {
+        & {
+          color: var(--mdc-theme-text-disabled-on-dark, rgba(255, 255, 255, 0.5));
+        }
+      }
+    }
+
+    input {
+      display: none;
+    }
   }
 </style>

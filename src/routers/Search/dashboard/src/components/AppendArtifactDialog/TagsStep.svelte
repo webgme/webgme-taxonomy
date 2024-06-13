@@ -6,15 +6,19 @@
   import Paper, { Subtitle, Content } from "@smui/paper";
   import CircularProgress from "@smui/circular-progress";
   import FileButton from "../FileButton.svelte";
-  import SchemaForm, { ValidationError, type JSONSchema7 } from "svelte-jsonschema-form";
+  import SchemaForm, { ValidationError, type JSONSchema7, type UISchema } from "svelte-jsonschema-form";
+  import { deepMerge } from "../../../../Utils";
 
   export let data: any;
+  export let disabled = false
 
   let schema = fetchSchema();
   let tagsFile: FileList | null = null;
   let schemaForm: SchemaForm;
   let schemaError: string | Error | ValidationError | null = null;
+  let uischema = { ":ui:": { "collapse": "unrequired" }} as UISchema;
 
+  $: updateUischema(disabled);
   $: mergeTagsFile(tagsFile?.[0]);
 
   async function fetchSchema(): Promise<JSONSchema7> {
@@ -37,6 +41,10 @@
     }
   }
 
+  function updateUischema(disabled: boolean) {
+    uischema = deepMerge(uischema, <UISchema>{ ":ui:": { "readonly": disabled }})
+  }
+
   function handleSchemaFormError(event: CustomEvent<Error | ValidationError>) {
     console.error(event.detail);
     if (event.detail instanceof ValidationError) {
@@ -52,7 +60,7 @@
 <Paper variant="unelevated" class="tags-step">
   <Subtitle>
     <span>Select Tags for the Content</span>
-    <FileButton accept="application/json" tooltip="Populate from tags file" />
+    <FileButton accept="application/json" tooltip="Populate from tags file" {disabled} />
   </Subtitle>
 
   <Content>
@@ -60,7 +68,7 @@
       <CircularProgress indeterminate />
       <p>Loading schema...</p>
     {:then schema}
-      <SchemaForm {schema} bind:data={data} bind:this={schemaForm} on:error={handleSchemaFormError} />
+      <SchemaForm {schema} {uischema} bind:data={data} bind:this={schemaForm} on:error={handleSchemaFormError} />
     {:catch error}
       <div class="error">ERROR: {error.message}</div>
     {/await}

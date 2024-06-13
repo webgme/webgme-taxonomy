@@ -28,10 +28,12 @@
   let tagging = true;
   let tags: any;
   let uploads: UploadPromise[] | null = null;
+  let uploading = false
   let isReference = false;
   /** The files to append as an artifact to this artifact set. */
   let files: File[] = [];
 
+  $: updateUploading(uploads);
   $: setOpen(repo != null);
   $: setNameAndTitle(repo, content);
   $: updateIsReference(tags);
@@ -44,6 +46,13 @@
     const repoName = repo?.displayName ?? "";
     displayName = content?.displayName ?? repoName;
     title = (content != null) ? `Update ${content.displayName}`: `Append data to ${repoName}`;
+  }
+
+  function updateUploading(uplods: UploadPromise[] | null) {
+    const isUploading = !!uploads?.length;
+    if (uploading != isUploading) {
+      uploading = isUploading;
+    }
   }
 
   function updateIsReference(tags: any) {
@@ -100,8 +109,8 @@
   
 <Dialog
   bind:open
-  scrimClickAction={uploads ? "" : null}
-  escapeKeyAction={uploads ? "" : null}
+  scrimClickAction={uploading ? "" : null}
+  escapeKeyAction={uploading ? "" : null}
   aria-labelledby="upload-artifact-title"
   aria-describedby="upload-artifact-content"
   on:SMUIDialog:closed={closeHandler}
@@ -112,7 +121,7 @@
     <Content id="upload-artifact-content">
 
       {#if tagging}
-        <TagsStep bind:data={tags}></TagsStep>
+        <TagsStep disabled={uploading} bind:data={tags}></TagsStep>
       {:else}
         <DatasetStep
           contentType={contentType.name}
@@ -129,7 +138,7 @@
   <Actions id="upload-artifact-actions">
     <div class="actions-group">
       {#if !tagging}
-        <Button action={null} on:click={(e) => { tagging = true }}>
+        <Button disabled={uploading} action={null} on:click={(e) => { tagging = true }}>
           <Icon class="material-icons">arrow_back</Icon>
           <Label>Back</Label>
         </Button>
@@ -137,16 +146,16 @@
     </div>
     
     <div class="actions-group">
-      <Button>
+      <Button disabled={uploading}>
         <Label>Cancel</Label>
       </Button>
       {#if tagging}
-        <Button default action={null} on:click={(e) => { tagging = false }}>
+        <Button default disabled={uploading} action={null} on:click={(e) => { tagging = false }}>
           <Label>Next</Label>
           <Icon class="material-icons">arrow_forward</Icon>
         </Button>
       {:else}
-        <Button default  action={null} on:click={confirmUpload}>
+        <Button default  disabled={uploading} action={null} on:click={confirmUpload}>
           <Label>Upload</Label>
           <Icon class="material-icons">upload</Icon>
         </Button>
