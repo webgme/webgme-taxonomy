@@ -102,6 +102,7 @@
   }
 
   function closeHandler(_e: CustomEvent<{ action: string }>) {
+    tagging ||= true;
     if (repo != null) repo = null;
     files = [];
   }

@@ -1,3 +1,7 @@
+<!--
+  @component
+  A component to fetch schema and manage corresponding a SchemaForm.
+-->
 <script lang="ts">
   import { createEventDispatcher } from "svelte";
   import CircularProgress from "@smui/circular-progress";
