@@ -3,22 +3,19 @@
   A dialog for displaying tags for content.
 -->
 <script lang="ts">
+  import { createEventDispatcher, getContext } from "svelte";
+  import type { toast as Toast } from "@zerodevx/svelte-toast";
   import Dialog, { Content, Title, Actions } from "@smui/dialog";
   import Button, { Label } from "@smui/button";
-  import List, {
-    Item,
-    Text,
-    PrimaryText,
-    SecondaryText,
-    Meta,
-    Graphic,
-  } from "@smui/list";
-  import {downloadJSON} from '../Utils';
-  import TagItem from './TagItem.svelte';
+  import SchemaForm from "./SchemaForm.svelte";
 
   export let displayName: string = '';
-  export let taxonomyTags: object = {};
+  export let taxonomyTags = {};
   export let open = true;
+
+  const dispatch = createEventDispatcher();
+  const toast = getContext<typeof Toast>("toast");
+  let schemaForm: SchemaForm;
 
   // FIXME: check that it shows correct tags when item is changed
   function close() {
@@ -27,6 +24,20 @@
 
   function getVocabName(tag) {
     return Object.keys(tag).pop();
+  }
+
+  function download() {
+    const filename = `${displayName}_metadata`;
+    try {
+      schemaForm.download(filename, { validate: false });
+    }
+    catch(error) {
+      console.error(error);
+      if (dispatch("error", error)) {
+        const msg = error.message ?? error.toString();
+        toast.push(msg, { initial: 0, classes: ["warn"] });
+      }
+    }
   }
 </script>
 
@@ -37,22 +48,20 @@
 >
   <Title id="display-tags-title">Metadata for {displayName}</Title>
   <Content id="display-tags-content">
-    <List>
-      <TagItem tag={taxonomyTags}/>
-    </List>
+    <SchemaForm bind:data={taxonomyTags} readonly bind:this={schemaForm} />
   </Content>
-  <div class="dialog-actions">
+  <Actions id="display-tags-actions">
     <Button on:click={close}>
       <Label>Close</Label>
     </Button>
-    <Button on:click={() => downloadJSON(`${displayName}_metadata`, taxonomyTags)}>
+    <Button on:click={download}>
       <Label>Download</Label>
     </Button>
-  </div>
+  </Actions>
 </Dialog>
 
 <style>
-  .dialog-actions {
+  :global(#display-tags-actions) {
     display: flex;
     justify-content: flex-end;
     padding: 0.5em;
