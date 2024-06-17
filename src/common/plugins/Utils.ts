@@ -15,7 +15,7 @@ interface PluginState {
 }
 
 export async function getVersionString(
-  project: GmeClasses.Project,
+  project: GmeClasses.ProjectInterface,
   pluginState: PluginState,
 ): Promise<string> {
   return Object.entries(await getProjectVersion(project, pluginState))
@@ -24,7 +24,7 @@ export async function getVersionString(
 }
 
 async function getProjectVersion(
-  project: GmeClasses.Project,
+  project: GmeClasses.ProjectInterface,
   pluginState: PluginState,
 ): Promise<NamedVersion> {
   const tags = await project.getTags();
