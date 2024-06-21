@@ -1,4 +1,7 @@
-import type { MiddlewareOptions as GmeMiddlewareOptions, UserProject } from "webgme";
+import type {
+  MiddlewareOptions as GmeMiddlewareOptions,
+  UserProject,
+} from "webgme";
 
 import type { Request, RequestHandler, Response } from "express";
 
