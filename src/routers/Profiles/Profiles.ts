@@ -16,7 +16,8 @@
 import { unique } from "../Search/Utils";
 import { makeCore } from "../../common/routers/Utils";
 import { toString } from "../../common/Utils";
-import { MiddlewareOptions, ProjectMetadata } from "../../common/types";
+import { MiddlewareOptions } from "../../common/types";
+import type { ProjectMetadata } from "webgme";
 import { NextFunction, Request, Response } from "express";
 import express from "express";
 const router = express.Router();
