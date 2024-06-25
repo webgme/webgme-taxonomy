@@ -5,46 +5,54 @@
 <script lang="ts">
   import { createEventDispatcher, getContext } from "svelte";
   import Dialog, { Content, Title, Actions } from "@smui/dialog";
-  import Button, { Label } from "@smui/button";
-  import TagSelector from "./TagSelector.svelte";
+  import { Subtitle } from "@smui/paper";
   import Textfield from "@smui/textfield";
-  import type { default as ContentType } from "../ContentType";
+  import SchemaForm from "./SchemaForm.svelte";
+  import FileButton from "./FileButton.svelte";
+  import Button, { Label } from "@smui/button";
+
+  export let open = false;
+  export let disabled = false;
+
   const storage: Storage = getContext("storage");
   const dispatch = createEventDispatcher();
-
-  export let open;
-  export let contentType: ContentType;
   let displayName = '';
-  let metadata = {
-    tags: {},
-  };
+  let tags: any = {};
+  let creating = false;
 
-  async function onCreateRepo() {
-    metadata.displayName = displayName;
+  async function submit() {
+    const metadata = { displayName, tags };
+    creating = true;
     const status = await storage.createRepo(metadata);
     dispatch('create', {status});
   }
-
 </script>
+
 
 <Dialog
   bind:open={open}
-  aria-labelledby="title"
-  aria-describedby="content"
+  aria-labelledby="create-repo-title"
+  aria-describedby="create-repo-content"
 >
-  <Title id="title">Create new repository</Title>
-  <Content id="content">
-    <Textfield label="Name" bind:value={displayName} />
-    <TagSelector 
-      bind:metadata={metadata}
-      bind:contentType
-    />
+  <Title id="create-repo-title">Create new repository</Title>
+  <Content id="create-repo-content">
+    <Textfield label="Name" bind:value={displayName} {disabled} />
   </Content>
-  <Actions>
+
+  <Subtitle>
+    <span>Select Tags for the Content</span>
+    <FileButton accept="application/json" tooltip="Populate from tags file" {disabled} />
+  </Subtitle>
+
+  <Content>
+    <SchemaForm bind:data={tags} />
+  </Content>
+
+  <Actions id="create-repo-actions">
     <Button>
       <Label>Cancel</Label>
     </Button>
-    <Button on:click={() => onCreateRepo()}>
+    <Button on:click={submit}>
       <Label>Submit</Label>
     </Button>
   </Actions>
