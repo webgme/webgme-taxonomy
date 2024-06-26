@@ -4,11 +4,18 @@
 -->
 <script lang="ts">
   import { createEventDispatcher, getContext } from "svelte";
-  import type { default as Storage, Artifact, PopulatedRepo, UploadPromise } from "../../Storage";
-  import type { default as ContentType } from "../../ContentType";
+  import { fade } from "svelte/transition";
+  import type { default as Storage, Artifact, PopulatedRepo, UploadPromise } from "../Storage";
+  import type { default as ContentType } from "../ContentType";
 
-  import TagStepDialog from "../TagStepDialog/index.svelte";
-  import DatasetStep from "./DatasetStep.svelte";
+  import TagStepDialog from "./TagStepDialog/index.svelte";
+  import Paper, { Subtitle, Content } from "@smui/paper";
+  import Textfield from "@smui/textfield";
+  import UploadFile from "./UploadFile.svelte";
+  import Dropzone from "svelte-file-dropzone";
+
+  /** Event type for dropping files onto a dropzone. */
+  type DropEvent = CustomEvent<{ acceptedFiles: File[] }>;
 
   /** The repo to upload a new artifact to. Null to hide dialog.*/
   export let repo: PopulatedRepo | null = null;
@@ -102,6 +109,22 @@
     if (repo != null) repo = null;
     if (files.length) files = [];
   }
+
+  function removeFileAt(index: number) {
+    files = (files.splice(index, 1), files);
+    if (uploads != null) {
+      uploads[index]?.abort();
+      uploads = (uploads.splice(index, 1), uploads);
+    }
+  }
+
+  function onFileDrop(event: DropEvent) {
+    const { acceptedFiles } = event.detail;
+    if (acceptedFiles.length) {
+      files = files.concat(acceptedFiles);
+    }
+    // TODO: handle rejections
+  }
 </script>
 
 
@@ -114,18 +137,38 @@
   on:close={closeHandler}
   let:working={working}
 >
-  <DatasetStep
-    contentType={contentType.name}
-    bind:name={displayName}
-    bind:files={files}
-    bind:uploads={uploads}
-    {isReference}
-  />
+  <Paper variant="unelevated">
+    <Subtitle>Name and Select Content</Subtitle>
+    <Content>
+      <Textfield label="Name" bind:value={displayName} disabled={!!uploads} />
+      <p>{contentType.name} file(s):</p>
+      <ul class="upload-files">
+        {#each files as file, index (file.name + "-" + file.lastModified)}
+          {@const upload = uploads?.[index]}
+          <li transition:fade={{ duration: 200 }}>
+            <UploadFile {file} {upload} on:remove={() => removeFileAt(index)} />
+          </li>
+        {/each}
+      </ul>
+    </Content>
+  </Paper>
+
+  <Dropzone
+    disabled={isReference || !!uploads } 
+    multiple
+    on:drop={onFileDrop}
+  >
+    {#if isReference}
+      <p>Tags reference existing data</p>
+    {:else}
+      <p>Select dataset to upload.</p>
+    {/if}
+  </Dropzone>
 </TagStepDialog>
 
 
 <style lang="scss">
-  :global(#upload-artifact-actions) {
-    justify-content: space-between;
+  :global(.tags-step.smui-paper) {
+    padding: 0;
   }
 </style>

@@ -4,7 +4,7 @@
 -->
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
-  import type { UploadPromise } from "../../Storage";
+  import type { UploadPromise } from "../Storage";
 
   import IconButton from "@smui/icon-button";
   import LinearProgress from "@smui/linear-progress";

@@ -23,10 +23,6 @@
   let tagging = true;
   let working = false
 
-  // function setOpen(value: boolean) {
-  //   if (value !== open) open = value;
-  // }
-
   function submit() {
     dispatch('submit');
   }
@@ -34,8 +30,6 @@
   function closeHandler(event: CustomEvent<{ action: string }>) {
     tagging ||= true;
     dispatch('close', event);
-    // if (repo != null) repo = null;
-    // files = [];
   }
 </script>
   
@@ -50,7 +44,7 @@
   class="tag-step-dialog"
 >
   <Title id={`${id}-title`}>{title}</Title>
-  <div class:step-tags={tagging} class:step-dataset={!tagging}>
+  <div class:step-tags={tagging} class:step-next={!tagging}>
     <Content id={`${id}-content`}>
 
       {#if tagging}
