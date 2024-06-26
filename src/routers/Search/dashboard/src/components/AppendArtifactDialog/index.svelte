@@ -7,10 +7,8 @@
   import type { default as Storage, Artifact, PopulatedRepo, UploadPromise } from "../../Storage";
   import type { default as ContentType } from "../../ContentType";
 
-  import Dialog, { Content, Title, Actions } from "@smui/dialog";
-  import Button, { Label, Icon } from "@smui/button";
+  import TagStepDialog from "../TagStepDialog/index.svelte";
   import DatasetStep from "./DatasetStep.svelte";
-  import TagsStep from "./TagsStep.svelte";
 
   /** The repo to upload a new artifact to. Null to hide dialog.*/
   export let repo: PopulatedRepo | null = null;
@@ -25,7 +23,6 @@
   let open = false;
   let title = "";
   let displayName = "";
-  let tagging = true;
   let tags: any;
   let uploads: UploadPromise[] | null = null;
   let uploading = false
@@ -102,68 +99,30 @@
   }
 
   function closeHandler(_e: CustomEvent<{ action: string }>) {
-    tagging ||= true;
     if (repo != null) repo = null;
-    files = [];
+    if (files.length) files = [];
   }
 </script>
-  
-<Dialog
-  bind:open
-  scrimClickAction={uploading ? "" : null}
-  escapeKeyAction={uploading ? "" : null}
-  aria-labelledby="upload-artifact-title"
-  aria-describedby="upload-artifact-content"
-  on:SMUIDialog:closed={closeHandler}
-  class="append-artifact-dialog"
+
+
+<TagStepDialog
+  submitLabel="Upload"
+  submitIcon="upload"
+  {title} {open}
+  bind:tags={tags}
+  on:submit={confirmUpload}
+  on:close={closeHandler}
+  let:working={working}
 >
-  <Title id="upload-artifact-title">{title}</Title>
-  <div class:step-tags={tagging} class:step-dataset={!tagging}>
-    <Content id="upload-artifact-content">
+  <DatasetStep
+    contentType={contentType.name}
+    bind:name={displayName}
+    bind:files={files}
+    bind:uploads={uploads}
+    {isReference}
+  />
+</TagStepDialog>
 
-      {#if tagging}
-        <TagsStep disabled={uploading} bind:data={tags}></TagsStep>
-      {:else}
-        <DatasetStep
-          contentType={contentType.name}
-          bind:name={displayName}
-          bind:files={files}
-          bind:uploads={uploads}
-          {isReference}
-        />
-      {/if}
-
-    </Content>
-  </div>
-
-  <Actions id="upload-artifact-actions">
-    <div class="actions-group">
-      {#if !tagging}
-        <Button disabled={uploading} action={null} on:click={(e) => { tagging = true }}>
-          <Icon class="material-icons">arrow_back</Icon>
-          <Label>Back</Label>
-        </Button>
-      {/if}
-    </div>
-    
-    <div class="actions-group">
-      <Button disabled={uploading}>
-        <Label>Cancel</Label>
-      </Button>
-      {#if tagging}
-        <Button default disabled={uploading} action={null} on:click={(e) => { tagging = false }}>
-          <Label>Next</Label>
-          <Icon class="material-icons">arrow_forward</Icon>
-        </Button>
-      {:else}
-        <Button default  disabled={uploading} action={null} on:click={confirmUpload}>
-          <Label>Upload</Label>
-          <Icon class="material-icons">upload</Icon>
-        </Button>
-      {/if}
-    </div>
-  </Actions>
-</Dialog>
 
 <style lang="scss">
   :global(#upload-artifact-actions) {

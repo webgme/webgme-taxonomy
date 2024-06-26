@@ -55,8 +55,6 @@
   </Content>
 </Paper>
 
-
-
 <Dropzone
   disabled={isReference || !!uploads } 
   multiple
