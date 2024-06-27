@@ -4,10 +4,13 @@
 -->
 <script lang="ts">
   import { createEventDispatcher, getContext } from "svelte";
-  import type { default as Storage } from "../../Storage";
+  import type { default as Storage } from "../Storage";
+
   import Dialog, { Content, Title, Actions } from "@smui/dialog";
   import Button, { Label, Icon } from "@smui/button";
-  import TagsStep from "./TagsStep.svelte";
+  import Paper, { Subtitle, Content as PContent } from "@smui/paper";
+  import FileButton from "./FileButton.svelte";
+  import SchemaForm from "./SchemaForm.svelte";
 
   export let open = false;
   export let title = "";
@@ -22,9 +25,22 @@
 
   let tagging = true;
   let working = false
+  let tagsFiles: FileList | null = null;
+
+  $: mergeTagsFile(tagsFiles?.[0]);
 
   function submit() {
     dispatch('submit');
+  }
+
+  async function mergeTagsFile(file: File | undefined) {
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function() {
+        tags = JSON.parse(reader.result as string);
+      };
+      reader.readAsText(file);
+    }
   }
 
   function closeHandler(event: CustomEvent<{ action: string }>) {
@@ -48,7 +64,21 @@
     <Content id={`${id}-content`}>
 
       {#if tagging}
-        <TagsStep disabled={working} bind:data={tags}></TagsStep>
+        <Paper variant="unelevated" class="tags-step">
+          <Subtitle>
+            <span>Select Tags</span>
+            <FileButton
+              accept="application/json"
+              tooltip="Populate from tags file"
+              disabled={working}
+              bind:files={tagsFiles}
+            />
+          </Subtitle>
+          <Content>
+            <SchemaForm bind:data={tags} />
+          </Content>
+        </Paper>
+
       {:else}
         <slot {working} />
       {/if}
@@ -87,6 +117,25 @@
 
 <style lang="scss">
   :global(.tag-step-dialog-actions) {
+    justify-content: space-between;
+  }
+
+  :global(.jsonschema-form > .smui-paper--raised) {
+    box-shadow: none !important;
+    padding: 0 !important;
+
+    > :global(.smui-paper__title) {
+      display: none;
+    }
+  }
+
+  :global(.tags-step.smui-paper) {
+    padding: 0;
+  }
+
+  :global(.tags-step .smui-paper__subtitle) {
+    display: flex;
+    align-items: center;
     justify-content: space-between;
   }
 </style>

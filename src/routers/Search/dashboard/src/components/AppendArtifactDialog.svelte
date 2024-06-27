@@ -8,7 +8,7 @@
   import type { default as Storage, Artifact, PopulatedRepo, UploadPromise } from "../Storage";
   import type { default as ContentType } from "../ContentType";
 
-  import TagStepDialog from "./TagStepDialog/index.svelte";
+  import TagStepDialog from "./TagStepDialog.svelte";
   import Paper, { Subtitle, Content } from "@smui/paper";
   import Textfield from "@smui/textfield";
   import UploadFile from "./UploadFile.svelte";

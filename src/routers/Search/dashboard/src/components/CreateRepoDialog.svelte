@@ -4,7 +4,7 @@
 -->
 <script lang="ts">
   import { createEventDispatcher, getContext } from "svelte";
-  import TagStepDialog from "./TagStepDialog/index.svelte";
+  import TagStepDialog from "./TagStepDialog.svelte";
   import Paper, { Content } from "@smui/paper";
   import Textfield from "@smui/textfield";
 
