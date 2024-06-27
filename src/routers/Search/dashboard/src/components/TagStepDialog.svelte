@@ -51,7 +51,7 @@
       const reader = new FileReader();
       reader.onload = function() {
         const json = JSON.parse(reader.result as string);
-        tags = deepMerge(tags, json);
+        tags = deepMerge(tags, json.tags ?? json);
       };
       reader.readAsText(file);
     }
