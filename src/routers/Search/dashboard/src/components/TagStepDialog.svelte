@@ -5,6 +5,7 @@
 <script lang="ts">
   import { createEventDispatcher, getContext } from "svelte";
   import type { default as Storage } from "../Storage";
+  import { deepMerge } from "../Utils";
 
   import Dialog, { Content, Title, Actions } from "@smui/dialog";
   import Button, { Label, Icon } from "@smui/button";
@@ -29,15 +30,28 @@
 
   $: mergeTagsFile(tagsFiles?.[0]);
 
-  function submit() {
-    dispatch('submit');
+  function submit(event: CustomEvent) {
+    const performDefault = dispatch('submit', async function(busy: () => Promise<boolean | void>) {
+      working = true;
+      const done = await busy() ?? true;
+      if (done) {
+        open = false;
+      }
+      else {
+        working = false;
+      }
+    });
+    if (performDefault && !working) {
+      open &&= false;
+    }
   }
 
   async function mergeTagsFile(file: File | undefined) {
     if (file) {
       const reader = new FileReader();
       reader.onload = function() {
-        tags = JSON.parse(reader.result as string);
+        const json = JSON.parse(reader.result as string);
+        tags = deepMerge(tags, json);
       };
       reader.readAsText(file);
     }
@@ -45,6 +59,7 @@
 
   function closeHandler(event: CustomEvent<{ action: string }>) {
     tagging ||= true;
+    working &&= false;
     dispatch('close', event);
   }
 </script>
@@ -106,7 +121,7 @@
           <Icon class="material-icons">arrow_forward</Icon>
         </Button>
       {:else}
-        <Button default  disabled={working} action={null} on:click={submit}>
+        <Button default disabled={working} action={null} on:click={submit}>
           <Label>{ submitLabel }</Label>
           <Icon class="material-icons">{ submitIcon }</Icon>
         </Button>

@@ -391,7 +391,6 @@
 <!-- Repo creation dialog -->
 <CreateRepoDialog
   bind:open={creatingRepo}
-  bind:contentType
   on:create={onTryCreateRepo}
 />
 

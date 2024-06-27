@@ -66,7 +66,7 @@
     }
   }
 
-  function confirmUpload() {
+  async function confirmUpload() {
     if (!files.length && !isReference) {
       const [title, prompt] = (content == null) ? 
         [
@@ -77,9 +77,10 @@
           'Are you sure you only want to update the metadata?'
         ];
 
-      return dispatch('confirm', { title, prompt, action: upload });
+      dispatch('confirm', { title, prompt, action: upload });
+      return false;
     } else {
-      upload();
+      await upload();
     }
   }
 
@@ -133,7 +134,7 @@
   submitIcon="upload"
   {title} {open}
   bind:tags={tags}
-  on:submit={confirmUpload}
+  on:submit={({ detail }) => detail(confirmUpload)}
   on:close={closeHandler}
   let:working={working}
 >

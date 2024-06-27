@@ -26,9 +26,9 @@
 <TagStepDialog
   title="Create new repository"
   submitLabel="Create"
-  {open}
+  bind:open={open}
   bind:tags={tags}
-  on:submit={submit}
+  on:submit={({ detail }) => detail(submit) }
   let:working={working}
 >
   <Paper variant="unelevated">
