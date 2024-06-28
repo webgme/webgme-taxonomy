@@ -7,6 +7,7 @@
   import { fade } from "svelte/transition";
   import type { default as Storage, Artifact, PopulatedRepo, UploadPromise } from "../Storage";
   import type { default as ContentType } from "../ContentType";
+  import TagFormatter from "../Formatter";
 
   import TagStepDialog from "./TagStepDialog.svelte";
   import Paper, { Subtitle, Content } from "@smui/paper";
@@ -40,6 +41,7 @@
   $: updateUploading(uploads);
   $: setOpen(repo != null);
   $: setNameAndTitle(repo, content);
+  $: setTags(content);
   $: updateIsReference(tags);
 
   function setOpen(value: boolean) {
@@ -50,6 +52,11 @@
     const repoName = repo?.displayName ?? "";
     displayName = content?.displayName ?? repoName;
     title = (content != null) ? `Update ${content.displayName}`: `Append data to ${repoName}`;
+  }
+
+  async function setTags(content: Artifact | null) {
+    tags = (content == null) ? {} :
+      await (new TagFormatter()).toHumanFormat(content.tags);
   }
 
   function updateUploading(uplods: UploadPromise[] | null) {
@@ -133,7 +140,7 @@
   submitLabel="Upload"
   submitIcon="upload"
   {title} {open}
-  bind:tags={tags}
+  bind:tags
   on:submit={({ detail }) => detail(confirmUpload)}
   on:close={closeHandler}
   let:working={working}

@@ -54,7 +54,7 @@
   <CircularProgress indeterminate />
   <p>Loading schema...</p>
 {:then schema}
-  <SchemaForm {schema} {uischema} bind:data={data} bind:this={schemaForm} on:error={handleSchemaFormError} />
+  <SchemaForm {schema} {uischema} bind:data bind:this={schemaForm} on:error={handleSchemaFormError} />
 {:catch error}
   <div class="error">ERROR: {error.message}</div>
 {/await}
