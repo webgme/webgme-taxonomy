@@ -153,4 +153,8 @@
     align-items: center;
     justify-content: space-between;
   }
+
+  :global(.tags-step .smui-accordion__header__title--with-description) {
+    max-width: unset !important;
+  }
 </style>
