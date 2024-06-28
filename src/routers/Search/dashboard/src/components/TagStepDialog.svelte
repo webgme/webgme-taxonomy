@@ -65,6 +65,7 @@
 </script>
   
 <Dialog
+  fullscreen
   bind:open
   scrimClickAction={working ? "" : null}
   escapeKeyAction={working ? "" : null}
@@ -131,7 +132,11 @@
 </Dialog>
 
 <style lang="scss">
-  :global(.tag-step-dialog-actions) {
+  :global(.tag-step-dialog.mdc-dialog--fullscreen .mdc-dialog__title) {
+    padding: 0 24px;
+  }
+
+  :global(.tag-step-dialog-actions.mdc-dialog__actions) {
     justify-content: space-between;
   }
 
