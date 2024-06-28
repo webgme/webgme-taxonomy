@@ -9,6 +9,8 @@
 
   import Dialog, { Content, Title, Actions } from "@smui/dialog";
   import Button, { Label, Icon } from "@smui/button";
+  import IconButton from "@smui/icon-button";
+  import Tooltip, { Wrapper } from "@smui/tooltip"
   import Paper, { Subtitle, Content as PContent } from "@smui/paper";
   import FileButton from "./FileButton.svelte";
   import SchemaForm from "./SchemaForm.svelte";
@@ -57,6 +59,10 @@
     }
   }
 
+  function clearTags() {
+    tags = {};
+  }
+
   function closeHandler(event: CustomEvent<{ action: string }>) {
     tagging ||= true;
     working &&= false;
@@ -89,6 +95,16 @@
               disabled={working}
               bind:files={tagsFiles}
             />
+            <Wrapper>
+              <IconButton
+                class="material-icons"
+                on:click={clearTags}
+                disabled={working}
+                type="button"
+                tabindex="-1"
+              >backspace</IconButton>
+              <Tooltip yPos="above">Clear all tags</Tooltip>
+            </Wrapper>
           </Subtitle>
           <Content>
             <SchemaForm bind:data={tags} />
@@ -117,12 +133,12 @@
         <Label>Cancel</Label>
       </Button>
       {#if tagging}
-        <Button default disabled={working} action={null} on:click={(e) => { tagging = false }}>
+        <Button autofocus disabled={working} action={null} on:click={(e) => { tagging = false }}>
           <Label>Next</Label>
           <Icon class="material-icons">arrow_forward</Icon>
         </Button>
       {:else}
-        <Button default disabled={working} action={null} on:click={submit}>
+        <Button autofocus disabled={working} action={null} on:click={submit}>
           <Label>{ submitLabel }</Label>
           <Icon class="material-icons">{ submitIcon }</Icon>
         </Button>
@@ -157,6 +173,10 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+
+    > span {
+      flex: 1;
+    }
   }
 
   :global(.tags-step .smui-accordion__header__title--with-description) {
