@@ -42,9 +42,11 @@
 </script>
 
 <Dialog
+  fullscreen
   bind:open
   aria-labelledby="title"
   aria-describedby="content"
+  id="display-tags-dialog"
 >
   <Title id="display-tags-title">Metadata for {displayName}</Title>
   <Content id="display-tags-content">
@@ -61,6 +63,14 @@
 </Dialog>
 
 <style>
+  :global(#display-tags-dialog.mdc-dialog--fullscreen .mdc-dialog__title) {
+    padding: 0 24px;
+  }
+
+  :global(#display-tags-dialog .jsonschema-form .smui-accordion__header__title--with-description) {
+    max-width: unset !important;
+  }
+
   :global(#display-tags-actions) {
     display: flex;
     justify-content: flex-end;
