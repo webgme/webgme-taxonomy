@@ -49,15 +49,9 @@
       {metadata && metadata.tags ? getTagDisplayName(metadata.tags) : ""}
     </p>
 
-    {#if disabled}
-      <Dropzone disabled accept=".json">
-        <p>Select tags file for the {displayTypeName}.</p>
-      </Dropzone>
-    {:else}
-      <Dropzone on:drop={onTagsFileDrop} accept=".json">
-        <p>Select tags file for the {displayTypeName}.</p>
-      </Dropzone>
-    {/if}
+    <Dropzone {disabled} on:drop={onTagsFileDrop} accept=".json">
+      <p>Select tags file for the {displayTypeName}.</p>
+    </Dropzone>
 
     <a
       target="_blank"

@@ -141,5 +141,6 @@ src/routers/Search/dashboard/src/Bearer.ts
 CreateProcesses.jsonl
 notes.md
 package-docker.json
+.nvmrc
 
 types/target
