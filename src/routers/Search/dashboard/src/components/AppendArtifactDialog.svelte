@@ -41,22 +41,23 @@
   $: updateUploading(uploads);
   $: setOpen(repo != null);
   $: setNameAndTitle(repo, content);
-  $: setTags(content);
+  $: setTags(repo, content);
   $: updateIsReference(tags);
 
   function setOpen(value: boolean) {
     if (value !== open) open = value;
   }
 
-  function setNameAndTitle(repo: PopulatedRepo, content: Artifact | null) {
+  function setNameAndTitle(repo: PopulatedRepo | null, content: Artifact | null) {
     const repoName = repo?.displayName ?? "";
     displayName = content?.displayName ?? repoName;
     title = (content != null) ? `Update ${content.displayName}`: `Append data to ${repoName}`;
   }
 
-  async function setTags(content: Artifact | null) {
-    tags = (content == null) ? {} :
-      await (new TagFormatter()).toHumanFormat(content.tags);
+  async function setTags(repo: PopulatedRepo | null, content: Artifact | null) {
+    const inhumanTags = content?.tags ?? repo?.tags;
+    tags = (inhumanTags == null) ? {} :
+      await (new TagFormatter()).toHumanFormat(inhumanTags);
   }
 
   function updateUploading(uplods: UploadPromise[] | null) {
