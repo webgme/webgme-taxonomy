@@ -173,7 +173,8 @@ export function isString(possibleStr: any): possibleStr is string {
 }
 
 export function isObject(possibleObj: any): possibleObj is Object {
-  return possibleObj && (typeof possibleObj === "object") && (possibleObj.constructor === Object);
+  return possibleObj && (typeof possibleObj === "object") &&
+    (possibleObj.constructor === Object);
 }
 
 export function assert(cond: boolean, msg: string | Error) {
