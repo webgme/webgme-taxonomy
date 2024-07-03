@@ -15,6 +15,8 @@
   import FileButton from "./FileButton.svelte";
   import SchemaForm from "./SchemaForm.svelte";
 
+  const IconButtonExt: (typeof IconButton) &  (typeof Button) = <any>IconButton;
+
   export let open = false;
   export let title = "";
   export let tags: any;
@@ -96,13 +98,13 @@
               bind:files={tagsFiles}
             />
             <Wrapper>
-              <IconButton
+              <IconButtonExt
                 class="material-icons"
                 on:click={clearTags}
                 disabled={working}
                 type="button"
-                tabindex="-1"
-              >backspace</IconButton>
+                tabindex={-1}
+              >backspace</IconButtonExt>
               <Tooltip yPos="above">Clear all tags</Tooltip>
             </Wrapper>
           </Subtitle>
