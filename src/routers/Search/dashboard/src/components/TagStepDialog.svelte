@@ -104,6 +104,7 @@
                 disabled={working}
                 type="button"
                 tabindex={-1}
+                aria-label="Clear all tags"
               >backspace</IconButtonExt>
               <Tooltip yPos="above">Clear all tags</Tooltip>
             </Wrapper>
@@ -124,7 +125,7 @@
     <div class="actions-group">
       {#if !tagging}
         <Button disabled={working} action={null} on:click={(e) => { tagging = true }}>
-          <Icon class="material-icons">arrow_back</Icon>
+          <Icon class="material-icons" aria-hidden="true">arrow_back</Icon>
           <Label>Back</Label>
         </Button>
       {/if}
@@ -135,14 +136,14 @@
         <Label>Cancel</Label>
       </Button>
       {#if tagging}
-        <Button autofocus disabled={working} action={null} on:click={(e) => { tagging = false }}>
-          <Label>Next</Label>
-          <Icon class="material-icons">arrow_forward</Icon>
+        <Button autofocus disabled={working} action={null} on:click={(e) => { tagging = false }} aria-labelledby={`${id}-next`}>
+          <Label id={`${id}-next`}>Next</Label>
+          <Icon class="material-icons" aria-hidden="true">arrow_forward</Icon>
         </Button>
       {:else}
         <Button autofocus disabled={working} action={null} on:click={submit}>
           <Label>{ submitLabel }</Label>
-          <Icon class="material-icons">{ submitIcon }</Icon>
+          <Icon class="material-icons" aria-hidden="true">{ submitIcon }</Icon>
         </Button>
       {/if}
     </div>

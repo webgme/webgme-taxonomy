@@ -15,8 +15,8 @@
 
 <Wrapper>
   <label class="file-button" class:disabled={disabled}>
-    <IconButton tag="div" class="material-icons"><slot>upload_file</slot></IconButton>
-    <input type="file" {accept} {multiple} {disabled} bind:files />
+    <IconButton tag="div" class="material-icons" aria-hidden="true"><slot>upload_file</slot></IconButton>
+    <input type="file" {accept} {multiple} {disabled} bind:files aria-label={tooltip || "Upload file"}/>
   </label>
   {#if tooltip != null}
     <Tooltip yPos="above">{tooltip}</Tooltip>
