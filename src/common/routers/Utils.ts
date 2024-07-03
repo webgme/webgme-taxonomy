@@ -15,10 +15,10 @@ import type {
   MiddlewareOptions,
   PackageJSON,
   ProjectContext,
-  UserProject,
   VerifiedProjectContext,
   WebgmeHandler,
 } from "../types";
+import type { UserProject } from "webgme";
 import type { NextFunction, Request, Response, Router } from "express";
 import TagFormatter from "../TagFormatter";
 import { TaxNodeNotFoundError } from "../../routers/Search/adapters/common/ModelError";
@@ -144,7 +144,6 @@ export default {
       }
       throw err;
     }
-    project.setUser(userId);
 
     const core = makeCore(project, middlewareOpts);
 
@@ -325,10 +324,11 @@ export default {
           if (tag === "latest") {
             const { safeStorage } = middlewareOpts;
             const userId = projectId.split("+").shift() as string;
-            const tagDict = await safeStorage.getTags({
-              projectId,
+            const project = await safeStorage.openProject({
               username: userId,
+              projectId,
             });
+            const tagDict = await project.getTags();
             const tags = filterMap(Object.keys(tagDict), (tagName) => {
               try {
                 const version = SemanticVersion.parse(tagName);
