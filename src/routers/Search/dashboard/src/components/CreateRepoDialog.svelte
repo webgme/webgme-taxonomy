@@ -4,48 +4,36 @@
 -->
 <script lang="ts">
   import { createEventDispatcher, getContext } from "svelte";
-  import Dialog, { Content, Title, Actions } from "@smui/dialog";
-  import Button, { Label } from "@smui/button";
-  import TagSelector from "./TagSelector.svelte";
+  import TagStepDialog from "./TagStepDialog.svelte";
+  import Paper, { Content } from "@smui/paper";
   import Textfield from "@smui/textfield";
-  import type { default as ContentType } from "../ContentType";
+
+  export let open = false;
+
   const storage: Storage = getContext("storage");
   const dispatch = createEventDispatcher();
-
-  export let open;
-  export let contentType: ContentType;
   let displayName = '';
-  let metadata = {
-    tags: {},
-  };
+  let tags: any = {};
 
-  async function onCreateRepo() {
-    metadata.displayName = displayName;
+  async function submit() {
+    const metadata = { displayName, tags };
     const status = await storage.createRepo(metadata);
     dispatch('create', {status});
   }
-
 </script>
 
-<Dialog
+<div></div>
+<TagStepDialog
+  title="Create new repository"
+  submitLabel="Create"
   bind:open={open}
-  aria-labelledby="title"
-  aria-describedby="content"
+  bind:tags={tags}
+  on:submit={({ detail }) => detail(submit) }
+  let:working={working}
 >
-  <Title id="title">Create new repository</Title>
-  <Content id="content">
-    <Textfield label="Name" bind:value={displayName} />
-    <TagSelector 
-      bind:metadata={metadata}
-      bind:contentType
-    />
-  </Content>
-  <Actions>
-    <Button>
-      <Label>Cancel</Label>
-    </Button>
-    <Button on:click={() => onCreateRepo()}>
-      <Label>Submit</Label>
-    </Button>
-  </Actions>
-</Dialog>
+  <Paper variant="unelevated">
+    <Content>
+      <Textfield label="Name" bind:value={displayName} disabled={working} />
+    </Content>
+  </Paper>  
+</TagStepDialog>

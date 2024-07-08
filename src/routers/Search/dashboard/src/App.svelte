@@ -48,6 +48,7 @@
   const mainDashboardUrl =  window.location.pathname.replace(/Search/, 'Dashboard').split('/').slice(0, -3).join('/');
 
   setContext("dashboard-api", new DashboardAPI(mainDashboardUrl));
+  setContext("toast", toast);
   const storage = setContext("storage", new Storage());
 
   let allRepos: PopulatedRepo[] = [];
@@ -390,7 +391,6 @@
 <!-- Repo creation dialog -->
 <CreateRepoDialog
   bind:open={creatingRepo}
-  bind:contentType
   on:create={onTryCreateRepo}
 />
 

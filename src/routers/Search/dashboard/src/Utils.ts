@@ -1,4 +1,6 @@
 import type { ContentTypeConfiguration } from "../../../../common/SearchFilterDataExporter";
+export { deepMerge } from "../../Utils";
+
 /**
  * A Result is the result from a request. Errors can be mapped (like
  * combinators). Unwrapping the result will either throw an error (if an error
@@ -153,17 +155,6 @@ export function getNestedValue(
   } else {
     return undefined;
   }
-}
-
-export function downloadJSON(name: string, object: any) {
-  const dataStr = "data:text/json;charset=utf-8," +
-    encodeURIComponent(JSON.stringify(object));
-  const element = document.createElement("a");
-  element.setAttribute("href", dataStr);
-  element.setAttribute("download", name + ".json");
-  document.body.appendChild(element);
-  element.click();
-  element.remove();
 }
 
 // TODO: combine logic with the other utils in the server code

@@ -127,8 +127,8 @@ export function zip<A, B>(l1: A[], l2: B[]): [A, B][] {
 // to be merged with another eg, {vocab: {term2: {value2: "example"}}}
 // to get an object with all the values
 type StrObj = { [k: string]: any };
-export function deepMerge(...pathObjs: object[]): object {
-  const initValue: { [k: string]: any } = {};
+export function deepMerge<T extends {} = object>(...pathObjs: Partial<T>[]): T {
+  const initValue: { [k: string]: any } = {} as T;
   return pathObjs.reduce((obj: StrObj, keyObj) => {
     const entries = Object.entries(keyObj);
     const mergedEntries: [string, any][] = entries.map(
@@ -145,7 +145,7 @@ export function deepMerge(...pathObjs: object[]): object {
     mergedEntries.forEach(([k, v]: [string, any]) => obj[k] = v);
 
     return obj;
-  }, initValue);
+  }, initValue) as T;
 }
 
 export function partition<T>(list: T[], fn: (i: T) => boolean): [T[], T[]] {
@@ -168,12 +168,13 @@ export function omit(dict: object, ...keys: string[]): object {
   return Object.fromEntries(entries);
 }
 
-export function isString<T>(possibleStr: T): possibleStr is Extract<T, string> {
+export function isString(possibleStr: any): possibleStr is string {
   return typeof possibleStr === "string";
 }
 
-export function isObject<T>(possibleObj: T): possibleObj is Extract<T, object> {
-  return typeof possibleObj === "object";
+export function isObject(possibleObj: any): possibleObj is Object {
+  return possibleObj && (typeof possibleObj === "object") &&
+    (possibleObj.constructor === Object);
 }
 
 export function assert(cond: boolean, msg: string | Error) {

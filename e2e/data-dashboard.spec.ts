@@ -28,6 +28,11 @@ test.describe(`Data dashboard`, function () {
   test("can create repo", async () => {
     // Create a new repo
     await page.getByLabel(/Upload dataset/).click();
+
+    const createRepoDialog = page.getByLabel("Create new repository");
+    await createRepoDialog.isVisible();
+    await createRepoDialog.getByRole("button", { name: "Next" }).click();
+
     const textBoxLocator = page.getByRole("textbox", { name: "Name" });
     const textBoxLocatorIsVisible = await poll(
       () => textBoxLocator.isVisible(),
@@ -44,7 +49,7 @@ test.describe(`Data dashboard`, function () {
 
     await textBoxLocator.fill(repoName);
 
-    await page.getByRole("button", { name: "Submit" }).click();
+    await page.getByRole("button", { name: "Create" }).click();
 
     // check that the new repository is there
     // FIXME: there has to be a better way to do this...
@@ -74,6 +79,7 @@ test.describe(`Data dashboard`, function () {
   test("can upload data to repo", async () => {
     await page.getByText(repoName, { exact: true }).click();
     await page.getByRole("button", { name: "Upload", exact: true }).click();
+    await page.getByRole("button", { name: "Next" }).click();
 
     const nameInput = page.getByRole("textbox", { name: "Name" });
     nameInput.fill(contentName);
