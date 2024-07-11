@@ -67,4 +67,13 @@ export default class DashboardAPI {
 
     return this.handleResponse<{ url: string; host: string }>(response);
   }
+
+  async populateGraphDb() {
+    const postUrl = this.apiBaseUrl + "/graphdb";
+    const response = await fetch(postUrl, {
+      method: "POST",
+    });
+
+    return this.handleResponse<any[]>(response);
+  };
 }
