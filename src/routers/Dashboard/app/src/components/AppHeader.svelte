@@ -1,16 +1,25 @@
 <script lang="ts">
+  import { getContext } from "svelte";
   import TopAppBar, { Row, Section, Title } from "@smui/top-app-bar";
   import IconButton from "@smui/icon-button";
   import SearchDialog from "./SearchDialog.svelte";
+  import type DashboardAPI from '../DashboardAPI';
 
   export let title: string | null = null;
   export let taxonomyInfo: string | null = null;
 
+  const api: DashboardAPI = getContext("dashboard-api");
+
+  let showSearchDialog = false;
   function openSearchDialog() {
     showSearchDialog = true;
   }
 
-  let showSearchDialog = false;
+  async function graphDbClicked() {
+    const data = await api.populateGraphDb();
+
+    console.log(data);
+  }
 </script>
 
 <SearchDialog
@@ -34,6 +43,13 @@
         title="Search .."
         ripple={false}
         on:click={() => {openSearchDialog()}}>search
+      </IconButton>
+      <IconButton
+        class="material-icons"
+        aria-label="GraphDB"
+        title="Populate GraphDB"
+        ripple={false}
+        on:click={graphDbClicked}>file_upload
       </IconButton>
     </Section>
   </Row>

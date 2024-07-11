@@ -35,7 +35,7 @@ import { Taxonomy } from "../../../common/exchange/Taxonomy";
 
 export class StorageWithGraphSearch<
   C extends Adapter,
-  M extends MetadataAdapter,
+  M extends MetadataAdapter | null,
 > implements Adapter {
   private contentStore: C;
   private metadataStore: M;
@@ -51,7 +51,7 @@ export class StorageWithGraphSearch<
     res: RepoReservation,
     metadata: ArtifactMetadata,
   ): Promise<string> {
-    if (this.config.enable) {
+    if (this.metadataStore) {
       await this.metadataStore.create(new ContentReference(res.repoId), metadata);
     }
 
@@ -63,7 +63,7 @@ export class StorageWithGraphSearch<
     metadata: ArtifactMetadata,
     filenames: string[],
   ): Promise<AppendResult> {
-    if (this.config.enable) {
+    if (this.metadataStore) {
       await this.metadataStore.create(
         new ChildContentReference(res.repoId, res.contentId),
         metadata,
@@ -83,7 +83,7 @@ export class StorageWithGraphSearch<
     filenames: string[],
   ): Promise<UpdateResult> {
     // FIXME: for now, we can only update content but we should be able to update repos, too...
-    if (this.config.enable) {
+    if (this.metadataStore) {
       await this.metadataStore.create(
         new UpdatedChildContentReference(
           res.repoId,
@@ -101,7 +101,7 @@ export class StorageWithGraphSearch<
     repoId: string,
     contentId: string,
   ): Promise<DisableResult> {
-    if (this.config.enable) {
+    if (this.metadataStore) {
       await this.metadataStore.delete(new ChildContentReference(repoId, contentId));
     }
 
@@ -244,7 +244,7 @@ interface NodeInContext {
   apply(g: GraphTraversal, nodeAlias: string): GraphTraversal;
 }
 
-class ContentReference implements NodeInContext {
+export class ContentReference implements NodeInContext {
   id: string;
 
   constructor(id: string) {
@@ -264,7 +264,7 @@ class ContentReference implements NodeInContext {
 }
 
 // TODO: it would be nice to have more composable versions of these...
-class ChildContentReference implements NodeInContext {
+export class ChildContentReference implements NodeInContext {
   id: string;
   private parentId: string;
 
@@ -314,7 +314,6 @@ class UpdatedChildContentReference extends ChildContentReference
 
   apply(g: GraphTraversal, nodeAlias: string): GraphTraversal {
     const addChildEdge = super.apply(g, nodeAlias);
-
     // Add the version edge
     const addPrevAlias = addChildEdge.V()
       .has(ContentLabel, Prop.ContentId, this.prevId)
@@ -393,6 +392,14 @@ export class GremlinAdapter implements MetadataAdapter {
 
     console.log("deleted metadata", context);
     // TODO: Should we capture the user ID who disabled it and the timestamp?
+  }
+
+  async dropAll() {
+    const g = traversal().withRemote(
+      new DriverRemoteConnection(this.config.gremlinEndpoint),
+    );
+
+    await g.V().drop();
   }
 
   async runGremlin(query: string): Promise<any> {

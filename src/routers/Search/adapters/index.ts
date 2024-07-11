@@ -38,7 +38,7 @@ export default class Adapters {
     req: Request,
     storageNode: Core.Node,
     config: any,
-  ): Promise<StorageWithGraphSearch<Adapter, GremlinAdapter>> {
+  ): Promise<StorageWithGraphSearch<Adapter, GremlinAdapter | null>> {
     const { core } = gmeContext;
     const adapterType = core.getAttribute(
       core.getMetaType(storageNode),
@@ -82,11 +82,15 @@ export default class Adapters {
       req,
       config,
     );
-    // TODO: consider caching these
-    const taxNode = await getTaxonomyNode(gmeContext);
-    const exchange = await exportTaxonomy(gmeContext.core, taxNode);
     const msConfig = config.rest.components.Search.options.metadataStorageConfig as MetadataStorageConfig;
-    const metadata = new GremlinAdapter(msConfig, exchange); // FIXME: how to configure this?
+    // TODO: consider caching these
+    let metadata: GremlinAdapter | null = null;
+    if (msConfig.enable) {
+      const taxNode = await getTaxonomyNode(gmeContext);
+      const taxonomy = await exportTaxonomy(gmeContext.core, taxNode);
+      metadata = new GremlinAdapter(msConfig, taxonomy); // FIXME: how to configure this?
+    }
+
     // TODO: can we get a reference to the exchange format?
     return new StorageWithGraphSearch(msConfig, content, metadata);
   }

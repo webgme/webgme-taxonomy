@@ -12,13 +12,22 @@
 
 import * as express from "express";
 import * as path from "path";
-import type { MiddlewareOptions } from "../../common/types";
+import assert from "assert";
+import type { MiddlewareOptions, GmeCore, GmeLogger } from "../../common/types";
 import RouterUtils, {
   getContentContext,
   handleUserErrors,
+  getFormatter,
 } from "../../common/routers/Utils";
+import { uniqWithKey } from "../Search/Utils";
+import { Repository } from "../Search/adapters/common/types";
+import { filterMap, getTaxonomyNode } from "../../common/Utils";
+import { MetaNodeNotFoundError } from "../Search/adapters/common/ModelError";
 import ContextFacade from "./ContextFacade";
 import StorageAdapter from "../Search/adapters";
+import { ChildContentReference, GremlinAdapter } from "../Search/adapters/metadata";
+import exportTaxonomy from "../../common/TaxonomyExporter";
+import { MetadataStorageConfig } from "../Search/adapters/common/types";
 
 export const router = express.Router();
 const staticPath = path.join(__dirname, "app", "dist");
@@ -33,7 +42,8 @@ const staticPath = path.join(__dirname, "app", "dist");
 export function initialize(middlewareOpts: MiddlewareOptions) {
   const { ensureAuthenticated } = middlewareOpts;
   middlewareOpts.getUserId;
-  const logger = middlewareOpts.logger.fork("Dashboard");
+  const logger = middlewareOpts.logger.fork("Dashboard") as GmeLogger;
+  const msConfig = middlewareOpts.gmeConfig.rest.components.Search.options.metadataStorageConfig as MetadataStorageConfig;
 
   logger.debug("initializing ...");
 
@@ -109,12 +119,10 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
             // original: /routers/Dashboard/guest%2BmongoPipeline/branch/master/resolve-url
             // url: /routers/Search/guest%2BmongoPipeline/branch/master/%2FA/static/index.html?repoId=6617fab6596a7edfc2fb9cff&contentId=1_1
             url =
-              `${
-                req.originalUrl.split("?")[0].replace(/Dashboard/, "Search")
-                  .split("/").slice(0, -1).join("/")
+              `${req.originalUrl.split("?")[0].replace(/Dashboard/, "Search")
+                .split("/").slice(0, -1).join("/")
               }` +
-              `/${
-                encodeURIComponent(path)
+              `/${encodeURIComponent(path)
               }/static/index.html?repoId=${repoId}&contentId=${contentId}`;
             break;
           }
@@ -123,6 +131,117 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
 
       // TODO: Check that this works behind secure proxy..
       res.json({ host: `${req.protocol}://${req.get("host")}`, url });
+    },
+    { method: "post" },
+  );
+
+
+  function getNormalStorageNode(core: GmeCore, node: Core.Node) {
+    const attrEntries = core.getAttributeNames(node)
+      .sort()
+      .map((name) => [name, core.getAttribute(node, name)]);
+    const typeName = core.getAttribute(core.getMetaType(node), "name");
+    return JSON.stringify({ typeName, attrEntries });
+  }
+
+  RouterUtils.addProjectRoute(
+    middlewareOpts,
+    router,
+    "graphdb/",
+    async function dumpContentMetadata(gmeContext, req, res) {
+      const { core, root } = gmeContext;
+      if (!msConfig.enable) {
+        logger.error('Client trying to access disabled metadata')
+        res.sendStatus(418);
+        return;
+      }
+
+
+      // Get all the storage adapters for each (unique) storage node in the project
+      const storageType = Object.values(core.getAllMetaNodes(root))
+        .find((node) => core.getAttribute(node, "name") === "Storage");
+
+      assert(storageType, new MetaNodeNotFoundError(gmeContext, "Storage"));
+
+      const allStorageNodes: Core.Node[] = (await core.loadSubTree(root))
+        .filter((node: Core.Node) =>
+          core.isTypeOf(node, storageType) && !core.isMetaNode(node)
+        );
+      const storageNodes = uniqWithKey(
+        allStorageNodes,
+        (node) => getNormalStorageNode(core, node),
+      );
+
+      // Fetch all the contents
+      const storageAdapters = await Promise.all(
+        storageNodes.map((node) =>
+          StorageAdapter.fromStorageNode(
+            gmeContext,
+            req,
+            node,
+            middlewareOpts.gmeConfig,
+          )
+        ),
+      );
+
+      const taxNode = await getTaxonomyNode(gmeContext);
+      const taxonomy = await exportTaxonomy(gmeContext.core, taxNode);
+      const gremlinAdapter = new GremlinAdapter(msConfig, taxonomy);
+
+      const stats = {
+        time_sec: {
+          total: Date.now(),
+        },
+        storages: {
+          successes: 0,
+          errors: 0,
+        },
+        repositories: {
+          successes: 0,
+          errors: 0,
+        },
+        artifacts: {
+          successes: 0,
+          errors: 0,
+        },
+      };
+
+      for (const adapter of storageAdapters) {
+        try {
+          const repos = await adapter.listRepos();
+          for (const repo of repos) {
+            try {
+              const contents = await adapter.listArtifacts(repo.id);
+              for (const content of contents) {
+                try {
+                  const { parentId, id } = content;
+                  if (!parentId || !id) {
+                    throw new Error('content missing id or parentId ' + JSON.stringify({ parentId, id }));
+                  }
+                  await gremlinAdapter.create(new ChildContentReference(parentId, id), content);
+                  stats.artifacts.successes += 1;
+                } catch (e) {
+                  logger.error(e);
+                  stats.artifacts.errors += 1;
+                }
+              }
+              stats.repositories.successes += 1;
+            } catch (e) {
+              logger.error(e);
+              stats.repositories.errors += 1;
+            }
+          }
+
+          stats.storages.successes += 1;
+        } catch (e) {
+          logger.error(e);
+          stats.storages.errors += 1;
+        }
+      }
+
+      stats.time_sec.total = (Date.now() - stats.time_sec.total) / 1000;
+
+      res.json(stats);
     },
     { method: "post" },
   );
