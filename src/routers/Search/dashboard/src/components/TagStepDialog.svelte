@@ -18,6 +18,7 @@
   const IconButtonExt: (typeof IconButton) &  (typeof Button) = <any>IconButton;
 
   export let open = false;
+  export let nodePath: string | undefined = undefined;
   export let title = "";
   export let tags: any;
   export let submitLabel = "Submit";
@@ -110,7 +111,7 @@
             </Wrapper>
           </Subtitle>
           <Content>
-            <SchemaForm bind:data={tags} />
+            <SchemaForm bind:data={tags} {nodePath} />
           </Content>
         </Paper>
 

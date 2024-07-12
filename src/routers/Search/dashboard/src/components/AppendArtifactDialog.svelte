@@ -141,6 +141,7 @@
   submitLabel="Upload"
   submitIcon="upload"
   {title} {open}
+  nodePath={contentType.nodePath}
   bind:tags
   on:submit={({ detail }) => detail(confirmUpload)}
   on:close={closeHandler}
