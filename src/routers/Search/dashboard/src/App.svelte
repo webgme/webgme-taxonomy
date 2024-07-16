@@ -391,6 +391,7 @@
 <!-- Repo creation dialog -->
 <CreateRepoDialog
   bind:open={creatingRepo}
+  nodePath={contentType.content?.nodePath}
   on:create={onTryCreateRepo}
 />
 

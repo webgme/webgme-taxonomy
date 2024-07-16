@@ -9,6 +9,7 @@
   import Textfield from "@smui/textfield";
 
   export let open = false;
+  export let nodePath: string | undefined = undefined;
 
   const storage: Storage = getContext("storage");
   const dispatch = createEventDispatcher();
@@ -26,6 +27,7 @@
 <TagStepDialog
   title="Create new repository"
   submitLabel="Create"
+  {nodePath}
   bind:open={open}
   bind:tags={tags}
   on:submit={({ detail }) => detail(submit) }

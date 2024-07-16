@@ -188,7 +188,9 @@
   <DisplayTagsDialog
     bind:open={displayTags}
     displayName={displayedName}
-    bind:taxonomyTags={displayedTags}/>
+    bind:taxonomyTags={displayedTags}
+    nodePath={contentType.content.nodePath}
+  />
 {/if}
 <div class="card-container">
   <!-- TODO: add a header for the observation -->

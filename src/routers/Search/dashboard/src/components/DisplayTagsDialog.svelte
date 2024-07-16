@@ -11,6 +11,7 @@
 
   export let displayName: string = '';
   export let taxonomyTags = {};
+  export let nodePath: string | undefined = undefined;
   export let open = true;
 
   const dispatch = createEventDispatcher();
@@ -50,7 +51,7 @@
 >
   <Title id="display-tags-title">Metadata for {displayName}</Title>
   <Content id="display-tags-content">
-    <SchemaForm bind:data={taxonomyTags} readonly bind:this={schemaForm} />
+    <SchemaForm bind:data={taxonomyTags} readonly bind:this={schemaForm} {nodePath} />
   </Content>
   <Actions id="display-tags-actions">
     <Button on:click={close}>

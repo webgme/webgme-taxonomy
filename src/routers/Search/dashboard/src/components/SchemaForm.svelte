@@ -9,18 +9,20 @@
   import { deepMerge } from "../Utils";
 
   export let data: any;
+  export let nodePath: string | undefined = undefined;
   export let readonly = false;
 
   const dispatch = createEventDispatcher();
-  const schema = fetchSchema();
+  let schema: Promise<JSONSchema7>;
   let uischema = { ":ui:": { "collapse": "unrequired" }} as UISchema;
   let schemaForm: SchemaForm;
   let schemaError: string | Error | ValidationError | null = null;
 
+  $: schema = fetchSchema(nodePath)
   $: updateUischema(readonly);
 
-  async function fetchSchema(): Promise<JSONSchema7> {
-    const url = "../schema.json";    
+  async function fetchSchema(nodePath?: string): Promise<JSONSchema7> {
+    const url = (nodePath == null) ? "../schema.json" : `../../${encodeURIComponent(nodePath)}/schema.json`;
     const response = await fetch(url);
     if (response.ok) {
       return response.json();
