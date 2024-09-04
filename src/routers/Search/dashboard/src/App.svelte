@@ -391,6 +391,7 @@
   font-size: 24px;
   text-align: center;
 ">
+  <!-- Temporary fix for #191 -->
   Loading...
 </div>
 
