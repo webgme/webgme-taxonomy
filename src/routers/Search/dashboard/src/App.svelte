@@ -269,6 +269,7 @@
 
   async function fetchAllRepositories() {
     isLoading = true;
+    document.getElementById('init-load-cover').style.display = 'none'; // Hide cover element..
     try {
       allRepos = (await storage.listRepos(currentTaxonomy))
         .map(repo => ({
@@ -374,6 +375,25 @@
 <svelte:head>
   <title>{title}</title>
 </svelte:head>
+
+<div id="init-load-cover" style="
+  position: fixed;
+  height: 100%;
+  width: 100%;
+  top: 0;
+  left: 0;
+  background: #ffffff;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: darkgrey;
+  font-size: 24px;
+  text-align: center;
+">
+  <!-- Temporary fix for #191 -->
+  Loading...
+</div>
 
 {#if configuration && configuration.content.content}
   <AppendArtifactDialog
