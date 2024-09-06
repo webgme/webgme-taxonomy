@@ -84,7 +84,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
     const flexReq = req as { [key: string]: any };
     const userId = flexReq.userData?.userId as string;
 
-    return userId && userId.toLowerCase().endsWith('at_vanderbilt_p_edu');
+    return userId && userId.toLowerCase().endsWith("at_vanderbilt_p_edu");
   }
 
   // Ensure authenticated can be used only after this rule.
@@ -202,7 +202,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
       const userId = middlewareOpts.getUserId(req);
       let metadata: ArtifactMetadatav2 = getArtifactMetadata(
         gmeContext,
-        <ArtifactMetadata>req.body.metadata,
+        <ArtifactMetadata> req.body.metadata,
       );
 
       // Upload to the storage backend
@@ -241,7 +241,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
       const userId = middlewareOpts.getUserId(req);
       let metadata: ArtifactMetadatav2 = getArtifactMetadata(
         gmeContext,
-        <ArtifactMetadata>req.body.metadata,
+        <ArtifactMetadata> req.body.metadata,
       );
 
       const { repoId } = req.params;
@@ -377,7 +377,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
 
       // FIXME: Temporary fix to allow deletion to be disabled..
       if (canUserDelete(req)) {
-        logger.error('Deletion only valid for vandy');
+        logger.error("Deletion only valid for vandy");
         res.sendStatus(403);
         return;
       }
@@ -560,7 +560,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
       );
       let metadata: ArtifactMetadatav2 = getArtifactMetadata(
         gmeContext,
-        <ArtifactMetadata>req.body.metadata,
+        <ArtifactMetadata> req.body.metadata,
       );
 
       // update the content
