@@ -10,6 +10,7 @@ config.plugin.allowServerExecution = true;
 
 config.requirejsPaths["webgme-taxonomy/lib"] = "./lib";
 config.requirejsPaths.react = "./lib/react.production.min";
+config.client.onlyVandyDelete = true;
 
 validateConfig(config);
 module.exports = config;

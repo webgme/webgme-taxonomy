@@ -24,6 +24,7 @@
   let numArtifacts = 10;
   let shownArtifacts = [];
   let selected = [];
+  let deletionEnabled = false;
 
   let menu: Menu;
   const formatter = new TagFormatter();
@@ -35,6 +36,27 @@
       artifactIds: [...selected],
     });
   }
+
+  async function fetchDeploymentConfiguration() {
+    const chunks = window.location.href.split("/");
+    chunks.pop();
+    chunks.pop();
+    const url = chunks.join("/") + "/deployment-config.json";
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      console.error(
+        `${response.status} - ${response.statusText}`,
+        response.status,
+      );
+
+    }
+
+    const config = await response.json() as { deletionEnabled: boolean; };
+    deletionEnabled = config.deletionEnabled;
+  }
+
+  fetchDeploymentConfiguration();
 
   let displayedTags = null;
   let displayedName = null;
@@ -281,9 +303,11 @@
       <Button on:click={onDownloadClicked} disabled={selected.length === 0}>
         <Label>Download</Label>
       </Button>
+      {#if deletionEnabled }
       <Button on:click={() => onDeleteArtifact()} disabled={selected.length === 0}>
         <Label>Delete</Label>
       </Button>
+      {/if}
       {#if window.self !== window.top }
       <Button on:click={() => onSelectContent()} disabled={selected.length !== 1}>
         <Label>Select</Label>

@@ -74,6 +74,19 @@ function initialize(middlewareOpts: MiddlewareOptions) {
 
   const mainConfig = middlewareOpts.gmeConfig;
 
+  function canUserDelete(req: any) {
+    const flexClientConfig = mainConfig.client as { [key: string]: any };
+
+    if (!flexClientConfig.onlyVandyDelete) {
+      return true;
+    }
+
+    const flexReq = req as { [key: string]: any };
+    const userId = flexReq.userData?.userId as string;
+
+    return userId && userId.toLowerCase().endsWith("at_vanderbilt_p_edu");
+  }
+
   // Ensure authenticated can be used only after this rule.
   // router.use("*", function (req, res, next) {
   // TODO: set all headers, check rate limit, etc.
@@ -111,6 +124,20 @@ function initialize(middlewareOpts: MiddlewareOptions) {
       configuration.project = webgmeContext.projectVersion;
       configuration.contentTypePath = core.getPath(contentType);
       res.json(configuration);
+    },
+  );
+
+  RouterUtils.addContentTypeRoute(
+    middlewareOpts,
+    router,
+    "deployment-config.json",
+    async function getConfiguration(
+      _,
+      req: Request,
+      res: Response,
+    ) {
+      const deletionEnabled = canUserDelete(req);
+      res.json({ deletionEnabled });
     },
   );
 
@@ -162,7 +189,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
       // TODO: add support for repos that just reference another repo
       const artifacts = await storage.listArtifacts(repoId);
       // Print the tags... Are they the correct type?
-      console.log(artifacts[0]);
+      // console.log(artifacts[0]);
       res.status(200).json(artifacts).end();
     },
   );
@@ -347,12 +374,19 @@ function initialize(middlewareOpts: MiddlewareOptions) {
     "artifacts/:parentId/:id",
     async function disableContent(webgmeContext, req, res) {
       const { parentId, id } = req.params;
+
+      // FIXME: Temporary fix to allow deletion to be disabled..
+      if (canUserDelete(req)) {
+        logger.error("Deletion only valid for vandy");
+        res.sendStatus(403);
+        return;
+      }
+
       const storage = await StorageAdapter.from(
         webgmeContext,
         req,
         mainConfig,
       );
-
       await storage.disableArtifact(parentId, id);
       res.sendStatus(200);
     },
@@ -551,7 +585,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
             userId,
             usedFileNames,
           );
-          console.log({ metadata, filenames });
+
           await toGuidFormat(
             gmeContext,
             metadata,
