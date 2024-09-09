@@ -24,7 +24,7 @@
     "prepare-docker": "node scripts/prepare-docker.js",
     "prepare": "cd src/routers/Dashboard/app && npm install && cd ../../Search/dashboard && npm install && cd ../../TagCreator/form && npm install && cd ../../Insights/dashboard && npm install && cd ../.. && npm run build"
   },
-  "version": "1.7.10-beta1",
+  "version": "1.7.10",
   "devDependencies": {
     "@playwright/test": "^1.36.0",
     "@rollup/plugin-commonjs": "^25.0.7",
