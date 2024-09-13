@@ -60,6 +60,7 @@ export class ContentTypeConfiguration {
   nodePath: string;
   name: string;
   namePlural: string;
+  documentation: string;
   vocabularies: VocabularyConfig[];
   content?: ContentTypeConfiguration;
 
@@ -67,12 +68,14 @@ export class ContentTypeConfiguration {
     nodePath: string,
     name: string,
     namePlural: string,
+    documentation: string,
     vocabularies: VocabularyConfig[],
     childContent: ContentTypeConfiguration | undefined,
   ) {
     this.nodePath = nodePath;
     this.name = name;
     this.namePlural = namePlural;
+    this.documentation = documentation;
     this.vocabularies = vocabularies;
     this.content = childContent;
   }
@@ -82,6 +85,7 @@ export class ContentTypeConfiguration {
     contentTypeNode: Core.Node,
   ): Promise<ContentTypeConfiguration> {
     const name = toString(core.getAttribute(contentTypeNode, "name"));
+    const documentation = toString(core.getAttribute(contentTypeNode, "documentation"));
     const namePlural = core.getAttribute(contentTypeNode, "namePlural")
       ? toString(core.getAttribute(contentTypeNode, "namePlural"))
       : name + "s";
@@ -107,6 +111,7 @@ export class ContentTypeConfiguration {
       nodePath,
       name,
       namePlural,
+      documentation,
       vocabularies,
       childType,
     );
@@ -115,6 +120,7 @@ export class ContentTypeConfiguration {
 
 export interface DashboardConfig {
   name: string;
+  documentation?: string;
   content: ContentTypeConfiguration;
   project?: VerifiedProjectContext;
   contentTypePath?: string; // FIXME: is this needed?
@@ -137,6 +143,7 @@ export default class DashboardConfiguration {
     return {
       name: content.name, // TODO: allow other names?
       content: content,
+      documentation: content.documentation,
     };
   }
 }

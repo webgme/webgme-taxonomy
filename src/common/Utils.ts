@@ -5,7 +5,7 @@ import { None, Option, Some } from "oxide.ts";
 import { isTypeNamed } from "./GmeHelpers";
 import type { GmeContext, GmeCore } from "./types";
 import { TaxNodeNotFoundError } from "../routers/Search/adapters/common/ModelError";
-import { MiddlewareOptions } from "webgme";
+import type { MiddlewareOptions } from "webgme";
 
 export function toString(attr: OutAttr): string {
   if (attr) {
