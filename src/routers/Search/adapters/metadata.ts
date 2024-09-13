@@ -24,11 +24,11 @@ import type {
   DisableResult,
   DownloadInfo,
   FileStreamDict,
+  MetadataStorageConfig,
   RepoReservation,
   Repository,
   UpdateReservation,
   UpdateResult,
-  MetadataStorageConfig,
 } from "./common/types";
 import { toArtifactMetadatav2 } from "../Utils";
 import { Taxonomy } from "../../../common/exchange/Taxonomy";
@@ -52,7 +52,10 @@ export class StorageWithGraphSearch<
     metadata: ArtifactMetadata,
   ): Promise<string> {
     if (this.metadataStore) {
-      await this.metadataStore.create(new ContentReference(res.repoId), metadata);
+      await this.metadataStore.create(
+        new ContentReference(res.repoId),
+        metadata,
+      );
     }
 
     return await this.contentStore.createArtifact(res, metadata);
@@ -102,7 +105,9 @@ export class StorageWithGraphSearch<
     contentId: string,
   ): Promise<DisableResult> {
     if (this.metadataStore) {
-      await this.metadataStore.delete(new ChildContentReference(repoId, contentId));
+      await this.metadataStore.delete(
+        new ChildContentReference(repoId, contentId),
+      );
     }
 
     return this.contentStore.disableArtifact(repoId, contentId);

@@ -7,7 +7,11 @@ import type {
 } from "../../../common/types";
 import type { Request } from "express";
 import { InvalidStorageError, StorageNotFoundError } from "./common/ModelError";
-import type { Adapter, AdapterStatic, MetadataStorageConfig } from "./common/types";
+import type {
+  Adapter,
+  AdapterStatic,
+  MetadataStorageConfig,
+} from "./common/types";
 import { UnsupportedUriFormat } from "./common/StorageError";
 import { UserError } from "../../../common/UserError";
 import { getTaxonomyNode } from "../../../common/Utils";
@@ -31,7 +35,13 @@ export default class Adapters {
     if (!storageNode) {
       throw new StorageNotFoundError(gmeContext, contentType);
     }
-    return Adapters.fromStorageNode(gmeContext, req, storageNode, config, includeMetadataStorage);
+    return Adapters.fromStorageNode(
+      gmeContext,
+      req,
+      storageNode,
+      config,
+      includeMetadataStorage,
+    );
   }
 
   static async fromStorageNode(
@@ -84,7 +94,8 @@ export default class Adapters {
       req,
       config,
     );
-    const msConfig = config.rest.components.Search.options.metadataStorageConfig as MetadataStorageConfig;
+    const msConfig = config.rest.components.Search.options
+      .metadataStorageConfig as MetadataStorageConfig;
     // TODO: consider caching these
     let metadata: GremlinAdapter | null = null;
     if (includeMetadataStorage) {

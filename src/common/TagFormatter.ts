@@ -114,7 +114,7 @@ export interface TaxonomyJson {
   children: TaxonomyJson[];
 }
 
-export class FormatError extends Error { }
+export class FormatError extends Error {}
 class TagNotFoundError extends FormatError {
   constructor(tagName: string) {
     super(`Tag not found: ${tagName}`);

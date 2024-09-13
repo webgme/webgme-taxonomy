@@ -17,12 +17,14 @@ docker run --name webgme-mongo -d -p 27017:27017 mongo:5
 ```
 
 Thirdly, start the janus graph:
+
 ```
 docker run --name janusgraph -p 8182:8182 -d janusgraph/janusgraph:latest
 ```
 
-Optionally if you want to be able to visualize the graph-db data at http://localhost:3000 (psst `g.V()` returns
-all vertices and their edges).
+Optionally if you want to be able to visualize the graph-db data at
+http://localhost:3000 (psst `g.V()` returns all vertices and their edges).
+
 ```
 docker run -d --name=gremlin-visualizer --network=host prabushitha/gremlin-visualizer:latest
 ```

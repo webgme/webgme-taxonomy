@@ -16,8 +16,8 @@ config.rest.components["Search"].options = {
   metadataStorageConfig: {
     enable: true,
     useAsMainMetadataStorage: false,
-    gremlinEndpoint: "ws://localhost:8182/gremlin"
-  }
+    gremlinEndpoint: "ws://localhost:8182/gremlin",
+  },
 };
 
 validateConfig(config);

@@ -85,7 +85,9 @@ export class ContentTypeConfiguration {
     contentTypeNode: Core.Node,
   ): Promise<ContentTypeConfiguration> {
     const name = toString(core.getAttribute(contentTypeNode, "name"));
-    const documentation = toString(core.getAttribute(contentTypeNode, "documentation"));
+    const documentation = toString(
+      core.getAttribute(contentTypeNode, "documentation"),
+    );
     const namePlural = core.getAttribute(contentTypeNode, "namePlural")
       ? toString(core.getAttribute(contentTypeNode, "namePlural"))
       : name + "s";

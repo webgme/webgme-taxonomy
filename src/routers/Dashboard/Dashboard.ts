@@ -13,19 +13,27 @@
 import * as express from "express";
 import * as path from "path";
 import assert from "assert";
-import type { MiddlewareOptions, GmeCore, GmeLogger } from "../../common/types";
+import type { GmeCore, GmeLogger, MiddlewareOptions } from "../../common/types";
 import RouterUtils, {
   getContentContext,
-  handleUserErrors,
   getFormatter,
+  handleUserErrors,
 } from "../../common/routers/Utils";
 import { uniqWithKey } from "../Search/Utils";
 import { Repository } from "../Search/adapters/common/types";
-import { canUserDelete, filterMap, getTaxonomyNode, isUserAdmin } from "../../common/Utils";
+import {
+  canUserDelete,
+  filterMap,
+  getTaxonomyNode,
+  isUserAdmin,
+} from "../../common/Utils";
 import { MetaNodeNotFoundError } from "../Search/adapters/common/ModelError";
 import ContextFacade from "./ContextFacade";
 import StorageAdapter from "../Search/adapters";
-import { ChildContentReference, GremlinAdapter } from "../Search/adapters/metadata";
+import {
+  ChildContentReference,
+  GremlinAdapter,
+} from "../Search/adapters/metadata";
 import exportTaxonomy from "../../common/TaxonomyExporter";
 import { MetadataStorageConfig } from "../Search/adapters/common/types";
 
@@ -44,7 +52,8 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
   middlewareOpts.getUserId;
   const logger = middlewareOpts.logger.fork("Dashboard") as GmeLogger;
   const mainConfig = middlewareOpts.gmeConfig;
-  const msConfig = middlewareOpts.gmeConfig.rest.components.Search.options.metadataStorageConfig as MetadataStorageConfig;
+  const msConfig = middlewareOpts.gmeConfig.rest.components.Search.options
+    .metadataStorageConfig as MetadataStorageConfig;
 
   logger.debug("initializing ...");
 
@@ -120,10 +129,12 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
             // original: /routers/Dashboard/guest%2BmongoPipeline/branch/master/resolve-url
             // url: /routers/Search/guest%2BmongoPipeline/branch/master/%2FA/static/index.html?repoId=6617fab6596a7edfc2fb9cff&contentId=1_1
             url =
-              `${req.originalUrl.split("?")[0].replace(/Dashboard/, "Search")
-                .split("/").slice(0, -1).join("/")
+              `${
+                req.originalUrl.split("?")[0].replace(/Dashboard/, "Search")
+                  .split("/").slice(0, -1).join("/")
               }` +
-              `/${encodeURIComponent(path)
+              `/${
+                encodeURIComponent(path)
               }/static/index.html?repoId=${repoId}&contentId=${contentId}`;
             break;
           }
@@ -135,7 +146,6 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
     },
     { method: "post" },
   );
-
 
   function getNormalStorageNode(core: GmeCore, node: Core.Node) {
     const attrEntries = core.getAttributeNames(node)
@@ -152,7 +162,7 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
     async function dumpContentMetadata(gmeContext, req, res) {
       const { core, root } = gmeContext;
       if (!msConfig.enable) {
-        logger.error('Client trying to access disabled metadata')
+        logger.error("Client trying to access disabled metadata");
         res.sendStatus(418);
         return;
       }
@@ -186,7 +196,7 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
             req,
             node,
             middlewareOpts.gmeConfig,
-            true
+            true,
           )
         ),
       );
@@ -223,9 +233,15 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
                 try {
                   const { parentId, id } = content;
                   if (!parentId || !id) {
-                    throw new Error('content missing id or parentId ' + JSON.stringify({ parentId, id }));
+                    throw new Error(
+                      "content missing id or parentId " +
+                        JSON.stringify({ parentId, id }),
+                    );
                   }
-                  await gremlinAdapter.create(new ChildContentReference(parentId, id), content);
+                  await gremlinAdapter.create(
+                    new ChildContentReference(parentId, id),
+                    content,
+                  );
                   stats.artifacts.successes += 1;
                 } catch (e) {
                   logger.error(e);
@@ -261,7 +277,7 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
       res.json({
         deletionEnabled: await canUserDelete(req, middlewareOpts),
         isAdmin: await isUserAdmin(req, middlewareOpts),
-        graphDbEnabled: msConfig.enable
+        graphDbEnabled: msConfig.enable,
       });
     },
   );

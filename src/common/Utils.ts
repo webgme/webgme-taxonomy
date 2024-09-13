@@ -26,7 +26,7 @@ export function filterMapOpt<I, O>(list: I[], fn: (x: I) => Option<O>): O[] {
       items.push(opt.unwrap());
     }
     return items;
-  }, <Array<O>>[]);
+  }, <Array<O>> []);
 }
 
 export function findIndex<I>(list: I[], fn: (x: I) => boolean): Option<number> {
@@ -161,8 +161,9 @@ function getMetaNode(
 
 export class InvalidVariantError<T> extends Error {
   constructor(value: unknown, variants: T[]) {
-    const msg = `Invalid value "${value}". Expected one of ${variants.join(",")
-      }`;
+    const msg = `Invalid value "${value}". Expected one of ${
+      variants.join(",")
+    }`;
     super(msg);
   }
 }
@@ -183,8 +184,13 @@ export async function isUserAdmin(req: any, middlewareOpts: MiddlewareOptions) {
   return !!userData?.siteAdmin;
 }
 
-export async function canUserDelete(req: any, middlewareOpts: MiddlewareOptions) {
-  const flexClientConfig = middlewareOpts.gmeConfig.client as { [key: string]: any };
+export async function canUserDelete(
+  req: any,
+  middlewareOpts: MiddlewareOptions,
+) {
+  const flexClientConfig = middlewareOpts.gmeConfig.client as {
+    [key: string]: any;
+  };
 
   if (!flexClientConfig.onlyAdminDelete) {
     return true;

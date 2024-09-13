@@ -75,7 +75,8 @@ function initialize(middlewareOpts: MiddlewareOptions) {
   logger.debug("initializing ...");
 
   const mainConfig = middlewareOpts.gmeConfig;
-  const msConfig = mainConfig.rest.components.Search.options.metadataStorageConfig as MetadataStorageConfig;
+  const msConfig = mainConfig.rest.components.Search.options
+    .metadataStorageConfig as MetadataStorageConfig;
 
   // Ensure authenticated can be used only after this rule.
   // router.use("*", function (req, res, next) {
@@ -129,7 +130,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
       res.json({
         deletionEnabled: await canUserDelete(req, middlewareOpts),
         isAdmin: await isUserAdmin(req, middlewareOpts),
-        graphDbEnabled: msConfig.enable
+        graphDbEnabled: msConfig.enable,
       });
     },
   );
@@ -162,7 +163,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
         webgmeContext,
         req,
         mainConfig,
-        msConfig.useAsMainMetadataStorage
+        msConfig.useAsMainMetadataStorage,
       );
       const artifacts = await storage.listRepos();
       res.status(200).json(artifacts).end();
@@ -179,7 +180,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
         webgmeContext,
         req,
         mainConfig,
-        msConfig.useAsMainMetadataStorage
+        msConfig.useAsMainMetadataStorage,
       );
       // TODO: add support for repos that just reference another repo
       const artifacts = await storage.listArtifacts(repoId);
@@ -197,7 +198,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
       const userId = middlewareOpts.getUserId(req);
       let metadata: ArtifactMetadatav2 = getArtifactMetadata(
         gmeContext,
-        <ArtifactMetadata>req.body.metadata,
+        <ArtifactMetadata> req.body.metadata,
       );
 
       // Upload to the storage backend
@@ -205,7 +206,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
         gmeContext,
         req,
         mainConfig,
-        msConfig.useAsMainMetadataStorage
+        msConfig.useAsMainMetadataStorage,
       );
       const status = await storage.withRepoReservation(
         async (reservation) => {
@@ -238,7 +239,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
       const userId = middlewareOpts.getUserId(req);
       let metadata: ArtifactMetadatav2 = getArtifactMetadata(
         gmeContext,
-        <ArtifactMetadata>req.body.metadata,
+        <ArtifactMetadata> req.body.metadata,
       );
 
       const { repoId } = req.params;
@@ -246,7 +247,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
         gmeContext,
         req,
         mainConfig,
-        msConfig.useAsMainMetadataStorage
+        msConfig.useAsMainMetadataStorage,
       );
 
       const appendResult = await storage.withContentReservation(
@@ -298,7 +299,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
         webgmeContext,
         req,
         mainConfig,
-        msConfig.useAsMainMetadataStorage
+        msConfig.useAsMainMetadataStorage,
       );
       if (storage.uploadFile) {
         const status = await storage.uploadFile(repoId, id, fileId, req);
@@ -330,7 +331,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
         webgmeContext,
         req,
         mainConfig,
-        msConfig.useAsMainMetadataStorage
+        msConfig.useAsMainMetadataStorage,
       );
 
       // need to download the urls of the associated observations ids
@@ -349,7 +350,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
         webgmeContext,
         req,
         mainConfig,
-        msConfig.useAsMainMetadataStorage
+        msConfig.useAsMainMetadataStorage,
       );
       const metadataOpt = await storage.getMetadata(
         parentId,
@@ -387,7 +388,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
         webgmeContext,
         req,
         mainConfig,
-        msConfig.useAsMainMetadataStorage
+        msConfig.useAsMainMetadataStorage,
       );
       await storage.disableArtifact(parentId, id);
       res.sendStatus(200);
@@ -419,7 +420,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
         webgmeContext,
         req,
         mainConfig,
-        msConfig.useAsMainMetadataStorage
+        msConfig.useAsMainMetadataStorage,
       );
       const metadata = await storage.getBulkMetadata(
         parentId,
@@ -456,7 +457,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
         webgmeContext,
         req,
         mainConfig,
-        msConfig.useAsMainMetadataStorage
+        msConfig.useAsMainMetadataStorage,
       );
       // Fetch all the metadata
       const contentIds = ids.sort((id1, id2) => +id1 < +id2 ? -1 : 1);
@@ -561,11 +562,11 @@ function initialize(middlewareOpts: MiddlewareOptions) {
         gmeContext,
         req,
         mainConfig,
-        msConfig.useAsMainMetadataStorage
+        msConfig.useAsMainMetadataStorage,
       );
       let metadata: ArtifactMetadatav2 = getArtifactMetadata(
         gmeContext,
-        <ArtifactMetadata>req.body.metadata,
+        <ArtifactMetadata> req.body.metadata,
       );
 
       // update the content

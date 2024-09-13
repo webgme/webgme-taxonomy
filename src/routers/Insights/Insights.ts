@@ -15,8 +15,7 @@ import express from "express";
 import { Request, Response } from "express";
 import { GmeContext, GmeCore, MiddlewareOptions } from "../../common/types";
 
-
-const nop = () => { };
+const nop = () => {};
 const staticPath = path.join(__dirname, "dashboard", "public");
 const router = express.Router();
 
@@ -38,7 +37,6 @@ function initialize(middlewareOpts: MiddlewareOptions) {
   var logger = middlewareOpts.logger.fork("Insights"),
     ensureAuthenticated = middlewareOpts.ensureAuthenticated;
   const mainConfig = middlewareOpts.gmeConfig;
-
 
   logger.debug("initializing ...");
 
@@ -72,7 +70,6 @@ function initialize(middlewareOpts: MiddlewareOptions) {
       req: Request,
       res: Response,
     ) {
-
       const { core, root } = gmeContext;
       // Get all the storage adapters for each (unique) storage node in the project
       const storageType = Object.values(core.getAllMetaNodes(root))

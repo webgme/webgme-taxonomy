@@ -136,7 +136,7 @@ export function filterMap<I, O>(list: I[], fn: (x: I) => O | undefined): O[] {
       items.push(mapped);
     }
     return items;
-  }, <Array<O>>[]);
+  }, <Array<O>> []);
 }
 
 export function getNestedValue(

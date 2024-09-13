@@ -86,7 +86,5 @@ export default class DashboardAPI {
     });
 
     return this.handleResponse<any[]>(response);
-  };
-
-
+  }
 }
