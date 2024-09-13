@@ -10,11 +10,12 @@ config.plugin.allowServerExecution = true;
 
 config.requirejsPaths["webgme-taxonomy/lib"] = "./lib";
 config.requirejsPaths.react = "./lib/react.production.min";
-config.client.onlyVandyDelete = true;
+config.client.onlyAdminDelete = true;
 
 config.rest.components["Search"].options = {
   metadataStorageConfig: {
     enable: true,
+    useAsMainMetadataStorage: false,
     gremlinEndpoint: "ws://localhost:8182/gremlin"
   }
 };

@@ -32,7 +32,7 @@ import type {
   MiddlewareOptions,
 } from "../../common/types";
 import { toArtifactMetadatav2 } from "./adapters/common/Helpers";
-import Utils from "../../common/Utils";
+import Utils, { canUserDelete, isUserAdmin } from "../../common/Utils";
 import { deepMerge, fromResult, isString } from "./Utils";
 import DashboardConfiguration from "../../common/SearchFilterDataExporter";
 import TagFormatter, { FormatError } from "../../common/TagFormatter";
@@ -52,10 +52,10 @@ import {
   ArtifactMetadata,
   ArtifactMetadatav2,
   ContentReservation,
+  MetadataStorageConfig,
   RepoReservation,
 } from "./adapters/common/types";
 import { UserError } from "../../common/UserError";
-import { GremlinAdapter } from "./adapters/metadata";
 
 /* N.B. gmeAuth, safeStorage and workerManager are not ready to use until the start function is called.
  * (However inside an incoming request they are all ensured to have been initialized.)
@@ -75,19 +75,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
   logger.debug("initializing ...");
 
   const mainConfig = middlewareOpts.gmeConfig;
-
-  function canUserDelete(req: any) {
-    const flexClientConfig = mainConfig.client as { [key: string]: any };
-
-    if (!flexClientConfig.onlyVandyDelete) {
-      return true;
-    }
-
-    const flexReq = req as { [key: string]: any };
-    const userId = flexReq.userData?.userId as string;
-
-    return userId && userId.toLowerCase().endsWith("at_vanderbilt_p_edu");
-  }
+  const msConfig = mainConfig.rest.components.Search.options.metadataStorageConfig as MetadataStorageConfig;
 
   // Ensure authenticated can be used only after this rule.
   // router.use("*", function (req, res, next) {
@@ -138,8 +126,11 @@ function initialize(middlewareOpts: MiddlewareOptions) {
       req: Request,
       res: Response,
     ) {
-      const deletionEnabled = canUserDelete(req);
-      res.json({ deletionEnabled });
+      res.json({
+        deletionEnabled: await canUserDelete(req, middlewareOpts),
+        isAdmin: await isUserAdmin(req, middlewareOpts),
+        graphDbEnabled: msConfig.enable
+      });
     },
   );
 
@@ -171,6 +162,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
         webgmeContext,
         req,
         mainConfig,
+        msConfig.useAsMainMetadataStorage
       );
       const artifacts = await storage.listRepos();
       res.status(200).json(artifacts).end();
@@ -187,6 +179,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
         webgmeContext,
         req,
         mainConfig,
+        msConfig.useAsMainMetadataStorage
       );
       // TODO: add support for repos that just reference another repo
       const artifacts = await storage.listArtifacts(repoId);
@@ -212,6 +205,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
         gmeContext,
         req,
         mainConfig,
+        msConfig.useAsMainMetadataStorage
       );
       const status = await storage.withRepoReservation(
         async (reservation) => {
@@ -252,6 +246,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
         gmeContext,
         req,
         mainConfig,
+        msConfig.useAsMainMetadataStorage
       );
 
       const appendResult = await storage.withContentReservation(
@@ -303,6 +298,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
         webgmeContext,
         req,
         mainConfig,
+        msConfig.useAsMainMetadataStorage
       );
       if (storage.uploadFile) {
         const status = await storage.uploadFile(repoId, id, fileId, req);
@@ -334,6 +330,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
         webgmeContext,
         req,
         mainConfig,
+        msConfig.useAsMainMetadataStorage
       );
 
       // need to download the urls of the associated observations ids
@@ -352,6 +349,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
         webgmeContext,
         req,
         mainConfig,
+        msConfig.useAsMainMetadataStorage
       );
       const metadataOpt = await storage.getMetadata(
         parentId,
@@ -379,8 +377,8 @@ function initialize(middlewareOpts: MiddlewareOptions) {
       const { parentId, id } = req.params;
 
       // FIXME: Temporary fix to allow deletion to be disabled..
-      if (canUserDelete(req)) {
-        logger.error("Deletion only valid for vandy");
+      if (await canUserDelete(req, middlewareOpts)) {
+        logger.error("Deletion only valid for admins");
         res.sendStatus(403);
         return;
       }
@@ -389,6 +387,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
         webgmeContext,
         req,
         mainConfig,
+        msConfig.useAsMainMetadataStorage
       );
       await storage.disableArtifact(parentId, id);
       res.sendStatus(200);
@@ -420,6 +419,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
         webgmeContext,
         req,
         mainConfig,
+        msConfig.useAsMainMetadataStorage
       );
       const metadata = await storage.getBulkMetadata(
         parentId,
@@ -456,6 +456,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
         webgmeContext,
         req,
         mainConfig,
+        msConfig.useAsMainMetadataStorage
       );
       // Fetch all the metadata
       const contentIds = ids.sort((id1, id2) => +id1 < +id2 ? -1 : 1);
@@ -560,6 +561,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
         gmeContext,
         req,
         mainConfig,
+        msConfig.useAsMainMetadataStorage
       );
       let metadata: ArtifactMetadatav2 = getArtifactMetadata(
         gmeContext,

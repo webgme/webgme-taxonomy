@@ -21,6 +21,7 @@ export default class Adapters {
     gmeContext: GmeContentContext,
     req: Request,
     config: any,
+    includeMetadataStorage?: boolean,
   ): Promise<Adapter> {
     const { core, contentType } = gmeContext;
     const storageNode = (await core.loadChildren(contentType)).find((child) =>
@@ -30,7 +31,7 @@ export default class Adapters {
     if (!storageNode) {
       throw new StorageNotFoundError(gmeContext, contentType);
     }
-    return Adapters.fromStorageNode(gmeContext, req, storageNode, config);
+    return Adapters.fromStorageNode(gmeContext, req, storageNode, config, includeMetadataStorage);
   }
 
   static async fromStorageNode(
@@ -38,6 +39,7 @@ export default class Adapters {
     req: Request,
     storageNode: Core.Node,
     config: any,
+    includeMetadataStorage?: boolean,
   ): Promise<StorageWithGraphSearch<Adapter, GremlinAdapter | null>> {
     const { core } = gmeContext;
     const adapterType = core.getAttribute(
@@ -85,7 +87,7 @@ export default class Adapters {
     const msConfig = config.rest.components.Search.options.metadataStorageConfig as MetadataStorageConfig;
     // TODO: consider caching these
     let metadata: GremlinAdapter | null = null;
-    if (msConfig.enable) {
+    if (includeMetadataStorage) {
       const taxNode = await getTaxonomyNode(gmeContext);
       const taxonomy = await exportTaxonomy(gmeContext.core, taxNode);
       metadata = new GremlinAdapter(msConfig, taxonomy); // FIXME: how to configure this?

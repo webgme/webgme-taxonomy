@@ -21,7 +21,7 @@ import RouterUtils, {
 } from "../../common/routers/Utils";
 import { uniqWithKey } from "../Search/Utils";
 import { Repository } from "../Search/adapters/common/types";
-import { filterMap, getTaxonomyNode } from "../../common/Utils";
+import { canUserDelete, filterMap, getTaxonomyNode, isUserAdmin } from "../../common/Utils";
 import { MetaNodeNotFoundError } from "../Search/adapters/common/ModelError";
 import ContextFacade from "./ContextFacade";
 import StorageAdapter from "../Search/adapters";
@@ -43,6 +43,7 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
   const { ensureAuthenticated } = middlewareOpts;
   middlewareOpts.getUserId;
   const logger = middlewareOpts.logger.fork("Dashboard") as GmeLogger;
+  const mainConfig = middlewareOpts.gmeConfig;
   const msConfig = middlewareOpts.gmeConfig.rest.components.Search.options.metadataStorageConfig as MetadataStorageConfig;
 
   logger.debug("initializing ...");
@@ -156,6 +157,11 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
         return;
       }
 
+      if (!await isUserAdmin(req, middlewareOpts)) {
+        logger.error('Non admin trying to access "graphdb" end-point..');
+        res.sendStatus(403);
+        return;
+      }
 
       // Get all the storage adapters for each (unique) storage node in the project
       const storageType = Object.values(core.getAllMetaNodes(root))
@@ -180,6 +186,7 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
             req,
             node,
             middlewareOpts.gmeConfig,
+            true
           )
         ),
       );
@@ -244,6 +251,19 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
       res.json(stats);
     },
     { method: "post" },
+  );
+
+  RouterUtils.addProjectRoute(
+    middlewareOpts,
+    router,
+    "deployment-config.json",
+    async function dumpContentMetadata(_, req, res) {
+      res.json({
+        deletionEnabled: await canUserDelete(req, middlewareOpts),
+        isAdmin: await isUserAdmin(req, middlewareOpts),
+        graphDbEnabled: msConfig.enable
+      });
+    },
   );
 
   logger.debug("ready");

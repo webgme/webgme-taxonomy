@@ -33,7 +33,6 @@
   import TaxonomyData from "./TaxonomyData";
   import TaxonomyReference from "../../../../common/TaxonomyReference";
   import Storage, { LoadState, ModelError, RequestError, ModelContext } from "./Storage";
-  import generateGremlinQuery from './generateGremlinQuery';
   import type { Artifact, PopulatedRepo } from "./Storage";
   import DashboardAPI from "./DashboardAPI";
   import type {ContentTypeConfiguration}  from "../../../../common/SearchFilterDataExporter";
@@ -443,22 +442,6 @@
       <Content>
         <Textfield label="Search..." bind:value={searchQuery} />
         <span class="filter-header">Advanced Filters</span>
-        <IconButton
-          on:click$stopPropagation={() => {
-            const query = generateGremlinQuery(filterTags);
-            console.log({filterTags, query});
-            if (!query) {
-              displayError('No query generated');
-              return;
-            }
-
-            navigator.clipboard.writeText(query);
-            displayMessage(`Gremlin query ${query} copied to clipboard`);
-          }}
-          class="material-icons"
-          size="mini"
-          title="Copy Gremlin query to Clipboard"
-        >content_copy</IconButton>
         <TaxonomyFilter
           trees={vocabularies}
           tags={itemTags}

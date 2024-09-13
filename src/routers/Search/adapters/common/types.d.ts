@@ -226,5 +226,6 @@ export type FileStreamDict = { [filename: string]: NodeJS.ReadableStream };
 
 export interface MetadataStorageConfig {
   enable: boolean;
+  useAsMainMetadataStorage: boolean;
   gremlinEndpoint: string;
 }

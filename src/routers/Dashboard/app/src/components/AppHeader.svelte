@@ -10,6 +10,14 @@
 
   const api: DashboardAPI = getContext("dashboard-api");
 
+  let canPopulateGraph = false;
+
+  api.getDeploymentConfig()
+    .then((config) => {
+      canPopulateGraph = config.graphDbEnabled && config.isAdmin;
+    })
+    .catch(console.error);
+
   let showSearchDialog = false;
   function openSearchDialog() {
     showSearchDialog = true;
@@ -44,13 +52,15 @@
         ripple={false}
         on:click={() => {openSearchDialog()}}>search
       </IconButton>
+      {#if canPopulateGraph}
       <IconButton
         class="material-icons"
         aria-label="GraphDB"
         title="Populate GraphDB"
         ripple={false}
-        on:click={graphDbClicked}>file_upload
+        on:click={graphDbClicked}>archive
       </IconButton>
+      {/if}
     </Section>
   </Row>
 </TopAppBar>
