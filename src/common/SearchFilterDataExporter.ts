@@ -145,7 +145,7 @@ export default class DashboardConfiguration {
     return {
       name: content.name, // TODO: allow other names?
       content: content,
-      documentation: content.documentation,
+      documentation: content.documentation, // This is Markdown text explaining the content-type
     };
   }
 }

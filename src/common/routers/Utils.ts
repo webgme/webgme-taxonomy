@@ -462,3 +462,14 @@ export async function getPackageJSON(): Promise<PackageJSON> {
 
   return _packageJSon;
 }
+
+/**
+ * Generate a normalized string representation of the given storage node
+ */
+export function getNormalStorageNode(core: GmeCore, node: Core.Node) {
+  const attrEntries = core.getAttributeNames(node)
+    .sort()
+    .map((name) => [name, core.getAttribute(node, name)]);
+  const typeName = core.getAttribute(core.getMetaType(node), "name");
+  return JSON.stringify({ typeName, attrEntries });
+}
