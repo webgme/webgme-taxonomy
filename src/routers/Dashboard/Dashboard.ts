@@ -129,10 +129,12 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
             // original: /routers/Dashboard/guest%2BmongoPipeline/branch/master/resolve-url
             // url: /routers/Search/guest%2BmongoPipeline/branch/master/%2FA/static/index.html?repoId=6617fab6596a7edfc2fb9cff&contentId=1_1
             url =
-              `${req.originalUrl.split("?")[0].replace(/Dashboard/, "Search")
-                .split("/").slice(0, -1).join("/")
+              `${
+                req.originalUrl.split("?")[0].replace(/Dashboard/, "Search")
+                  .split("/").slice(0, -1).join("/")
               }` +
-              `/${encodeURIComponent(path)
+              `/${
+                encodeURIComponent(path)
               }/static/index.html?repoId=${repoId}&contentId=${contentId}`;
             break;
           }
@@ -225,7 +227,7 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
                   if (!parentId || !id) {
                     throw new Error(
                       "content missing id or parentId " +
-                      JSON.stringify({ parentId, id }),
+                        JSON.stringify({ parentId, id }),
                     );
                   }
                   await gremlinAdapter.create(

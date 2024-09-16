@@ -9,7 +9,10 @@ import StorageAdapter from "../Search/adapters";
 
 import { uniqWithKey } from "../Search/Utils";
 import { filterMap, getTaxonomyNode } from "../../common/Utils";
-import RouterUtils, { getFormatter, getNormalStorageNode } from "../../common/routers/Utils";
+import RouterUtils, {
+  getFormatter,
+  getNormalStorageNode,
+} from "../../common/routers/Utils";
 import { MetaNodeNotFoundError } from "../Search/adapters/common/ModelError";
 import express from "express";
 import { Request, Response } from "express";
