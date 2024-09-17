@@ -12,13 +12,30 @@
 
 import * as express from "express";
 import * as path from "path";
-import type { MiddlewareOptions } from "../../common/types";
+import assert from "assert";
+import type { GmeCore, GmeLogger, MiddlewareOptions } from "../../common/types";
 import RouterUtils, {
   getContentContext,
+  getNormalStorageNode,
   handleUserErrors,
 } from "../../common/routers/Utils";
+import { uniqWithKey } from "../Search/Utils";
+import { Repository } from "../Search/adapters/common/types";
+import {
+  canUserDelete,
+  filterMap,
+  getTaxonomyNode,
+  isUserAdmin,
+} from "../../common/Utils";
+import { MetaNodeNotFoundError } from "../Search/adapters/common/ModelError";
 import ContextFacade from "./ContextFacade";
 import StorageAdapter from "../Search/adapters";
+import {
+  ChildContentReference,
+  GremlinAdapter,
+} from "../Search/adapters/metadata";
+import exportTaxonomy from "../../common/TaxonomyExporter";
+import { MetadataStorageConfig } from "../Search/adapters/common/types";
 
 export const router = express.Router();
 const staticPath = path.join(__dirname, "app", "dist");
@@ -33,7 +50,10 @@ const staticPath = path.join(__dirname, "app", "dist");
 export function initialize(middlewareOpts: MiddlewareOptions) {
   const { ensureAuthenticated } = middlewareOpts;
   middlewareOpts.getUserId;
-  const logger = middlewareOpts.logger.fork("Dashboard");
+  const logger = middlewareOpts.logger.fork("Dashboard") as GmeLogger;
+  const mainConfig = middlewareOpts.gmeConfig;
+  const msConfig = middlewareOpts.gmeConfig.rest.components.Search.options
+    .metadataStorageConfig as MetadataStorageConfig;
 
   logger.debug("initializing ...");
 
@@ -125,6 +145,133 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
       res.json({ host: `${req.protocol}://${req.get("host")}`, url });
     },
     { method: "post" },
+  );
+
+  RouterUtils.addProjectRoute(
+    middlewareOpts,
+    router,
+    "graphdb/",
+    async function dumpContentMetadata(gmeContext, req, res) {
+      const { core, root } = gmeContext;
+      if (!msConfig.enable) {
+        logger.error("Client trying to access disabled metadata");
+        res.sendStatus(418);
+        return;
+      }
+
+      if (!await isUserAdmin(req, middlewareOpts)) {
+        logger.error('Non admin trying to access "graphdb" end-point..');
+        res.sendStatus(403);
+        return;
+      }
+
+      // Get all the storage adapters for each (unique) storage node in the project
+      const storageType = Object.values(core.getAllMetaNodes(root))
+        .find((node) => core.getAttribute(node, "name") === "Storage");
+
+      assert(storageType, new MetaNodeNotFoundError(gmeContext, "Storage"));
+
+      const allStorageNodes: Core.Node[] = (await core.loadSubTree(root))
+        .filter((node: Core.Node) =>
+          core.isTypeOf(node, storageType) && !core.isMetaNode(node)
+        );
+      const storageNodes = uniqWithKey(
+        allStorageNodes,
+        (node) => getNormalStorageNode(core, node),
+      );
+
+      // Fetch all the contents
+      const storageAdapters = await Promise.all(
+        storageNodes.map((node) =>
+          StorageAdapter.fromStorageNode(
+            gmeContext,
+            req,
+            node,
+            middlewareOpts.gmeConfig,
+            true,
+          )
+        ),
+      );
+
+      const taxNode = await getTaxonomyNode(gmeContext);
+      const taxonomy = await exportTaxonomy(gmeContext.core, taxNode);
+      const gremlinAdapter = new GremlinAdapter(msConfig, taxonomy);
+
+      const stats = {
+        time_sec: {
+          total: Date.now(),
+        },
+        storages: {
+          successes: 0,
+          errors: 0,
+        },
+        repositories: {
+          successes: 0,
+          errors: 0,
+        },
+        artifacts: {
+          successes: 0,
+          errors: 0,
+        },
+      };
+
+      for (const adapter of storageAdapters) {
+        try {
+          const repos = await adapter.listRepos();
+          for (const repo of repos) {
+            try {
+              const contents = await adapter.listArtifacts(repo.id);
+              for (const content of contents) {
+                try {
+                  const { parentId, id } = content;
+                  if (!parentId || !id) {
+                    throw new Error(
+                      "content missing id or parentId " +
+                        JSON.stringify({ parentId, id }),
+                    );
+                  }
+                  await gremlinAdapter.create(
+                    new ChildContentReference(parentId, id),
+                    content,
+                  );
+                  stats.artifacts.successes += 1;
+                } catch (e) {
+                  logger.error(e);
+                  stats.artifacts.errors += 1;
+                }
+              }
+              stats.repositories.successes += 1;
+            } catch (e) {
+              logger.error(e);
+              stats.repositories.errors += 1;
+            }
+          }
+
+          stats.storages.successes += 1;
+        } catch (e) {
+          logger.error(e);
+          stats.storages.errors += 1;
+        }
+      }
+
+      stats.time_sec.total = (Date.now() - stats.time_sec.total) / 1000;
+
+      res.json(stats);
+    },
+    { method: "post" },
+  );
+
+  RouterUtils.addProjectRoute(
+    middlewareOpts,
+    router,
+    "deployment-config.json",
+    async function dumpContentMetadata(_, req, res) {
+      res.json({
+        deletionEnabled: await canUserDelete(req, middlewareOpts),
+        isAdmin: await isUserAdmin(req, middlewareOpts),
+        graphDbEnabled: msConfig.enable,
+      });
+    },
   );
 
   logger.debug("ready");

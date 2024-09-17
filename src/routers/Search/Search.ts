@@ -32,7 +32,7 @@ import type {
   MiddlewareOptions,
 } from "../../common/types";
 import { toArtifactMetadatav2 } from "./adapters/common/Helpers";
-import Utils from "../../common/Utils";
+import Utils, { canUserDelete, isUserAdmin } from "../../common/Utils";
 import { deepMerge, fromResult, isString } from "./Utils";
 import DashboardConfiguration from "../../common/SearchFilterDataExporter";
 import TagFormatter, { FormatError } from "../../common/TagFormatter";
@@ -51,7 +51,9 @@ import {
   Adapter,
   ArtifactMetadata,
   ArtifactMetadatav2,
-  UploadReservation,
+  ContentReservation,
+  MetadataStorageConfig,
+  RepoReservation,
 } from "./adapters/common/types";
 import { UserError } from "../../common/UserError";
 
@@ -73,19 +75,8 @@ function initialize(middlewareOpts: MiddlewareOptions) {
   logger.debug("initializing ...");
 
   const mainConfig = middlewareOpts.gmeConfig;
-
-  function canUserDelete(req: any) {
-    const flexClientConfig = mainConfig.client as { [key: string]: any };
-
-    if (!flexClientConfig.onlyVandyDelete) {
-      return true;
-    }
-
-    const flexReq = req as { [key: string]: any };
-    const userId = flexReq.userData?.userId as string;
-
-    return userId && userId.toLowerCase().endsWith("at_vanderbilt_p_edu");
-  }
+  const msConfig = mainConfig.rest.components.Search.options
+    .metadataStorageConfig as MetadataStorageConfig;
 
   // Ensure authenticated can be used only after this rule.
   // router.use("*", function (req, res, next) {
@@ -136,8 +127,11 @@ function initialize(middlewareOpts: MiddlewareOptions) {
       req: Request,
       res: Response,
     ) {
-      const deletionEnabled = canUserDelete(req);
-      res.json({ deletionEnabled });
+      res.json({
+        deletionEnabled: await canUserDelete(req, middlewareOpts),
+        isAdmin: await isUserAdmin(req, middlewareOpts),
+        graphDbEnabled: msConfig.enable,
+      });
     },
   );
 
@@ -169,6 +163,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
         webgmeContext,
         req,
         mainConfig,
+        msConfig.useAsMainMetadataStorage,
       );
       const artifacts = await storage.listRepos();
       res.status(200).json(artifacts).end();
@@ -185,6 +180,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
         webgmeContext,
         req,
         mainConfig,
+        msConfig.useAsMainMetadataStorage,
       );
       // TODO: add support for repos that just reference another repo
       const artifacts = await storage.listArtifacts(repoId);
@@ -210,6 +206,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
         gmeContext,
         req,
         mainConfig,
+        msConfig.useAsMainMetadataStorage,
       );
       const status = await storage.withRepoReservation(
         async (reservation) => {
@@ -224,6 +221,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
             gmeContext,
             metadata,
           );
+          // TODO: should we upload to the graph db here?
           return await storage.createArtifact(reservation, metadata);
         },
       );
@@ -249,6 +247,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
         gmeContext,
         req,
         mainConfig,
+        msConfig.useAsMainMetadataStorage,
       );
 
       const appendResult = await storage.withContentReservation(
@@ -300,6 +299,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
         webgmeContext,
         req,
         mainConfig,
+        msConfig.useAsMainMetadataStorage,
       );
       if (storage.uploadFile) {
         const status = await storage.uploadFile(repoId, id, fileId, req);
@@ -331,6 +331,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
         webgmeContext,
         req,
         mainConfig,
+        msConfig.useAsMainMetadataStorage,
       );
 
       // need to download the urls of the associated observations ids
@@ -349,6 +350,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
         webgmeContext,
         req,
         mainConfig,
+        msConfig.useAsMainMetadataStorage,
       );
       const metadataOpt = await storage.getMetadata(
         parentId,
@@ -376,8 +378,8 @@ function initialize(middlewareOpts: MiddlewareOptions) {
       const { parentId, id } = req.params;
 
       // FIXME: Temporary fix to allow deletion to be disabled..
-      if (canUserDelete(req)) {
-        logger.error("Deletion only valid for vandy");
+      if (await canUserDelete(req, middlewareOpts)) {
+        logger.error("Deletion only valid for admins");
         res.sendStatus(403);
         return;
       }
@@ -386,6 +388,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
         webgmeContext,
         req,
         mainConfig,
+        msConfig.useAsMainMetadataStorage,
       );
       await storage.disableArtifact(parentId, id);
       res.sendStatus(200);
@@ -417,6 +420,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
         webgmeContext,
         req,
         mainConfig,
+        msConfig.useAsMainMetadataStorage,
       );
       const metadata = await storage.getBulkMetadata(
         parentId,
@@ -453,6 +457,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
         webgmeContext,
         req,
         mainConfig,
+        msConfig.useAsMainMetadataStorage,
       );
       // Fetch all the metadata
       const contentIds = ids.sort((id1, id2) => +id1 < +id2 ? -1 : 1);
@@ -557,6 +562,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
         gmeContext,
         req,
         mainConfig,
+        msConfig.useAsMainMetadataStorage,
       );
       let metadata: ArtifactMetadatav2 = getArtifactMetadata(
         gmeContext,
@@ -617,6 +623,27 @@ function initialize(middlewareOpts: MiddlewareOptions) {
     { method: "post" },
   );
 
+  RouterUtils.addContentTypeRoute(
+    middlewareOpts,
+    router,
+    "gremlin",
+    async function runGremlin(webgmeContext, req, res) {
+      // TODO: get the IDs for the specific observations to get
+      // TODO: run a gremlin query
+      // TODO: load the metadata
+      //const gremlin = <string> req.body.gremlin;
+      // TODO: pass this along to the graph DB
+
+      //const formatter = await getFormatter(webgmeContext);
+      //const storage = new GremlinAdapter();
+      //storage.
+      // Fetch all the metadata
+      throw new Error("Unimplemented!");
+      //res.json(id);
+    },
+    { method: "post" },
+  );
+
   logger.debug("ready");
 }
 
@@ -628,7 +655,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
  */
 async function addChildSystemTags(
   metadata: ArtifactMetadatav2,
-  reservation: UploadReservation,
+  reservation: ContentReservation,
   gmeContext: GmeContentContext,
   userId: string,
   filenames: string[],
@@ -655,7 +682,7 @@ async function addChildSystemTags(
 
 async function addSystemTags(
   metadata: ArtifactMetadatav2,
-  reservation: UploadReservation,
+  reservation: RepoReservation,
   gmeContext: GmeContentContext,
   userId: string,
   filenames: string[],
@@ -675,7 +702,7 @@ async function addSystemTags(
 async function addContentTypeSystemTags(
   contentType: Core.Node,
   metadata: ArtifactMetadatav2,
-  reservation: UploadReservation,
+  reservation: RepoReservation,
   gmeContext: GmeContentContext,
   userId: string,
   filenames: string[] = [],

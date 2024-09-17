@@ -7,17 +7,25 @@ import type {
 } from "../../../common/types";
 import type { Request } from "express";
 import { InvalidStorageError, StorageNotFoundError } from "./common/ModelError";
-import type { Adapter, AdapterStatic } from "./common/types";
+import type {
+  Adapter,
+  AdapterStatic,
+  MetadataStorageConfig,
+} from "./common/types";
 import { UnsupportedUriFormat } from "./common/StorageError";
 import { UserError } from "../../../common/UserError";
+import { getTaxonomyNode } from "../../../common/Utils";
 import PDP from "./PDP/index";
 import MongoDB from "./MongoDB/index";
+import { GremlinAdapter, StorageWithGraphSearch } from "./metadata";
+import exportTaxonomy from "../../../common/TaxonomyExporter";
 
 export default class Adapters {
   static async from(
     gmeContext: GmeContentContext,
     req: Request,
     config: any,
+    includeMetadataStorage?: boolean,
   ): Promise<Adapter> {
     const { core, contentType } = gmeContext;
     const storageNode = (await core.loadChildren(contentType)).find((child) =>
@@ -27,7 +35,13 @@ export default class Adapters {
     if (!storageNode) {
       throw new StorageNotFoundError(gmeContext, contentType);
     }
-    return Adapters.fromStorageNode(gmeContext, req, storageNode, config);
+    return Adapters.fromStorageNode(
+      gmeContext,
+      req,
+      storageNode,
+      config,
+      includeMetadataStorage,
+    );
   }
 
   static async fromStorageNode(
@@ -35,7 +49,8 @@ export default class Adapters {
     req: Request,
     storageNode: Core.Node,
     config: any,
-  ): Promise<Adapter> {
+    includeMetadataStorage?: boolean,
+  ): Promise<StorageWithGraphSearch<Adapter, GremlinAdapter | null>> {
     const { core } = gmeContext;
     const adapterType = core.getAttribute(
       core.getMetaType(storageNode),
@@ -73,7 +88,24 @@ export default class Adapters {
       commitObject: gmeContext.commitObject,
       contentType: parent,
     };
-    return await AdapterType.from(contentContext, storageNode, req, config);
+    const content = await AdapterType.from(
+      contentContext,
+      storageNode,
+      req,
+      config,
+    );
+    const msConfig = config.rest.components.Search.options
+      .metadataStorageConfig as MetadataStorageConfig;
+    // TODO: consider caching these
+    let metadata: GremlinAdapter | null = null;
+    if (includeMetadataStorage) {
+      const taxNode = await getTaxonomyNode(gmeContext);
+      const taxonomy = await exportTaxonomy(gmeContext.core, taxNode);
+      metadata = new GremlinAdapter(msConfig, taxonomy); // FIXME: how to configure this?
+    }
+
+    // TODO: can we get a reference to the exchange format?
+    return new StorageWithGraphSearch(msConfig, content, metadata);
   }
 
   static async fromUri(

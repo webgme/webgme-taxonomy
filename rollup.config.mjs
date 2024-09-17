@@ -22,6 +22,7 @@ const external = [
   "webgme-transformations",
   "assert",
   "webgme",
+  "gremlin",
   "jsonwebtoken",
   "os",
   "fs",

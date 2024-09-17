@@ -9,7 +9,7 @@
  *     }
  */
 import type { GmeCore, VerifiedProjectContext } from "./types";
-import Utils, { toString } from "./Utils";
+import Utils, { getPrototype, toString } from "./Utils";
 
 export interface VocabularyConfig {
   id: string;
@@ -27,7 +27,7 @@ class VocabExporter {
 
   async toSchema(node: Core.Node): Promise<VocabularyConfig> {
     const base = this.core.getBaseType(node);
-    const prototype = this.getPrototype(node);
+    const prototype = getPrototype(this.core, node);
     const children = await this.core.loadChildren(node);
 
     return {
@@ -54,25 +54,13 @@ class VocabExporter {
     }
     return false;
   }
-
-  getPrototype(node: Core.Node): Core.Node {
-    const base = this.core.getBaseType(node);
-
-    while (this.core.getBase(node) !== base) {
-      // This cannot be null. If `getBase` is null, then getBaseType must be null
-      // and we know they aren't equal. If the first call is null, the provided node
-      // will be returned.
-      node = this.core.getBase(node) as Core.Node;
-    }
-
-    return node;
-  }
 }
 
 export class ContentTypeConfiguration {
   nodePath: string;
   name: string;
   namePlural: string;
+  documentation: string;
   vocabularies: VocabularyConfig[];
   content?: ContentTypeConfiguration;
 
@@ -80,12 +68,14 @@ export class ContentTypeConfiguration {
     nodePath: string,
     name: string,
     namePlural: string,
+    documentation: string,
     vocabularies: VocabularyConfig[],
     childContent: ContentTypeConfiguration | undefined,
   ) {
     this.nodePath = nodePath;
     this.name = name;
     this.namePlural = namePlural;
+    this.documentation = documentation;
     this.vocabularies = vocabularies;
     this.content = childContent;
   }
@@ -95,6 +85,9 @@ export class ContentTypeConfiguration {
     contentTypeNode: Core.Node,
   ): Promise<ContentTypeConfiguration> {
     const name = toString(core.getAttribute(contentTypeNode, "name"));
+    const documentation = toString(
+      core.getAttribute(contentTypeNode, "documentation"),
+    );
     const namePlural = core.getAttribute(contentTypeNode, "namePlural")
       ? toString(core.getAttribute(contentTypeNode, "namePlural"))
       : name + "s";
@@ -120,6 +113,7 @@ export class ContentTypeConfiguration {
       nodePath,
       name,
       namePlural,
+      documentation,
       vocabularies,
       childType,
     );
@@ -128,6 +122,7 @@ export class ContentTypeConfiguration {
 
 export interface DashboardConfig {
   name: string;
+  documentation?: string;
   content: ContentTypeConfiguration;
   project?: VerifiedProjectContext;
   contentTypePath?: string; // FIXME: is this needed?
@@ -150,6 +145,7 @@ export default class DashboardConfiguration {
     return {
       name: content.name, // TODO: allow other names?
       content: content,
+      documentation: content.documentation, // This is Markdown text explaining the content-type
     };
   }
 }

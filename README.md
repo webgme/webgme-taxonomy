@@ -6,6 +6,7 @@ First, install the webgme-taxonomy following:
 
 - [NodeJS](https://nodejs.org/en/) (LTS recommended)
 - [MongoDB](https://www.mongodb.com/)
+- [JanusGraph](https://janusgraph.org/)
 
 Second, start mongodb locally by running the `mongod` executable in your mongodb
 installation (you may need to create a `data` directory or set `--dbpath`).
@@ -13,6 +14,19 @@ Alternatively use docker:
 
 ```
 docker run --name webgme-mongo -d -p 27017:27017 mongo:5
+```
+
+Thirdly, start the janus graph:
+
+```
+docker run --name janusgraph -p 8182:8182 -d janusgraph/janusgraph:latest
+```
+
+Optionally if you want to be able to visualize the graph-db data at
+http://localhost:3000 (psst `g.V()` returns all vertices and their edges).
+
+```
+docker run -d --name=gremlin-visualizer --network=host prabushitha/gremlin-visualizer:latest
 ```
 
 Then, run `webgme start` from the project root to start . Finally, navigate to

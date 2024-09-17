@@ -101,6 +101,8 @@ export default class TagFormatter {
       };
     };
 
+    // TODO: Consider using built-in traverse
+    // TODO: Consider caching this..
     const taxonomy = await load(taxonomyRoot);
     return new TagFormatter(taxonomy);
   }

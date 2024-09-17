@@ -14,16 +14,17 @@ import type {
   Artifact,
   ArtifactMetadata,
   ArtifactMetadatav2,
+  ContentReservation,
   DisabledInfo,
   DisableResult,
   DownloadInfo,
   FileStreamDict,
   Metadata,
+  RepoReservation,
   Repository,
   TaxonomyVersion,
   UpdateReservation,
   UpdateResult,
-  UploadReservation,
 } from "../common/types";
 import type TagFormatter from "../../../../common/TagFormatter";
 import { MissingAttributeError } from "../common/ModelError";
@@ -89,7 +90,7 @@ export default class MongoAdapter implements Adapter {
 
   async listPreviousFileNames(res: UpdateReservation): Promise<string[]> {
     const prevDoc = fromResult(
-      (await this.getPreviousArtifactDoc(res.repoId, res.contentId))
+      (await this.getArtifactDoc(res.repoId, res.targetContentId))
         .okOrElse(() => new ContentNotFoundError()),
     );
 
@@ -140,7 +141,7 @@ export default class MongoAdapter implements Adapter {
 
     if (reuseFiles) {
       const prevDoc = fromResult(
-        (await this.getPreviousArtifactDoc(res.repoId, res.contentId))
+        (await this.getArtifactDoc(res.repoId, res.targetContentId))
           .okOrElse(() => new ContentNotFoundError()),
       );
       usedFileIds = prevDoc.files;
@@ -307,9 +308,9 @@ export default class MongoAdapter implements Adapter {
   }
 
   async withRepoReservation<T>(
-    fn: (res: RepoReservation) => Promise<T>,
+    fn: (res: DocReservation) => Promise<T>,
   ): Promise<T> {
-    const reservation = new RepoReservation(this._hostUri);
+    const reservation = new DocReservation(this._hostUri);
 
     try {
       return await fn(reservation);
@@ -319,7 +320,7 @@ export default class MongoAdapter implements Adapter {
   }
 
   async withContentReservation<T>(
-    fn: (res: ContentReservation) => Promise<T>,
+    fn: (res: IndexReservation) => Promise<T>,
     repoId: string,
   ): Promise<T> {
     return await this._repoLocks.run(repoId, async () => {
@@ -327,7 +328,7 @@ export default class MongoAdapter implements Adapter {
       const index: number = repo
         .map((repo) => repo.artifacts.length)
         .unwrapOr(0);
-      const reservation = new ContentReservation(this._hostUri, repoId, index);
+      const reservation = new IndexReservation(this._hostUri, repoId, index);
 
       try {
         const result = await fn(reservation);
@@ -340,7 +341,7 @@ export default class MongoAdapter implements Adapter {
     });
   }
 
-  async createArtifact(res: RepoReservation, metadata: ArtifactMetadatav2) {
+  async createArtifact(res: DocReservation, metadata: ArtifactMetadatav2) {
     const repo = {
       _id: new ObjectId(res.repoId),
       displayName: metadata.displayName,
@@ -392,28 +393,13 @@ export default class MongoAdapter implements Adapter {
       .andThen((versions) => Option.from(versions[version]));
   }
 
-  private async getPreviousArtifactDoc(
-    repoId: string,
-    id: string,
-  ): Promise<Option<ArtifactDoc>> {
-    const [index, version] = this.parseContentId(id);
-
-    if (version === 0) {
-      throw new Error("Version is 0 - cannot load previous");
-    }
-
-    return (await this.getRepository(repoId))
-      .andThen((repo) => Option.from(repo.artifacts[index]))
-      .andThen((versions) => Option.from(versions[version - 1]));
-  }
-
   async getContentIds(repoId: string): Promise<Option<string[]>> {
     const repo = await this.getRepository(repoId);
     return repo.map((repo) => Object.keys(repo.artifacts));
   }
 
   async appendArtifact(
-    res: ContentReservation,
+    res: IndexReservation,
     metadata: ArtifactMetadatav2,
     filenames: string[],
   ) {
@@ -623,14 +609,9 @@ export default class MongoAdapter implements Adapter {
   }
 }
 
-interface MongoReservation extends UploadReservation {
-  uri: string;
-  repoId: string;
-}
-
-class RepoReservation implements MongoReservation {
-  repoId: string;
-  uri: string;
+class DocReservation implements RepoReservation {
+  readonly repoId: string;
+  readonly uri: string;
 
   constructor(hostUri: string) {
     this.repoId = new ObjectId().toString();
@@ -638,26 +619,30 @@ class RepoReservation implements MongoReservation {
   }
 }
 
-class ContentReservation implements UploadReservation {
-  repoId: string;
-  uri: string;
-  index: number;
+class IndexReservation implements ContentReservation {
+  readonly repoId: string;
+  readonly uri: string;
+  readonly index: number;
+  readonly contentId: string;
 
   constructor(hostUri: string, repoId: string, index: number) {
     this.repoId = repoId;
     this.index = index;
     this.uri = `${hostUri}/${this.repoId}/${index}`;
+    this.contentId = `${index}_0`;
   }
 }
 
 class ContentUpdateReservation implements UpdateReservation {
-  repoId: string;
-  contentId: string;
-  uri: string;
+  readonly repoId: string;
+  readonly contentId: string;
+  readonly targetContentId: string;
+  readonly uri: string;
 
   constructor(hostUri: string, repoId: string, index: number, version: number) {
     this.repoId = repoId;
     this.contentId = `${index}_${version}`;
+    this.targetContentId = `${index}_${version - 1}`;
     this.uri = `${hostUri}/${this.repoId}/${this.contentId}`;
   }
 }

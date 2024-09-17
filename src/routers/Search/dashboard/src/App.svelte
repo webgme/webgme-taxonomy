@@ -29,7 +29,7 @@
     CreateRepoDialog,
     Confirm,
    } from "./components";
-
+  import SvelteMarkdown from 'svelte-markdown'
   import TaxonomyData from "./TaxonomyData";
   import TaxonomyReference from "../../../../common/TaxonomyReference";
   import Storage, { LoadState, ModelError, RequestError, ModelContext } from "./Storage";
@@ -205,8 +205,10 @@
   let isLoading = false;
   let configuration;
   let currentTaxonomy: TaxonomyReference;
+  let documentation: string|undefined;
   async function initialize() {
     configuration = await fetchConfiguration();
+    documentation = configuration.documentation;
     currentTaxonomy = TaxonomyReference.from(configuration.project);
     // FIXME: Only 2-level depth is currently supported
     let depth = 1;
@@ -440,6 +442,7 @@
   <div class="drawer-container">
     <Drawer style="width: 360px">
       <Content>
+        <SvelteMarkdown source={documentation || ''} />
         <Textfield label="Search..." bind:value={searchQuery} />
         <span class="filter-header">Advanced Filters</span>
         <TaxonomyFilter

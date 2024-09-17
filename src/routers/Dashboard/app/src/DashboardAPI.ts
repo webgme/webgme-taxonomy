@@ -14,6 +14,12 @@ export interface PackageJSON {
   version: string;
 }
 
+export interface DeploymentConfig {
+  deletionEnabled: boolean;
+  isAdmin: boolean;
+  graphDbEnabled: boolean;
+}
+
 export class StatusError extends Error {
   statusCode: number;
 
@@ -51,6 +57,11 @@ export default class DashboardAPI {
     return this.handleResponse<PackageJSON>(await fetch(url));
   }
 
+  async getDeploymentConfig() {
+    const url = this.apiBaseUrl + "/deployment-config.json";
+    return this.handleResponse<DeploymentConfig>(await fetch(url));
+  }
+
   async getDashboardUrlFromUri(uri: string) {
     if (!uri) {
       throw new Error("URI cannot be empty");
@@ -66,5 +77,14 @@ export default class DashboardAPI {
     });
 
     return this.handleResponse<{ url: string; host: string }>(response);
+  }
+
+  async populateGraphDb() {
+    const postUrl = this.apiBaseUrl + "/graphdb";
+    const response = await fetch(postUrl, {
+      method: "POST",
+    });
+
+    return this.handleResponse<any[]>(response);
   }
 }
