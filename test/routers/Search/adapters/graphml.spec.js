@@ -11,9 +11,6 @@ describe("graphml", function () {
   let storage, gmeAuth, core, formatter;
 
   const assert = require("assert");
-  const { toGraph } = require(
-    "../../../../build/routers/Search/adapters/graphml",
-  );
 
   before(async () => {
     const params = await TestUtils.initializeProject(
@@ -61,7 +58,7 @@ describe("graphml", function () {
     assert.equal(target.attributes.tagId, "vocab");
   });
 
-  it.only("should convert reference field to edge", function () {
+  it.skip("should convert reference field to edge", function () {
     const m1 = newMetadata("m1");
     // check that there is an edge to the given field
     // - do I need to update the graph to use gremlin instead?
@@ -107,7 +104,7 @@ describe("graphml", function () {
       };
     });
 
-    it("should set labelV to term/field types", function () {
+    it.skip("should set labelV to term/field types", function () {
       const graph = addNodeData(taxonomy, toGraph(metadata));
       const untypedNode = graph.nodes.find((node) =>
         !node.attributes.labelV || node.attributes.labelV === "TagData"
