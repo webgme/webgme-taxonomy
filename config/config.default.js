@@ -14,7 +14,7 @@ config.client.onlyAdminDelete = true;
 
 config.rest.components["Search"].options = {
   metadataStorageConfig: {
-    enable: true,
+    enable: false,
     useAsMainMetadataStorage: false,
     gremlinEndpoint: "ws://localhost:8182/gremlin",
   },
