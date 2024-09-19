@@ -6,6 +6,7 @@ import { Pattern } from "../routers/Search/Utils";
 import { GmeCore } from "./types";
 import { toString } from "./Utils";
 import { getName } from "./GmeHelpers";
+import type { Taxonomy } from "./exchange/Taxonomy";
 
 // subsets of JSON schema targeted:
 export interface Schemas {
@@ -96,6 +97,9 @@ type FieldSchema =
   | IntegerFieldSchema;
 
 const optionTypes = ["EnumField", "SetField"];
+// TODO: change this to use the exchange format
+// TODO: make an inner class that uses the exchange format
+// TODO: for now, let's just write the converter from exchange to uniquely named exchange
 export default class JSONSchemaExporter {
   core: GmeCore;
   private META: { [name: string]: Core.Node };
@@ -106,7 +110,10 @@ export default class JSONSchemaExporter {
    * @param {any} META
    * @memberof JSONSchemaExporter
    */
-  constructor(core: GmeCore, META: { [name: string]: Core.Node }) {
+  constructor(
+    core: GmeCore,
+    META: { [name: string]: Core.Node },
+  ) {
     this.core = core;
     this.META = META;
   }
