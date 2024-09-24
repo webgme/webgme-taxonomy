@@ -177,7 +177,10 @@ export function parseEnum<T>(possibleVariant: unknown, variants: T[]): T {
   throw new InvalidVariantError(possibleVariant, variants);
 }
 
-export async function isUserAdmin(req: any, middlewareOpts: webgme.MiddlewareOptions) {
+export async function isUserAdmin(
+  req: any,
+  middlewareOpts: webgme.MiddlewareOptions,
+) {
   const userId = middlewareOpts.getUserId(req);
   const userData = await middlewareOpts.gmeAuth.getUser(userId);
 
