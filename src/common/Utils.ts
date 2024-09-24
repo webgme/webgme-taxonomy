@@ -5,7 +5,7 @@ import { None, Option, Some } from "oxide.ts";
 import { isTypeNamed } from "./GmeHelpers";
 import type { GmeContext, GmeCore } from "./types";
 import { TaxNodeNotFoundError } from "../routers/Search/adapters/common/ModelError";
-import type { MiddlewareOptions } from "webgme";
+import type * as webgme from "webgme";
 
 export function toString(attr: OutAttr): string {
   if (attr) {
@@ -177,7 +177,7 @@ export function parseEnum<T>(possibleVariant: unknown, variants: T[]): T {
   throw new InvalidVariantError(possibleVariant, variants);
 }
 
-export async function isUserAdmin(req: any, middlewareOpts: MiddlewareOptions) {
+export async function isUserAdmin(req: any, middlewareOpts: webgme.MiddlewareOptions) {
   const userId = middlewareOpts.getUserId(req);
   const userData = await middlewareOpts.gmeAuth.getUser(userId);
 
@@ -186,7 +186,7 @@ export async function isUserAdmin(req: any, middlewareOpts: MiddlewareOptions) {
 
 export async function canUserDelete(
   req: any,
-  middlewareOpts: MiddlewareOptions,
+  middlewareOpts: webgme.MiddlewareOptions,
 ) {
   const flexClientConfig = middlewareOpts.gmeConfig.client as {
     [key: string]: any;
