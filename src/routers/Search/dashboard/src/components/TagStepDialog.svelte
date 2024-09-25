@@ -7,6 +7,7 @@
   import type { default as Storage } from "../Storage";
   import { deepMerge } from "../Utils";
 
+  import type { toast as Toast } from "@zerodevx/svelte-toast";
   import Dialog, { Content, Title, Actions } from "@smui/dialog";
   import Button, { Label, Icon } from "@smui/button";
   import IconButton from "@smui/icon-button";
@@ -26,9 +27,11 @@
 
   const dispatch = createEventDispatcher();
   const storage: Storage = getContext("storage");
+  const toast = getContext<typeof Toast>("toast");
   // generate a unique id attr, since there can be multiple instances of this component
   const id = 'tag-step-dialog-' + Math.random().toString(36).substring(2);
 
+  let schemaForm: SchemaForm;
   let tagging = true;
   let working = false
   let tagsFiles: FileList | null = null;
@@ -48,6 +51,20 @@
     });
     if (performDefault && !working) {
       open &&= false;
+    }
+  }
+
+  function download() {
+    try {
+      const filename = `${title}${title && " - "}tags`;
+      schemaForm.download(filename, { validate: false });
+    }
+    catch(error) {
+      console.error(error);
+      if (dispatch("error", error)) {
+        const msg = error.message ?? error.toString();
+        toast.push(msg, { initial: 0, classes: ["warn"] });
+      }
     }
   }
 
@@ -111,7 +128,7 @@
             </Wrapper>
           </Subtitle>
           <Content>
-            <SchemaForm bind:data={tags} {nodePath} />
+            <SchemaForm bind:this={schemaForm} bind:data={tags} {nodePath} />
           </Content>
         </Paper>
 
@@ -137,6 +154,10 @@
         <Label>Cancel</Label>
       </Button>
       {#if tagging}
+        <Button disabled={working} on:click={download}>
+          <Label>Download</Label>
+          <Icon class="material-icons" aria-hidden="true">download</Icon>
+        </Button>
         <Button autofocus disabled={working} action={null} on:click={(e) => { tagging = false }} aria-labelledby={`${id}-next`}>
           <Label id={`${id}-next`}>Next</Label>
           <Icon class="material-icons" aria-hidden="true">arrow_forward</Icon>
