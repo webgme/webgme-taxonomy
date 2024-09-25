@@ -55,8 +55,8 @@
   }
 
   function download() {
-    const filename = `${title}${title && " - "}tags`;
     try {
+      const filename = `${title}${title && " - "}tags`;
       schemaForm.download(filename, { validate: false });
     }
     catch(error) {
