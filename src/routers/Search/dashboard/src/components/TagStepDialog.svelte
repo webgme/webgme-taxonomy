@@ -253,4 +253,14 @@
   :global(.tags-step .smui-accordion__header__title--with-description) {
     max-width: unset !important;
   }
+
+  :global(.mdc-snackbar.error) {
+    :global(.mdc-snackbar__surface) {
+      background-color: var(--mdc-theme-error);
+    }
+
+    :global(.mdc-snackbar__actions .mdc-button) {
+      color: currentColor;
+    }
+  }
 </style>
