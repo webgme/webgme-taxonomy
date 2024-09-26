@@ -49,6 +49,10 @@
   export function download(filename: string, opts?: any) {
     schemaForm.download(filename, opts);
   }
+
+  export function validate() {
+    return schemaForm.validate()
+  }
 </script>
 
 
