@@ -3,7 +3,7 @@
   A component to fetch schema and manage corresponding a SchemaForm.
 -->
 <script lang="ts">
-  import { createEventDispatcher } from "svelte";
+  import { createEventDispatcher, getContext } from "svelte";
   import CircularProgress from "@smui/circular-progress";
   import SchemaForm, { DownloadOptions, ValidationError, type JSONSchema7, type UISchema } from "svelte-jsonschema-form";
   import { deepMerge } from "../Utils";
@@ -11,8 +11,10 @@
   export let data: any;
   export let nodePath: string | undefined = undefined;
   export let readonly = false;
+  export let taxonomyVersion: { [key: string]: string } | null = null
 
   const dispatch = createEventDispatcher();
+  const configTaxVers: { [key: string]: string } | undefined = getContext<any>("configuration")?.taxonomyVersion;
   let schema: Promise<JSONSchema7>;
   let uischema = { ":ui:": { "collapse": "unrequired" }} as UISchema;
   let schemaForm: SchemaForm;
@@ -47,7 +49,9 @@
   }
 
   export function download(filename: string, opts?: DownloadOptions) {
-    schemaForm.download(filename, opts);
+    const taxVers = taxonomyVersion ?? configTaxVers;
+    const transform = (taxVers != null) ? (tags: any) => ({ tags, taxonomyVersion: taxVers }) : undefined;
+    schemaForm.download(filename, { transform, ...opts });
   }
 </script>
 
