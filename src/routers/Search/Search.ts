@@ -378,7 +378,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
       const { parentId, id } = req.params;
 
       // FIXME: Temporary fix to allow deletion to be disabled..
-      if (await canUserDelete(req, middlewareOpts)) {
+      if (!await canUserDelete(req, middlewareOpts)) {
         logger.error("Deletion only valid for admins");
         res.sendStatus(403);
         return;
