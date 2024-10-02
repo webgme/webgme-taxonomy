@@ -28,8 +28,8 @@
   title="Create new repository"
   submitLabel="Create"
   {nodePath}
-  bind:open={open}
-  bind:tags={tags}
+  bind:open
+  bind:tags
   on:submit={({ detail }) => detail(submit) }
   let:working={working}
 >

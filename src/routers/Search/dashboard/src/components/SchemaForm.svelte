@@ -5,7 +5,7 @@
 <script lang="ts">
   import { createEventDispatcher } from "svelte";
   import CircularProgress from "@smui/circular-progress";
-  import SchemaForm, { ValidationError, type JSONSchema7, type UISchema } from "svelte-jsonschema-form";
+  import SchemaForm, { DownloadOptions, ValidationError, type JSONSchema7, type UISchema } from "svelte-jsonschema-form";
   import { deepMerge } from "../Utils";
 
   export let data: any;
@@ -46,7 +46,7 @@
     dispatch("error", schemaError);
   }
 
-  export function download(filename: string, opts?: any) {
+  export function download(filename: string, opts?: DownloadOptions) {
     schemaForm.download(filename, opts);
   }
 </script>
