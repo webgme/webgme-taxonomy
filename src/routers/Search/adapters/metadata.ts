@@ -368,7 +368,6 @@ export class GremlinAdapter implements MetadataAdapter {
 
     // set up any relationships defined in the node's context (NodeInContext)
     const contentNode = graph.nodes[0];
-    console.log("connecting to node with UUID:", contentNode.id);
 
     const allSteps = node.apply(
       addGraphStep,
@@ -376,8 +375,6 @@ export class GremlinAdapter implements MetadataAdapter {
     );
 
     await allSteps.iterate();
-
-    console.log("imported data into graphdb!");
   }
 
   /**
