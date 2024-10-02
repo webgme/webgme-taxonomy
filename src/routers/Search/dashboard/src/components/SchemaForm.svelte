@@ -14,7 +14,7 @@
   export let taxonomyVersion: { [key: string]: string } | null = null
 
   const dispatch = createEventDispatcher();
-  const configTaxVers: { [key: string]: string } | undefined = getContext<any>("configuration")?.taxonomyVersion;
+  const configuration: Promise<any> = getContext<Promise<any>>("configuration");
   let schema: Promise<JSONSchema7>;
   let uischema = { ":ui:": { "collapse": "unrequired" }} as UISchema;
   let schemaForm: SchemaForm;
@@ -48,8 +48,8 @@
     dispatch("error", schemaError);
   }
 
-  export function download(filename: string, opts?: DownloadOptions) {
-    const taxVers = taxonomyVersion ?? configTaxVers;
+  export async function download(filename: string, opts?: DownloadOptions) {
+    const taxVers = taxonomyVersion ?? (await configuration)?.project;
     const transform = (taxVers != null) ? (tags: any) => ({ tags, taxonomyVersion: taxVers }) : undefined;
     schemaForm.download(filename, { transform, ...opts });
   }
