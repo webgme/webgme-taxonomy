@@ -154,6 +154,8 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
     { method: "post" },
   );
 
+  const USE_SMALL_TEST_DATA = false;
+
   RouterUtils.addProjectRoute(
     middlewareOpts,
     router,
@@ -188,33 +190,35 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
       );
 
       // Fetch all the contents
-      const storageAdapters: StorageWithGraphSearch<Adapter, GremlinAdapter | null>[] = [];
+      let storageAdapters: StorageWithGraphSearch<Adapter, GremlinAdapter | null>[] = [];
 
-      for (const node of storageNodes) {
-        const { core } = gmeContext;
-        // MODEL_ML || Bootcamp Sandbox
-        if (core.getPath(node) === '/R/F' || core.getPath(node) === '/f/l') {
-          storageAdapters.push(await StorageAdapter.fromStorageNode(
-            gmeContext,
-            req,
-            node,
-            middlewareOpts.gmeConfig,
-            true,
-          ));
+      if (USE_SMALL_TEST_DATA) {
+        for (const node of storageNodes) {
+          const { core } = gmeContext;
+          // MODEL_ML || Bootcamp Sandbox
+          if (core.getPath(node) === '/R/F' || core.getPath(node) === '/f/l') {
+            storageAdapters.push(await StorageAdapter.fromStorageNode(
+              gmeContext,
+              req,
+              node,
+              middlewareOpts.gmeConfig,
+              true,
+            ));
+          }
         }
+      } else {
+        storageAdapters = await Promise.all(
+          storageNodes.map((node) =>
+            StorageAdapter.fromStorageNode(
+              gmeContext,
+              req,
+              node,
+              middlewareOpts.gmeConfig,
+              true,
+            )
+          ),
+        );
       }
-
-      // await Promise.all(
-      //   storageNodes.map((node) =>
-      //     StorageAdapter.fromStorageNode(
-      //       gmeContext,
-      //       req,
-      //       node,
-      //       middlewareOpts.gmeConfig,
-      //       true,
-      //     )
-      //   ),
-      // );
 
       const taxNode = await getTaxonomyNode(gmeContext);
       const taxonomy = await exportTaxonomy(gmeContext.core, taxNode);
@@ -261,6 +265,9 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
                     content,
                   );
                   stats.artifacts.successes += 1;
+                  if (stats.artifacts.successes % 100 === 0) {
+                    console.log('Inserted', stats.artifacts.successes, 'artifacts ...');
+                  }
                 } catch (e) {
                   logger.error(e);
                   stats.artifacts.errors += 1;
@@ -282,6 +289,8 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
 
       stats.time_sec.total = (Date.now() - stats.time_sec.total) / 1000;
 
+      console.log('DONE!, stats:', JSON.stringify(stats, null, 2));
+
       res.json(stats);
     },
     { method: "post" },
@@ -291,7 +300,7 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
     middlewareOpts,
     router,
     "deployment-config.json",
-    async function dumpContentMetadata(_, req, res) {
+    async function getDeploymentConfig(_, req, res) {
       res.json({
         deletionEnabled: await canUserDelete(req, middlewareOpts),
         isAdmin: await isUserAdmin(req, middlewareOpts),
