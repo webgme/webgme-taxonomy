@@ -203,11 +203,12 @@
   }
 
   let isLoading = false;
+  let configurationFetch = setContext('configuration', fetchConfiguration());
   let configuration;
   let currentTaxonomy: TaxonomyReference;
   let documentation: string|undefined;
   async function initialize() {
-    configuration = await fetchConfiguration();
+    configuration = await configurationFetch;
     documentation = configuration.documentation;
     currentTaxonomy = TaxonomyReference.from(configuration.project);
     // FIXME: Only 2-level depth is currently supported
