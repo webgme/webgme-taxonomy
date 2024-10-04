@@ -75,7 +75,7 @@ export interface Adapter {
   /**
    * Convert a URI to a repo and content ID.
    */
-  resolveUri(uri: string): [string, string];
+  resolveUri(uri: string): [string, string, string];
   /*
    * RAII-style reservations for uploading data
    */
@@ -130,7 +130,7 @@ export interface AdapterStatic<A extends Adapter> {
     uri: string,
   ): Promise<A>;
   getUriPatterns(): string[];
-  resolveUri(uri: string): [string, string];
+  resolveUri(uri: string): [string, string, string];
 }
 
 export interface Artifact {

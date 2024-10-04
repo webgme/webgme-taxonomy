@@ -123,7 +123,7 @@ export default class Adapters {
     ].flat();
   }
 
-  static resolveUri(uri: string): [string, string] {
+  static resolveUri(uri: string): [string, string, string] {
     return getAdapterClassFromUri(uri).resolveUri(uri);
   }
 }
@@ -150,7 +150,7 @@ function isUriFor<A extends Adapter>(
   });
 }
 
-function isTypeOf(
+export function isTypeOf(
   core: GmeContentContext["core"],
   node: Core.Node,
   name: string,
