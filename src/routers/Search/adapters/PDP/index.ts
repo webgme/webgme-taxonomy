@@ -898,8 +898,8 @@ export default class PDP implements Adapter {
   static resolveUri(uri: string): [string, string, string] {
     const chunks = uri.split("/");
     let host: string;
-    let repo: string = '';
-    let content: string = '';
+    let repo: string = "";
+    let content: string = "";
 
     if (RegExp(contentPattern).test(uri)) {
       const version = chunks.pop() as string;

@@ -115,22 +115,30 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
 
       const [hostId, repoId, contentId] = uriPieces;
 
-      logger.info(`uri="${uri}", with hostId="${hostId}", repoId="${repoId}", contentId="${contentId}"`);
+      logger.info(
+        `uri="${uri}", with hostId="${hostId}", repoId="${repoId}", contentId="${contentId}"`,
+      );
 
       // Grab all contentTypes for the project..
-      const hostUriToPath = await (new ContextFacade(gmeContext)).getHostUriToNodePath();
+      const hostUriToPath = await (new ContextFacade(gmeContext))
+        .getHostUriToNodePath();
       // logger.info(JSON.stringify(hostUriToPath, null, 2));
       const path = hostUriToPath[hostId];
 
       if (!path) {
-        logger.error('Could not find matching node for ' + hostId);
+        logger.error("Could not find matching node for " + hostId);
         res.sendStatus(404);
         return;
       }
 
       // original: /routers/Dashboard/guest%2BmongoPipeline/branch/master/resolve-url
       // url: /routers/Search/guest%2BmongoPipeline/branch/master/%2FA/static/index.html?repoId=6617fab6596a7edfc2fb9cff&contentId=1_1
-      let url = `${req.originalUrl.split("?")[0].replace(/Dashboard/, "Search").split("/").slice(0, -1).join("/")}` +
+      let url =
+        `${
+          req.originalUrl.split("?")[0].replace(/Dashboard/, "Search").split(
+            "/",
+          ).slice(0, -1).join("/")
+        }` +
         `/${encodeURIComponent(path)}/static/index.html`;
 
       if (repoId) {
@@ -226,7 +234,7 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
                   if (!parentId || !id) {
                     throw new Error(
                       "content missing id or parentId " +
-                      JSON.stringify({ parentId, id }),
+                        JSON.stringify({ parentId, id }),
                     );
                   }
                   await gremlinAdapter.create(
