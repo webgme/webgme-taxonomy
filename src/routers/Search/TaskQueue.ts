@@ -80,7 +80,7 @@ export class DownloadTask implements Runnable<FilePath> {
 
     const uniqNames = names.reduce(
       (names, name) => names.concat(namer.unique(name)),
-      <string[]>[],
+      <string[]> [],
     );
 
     // Write data to files
