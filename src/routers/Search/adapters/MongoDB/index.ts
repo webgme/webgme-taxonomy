@@ -47,6 +47,10 @@ import {
   DeletedContentError,
 } from "../../../../common/UserError";
 
+const hostPattern = `mongoDoc://${Pattern.URL}/([a-zA-Z0-9_]+/)?[a-zA-Z_]+`;
+const repoPattern = hostPattern + "/[a-f0-9]{24}";
+const contentPattern = repoPattern + "/[0-9]+";
+
 const defaultMongoUri = gmeConfig.mongo.uri;
 const defaultClient = new MongoClient(defaultMongoUri);
 
@@ -581,30 +585,39 @@ export default class MongoAdapter implements Adapter {
     return `mongoDoc://${hostAddr}/${collection}`;
   }
 
-  resolveUri(uri: string): [string, string] {
+  resolveUri(uri: string): [string, string, string] {
     return MongoAdapter.resolveUri(uri);
   }
 
-  static resolveUri(uri: string): [string, string] {
+  static resolveUri(uri: string): [string, string, string] {
     const chunks = uri.split("/");
-    let content = chunks.pop() as string;
-    if (!content.includes("_")) {
-      // Fix for first versions that only includes the index and no version
-      content += "_0";
+    let host: string;
+    let repo: string = "";
+    let content: string = "";
+
+    if (RegExp(contentPattern).test(uri)) {
+      content = chunks.pop() as string;
+      if (!content.includes("_")) {
+        // Fix for first versions that only includes the index and no version
+        content += "_0";
+      }
+      repo = chunks.pop() as string;
+    } else if (RegExp(repoPattern).test(uri)) {
+      repo = chunks.pop() as string;
+    } else if (!RegExp(hostPattern).test(uri)) {
+      throw new Error(`No valid uri provided: ${uri}`);
     }
 
-    const repo = chunks.pop() as string;
-    return [repo, content];
+    host = chunks.join("/");
+
+    return [host, repo, content];
   }
 
   static getUriPatterns(): string[] {
-    const hostPattern =
-      `mongoDoc://${Pattern.URL}/([a-zA-Z0-9_]+/)?[a-zA-Z_]+/`;
-    const repoPattern = "[a-f0-9]{24}";
-    const contentPattern = "[0-9]+";
     return [
-      hostPattern + repoPattern,
-      hostPattern + repoPattern + "/" + contentPattern,
+      hostPattern,
+      repoPattern,
+      contentPattern,
     ];
   }
 }

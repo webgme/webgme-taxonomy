@@ -180,6 +180,46 @@ describe("MongoDB", function () {
       );
     });
 
+    describe("resolveUri", function () {
+      const storageHostUri =
+        "mongoDoc://mongo:27017/udcp_taxonomy/udcp_provenance";
+      const repoId = "65ba9221db63515528bf54f8";
+      const repoUri = storageHostUri + "/" + repoId;
+      const contentUri = repoUri + "/0_1";
+
+      it("should resolve storageHostUri", function () {
+        const [host, repo, content] = MongoDB.resolveUri(storageHostUri);
+        assert.equal(host, storageHostUri);
+        assert.equal(repo, "");
+        assert.equal(content, "");
+      });
+
+      it("should resolve repoUri", function () {
+        const [host, repo, content] = MongoDB.resolveUri(repoUri);
+        assert.equal(host, storageHostUri);
+        assert.equal(repo, repoId);
+        assert.equal(content, "");
+      });
+
+      it("should resolve storageHostUri", function () {
+        const [host, repo, content] = MongoDB.resolveUri(contentUri);
+        assert.equal(host, storageHostUri);
+        assert.equal(repo, repoId);
+        assert.equal(content, "0_1");
+      });
+
+      it("should throw if no uri", function () {
+        let didThrow = false;
+        try {
+          MongoDB.resolveUri("mongoDoc://mongo:27017");
+        } catch {
+          didThrow = true;
+        }
+
+        assert(didThrow, "Should have thrown");
+      });
+    });
+
     it("should match against content URIs", async function () {
       const repoId = await mongo.withRepoReservation(async (res) => {
         const metadata = {

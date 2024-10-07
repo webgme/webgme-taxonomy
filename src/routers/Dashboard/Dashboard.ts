@@ -103,45 +103,52 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
     "resolve-url",
     async function resolveUrl(gmeContext, req, res) {
       const { uri } = req.body;
-      // FIXME: This doesn't work for repositories..
-      const [repoId, contentId] = StorageAdapter.resolveUri(uri);
-      logger.info(
-        `uri="${uri}", with repoId="${repoId}", contentId="${contentId}"`,
-      );
-      // Grab all contentTypes for the project..
-      const projectInfo = await (new ContextFacade(gmeContext))
-        .getProjectInfo();
+      let uriPieces: [string, string, string];
 
-      let url: string | null = null;
-
-      for (const { name, path } of projectInfo.contentTypes) {
-        logger.info(`At content type ${name} ${path}`);
-        const contentContext = await getContentContext(gmeContext, path);
-        const storage = await StorageAdapter.from(
-          contentContext,
-          req,
-          middlewareOpts.gmeConfig,
-        );
-        // List all the repos for each such..
-        for (const repo of await storage.listRepos()) {
-          if (repo.id === repoId) {
-            logger.info(`found matching repository: ${JSON.stringify(repo)}`);
-            // original: /routers/Dashboard/guest%2BmongoPipeline/branch/master/resolve-url
-            // url: /routers/Search/guest%2BmongoPipeline/branch/master/%2FA/static/index.html?repoId=6617fab6596a7edfc2fb9cff&contentId=1_1
-            url =
-              `${
-                req.originalUrl.split("?")[0].replace(/Dashboard/, "Search")
-                  .split("/").slice(0, -1).join("/")
-              }` +
-              `/${
-                encodeURIComponent(path)
-              }/static/index.html?repoId=${repoId}&contentId=${contentId}`;
-            break;
-          }
-        }
+      try {
+        uriPieces = StorageAdapter.resolveUri(uri);
+      } catch (err) {
+        logger.error(err);
+        res.sendStatus(400);
+        return;
       }
 
-      // TODO: Check that this works behind secure proxy..
+      const [hostId, repoId, contentId] = uriPieces;
+
+      logger.info(
+        `uri="${uri}", with hostId="${hostId}", repoId="${repoId}", contentId="${contentId}"`,
+      );
+
+      // Grab all contentTypes for the project..
+      const hostUriToPath = await (new ContextFacade(gmeContext))
+        .getHostUriToNodePath();
+      // logger.info(JSON.stringify(hostUriToPath, null, 2));
+      const path = hostUriToPath[hostId];
+
+      if (!path) {
+        logger.error("Could not find matching node for " + hostId);
+        res.sendStatus(404);
+        return;
+      }
+
+      // original: /routers/Dashboard/guest%2BmongoPipeline/branch/master/resolve-url
+      // url: /routers/Search/guest%2BmongoPipeline/branch/master/%2FA/static/index.html?repoId=6617fab6596a7edfc2fb9cff&contentId=1_1
+      let url =
+        `${
+          req.originalUrl.split("?")[0].replace(/Dashboard/, "Search").split(
+            "/",
+          ).slice(0, -1).join("/")
+        }` +
+        `/${encodeURIComponent(path)}/static/index.html`;
+
+      if (repoId) {
+        url += `?repoId=${repoId}`;
+      }
+
+      if (contentId) {
+        url += `&contentId=${contentId}`;
+      }
+
       res.json({ host: `${req.protocol}://${req.get("host")}`, url });
     },
     { method: "post" },

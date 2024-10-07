@@ -76,6 +76,18 @@ const UPLOAD_HEADERS = {
   "x-ms-encryption-algorithm": "AES256",
 };
 
+const hexSeq = "[0-9a-f]+";
+const idPattern = [hexSeq, hexSeq, hexSeq, hexSeq, hexSeq].join("-");
+const indexPattern = "[0-9]+";
+const versionPattern = "[0-9]+";
+const typePattern = "[a-zA-Z_0-9]+";
+const newProcessPattern = `PROCESS_ID`;
+const processPattern = Pattern.anyIn(idPattern, newProcessPattern);
+
+const hostPattern = `pdp://${Pattern.URL}/${typePattern}`;
+const repoPattern = hostPattern + "/" + processPattern;
+const contentPattern = repoPattern + "/" + indexPattern + "/" + versionPattern;
+
 export default class PDP implements Adapter {
   private observerId: string;
   private _readToken: string;
@@ -879,35 +891,37 @@ export default class PDP implements Adapter {
     );
   }
 
-  resolveUri(uri: string): [string, string] {
+  resolveUri(uri: string): [string, string, string] {
     return PDP.resolveUri(uri);
   }
 
-  static resolveUri(uri: string): [string, string] {
+  static resolveUri(uri: string): [string, string, string] {
     const chunks = uri.split("/");
-    const version = chunks.pop() as string;
-    const index = chunks.pop() as string;
-    const content = `${index}_${version}`;
-    const repo = chunks.pop() as string;
-    return [repo, content];
+    let host: string;
+    let repo: string = "";
+    let content: string = "";
+
+    if (RegExp(contentPattern).test(uri)) {
+      const version = chunks.pop() as string;
+      const index = chunks.pop() as string;
+      content = `${index}_${version}`;
+      repo = chunks.pop() as string;
+    } else if (RegExp(repoPattern).test(uri)) {
+      repo = chunks.pop() as string;
+    } else if (!RegExp(hostPattern).test(uri)) {
+      throw new Error(`No valid uri provided: ${uri}`);
+    }
+
+    host = chunks.join("/");
+
+    return [host, repo, content];
   }
 
   static getUriPatterns(): string[] {
-    const hexSeq = "[0-9a-f]+";
-    const idPattern = [hexSeq, hexSeq, hexSeq, hexSeq, hexSeq].join("-");
-    const indexPattern = "[0-9]+";
-    const versionPattern = "[0-9]+";
-
-    const typePattern = "[a-zA-Z_0-9]+";
-    const hostPattern = `pdp://${Pattern.URL}/${typePattern}/`;
-
-    const newProcessPattern = `PROCESS_ID`;
-    const processPattern = Pattern.anyIn(idPattern, newProcessPattern);
-
-    const repoPattern = hostPattern + processPattern;
     return [
+      hostPattern,
       repoPattern,
-      repoPattern + "/" + indexPattern + "/" + versionPattern,
+      contentPattern,
     ];
   }
 }
@@ -940,6 +954,10 @@ export class HostUri {
     const baseUrl = chunks.join("/").replace(/^pdp/, "https");
 
     return new HostUri(baseUrl, processType);
+  }
+
+  static hostUrlToHostUri(hostUrl: string): string {
+    return `pdp://${hostUrl.replace(/^(https:\/\/)?/, "")}`;
   }
 }
 

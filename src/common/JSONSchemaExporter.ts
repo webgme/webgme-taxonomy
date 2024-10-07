@@ -58,6 +58,7 @@ interface TextFieldSchema extends BaseFieldSchema {
 }
 interface UriFieldSchema extends BaseFieldSchema {
   type: "string";
+  format: "uri";
   pattern: string;
   default?: string;
 }
@@ -434,6 +435,7 @@ export default class JSONSchemaExporter {
         const fieldSchema: UriFieldSchema = {
           title: name,
           type: "string",
+          format: "uri",
           pattern: Pattern.exact(Pattern.anyIn(
             ...StorageAdapters.getUriPatterns(),
           )),

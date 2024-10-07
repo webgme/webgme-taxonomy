@@ -98,7 +98,7 @@ export class DownloadTask implements Runnable<FilePath> {
           uri,
           this.config,
         );
-        const [repoId, id] = storage.resolveUri(uri);
+        const [_, repoId, id] = storage.resolveUri(uri);
         console.log("getting file streams:", { uri, repoId, id });
         const streamDict = await storage.getFileStreams(repoId, id);
 

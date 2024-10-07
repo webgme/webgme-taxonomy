@@ -181,7 +181,7 @@ export class StorageWithGraphSearch<
     }
   }
 
-  resolveUri(uri: string): [string, string] {
+  resolveUri(uri: string): [string, string, string] {
     return this.contentStore.resolveUri(uri);
   }
 
