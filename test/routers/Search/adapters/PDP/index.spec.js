@@ -346,7 +346,7 @@ describe("PDP", function () {
     const storageHostUri =
       "pdp://leappremonitiondev.azurewebsites.net/PROD_MODEL_ML";
     const repoId = "a8409436-2040-46c7-9310-ea23f7d29c25";
-    const repoUri = storageHostUri + "/" + repo;
+    const repoUri = storageHostUri + "/" + repoId;
     const contentUri = repoUri + "/1/0";
 
     it("should resolve storageHostUri", function () {
