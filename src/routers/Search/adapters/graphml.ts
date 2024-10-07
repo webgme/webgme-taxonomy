@@ -6,6 +6,7 @@ import { isObject } from "../Utils";
 import { ArtifactMetadatav2 } from "./common/types";
 import { v4 as uuidv4 } from "uuid";
 import gremlin from "gremlin";
+import { isArray } from "underscore";
 
 type GraphTraversal = gremlin.process.GraphTraversal;
 type GremlinGraph = gremlin.process.GraphTraversalSource<GraphTraversal>;
@@ -334,7 +335,7 @@ export function getFieldNameTuples(
 export function fromTags(parentId: NodeId, tags: any): [Node[], Edge[]] {
   return Object.entries(tags).reduce(
     ([nodes, edges]: [Node[], Edge[]], [guid, data]: [string, any]) => {
-      const tagNode = isObject(data)
+      const tagNode = isObject(data) || isArray(data)
         ? new NamedNode("TagData", guid)
         : new NamedNode("TagData", guid, data); // FIXME: get the actual types
 
@@ -345,6 +346,12 @@ export function fromTags(parentId: NodeId, tags: any): [Node[], Edge[]] {
         const [children, subEdges] = fromTags(tagNode.id, data);
         nodes.push(...children);
         edges.push(...subEdges);
+      } else if (isArray(data)) {
+        for (const childData of data) {
+          const [children, subEdges] = fromTags(tagNode.id, childData);
+          nodes.push(...children);
+          edges.push(...subEdges);
+        }
       }
 
       return [nodes, edges];

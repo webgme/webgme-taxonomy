@@ -177,6 +177,10 @@ export function isObject(possibleObj: any): possibleObj is Object {
     (possibleObj.constructor === Object);
 }
 
+export function isArray(possibleArray: any) {
+  return possibleArray && possibleArray instanceof Array;
+}
+
 export function assert(cond: boolean, msg: string | Error) {
   if (!cond) {
     const error = msg instanceof Error ? msg : new Error(msg);

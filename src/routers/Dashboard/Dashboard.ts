@@ -20,7 +20,7 @@ import RouterUtils, {
   handleUserErrors,
 } from "../../common/routers/Utils";
 import { uniqWithKey } from "../Search/Utils";
-import { Repository } from "../Search/adapters/common/types";
+import { Adapter, Repository } from "../Search/adapters/common/types";
 import {
   canUserDelete,
   filterMap,
@@ -33,6 +33,7 @@ import StorageAdapter from "../Search/adapters";
 import {
   ChildContentReference,
   GremlinAdapter,
+  StorageWithGraphSearch,
 } from "../Search/adapters/metadata";
 import exportTaxonomy from "../../common/TaxonomyExporter";
 import { MetadataStorageConfig } from "../Search/adapters/common/types";
@@ -134,10 +135,9 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
       // original: /routers/Dashboard/guest%2BmongoPipeline/branch/master/resolve-url
       // url: /routers/Search/guest%2BmongoPipeline/branch/master/%2FA/static/index.html?repoId=6617fab6596a7edfc2fb9cff&contentId=1_1
       let url =
-        `${
-          req.originalUrl.split("?")[0].replace(/Dashboard/, "Search").split(
-            "/",
-          ).slice(0, -1).join("/")
+        `${req.originalUrl.split("?")[0].replace(/Dashboard/, "Search").split(
+          "/",
+        ).slice(0, -1).join("/")
         }` +
         `/${encodeURIComponent(path)}/static/index.html`;
 
@@ -188,17 +188,33 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
       );
 
       // Fetch all the contents
-      const storageAdapters = await Promise.all(
-        storageNodes.map((node) =>
-          StorageAdapter.fromStorageNode(
+      const storageAdapters: StorageWithGraphSearch<Adapter, GremlinAdapter | null>[] = [];
+
+      for (const node of storageNodes) {
+        const { core } = gmeContext;
+        // MODEL_ML || Bootcamp Sandbox
+        if (core.getPath(node) === '/R/F' || core.getPath(node) === '/f/l') {
+          storageAdapters.push(await StorageAdapter.fromStorageNode(
             gmeContext,
             req,
             node,
             middlewareOpts.gmeConfig,
             true,
-          )
-        ),
-      );
+          ));
+        }
+      }
+
+      // await Promise.all(
+      //   storageNodes.map((node) =>
+      //     StorageAdapter.fromStorageNode(
+      //       gmeContext,
+      //       req,
+      //       node,
+      //       middlewareOpts.gmeConfig,
+      //       true,
+      //     )
+      //   ),
+      // );
 
       const taxNode = await getTaxonomyNode(gmeContext);
       const taxonomy = await exportTaxonomy(gmeContext.core, taxNode);
@@ -222,6 +238,9 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
         },
       };
 
+      await gremlinAdapter.dropAll();
+      console.log('Dropped current graphDb data..');
+
       for (const adapter of storageAdapters) {
         try {
           const repos = await adapter.listRepos();
@@ -234,7 +253,7 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
                   if (!parentId || !id) {
                     throw new Error(
                       "content missing id or parentId " +
-                        JSON.stringify({ parentId, id }),
+                      JSON.stringify({ parentId, id }),
                     );
                   }
                   await gremlinAdapter.create(

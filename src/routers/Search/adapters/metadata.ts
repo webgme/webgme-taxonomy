@@ -404,7 +404,8 @@ export class GremlinAdapter implements MetadataAdapter {
       new DriverRemoteConnection(this.config.gremlinEndpoint),
     );
 
-    await g.V().drop();
+    await g.V().drop().iterate();
+    await g.E().drop().iterate();
   }
 
   async runGremlin(query: string): Promise<any> {
