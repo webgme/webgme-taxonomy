@@ -279,9 +279,14 @@ export default class MongoAdapter implements Adapter {
     return fromResult(doc.map(toRepository).okOr(new RepositoryNotFound(id)));
   }
 
-  async listArtifacts(repoId: string, includeAllVersions?: boolean): Promise<Artifact[]> {
+  async listArtifacts(
+    repoId: string,
+    includeAllVersions?: boolean,
+  ): Promise<Artifact[]> {
     if (includeAllVersions) {
-      console.warn('TODO: add support for listArtifacts includeAllVersions in mongo..')
+      console.warn(
+        "TODO: add support for listArtifacts includeAllVersions in mongo..",
+      );
     }
     const artifacts: Artifact[] = (await this.getRepository(repoId))
       .map((repo) =>

@@ -159,7 +159,10 @@ export default class PDP implements Adapter {
     return metadata;
   }
 
-  async listArtifacts(repoId: string, includeAllVersions?: boolean): Promise<Artifact[]> {
+  async listArtifacts(
+    repoId: string,
+    includeAllVersions?: boolean,
+  ): Promise<Artifact[]> {
     const processId = newtype<ProcessID>(repoId);
     const observations = await this.getProcessObservations(processId);
     let artifacts: Artifact[] = filterMapOpt(
@@ -178,7 +181,11 @@ export default class PDP implements Adapter {
               continue;
             }
 
-            olderVersions.push(fromResult(await this.api.getObservation(processId, obs.index, version)));
+            olderVersions.push(
+              fromResult(
+                await this.api.getObservation(processId, obs.index, version),
+              ),
+            );
           }
         }
       }
