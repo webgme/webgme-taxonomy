@@ -135,9 +135,10 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
       // original: /routers/Dashboard/guest%2BmongoPipeline/branch/master/resolve-url
       // url: /routers/Search/guest%2BmongoPipeline/branch/master/%2FA/static/index.html?repoId=6617fab6596a7edfc2fb9cff&contentId=1_1
       let url =
-        `${req.originalUrl.split("?")[0].replace(/Dashboard/, "Search").split(
-          "/",
-        ).slice(0, -1).join("/")
+        `${
+          req.originalUrl.split("?")[0].replace(/Dashboard/, "Search").split(
+            "/",
+          ).slice(0, -1).join("/")
         }` +
         `/${encodeURIComponent(path)}/static/index.html`;
 
@@ -190,20 +191,25 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
       );
 
       // Fetch all the contents
-      let storageAdapters: StorageWithGraphSearch<Adapter, GremlinAdapter | null>[] = [];
+      let storageAdapters: StorageWithGraphSearch<
+        Adapter,
+        GremlinAdapter | null
+      >[] = [];
 
       if (USE_SMALL_TEST_DATA) {
         for (const node of storageNodes) {
           const { core } = gmeContext;
           // MODEL_ML || Bootcamp Sandbox
-          if (core.getPath(node) === '/R/F' || core.getPath(node) === '/f/l') {
-            storageAdapters.push(await StorageAdapter.fromStorageNode(
-              gmeContext,
-              req,
-              node,
-              middlewareOpts.gmeConfig,
-              true,
-            ));
+          if (core.getPath(node) === "/R/F" || core.getPath(node) === "/f/l") {
+            storageAdapters.push(
+              await StorageAdapter.fromStorageNode(
+                gmeContext,
+                req,
+                node,
+                middlewareOpts.gmeConfig,
+                true,
+              ),
+            );
           }
         }
       } else {
@@ -243,7 +249,7 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
       };
 
       await gremlinAdapter.dropAll();
-      console.log('Dropped current graphDb data..');
+      console.log("Dropped current graphDb data..");
 
       for (const adapter of storageAdapters) {
         try {
@@ -257,7 +263,7 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
                   if (!parentId || !id) {
                     throw new Error(
                       "content missing id or parentId " +
-                      JSON.stringify({ parentId, id }),
+                        JSON.stringify({ parentId, id }),
                     );
                   }
                   await gremlinAdapter.create(
@@ -266,7 +272,11 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
                   );
                   stats.artifacts.successes += 1;
                   if (stats.artifacts.successes % 100 === 0) {
-                    console.log('Inserted', stats.artifacts.successes, 'artifacts ...');
+                    console.log(
+                      "Inserted",
+                      stats.artifacts.successes,
+                      "artifacts ...",
+                    );
                   }
                 } catch (e) {
                   logger.error(e);
@@ -289,7 +299,7 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
 
       stats.time_sec.total = (Date.now() - stats.time_sec.total) / 1000;
 
-      console.log('DONE!, stats:', JSON.stringify(stats, null, 2));
+      console.log("DONE!, stats:", JSON.stringify(stats, null, 2));
 
       res.json(stats);
     },
