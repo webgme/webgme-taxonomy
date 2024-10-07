@@ -990,7 +990,7 @@ class ObservationReservation implements ContentReservation {
     this.index = index;
     this.version = version;
     this.uri = uri;
-    this.contentId = `${index}_${version} `;
+    this.contentId = `${index}_${version}`;
   }
 }
 
@@ -1015,8 +1015,8 @@ class ObservationUpdateReservation implements UpdateReservation {
     this.version = version;
 
     this.repoId = processId.toString();
-    this.contentId = `${index}_${version} `;
-    this.targetContentId = `${index}_${targetVersion} `;
+    this.contentId = `${index}_${version}`;
+    this.targetContentId = `${index}_${targetVersion}`;
     this.uri = uri;
   }
 }
