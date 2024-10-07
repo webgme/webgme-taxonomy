@@ -219,7 +219,10 @@ export class StorageWithGraphSearch<
     return this.contentStore.getRepoMetadata(repoId);
   }
 
-  async listArtifacts(repoId: string, includeAllVersions?: boolean): Promise<Artifact[]> {
+  async listArtifacts(
+    repoId: string,
+    includeAllVersions?: boolean,
+  ): Promise<Artifact[]> {
     return this.contentStore.listArtifacts(repoId, includeAllVersions);
   }
 }
