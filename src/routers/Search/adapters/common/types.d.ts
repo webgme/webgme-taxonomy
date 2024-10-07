@@ -19,7 +19,7 @@ interface UpdateResult {
 export interface Adapter {
   listRepos(): Promise<Repository[]>;
   getRepoMetadata(repoId: string): Promise<Repository>;
-  listArtifacts(repoId: string): Promise<Artifact[]>;
+  listArtifacts(repoId: string, includeAllVersions?: boolean): Promise<Artifact[]>;
   createArtifact(
     res: RepoReservation,
     metadata: ArtifactMetadata,
