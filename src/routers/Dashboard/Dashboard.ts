@@ -256,7 +256,7 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
           const repos = await adapter.listRepos();
           for (const repo of repos) {
             try {
-              const contents = await adapter.listArtifacts(repo.id);
+              const contents = await adapter.listArtifacts(repo.id, true);
               for (const content of contents) {
                 try {
                   const { parentId, id } = content;
