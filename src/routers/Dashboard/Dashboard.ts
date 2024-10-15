@@ -155,7 +155,7 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
     { method: "post" },
   );
 
-  const USE_SMALL_TEST_DATA = true;
+  const USE_SMALL_TEST_DATA = false;
 
   RouterUtils.addProjectRoute(
     middlewareOpts,
