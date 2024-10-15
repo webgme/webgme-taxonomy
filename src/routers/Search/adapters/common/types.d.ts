@@ -231,4 +231,5 @@ export interface MetadataStorageConfig {
   enable: boolean;
   useAsMainMetadataStorage: boolean;
   gremlinEndpoint: string;
+  taxonomyQueryUrl: string;
 }

@@ -24,7 +24,9 @@
   let numArtifacts = 10;
   let shownArtifacts = [];
   let selected = [];
-  let deletionEnabled = false;
+  let config: { deletionEnabled: boolean; graphDbEnabled: boolean; taxonomyQueryUrl: string;} = {
+    deletionEnabled: false, graphDbEnabled: false, taxonomyQueryUrl: ''
+  };
 
   let menu: Menu;
   const formatter = new TagFormatter();
@@ -52,8 +54,7 @@
 
     }
 
-    const config = await response.json() as { deletionEnabled: boolean; };
-    deletionEnabled = config.deletionEnabled;
+    config = await response.json();
   }
 
   fetchDeploymentConfiguration();
@@ -61,6 +62,20 @@
   let displayedTags = null;
   let displayedName = null;
   let displayTags = false;
+
+  async function openDependencies(artifact: Artifact, reverse?: boolean) {
+    dispatch("displayMessage", { message: `Opening up ${reverse ? 'dependants' : 'dependencies'} page ..` });
+    const tags = await formatter.toHumanFormat(artifact.tags);
+    const uri = await getUri(artifact, tags);
+
+    let url = `${config.taxonomyQueryUrl}dependency-view?sourceUri=${uri}`;
+    if (reverse) {
+      url += '&reverse';
+    }
+
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }
+
   async function showTags(artifact: Artifact) {
     displayedTags = await formatter.toHumanFormat(artifact.tags);
     displayedName = artifact.displayName;
@@ -134,7 +149,6 @@
   $: artifactSet, onArtifactSetChange();
 
   function onArtifactSetChange() {
-    console.log('onArtifactSetChange');
     if (!artifactSet || artifactSet.loadState === LoadState.Pending) {
       artifactSetId = null;
       artifactSetChildrenIds = [];
@@ -291,6 +305,21 @@
                 size="mini"
                 title="Copy URI"
               >link</IconButton>
+              {#if config.graphDbEnabled }
+                <IconButton
+                  on:click$stopPropagation={() => openDependencies(artifact)}
+                  class="material-icons"
+                  size="mini"
+                  title="View Dependencies"
+                >account_tree</IconButton>
+                <IconButton
+                  on:click$stopPropagation={() => openDependencies(artifact, true)}
+                  class="material-icons"
+                  size="mini"
+                  title="View Dependants"
+                  style="transform: scaleX(-1);"
+                >account_tree</IconButton>
+              {/if}
             </Meta>
           </Item>
         {/each}
@@ -303,7 +332,7 @@
       <Button on:click={onDownloadClicked} disabled={selected.length === 0}>
         <Label>Download</Label>
       </Button>
-      {#if deletionEnabled }
+      {#if config.deletionEnabled }
       <Button on:click={() => onDeleteArtifact()} disabled={selected.length === 0}>
         <Label>Delete</Label>
       </Button>
