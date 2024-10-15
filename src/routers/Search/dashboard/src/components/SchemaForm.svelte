@@ -6,6 +6,7 @@
   import { createEventDispatcher, getContext } from "svelte";
   import CircularProgress from "@smui/circular-progress";
   import SchemaForm, { DownloadOptions, ValidationError, type JSONSchema7, type UISchema } from "svelte-jsonschema-form";
+  import UriTagButton from "./UriTagButton.svelte";
   import { deepMerge } from "../Utils";
 
   export let data: any;
@@ -19,6 +20,7 @@
   let uischema = { ":ui:": { "collapse": "unrequired" }} as UISchema;
   let schemaForm: SchemaForm;
   let schemaError: string | Error | ValidationError | null = null;
+  let string$append: ConstructorOfATypedSvelteComponent | string | undefined;
 
   $: schema = fetchSchema(nodePath)
   $: updateUischema(readonly);
@@ -35,6 +37,7 @@
 
   function updateUischema(disabled: boolean) {
     uischema = deepMerge(uischema, <UISchema>{ ":ui:": { readonly }});
+    string$append = disabled ? UriTagButton : undefined;
   }
 
   function handleSchemaFormError(event: CustomEvent<Error | ValidationError>) {
@@ -60,7 +63,14 @@
   <CircularProgress indeterminate />
   <p>Loading schema...</p>
 {:then schema}
-  <SchemaForm {schema} {uischema} bind:data bind:this={schemaForm} on:error={handleSchemaFormError} />
+  <SchemaForm 
+    {schema}
+    {uischema}
+    bind:data
+    bind:this={schemaForm}
+    on:error={handleSchemaFormError}
+    {string$append}
+  />
 {:catch error}
   <div class="error">ERROR: {error.message}</div>
 {/await}
