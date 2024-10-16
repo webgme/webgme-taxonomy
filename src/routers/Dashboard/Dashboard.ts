@@ -244,7 +244,7 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
           successes: 0,
           errors: 0,
         },
-        artifacts: {
+        contents: {
           successes: 0,
           errors: 0,
         },
@@ -260,29 +260,22 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
             try {
               const contents = await adapter.listArtifacts(repo.id, true);
               for (const content of contents) {
+                const { parentId, id } = content;
                 try {
-                  const { parentId, id } = content;
                   if (!parentId || !id) {
-                    throw new Error(
-                      "content missing id or parentId " +
-                        JSON.stringify({ parentId, id }),
-                    );
+                    throw new Error("content missing id or parentId " + JSON.stringify({ parentId, id }));
                   }
                   await gremlinAdapter.create(
                     new ChildContentReference(parentId, id),
                     content,
                   );
-                  stats.artifacts.successes += 1;
-                  if (stats.artifacts.successes % 100 === 0) {
-                    console.log(
-                      "Inserted",
-                      stats.artifacts.successes,
-                      "artifacts ...",
-                    );
+                  stats.contents.successes += 1;
+                  if (stats.contents.successes % 100 === 0) {
+                    console.log("Inserted", stats.contents.successes, "contents ...");
                   }
                 } catch (e) {
-                  logger.error(e);
-                  stats.artifacts.errors += 1;
+                  logger.error("Failed at content", content.displayName,"id=", id, ", in repository", repo.displayName, "id=", repo.id, ".", e);
+                  stats.contents.errors += 1;
                 }
               }
               stats.repositories.successes += 1;
