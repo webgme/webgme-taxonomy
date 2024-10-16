@@ -155,7 +155,7 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
     { method: "post" },
   );
 
-  const USE_SMALL_TEST_DATA = false;
+  const DEBUG_WITH_SMALL_TEST_DATA = false;
 
   RouterUtils.addProjectRoute(
     middlewareOpts,
@@ -196,21 +196,23 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
         GremlinAdapter | null
       >[] = [];
 
-      if (USE_SMALL_TEST_DATA) {
+      if (DEBUG_WITH_SMALL_TEST_DATA) {
         for (const node of storageNodes) {
           const { core } = gmeContext;
           // MODEL_ML || Bootcamp Sandbox
-          if (core.getPath(node) === "/R/F" || core.getPath(node) === "/f/l") {
-            storageAdapters.push(
-              await StorageAdapter.fromStorageNode(
-                gmeContext,
-                req,
-                node,
-                middlewareOpts.gmeConfig,
-                true,
-              ),
-            );
+          if (core.getPath(node) !== "/R/F" && core.getPath(node) !== "/f/l") {
+            continue;
           }
+
+          storageAdapters.push(
+            await StorageAdapter.fromStorageNode(
+              gmeContext,
+              req,
+              node,
+              middlewareOpts.gmeConfig,
+              true,
+            ),
+          );
         }
       } else {
         storageAdapters = await Promise.all(

@@ -174,19 +174,21 @@ export default class PDP implements Adapter {
       const olderVersions: Observation[] = [];
       // Check if any version is higher and collect the older observations.
       for (const obs of observations) {
-        if (obs.version > 0) {
-          const obsData = getObservationData(obs);
-          for (const version of getValidVersions(obsData)) {
-            if (version === obs.version) {
-              continue;
-            }
+        if (obs.version === 0) {
+          continue;
+        }
 
-            olderVersions.push(
-              fromResult(
-                await this.api.getObservation(processId, obs.index, version),
-              ),
-            );
+        const obsData = getObservationData(obs);
+        for (const version of getValidVersions(obsData)) {
+          if (version === obs.version) {
+            continue;
           }
+
+          olderVersions.push(
+            fromResult(
+              await this.api.getObservation(processId, obs.index, version),
+            ),
+          );
         }
       }
 
