@@ -56,6 +56,10 @@
     const transform = (taxVers != null) ? (tags: any) => ({ tags, taxonomyVersion: taxVers }) : undefined;
     schemaForm.download(filename, { transform, ...opts });
   }
+
+  export function validate() {
+    return schemaForm.validate()
+  }
 </script>
 
 

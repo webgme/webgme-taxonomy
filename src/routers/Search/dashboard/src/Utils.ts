@@ -110,6 +110,10 @@ export function isObject<T>(
   return typeof thing === "object" && !Array.isArray(thing);
 }
 
+export function isBoolean(value: any): value is boolean {
+  return (value === true) || (value === false) || (value instanceof Boolean);
+}
+
 export function isDefined<T>(thing: T): thing is Exclude<T, undefined> {
   return (thing != null) || (thing === null);
 }
