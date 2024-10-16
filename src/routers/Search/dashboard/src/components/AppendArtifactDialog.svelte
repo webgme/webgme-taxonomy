@@ -27,6 +27,7 @@
 
   const dispatch = createEventDispatcher();
   const storage: Storage = getContext("storage");
+  const configuration: Promise<any> = getContext<Promise<any>>("configuration");
 
   let open = false;
   let title = "";
@@ -93,7 +94,8 @@
   }
 
   async function upload() {
-    const metadata = { tags, displayName, taxonomyVersion: repo?.taxonomyVersion };
+    const taxonomyVersion = (await configuration)?.project;
+    const metadata = { tags, displayName, taxonomyVersion };
     dispatch("upload");
     try {
       uploads = (content != null) ? 
