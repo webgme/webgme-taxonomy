@@ -88,6 +88,20 @@ const hostPattern = `pdp://${Pattern.URL}/${typePattern}`;
 const repoPattern = hostPattern + "/" + processPattern;
 const contentPattern = repoPattern + "/" + indexPattern + "/" + versionPattern;
 
+function getValidVersions(data: ObservationData): number[] {
+  return matchObsDatum(data, {
+    ArtifactMetadata(_md) {
+      return [0];
+    },
+    ContentUpdate(md) {
+      return md.validVersions;
+    },
+    ContentDeletion(md) {
+      return md.validVersions;
+    },
+  });
+}
+
 export default class PDP implements Adapter {
   private observerId: string;
   private _readToken: string;
@@ -145,13 +159,41 @@ export default class PDP implements Adapter {
     return metadata;
   }
 
-  async listArtifacts(repoId: string): Promise<Artifact[]> {
+  async listArtifacts(
+    repoId: string,
+    includeAllVersions?: boolean,
+  ): Promise<Artifact[]> {
     const processId = newtype<ProcessID>(repoId);
     const observations = await this.getProcessObservations(processId);
-    const artifacts: Artifact[] = filterMapOpt(
+    let artifacts: Artifact[] = filterMapOpt(
       observations,
       parseArtifact,
     );
+
+    if (includeAllVersions) {
+      const olderVersions: Observation[] = [];
+      // Check if any version is higher and collect the older observations.
+      for (const obs of observations) {
+        if (obs.version === 0) {
+          continue;
+        }
+
+        const obsData = getObservationData(obs);
+        for (const version of getValidVersions(obsData)) {
+          if (version === obs.version) {
+            continue;
+          }
+
+          olderVersions.push(
+            fromResult(
+              await this.api.getObservation(processId, obs.index, version),
+            ),
+          );
+        }
+      }
+
+      artifacts = artifacts.concat(filterMapOpt(olderVersions, parseArtifact));
+    }
 
     return artifacts;
   }
@@ -618,18 +660,7 @@ export default class PDP implements Adapter {
     );
 
     const latestData = getObservationData(lastObservation);
-
-    const validVersions = matchObsDatum(latestData, {
-      ArtifactMetadata(_md) { // only the first version can be this format
-        return [0];
-      },
-      ContentUpdate(md) {
-        return md.validVersions;
-      },
-      ContentDeletion(md) {
-        return md.validVersions;
-      },
-    });
+    const validVersions = getValidVersions(latestData);
 
     const latestVersion = validVersions[validVersions.length - 1];
     console.log({ latestData, validVersions, latestVersion });

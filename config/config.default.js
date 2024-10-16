@@ -17,6 +17,7 @@ config.rest.components["Search"].options = {
     enable: false,
     useAsMainMetadataStorage: false,
     gremlinEndpoint: "ws://localhost:8182/gremlin",
+    taxonomyQueryUrl: "",
   },
 };
 

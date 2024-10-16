@@ -20,7 +20,7 @@ import RouterUtils, {
   handleUserErrors,
 } from "../../common/routers/Utils";
 import { uniqWithKey } from "../Search/Utils";
-import { Repository } from "../Search/adapters/common/types";
+import { Adapter, Repository } from "../Search/adapters/common/types";
 import {
   canUserDelete,
   filterMap,
@@ -33,6 +33,7 @@ import StorageAdapter from "../Search/adapters";
 import {
   ChildContentReference,
   GremlinAdapter,
+  StorageWithGraphSearch,
 } from "../Search/adapters/metadata";
 import exportTaxonomy from "../../common/TaxonomyExporter";
 import { MetadataStorageConfig } from "../Search/adapters/common/types";
@@ -154,6 +155,8 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
     { method: "post" },
   );
 
+  const DEBUG_WITH_SMALL_TEST_DATA = false;
+
   RouterUtils.addProjectRoute(
     middlewareOpts,
     router,
@@ -188,17 +191,42 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
       );
 
       // Fetch all the contents
-      const storageAdapters = await Promise.all(
-        storageNodes.map((node) =>
-          StorageAdapter.fromStorageNode(
-            gmeContext,
-            req,
-            node,
-            middlewareOpts.gmeConfig,
-            true,
-          )
-        ),
-      );
+      let storageAdapters: StorageWithGraphSearch<
+        Adapter,
+        GremlinAdapter | null
+      >[] = [];
+
+      if (DEBUG_WITH_SMALL_TEST_DATA) {
+        for (const node of storageNodes) {
+          const { core } = gmeContext;
+          // MODEL_ML || Bootcamp Sandbox
+          if (core.getPath(node) !== "/R/F" && core.getPath(node) !== "/f/l") {
+            continue;
+          }
+
+          storageAdapters.push(
+            await StorageAdapter.fromStorageNode(
+              gmeContext,
+              req,
+              node,
+              middlewareOpts.gmeConfig,
+              true,
+            ),
+          );
+        }
+      } else {
+        storageAdapters = await Promise.all(
+          storageNodes.map((node) =>
+            StorageAdapter.fromStorageNode(
+              gmeContext,
+              req,
+              node,
+              middlewareOpts.gmeConfig,
+              true,
+            )
+          ),
+        );
+      }
 
       const taxNode = await getTaxonomyNode(gmeContext);
       const taxonomy = await exportTaxonomy(gmeContext.core, taxNode);
@@ -222,12 +250,15 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
         },
       };
 
+      await gremlinAdapter.dropAll();
+      console.log("Dropped current graphDb data..");
+
       for (const adapter of storageAdapters) {
         try {
           const repos = await adapter.listRepos();
           for (const repo of repos) {
             try {
-              const contents = await adapter.listArtifacts(repo.id);
+              const contents = await adapter.listArtifacts(repo.id, true);
               for (const content of contents) {
                 try {
                   const { parentId, id } = content;
@@ -242,6 +273,13 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
                     content,
                   );
                   stats.artifacts.successes += 1;
+                  if (stats.artifacts.successes % 100 === 0) {
+                    console.log(
+                      "Inserted",
+                      stats.artifacts.successes,
+                      "artifacts ...",
+                    );
+                  }
                 } catch (e) {
                   logger.error(e);
                   stats.artifacts.errors += 1;
@@ -263,6 +301,8 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
 
       stats.time_sec.total = (Date.now() - stats.time_sec.total) / 1000;
 
+      console.log("DONE!, stats:", JSON.stringify(stats, null, 2));
+
       res.json(stats);
     },
     { method: "post" },
@@ -272,7 +312,7 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
     middlewareOpts,
     router,
     "deployment-config.json",
-    async function dumpContentMetadata(_, req, res) {
+    async function getDeploymentConfig(_, req, res) {
       res.json({
         deletionEnabled: await canUserDelete(req, middlewareOpts),
         isAdmin: await isUserAdmin(req, middlewareOpts),

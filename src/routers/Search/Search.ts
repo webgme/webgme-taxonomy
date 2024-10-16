@@ -131,6 +131,7 @@ function initialize(middlewareOpts: MiddlewareOptions) {
         deletionEnabled: await canUserDelete(req, middlewareOpts),
         isAdmin: await isUserAdmin(req, middlewareOpts),
         graphDbEnabled: msConfig.enable,
+        taxonomyQueryUrl: msConfig.taxonomyQueryUrl,
       });
     },
   );

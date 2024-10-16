@@ -529,6 +529,7 @@
               };
           }}
           on:copyUri={(event) => displayMessage("Copied URI: " + event.detail.name)}
+          on:displayMessage={(event) => displayMessage(event.detail.message)}
         />
       {/if}
     </AppContent>
