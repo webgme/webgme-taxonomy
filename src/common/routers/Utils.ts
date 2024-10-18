@@ -92,6 +92,40 @@ function getProjectContext(params: { [k: string]: string }): ProjectContext {
   }
 }
 
+async function getLatestTag(
+  middlewareOpts: MiddlewareOptions,
+  projectId: string,
+) {
+  const { safeStorage } = middlewareOpts;
+  const userId = projectId.split("+").shift() as string;
+  const project = await safeStorage.openProject({
+    username: userId,
+    projectId,
+  });
+  const tagDict = await project.getTags();
+  const tags = filterMap(Object.keys(tagDict), (tagName) => {
+    try {
+      const version = SemanticVersion.parse(tagName);
+      return {
+        name: tagName,
+        version,
+      };
+    } catch (_err) {
+      return undefined;
+    }
+  });
+
+  if (tags.length === 0) {
+    throw new TagNotFoundError("latest");
+  }
+
+  const latestTag = tags.reduce((latest, other) =>
+    latest.version.gte(other.version) ? latest : other
+  );
+
+  return latestTag;
+}
+
 export default {
   /**
    * Get the GME context and use authorization from the userId in the request.
@@ -322,32 +356,7 @@ export default {
         async function resolveLatestTag(req: Request, res: Response) {
           const { projectId, tag } = req.params;
           if (tag === "latest") {
-            const { safeStorage } = middlewareOpts;
-            const userId = projectId.split("+").shift() as string;
-            const project = await safeStorage.openProject({
-              username: userId,
-              projectId,
-            });
-            const tagDict = await project.getTags();
-            const tags = filterMap(Object.keys(tagDict), (tagName) => {
-              try {
-                const version = SemanticVersion.parse(tagName);
-                return {
-                  name: tagName,
-                  version,
-                };
-              } catch (_err) {
-                return undefined;
-              }
-            });
-
-            if (tags.length === 0) {
-              throw new TagNotFoundError("latest");
-            }
-
-            const latestTag = tags.reduce((latest, other) =>
-              latest.version.gte(other.version) ? latest : other
-            );
+            const latestTag = await getLatestTag(middlewareOpts, projectId);
 
             const url = req.originalUrl.replace(
               "/tag/latest",
@@ -361,6 +370,7 @@ export default {
     return router;
   },
   getPackageJSON,
+  getLatestTag,
 };
 
 /**
