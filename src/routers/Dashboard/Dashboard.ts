@@ -77,6 +77,16 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
     express.static(staticPath),
   );
 
+  router.get('/:projectId/latest-tag', async (req, res) => {
+    try {
+      const tag = await RouterUtils.getLatestTag(middlewareOpts, req.params.projectId);
+      res.send(tag);
+    } catch (err) {
+      logger.error(err);
+      res.sendStatus(500);
+    }
+  });
+
   router.get(
     RouterUtils.getProjectScopedRoutes("package-json"),
     handleUserErrors(middlewareOpts.logger, async (req, res) => {
