@@ -77,9 +77,12 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
     express.static(staticPath),
   );
 
-  router.get('/:projectId/latest-tag', async (req, res) => {
+  router.get("/:projectId/latest-tag", async (req, res) => {
     try {
-      const tag = await RouterUtils.getLatestTag(middlewareOpts, req.params.projectId);
+      const tag = await RouterUtils.getLatestTag(
+        middlewareOpts,
+        req.params.projectId,
+      );
       res.send(tag);
     } catch (err) {
       logger.error(err);
@@ -273,7 +276,10 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
                 const { parentId, id } = content;
                 try {
                   if (!parentId || !id) {
-                    throw new Error("content missing id or parentId " + JSON.stringify({ parentId, id }));
+                    throw new Error(
+                      "content missing id or parentId " +
+                        JSON.stringify({ parentId, id }),
+                    );
                   }
                   await gremlinAdapter.create(
                     new ChildContentReference(parentId, id),
@@ -281,10 +287,25 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
                   );
                   stats.contents.successes += 1;
                   if (stats.contents.successes % 100 === 0) {
-                    console.log("Inserted", stats.contents.successes, "contents ...");
+                    console.log(
+                      "Inserted",
+                      stats.contents.successes,
+                      "contents ...",
+                    );
                   }
                 } catch (e) {
-                  logger.error("Failed at content", content.displayName,"id=", id, ", in repository", repo.displayName, "id=", repo.id, ".", e);
+                  logger.error(
+                    "Failed at content",
+                    content.displayName,
+                    "id=",
+                    id,
+                    ", in repository",
+                    repo.displayName,
+                    "id=",
+                    repo.id,
+                    ".",
+                    e,
+                  );
                   stats.contents.errors += 1;
                 }
               }
