@@ -316,7 +316,7 @@
                   on:click$stopPropagation={() => openDependencies(artifact, true)}
                   class="material-icons"
                   size="mini"
-                  title="View Dependants"
+                  title="View Dependents"
                   style="transform: scaleX(-1);"
                 >account_tree</IconButton>
               {/if}

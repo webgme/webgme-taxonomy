@@ -168,7 +168,11 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
     { method: "post" },
   );
 
-  const DEBUG_WITH_SMALL_TEST_DATA = false;
+  // MODEL DEP and Sandbox
+  // const DEBUG_GRAPHDB_CONTENT_TYPE_PATHS = ["/f/l", "/R/F"];
+  // Cohort
+  // const DEBUG_GRAPHDB_CONTENT_TYPE_PATHS = ["/q/V"];
+  const DEBUG_GRAPHDB_CONTENT_TYPE_PATHS: string[] = [];
 
   RouterUtils.addProjectRoute(
     middlewareOpts,
@@ -209,11 +213,12 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
         GremlinAdapter | null
       >[] = [];
 
-      if (DEBUG_WITH_SMALL_TEST_DATA) {
+      if (DEBUG_GRAPHDB_CONTENT_TYPE_PATHS.length > 0) {
         for (const node of storageNodes) {
           const { core } = gmeContext;
           // MODEL_ML || Bootcamp Sandbox
-          if (core.getPath(node) !== "/R/F" && core.getPath(node) !== "/f/l") {
+          if (!DEBUG_GRAPHDB_CONTENT_TYPE_PATHS.includes(core.getPath(node))) {
+            console.warn('Skipping contentType', core.getAttribute(core.getParent(node), 'name'));
             continue;
           }
 
