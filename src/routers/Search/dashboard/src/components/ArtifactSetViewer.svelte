@@ -307,16 +307,16 @@
               >link</IconButton>
               {#if config.graphDbEnabled }
                 <IconButton
+                  on:click$stopPropagation={() => openDependencies(artifact, true)}
+                  class="material-icons"
+                  size="mini"
+                  title="View Dependents"
+                >account_tree</IconButton>
+                <IconButton
                   on:click$stopPropagation={() => openDependencies(artifact)}
                   class="material-icons"
                   size="mini"
                   title="View Dependencies"
-                >account_tree</IconButton>
-                <IconButton
-                  on:click$stopPropagation={() => openDependencies(artifact, true)}
-                  class="material-icons"
-                  size="mini"
-                  title="View Dependants"
                   style="transform: scaleX(-1);"
                 >account_tree</IconButton>
               {/if}
