@@ -218,7 +218,10 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
           const { core } = gmeContext;
           // MODEL_ML || Bootcamp Sandbox
           if (!DEBUG_GRAPHDB_CONTENT_TYPE_PATHS.includes(core.getPath(node))) {
-            console.warn('Skipping contentType', core.getAttribute(core.getParent(node), 'name'));
+            console.warn(
+              "Skipping contentType",
+              core.getAttribute(core.getParent(node), "name"),
+            );
             continue;
           }
 
