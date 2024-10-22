@@ -5,7 +5,8 @@
 <script lang="ts">
   import { createEventDispatcher, getContext } from "svelte";
   import type { default as Storage } from "../Storage";
-  import { deepMerge } from "../Utils";
+  import { deepMerge, isBoolean } from "../Utils";
+  import { ErrorObject } from "ajv";
 
   import type { toast as Toast } from "@zerodevx/svelte-toast";
   import Dialog, { Content, Title, Actions } from "@smui/dialog";
@@ -13,6 +14,7 @@
   import IconButton from "@smui/icon-button";
   import Tooltip, { Wrapper } from "@smui/tooltip"
   import Paper, { Subtitle, Content as PContent } from "@smui/paper";
+  import Snackbar, { Actions as SBActions, Label as SBLabel } from "@smui/snackbar";
   import FileButton from "./FileButton.svelte";
   import SchemaForm from "./SchemaForm.svelte";
 
@@ -24,6 +26,7 @@
   export let tags: any;
   export let submitLabel = "Submit";
   export let submitIcon = "check";
+  export let validate = true;
 
   const dispatch = createEventDispatcher();
   const storage: Storage = getContext("storage");
@@ -32,13 +35,38 @@
   const id = 'tag-step-dialog-' + Math.random().toString(36).substring(2);
 
   let schemaForm: SchemaForm;
+  let snackbar: Snackbar;
   let tagging = true;
   let working = false
   let tagsFiles: FileList | null = null;
+  let validationErrors: ErrorObject[] | null = null;
+  let validationProceedFn: () => void = () => {};
 
   $: mergeTagsFile(tagsFiles?.[0]);
 
-  function submit(event: CustomEvent) {
+  function checkValidation(fn: () => void) {
+    const validation = validate && schemaForm.validate();
+    if (!isBoolean(validation)) {
+      console.log("Validation errors:", validation);
+      working ||= true;
+      validationProceedFn = () => {
+        fn();
+        working &&= false;
+      };
+      validationErrors = validation;
+      snackbar.open();
+    }
+    else {
+      fn();
+    }
+
+  }
+
+  function next() {
+    tagging = false;
+  }
+
+  function submit() {
     const performDefault = dispatch('submit', async function(busy: () => Promise<boolean | void>) {
       working = true;
       const done = await busy() ?? true;
@@ -84,6 +112,7 @@
   }
 
   function closeHandler(event: CustomEvent<{ action: string }>) {
+    snackbar.close();
     tagging ||= true;
     working &&= false;
     dispatch('close', event);
@@ -154,11 +183,11 @@
         <Label>Cancel</Label>
       </Button>
       {#if tagging}
-        <Button disabled={working} on:click={download}>
+        <Button disabled={working} action={null} on:click={() => checkValidation(download)}>
           <Label>Download</Label>
           <Icon class="material-icons" aria-hidden="true">download</Icon>
         </Button>
-        <Button autofocus disabled={working} action={null} on:click={(e) => { tagging = false }} aria-labelledby={`${id}-next`}>
+        <Button autofocus disabled={working} action={null} on:click={() => checkValidation(next)} aria-labelledby={`${id}-next`}>
           <Label id={`${id}-next`}>Next</Label>
           <Icon class="material-icons" aria-hidden="true">arrow_forward</Icon>
         </Button>
@@ -171,6 +200,23 @@
     </div>
   </Actions>
 </Dialog>
+
+<Snackbar class="error" bind:this={snackbar} timeoutMs={-1}>
+  <SBLabel>
+    <p>Tag validation failed:</p>
+    {#if validationErrors}
+      <ul>
+        {#each validationErrors as error}
+          <li>{error.message}</li>
+        {/each}
+      </ul>
+    {/if}
+  </SBLabel>
+  <SBActions>
+    <Button on:click={() => {snackbar.close(); working = false;}}>Cancel</Button>
+    <Button on:click={validationProceedFn}>Proceed</Button>
+  </SBActions>
+</Snackbar>
 
 <style lang="scss">
   :global(.tag-step-dialog.mdc-dialog--fullscreen .mdc-dialog__title) {
@@ -206,5 +252,15 @@
 
   :global(.tags-step .smui-accordion__header__title--with-description) {
     max-width: unset !important;
+  }
+
+  :global(.mdc-snackbar.error) {
+    :global(.mdc-snackbar__surface) {
+      background-color: var(--mdc-theme-error);
+    }
+
+    :global(.mdc-snackbar__actions .mdc-button) {
+      color: currentColor;
+    }
   }
 </style>
