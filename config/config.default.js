@@ -18,6 +18,7 @@ config.rest.components["Search"].options = {
     useAsMainMetadataStorage: false,
     gremlinEndpoint: "ws://localhost:8182/gremlin",
     taxonomyQueryUrl: "",
+    dropBatchSize: 10000,
   },
 };
 

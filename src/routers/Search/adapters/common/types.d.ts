@@ -232,4 +232,5 @@ export interface MetadataStorageConfig {
   useAsMainMetadataStorage: boolean;
   gremlinEndpoint: string;
   taxonomyQueryUrl: string;
+  dropBatchSize: number;
 }
