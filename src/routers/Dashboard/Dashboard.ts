@@ -195,161 +195,164 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
       }
 
       if (isPopulatingGraphDB) {
-        logger.error('isPopulatingGraphDB was true! Duplicate requests to /graphdb');
+        logger.error(
+          "isPopulatingGraphDB was true! Duplicate requests to /graphdb",
+        );
         res.sendStatus(400);
         return;
       }
 
-
       try {
         isPopulatingGraphDB = true;
-      // Get all the storage adapters for each (unique) storage node in the project
-      const storageType = Object.values(core.getAllMetaNodes(root))
-        .find((node) => core.getAttribute(node, "name") === "Storage");
+        // Get all the storage adapters for each (unique) storage node in the project
+        const storageType = Object.values(core.getAllMetaNodes(root))
+          .find((node) => core.getAttribute(node, "name") === "Storage");
 
-      assert(storageType, new MetaNodeNotFoundError(gmeContext, "Storage"));
+        assert(storageType, new MetaNodeNotFoundError(gmeContext, "Storage"));
 
-      const allStorageNodes: Core.Node[] = (await core.loadSubTree(root))
-        .filter((node: Core.Node) =>
-          core.isTypeOf(node, storageType) && !core.isMetaNode(node)
+        const allStorageNodes: Core.Node[] = (await core.loadSubTree(root))
+          .filter((node: Core.Node) =>
+            core.isTypeOf(node, storageType) && !core.isMetaNode(node)
+          );
+        const storageNodes = uniqWithKey(
+          allStorageNodes,
+          (node) => getNormalStorageNode(core, node),
         );
-      const storageNodes = uniqWithKey(
-        allStorageNodes,
-        (node) => getNormalStorageNode(core, node),
-      );
 
-      // Fetch all the contents
-      let storageAdapters: StorageWithGraphSearch<
-        Adapter,
-        GremlinAdapter | null
-      >[] = [];
+        // Fetch all the contents
+        let storageAdapters: StorageWithGraphSearch<
+          Adapter,
+          GremlinAdapter | null
+        >[] = [];
 
-      if (DEBUG_GRAPHDB_CONTENT_TYPE_PATHS.length > 0) {
-        for (const node of storageNodes) {
-          const { core } = gmeContext;
-          // MODEL_ML || Bootcamp Sandbox
-          if (!DEBUG_GRAPHDB_CONTENT_TYPE_PATHS.includes(core.getPath(node))) {
-            console.warn(
-              "Skipping contentType",
-              core.getAttribute(core.getParent(node), "name"),
+        if (DEBUG_GRAPHDB_CONTENT_TYPE_PATHS.length > 0) {
+          for (const node of storageNodes) {
+            const { core } = gmeContext;
+            // MODEL_ML || Bootcamp Sandbox
+            if (
+              !DEBUG_GRAPHDB_CONTENT_TYPE_PATHS.includes(core.getPath(node))
+            ) {
+              console.warn(
+                "Skipping contentType",
+                core.getAttribute(core.getParent(node), "name"),
+              );
+              continue;
+            }
+
+            storageAdapters.push(
+              await StorageAdapter.fromStorageNode(
+                gmeContext,
+                req,
+                node,
+                middlewareOpts.gmeConfig,
+                true,
+              ),
             );
-            continue;
           }
-
-          storageAdapters.push(
-            await StorageAdapter.fromStorageNode(
-              gmeContext,
-              req,
-              node,
-              middlewareOpts.gmeConfig,
-              true,
+        } else {
+          storageAdapters = await Promise.all(
+            storageNodes.map((node) =>
+              StorageAdapter.fromStorageNode(
+                gmeContext,
+                req,
+                node,
+                middlewareOpts.gmeConfig,
+                true,
+              )
             ),
           );
         }
-      } else {
-        storageAdapters = await Promise.all(
-          storageNodes.map((node) =>
-            StorageAdapter.fromStorageNode(
-              gmeContext,
-              req,
-              node,
-              middlewareOpts.gmeConfig,
-              true,
-            )
-          ),
-        );
-      }
 
-      const taxNode = await getTaxonomyNode(gmeContext);
-      const taxonomy = await exportTaxonomy(gmeContext.core, taxNode);
-      const gremlinAdapter = new GremlinAdapter(msConfig, taxonomy);
+        const taxNode = await getTaxonomyNode(gmeContext);
+        const taxonomy = await exportTaxonomy(gmeContext.core, taxNode);
+        const gremlinAdapter = new GremlinAdapter(msConfig, taxonomy);
 
-      const stats = {
-        time_sec: {
-          total: Date.now(),
-        },
-        storages: {
-          successes: 0,
-          errors: 0,
-        },
-        repositories: {
-          successes: 0,
-          errors: 0,
-        },
-        contents: {
-          successes: 0,
-          errors: 0,
-        },
-      };
+        const stats = {
+          time_sec: {
+            total: Date.now(),
+          },
+          storages: {
+            successes: 0,
+            errors: 0,
+          },
+          repositories: {
+            successes: 0,
+            errors: 0,
+          },
+          contents: {
+            successes: 0,
+            errors: 0,
+          },
+        };
 
-      await gremlinAdapter.dropAll();
-      logger.info("Dropped current graphDb data..");
+        await gremlinAdapter.dropAll();
+        logger.info("Dropped current graphDb data..");
 
-      for (const adapter of storageAdapters) {
-        try {
-          const repos = await adapter.listRepos();
-          for (const repo of repos) {
-            try {
-              const contents = await adapter.listArtifacts(repo.id, true);
-              for (const content of contents) {
-                const { parentId, id } = content;
-                try {
-                  if (!parentId || !id) {
-                    throw new Error(
-                      "content missing id or parentId " +
-                        JSON.stringify({ parentId, id }),
+        for (const adapter of storageAdapters) {
+          try {
+            const repos = await adapter.listRepos();
+            for (const repo of repos) {
+              try {
+                const contents = await adapter.listArtifacts(repo.id, true);
+                for (const content of contents) {
+                  const { parentId, id } = content;
+                  try {
+                    if (!parentId || !id) {
+                      throw new Error(
+                        "content missing id or parentId " +
+                          JSON.stringify({ parentId, id }),
+                      );
+                    }
+                    await gremlinAdapter.create(
+                      new ChildContentReference(parentId, id),
+                      content,
                     );
-                  }
-                  await gremlinAdapter.create(
-                    new ChildContentReference(parentId, id),
-                    content,
-                  );
-                  stats.contents.successes += 1;
-                  if (stats.contents.successes % 100 === 0) {
-                    logger.info(
-                      "Inserted",
-                      stats.contents.successes,
-                      "contents ...",
+                    stats.contents.successes += 1;
+                    if (stats.contents.successes % 100 === 0) {
+                      logger.info(
+                        "Inserted",
+                        stats.contents.successes,
+                        "contents ...",
+                      );
+                    }
+                  } catch (e) {
+                    logger.error(
+                      "Failed at content",
+                      content.displayName,
+                      "id=",
+                      id,
+                      ", in repository",
+                      repo.displayName,
+                      "id=",
+                      repo.id,
+                      ".",
+                      e,
                     );
+                    stats.contents.errors += 1;
                   }
-                } catch (e) {
-                  logger.error(
-                    "Failed at content",
-                    content.displayName,
-                    "id=",
-                    id,
-                    ", in repository",
-                    repo.displayName,
-                    "id=",
-                    repo.id,
-                    ".",
-                    e,
-                  );
-                  stats.contents.errors += 1;
                 }
+                stats.repositories.successes += 1;
+              } catch (e) {
+                logger.error(e);
+                stats.repositories.errors += 1;
               }
-              stats.repositories.successes += 1;
-            } catch (e) {
-              logger.error(e);
-              stats.repositories.errors += 1;
             }
+
+            stats.storages.successes += 1;
+          } catch (e) {
+            logger.error(e);
+            stats.storages.errors += 1;
           }
-
-          stats.storages.successes += 1;
-        } catch (e) {
-          logger.error(e);
-          stats.storages.errors += 1;
         }
+
+        stats.time_sec.total = (Date.now() - stats.time_sec.total) / 1000;
+
+        logger.info("DONE!, stats:", JSON.stringify(stats, null, 2));
+
+        res.json(stats);
+      } finally {
+        isPopulatingGraphDB = false;
       }
-
-      stats.time_sec.total = (Date.now() - stats.time_sec.total) / 1000;
-
-      logger.info("DONE!, stats:", JSON.stringify(stats, null, 2));
-
-      res.json(stats);
-    } finally {
-      isPopulatingGraphDB = false;
-    }
     },
     { method: "post" },
   );
