@@ -32,6 +32,7 @@ import type {
 } from "./common/types";
 import { toArtifactMetadatav2 } from "../Utils";
 import { Taxonomy } from "../../../common/exchange/Taxonomy";
+import { GmeLogger } from "../../../common/types";
 
 export class StorageWithGraphSearch<
   C extends Adapter,
@@ -404,8 +405,19 @@ export class GremlinAdapter implements MetadataAdapter {
       new DriverRemoteConnection(this.config.gremlinEndpoint),
     );
 
-    await g.V().drop().iterate();
-    await g.E().drop().iterate();
+    let cnt = (await g.E().count().next()).value;
+    while (cnt > 0) {
+      console.log(`Nbr of Edges: ${cnt} - about to drop ${this.config.dropBatchSize} of them.`)
+      await g.E().limit(this.config.dropBatchSize).drop().next();
+      cnt = (await g.E().count().next()).value;
+    }
+
+    cnt = (await g.V().count().next()).value;
+    while (cnt > 0) {
+      console.log(`Nbr of Vertices: ${cnt} - about to drop ${this.config.dropBatchSize} of them.`)
+      await g.V().limit(this.config.dropBatchSize).drop().next();
+      cnt = (await g.V().count().next()).value;
+    }
   }
 
   async runGremlin(query: string): Promise<any> {

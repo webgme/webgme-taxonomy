@@ -41,6 +41,8 @@ import { MetadataStorageConfig } from "../Search/adapters/common/types";
 export const router = express.Router();
 const staticPath = path.join(__dirname, "app", "dist");
 
+let isPopulatingGraphDB = false;
+
 /**
  * Called when the server is created but before it starts to listening to incoming requests.
  * N.B. gmeAuth, safeStorage and workerManager are not ready to use until the start function is called.
@@ -178,7 +180,7 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
     middlewareOpts,
     router,
     "graphdb/",
-    async function dumpContentMetadata(gmeContext, req, res) {
+    async function populateGraphDb(gmeContext, req, res) {
       const { core, root } = gmeContext;
       if (!msConfig.enable) {
         logger.error("Client trying to access disabled metadata");
@@ -192,6 +194,15 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
         return;
       }
 
+      if (isPopulatingGraphDB) {
+        logger.error('isPopulatingGraphDB was true! Duplicate requests to /graphdb');
+        res.sendStatus(400);
+        return;
+      }
+
+
+      try {
+        isPopulatingGraphDB = true;
       // Get all the storage adapters for each (unique) storage node in the project
       const storageType = Object.values(core.getAllMetaNodes(root))
         .find((node) => core.getAttribute(node, "name") === "Storage");
@@ -272,7 +283,7 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
       };
 
       await gremlinAdapter.dropAll();
-      console.log("Dropped current graphDb data..");
+      logger.info("Dropped current graphDb data..");
 
       for (const adapter of storageAdapters) {
         try {
@@ -295,7 +306,7 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
                   );
                   stats.contents.successes += 1;
                   if (stats.contents.successes % 100 === 0) {
-                    console.log(
+                    logger.info(
                       "Inserted",
                       stats.contents.successes,
                       "contents ...",
@@ -333,9 +344,12 @@ export function initialize(middlewareOpts: MiddlewareOptions) {
 
       stats.time_sec.total = (Date.now() - stats.time_sec.total) / 1000;
 
-      console.log("DONE!, stats:", JSON.stringify(stats, null, 2));
+      logger.info("DONE!, stats:", JSON.stringify(stats, null, 2));
 
       res.json(stats);
+    } finally {
+      isPopulatingGraphDB = false;
+    }
     },
     { method: "post" },
   );
